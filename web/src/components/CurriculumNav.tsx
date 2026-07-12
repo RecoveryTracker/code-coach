@@ -87,8 +87,25 @@ export function CurriculumNav({
 
   return (
     <div className="cur-nav" aria-label="Curriculum navigation">
-      {/* Status lives on the LEFT so "Not yet / Got it" is the first thing
-          you see, next to the code you're typing. */}
+      {/* Left side, in order: coach tools, then the Not yet / Got it status —
+          all next to the code you're typing. Steppers follow. */}
+      <button
+        type="button"
+        className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+        onClick={onToggleExplain}
+        title="The coach walks through your code line by line and explains the output"
+      >
+        {explainOpen ? "Hide explain" : "Explain my code"}
+      </button>
+
+      <button
+        type="button"
+        className="coach-chat-toggle"
+        onClick={onToggleChat}
+      >
+        {chatOpen ? "Hide chat" : "Ask coach"}
+      </button>
+
       <div className={`cur-nav-status ${statusClass}`}>
         <span className="cur-nav-status-glyph" aria-hidden>
           {STATUS_GLYPH[statusClass] ?? "•"}
@@ -247,22 +264,6 @@ export function CurriculumNav({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className={`coach-chat-toggle push-right${explainOpen ? " active" : ""}`}
-        onClick={onToggleExplain}
-        title="The coach walks through your code line by line and explains the output"
-      >
-        {explainOpen ? "Hide explain" : "Explain my code"}
-      </button>
-
-      <button
-        type="button"
-        className="coach-chat-toggle"
-        onClick={onToggleChat}
-      >
-        {chatOpen ? "Hide chat" : "Ask coach"}
-      </button>
     </div>
   );
 }

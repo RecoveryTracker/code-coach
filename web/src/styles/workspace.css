@@ -53,25 +53,15 @@
   font-size: 14px;
 }
 
-.ws-brand .muted,
-.ws-top-mid .muted {
+.ws-brand .muted {
   font-size: 11px;
   color: var(--text-dim);
-}
-
-.ws-top-mid {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  min-width: 0;
 }
 
 .ws-top-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .ws-btn {
@@ -1225,7 +1215,7 @@ body.is-resizing .ws-split-row {
   gap: 10px 12px;
 }
 
-/* Status sits FIRST (left side), before the steppers. */
+/* Status sits on the left, right after the coach tools. */
 .cur-nav-status {
   display: flex;
   align-items: center;
@@ -1235,12 +1225,6 @@ body.is-resizing .ws-split-row {
   min-width: 0;
   flex: 0 1 auto;
   max-width: 34%;
-  order: -1;
-}
-
-/* Explain / Ask coach hug the right edge. */
-.cur-nav .push-right {
-  margin-left: auto;
 }
 
 .cur-nav-status-text {

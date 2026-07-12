@@ -551,16 +551,8 @@ export default function App() {
         <div className="ws-brand">
           <strong>Code Coach</strong>
         </div>
-        <div className="ws-top-mid">
-          <span>{freeMode ? "Free mode" : session.title}</span>
-          {progress && !freeMode ? (
-            <span className="muted">
-              Class {session.class_number ?? 1} ·{" "}
-              {session.class_name ?? "Foundations"} · Lesson{" "}
-              {session.lesson_number ?? 1}
-            </span>
-          ) : null}
-        </div>
+        {/* No title breadcrumb here — the Class/Lesson steppers below carry
+            the same info. Free mode still labels itself in its banner. */}
         <div className="ws-top-actions">
           <ScriptLibrary
             source={freeMode ? "free" : "lesson"}
