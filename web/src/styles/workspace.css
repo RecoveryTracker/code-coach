@@ -1130,10 +1130,16 @@ body.is-resizing .ws-split-row {
   align-items: center;
 }
 
+/* Each stepper is a bordered pill: the arrows inside clearly belong to it,
+   instead of floating next to the neighboring control. */
 .cur-nav-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  padding: 2px 4px;
 }
 
 .cur-nav-kind {
@@ -1142,15 +1148,15 @@ body.is-resizing .ws-split-row {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
-  min-width: 4.2em;
+  padding: 0 4px 0 4px;
 }
 
 .cur-nav-arrow {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text);
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
   border-radius: 6px;
   font-size: 16px;
   line-height: 1;
@@ -1159,7 +1165,14 @@ body.is-resizing .ws-split-row {
 }
 
 .cur-nav-arrow:hover {
-  border-color: var(--accent);
+  background: var(--bg);
+  color: var(--accent);
+}
+
+/* Class steps look different on purpose — « » is the bigger jump. */
+.cur-nav-arrow-class {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--accent);
 }
 
@@ -1212,6 +1225,7 @@ body.is-resizing .ws-split-row {
   gap: 10px 12px;
 }
 
+/* Status sits FIRST (left side), before the steppers. */
 .cur-nav-status {
   display: flex;
   align-items: center;
@@ -1219,7 +1233,14 @@ body.is-resizing .ws-split-row {
   font-size: 12px;
   font-weight: 600;
   min-width: 0;
-  flex: 1 1 140px;
+  flex: 0 1 auto;
+  max-width: 34%;
+  order: -1;
+}
+
+/* Explain / Ask coach hug the right edge. */
+.cur-nav .push-right {
+  margin-left: auto;
 }
 
 .cur-nav-status-text {

@@ -87,15 +87,28 @@ export function CurriculumNav({
 
   return (
     <div className="cur-nav" aria-label="Curriculum navigation">
+      {/* Status lives on the LEFT so "Not yet / Got it" is the first thing
+          you see, next to the code you're typing. */}
+      <div className={`cur-nav-status ${statusClass}`}>
+        <span className="cur-nav-status-glyph" aria-hidden>
+          {STATUS_GLYPH[statusClass] ?? "•"}
+        </span>
+        <span className="cur-nav-status-text">{statusText}</span>
+        {watching ? <span className="live-pulse">…</span> : null}
+      </div>
+
+      {/* Each stepper is a bordered pill so its arrows can't be mistaken
+          for a neighbor's. Class uses « » (bigger jump) vs ‹ › elsewhere. */}
       <div className="cur-nav-row">
         <span className="cur-nav-kind">Class</span>
         <button
           type="button"
-          className="cur-nav-arrow"
+          className="cur-nav-arrow cur-nav-arrow-class"
           onClick={() => onClassDelta(-1)}
           aria-label="Previous class"
+          title="Previous class"
         >
-          ‹
+          «
         </button>
         <select
           className="cur-nav-select"
@@ -111,11 +124,12 @@ export function CurriculumNav({
         </select>
         <button
           type="button"
-          className="cur-nav-arrow"
+          className="cur-nav-arrow cur-nav-arrow-class"
           onClick={() => onClassDelta(1)}
           aria-label="Next class"
+          title="Next class"
         >
-          ›
+          »
         </button>
       </div>
 
@@ -126,6 +140,7 @@ export function CurriculumNav({
           className="cur-nav-arrow"
           onClick={() => onLessonDelta(-1)}
           aria-label="Previous lesson"
+          title="Previous lesson"
         >
           ‹
         </button>
@@ -147,6 +162,7 @@ export function CurriculumNav({
           className="cur-nav-arrow"
           onClick={() => onLessonDelta(1)}
           aria-label="Next lesson"
+          title="Next lesson"
         >
           ›
         </button>
@@ -159,6 +175,7 @@ export function CurriculumNav({
           className="cur-nav-arrow"
           onClick={() => onExerciseDelta(-1)}
           aria-label="Previous exercise"
+          title="Previous exercise"
         >
           ‹
         </button>
@@ -185,6 +202,7 @@ export function CurriculumNav({
           className="cur-nav-arrow"
           onClick={() => onExerciseDelta(1)}
           aria-label="Next exercise"
+          title="Next exercise"
         >
           ›
         </button>
@@ -199,6 +217,7 @@ export function CurriculumNav({
             disabled={dLevel <= 1}
             onClick={() => onDictationLevel(dLevel - 1)}
             aria-label="Easier dictation"
+            title="Easier"
           >
             ‹
           </button>
@@ -221,23 +240,16 @@ export function CurriculumNav({
             disabled={dLevel >= 5}
             onClick={() => onDictationLevel(dLevel + 1)}
             aria-label="Harder dictation"
+            title="Harder"
           >
             ›
           </button>
         </div>
       ) : null}
 
-      <div className={`cur-nav-status ${statusClass}`}>
-        <span className="cur-nav-status-glyph" aria-hidden>
-          {STATUS_GLYPH[statusClass] ?? "•"}
-        </span>
-        <span className="cur-nav-status-text">{statusText}</span>
-        {watching ? <span className="live-pulse">…</span> : null}
-      </div>
-
       <button
         type="button"
-        className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+        className={`coach-chat-toggle push-right${explainOpen ? " active" : ""}`}
         onClick={onToggleExplain}
         title="The coach walks through your code line by line and explains the output"
       >
