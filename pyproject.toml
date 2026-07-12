@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-coach"
+version = "0.2.1"
+description = "Local coach-first IAE for learning Python"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+# File-watch CLI: code-coach --watch --file path/to/practice.py
+code-coach = "code_coach.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["code_coach*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+# E4/E7/E9 pyflakes-ish errors + F (undefined names, unused imports)
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    "E741",  # ambiguous single-letter names — fine for teaching examples
+]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+# Start lenient; tighten over time.
+disallow_untyped_defs = false
+files = ["code_coach"]

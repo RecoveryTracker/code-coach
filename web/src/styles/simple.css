@@ -1,0 +1,230 @@
+/* Minimal learner UI — two panes, plain language */
+
+.simple-shell {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.simple-boot,
+.simple-boot-error {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.simple-boot-error h1 {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.simple-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+}
+
+.simple-editor-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.simple-muted {
+  font-weight: 500;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.simple-editor-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* EditorPane brings its own .iae-pane chrome — flatten it */
+.simple-editor-body .iae-pane {
+  height: 100%;
+  border: none;
+  background: transparent;
+}
+
+.simple-editor-body .iae-pane-header {
+  display: none;
+}
+
+.simple-editor-body .iae-pane-body.flush {
+  height: 100%;
+}
+
+.simple-coach {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  overflow: auto;
+}
+
+.simple-hero {
+  padding: 16px 16px 8px;
+}
+
+.simple-kicker {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.simple-step {
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.simple-card {
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(110, 168, 254, 0.28);
+}
+
+.simple-card.ok {
+  background: var(--success-soft);
+  border-color: rgba(61, 214, 140, 0.35);
+}
+
+.simple-card-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.simple-card.ok .simple-card-label {
+  color: var(--success);
+}
+
+.simple-card-body {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.simple-goal {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.simple-code {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: #0a0c10;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.45;
+  color: #8bbbff;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.simple-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.simple-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.simple-btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #0b1020;
+}
+
+.simple-btn.primary:hover:not(:disabled) {
+  background: #8bbbff;
+}
+
+.simple-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.simple-checks {
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.simple-check {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+
+.simple-check.yes {
+  color: var(--success);
+}
+
+.simple-output {
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.simple-output pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: var(--text);
+  min-height: 3em;
+}
+
+.simple-output pre.err {
+  color: var(--danger);
+}
+
+.simple-output .simple-card-label {
+  color: var(--text-dim);
+}

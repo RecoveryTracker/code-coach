@@ -1,0 +1,417 @@
+"""
+Full curriculum tree:
+
+  Class → Lesson → Exercise
+
+Navigation can jump freely among all three levels.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Callable
+
+from code_coach.checks import (
+    calls_function_with_args,
+    compares,
+    count_calls,
+    uses_and,
+    uses_for,
+    uses_if,
+    uses_if_else,
+    uses_while,
+)
+from code_coach.checks import calls_function, references_name
+from code_coach.curriculum.foundations import (
+    FOUNDATIONS_L2_TASKS,
+    foundations_l2_drill,
+)
+from code_coach.dictation.bank import (
+    check_int_assign,
+    check_print_var,
+    check_str_assign,
+)
+from code_coach.dictation.session import make_class_dictation_batch
+from code_coach.skills.drills import Drill, DrillStep, register_dynamic
+
+
+@dataclass
+class LessonDef:
+    number: int
+    id: str  # e.g. foundations-l1
+    title: str  # short: "Type-along"
+    role: str  # dictation | build
+    full_title: str  # Foundations · Lesson 1 — Type-along
+    resolve: Callable[[], Drill]
+
+
+@dataclass
+class ClassDef:
+    id: str
+    name: str
+    description: str
+    number: int  # Class 1, 2, 3…
+    lessons: list[LessonDef] = field(default_factory=list)
+
+    def lesson(self, number: int) -> LessonDef | None:
+        for L in self.lessons:
+            if L.number == number:
+                return L
+        return self.lessons[0] if self.lessons else None
+
+
+# ── Decisions (if / else) content ───────────────────────────
+# Lesson 1 of every class is an ENDLESS verbatim type-along drilling that
+# class's exact syntax (the curated spine + generated variants live in
+# dictation/bank.py). It's the easy fallback when the build lessons are
+# too hard — pure muscle memory for parens, quotes, colons, comparisons.
+
+
+def _decisions_l1_drill() -> Drill:
+    return make_class_dictation_batch(
+        "decisions",
+        class_number=2,
+        class_name="Decisions",
+        seed="local-student",
+        batch=0,
+        level=1,
+    )
+
+
+def _decisions_l2_drill() -> Drill:
+    steps = [
+        DrillStep(
+            "d2-1",
+            "If score is greater than 10, print win.",
+            lambda c: uses_if(c) and compares(c) and calls_function(c, "print"),
+            "build",
+            "Use if and a comparison. Hint has the exact lines.",
+            "⌘ → end of line",
+            'score = 12\nif score > 10:\n    print("win")',
+        ),
+        DrillStep(
+            "d2-2",
+            "Print even or odd for the number n.",
+            lambda c: uses_if_else(c),
+            "build",
+            "Use if / else and % 2.",
+            "↓ new line in block",
+            'n = 7\nif n % 2 == 0:\n    print("even")\nelse:\n    print("odd")',
+        ),
+        DrillStep(
+            "d2-3",
+            "Print go only if age >= 18 and has_pass is True.",
+            lambda c: uses_if(c) and uses_and(c),
+            "build",
+            "Combine two conditions with and.",
+            "⌘ →",
+            'age = 20\nhas_pass = True\nif age >= 18 and has_pass:\n    print("go")',
+        ),
+    ]
+    # Attach hint metadata via example field (already used for hover)
+    return Drill(
+        id="decisions-l2",
+        skill="conditionals",
+        difficulty=2,
+        title="Class 2 · Decisions · Lesson 2 — Build",
+        prompt="Build if/else from scratch. Use Hint for exact lines.",
+        starter="# Class 2 · Decisions · Lesson 2 — build these goals\n\n",
+        steps=steps,
+        tags=["decisions", "lesson-2", "build"],
+        path_order=11,
+        in_progressive=True,
+    )
+
+
+# ── Loops content ───────────────────────────────────────────
+
+
+def _loops_l1_drill() -> Drill:
+    return make_class_dictation_batch(
+        "loops",
+        class_number=3,
+        class_name="Loops",
+        seed="local-student",
+        batch=0,
+        level=1,
+    )
+
+
+def _loops_l2_drill() -> Drill:
+    steps = [
+        DrillStep(
+            "lp2-1",
+            "Print the numbers 0, 1, 2 using a for loop.",
+            lambda c: uses_for(c) and calls_function(c, "range"),
+            "build",
+            "for i in range(3): print(i)",
+            "↓",
+            "for i in range(3):\n    print(i)",
+        ),
+        DrillStep(
+            "lp2-2",
+            "Sum 1 through 5 into total, then print total.",
+            lambda c: uses_for(c) and references_name(c, "total"),
+            "build",
+            "Start total at 0, add each i, print once after the loop.",
+            "⌘ →",
+            "total = 0\nfor i in range(1, 6):\n    total = total + i\nprint(total)",
+        ),
+        DrillStep(
+            "lp2-3",
+            "Count down from 3 to 1 with while, printing each time.",
+            lambda c: uses_while(c),
+            "build",
+            "while n > 0, print, then n = n - 1.",
+            "↓",
+            "n = 3\nwhile n > 0:\n    print(n)\n    n = n - 1",
+        ),
+    ]
+    return Drill(
+        id="loops-l2",
+        skill="loops",
+        difficulty=2,
+        title="Class 3 · Loops · Lesson 2 — Build",
+        prompt="Build loops from scratch. Hint shows exact lines.",
+        starter="# Class 3 · Loops · Lesson 2 — build these goals\n\n",
+        steps=steps,
+        tags=["loops", "lesson-2", "build"],
+        path_order=21,
+        in_progressive=True,
+    )
+
+
+def _foundations_l1() -> Drill:
+    return make_class_dictation_batch(
+        "foundations",
+        class_number=1,
+        class_name="Foundations",
+        seed="local-student",
+        batch=0,
+        level=1,
+    )
+
+
+def _foundations_l3() -> Drill:
+    """Extra build practice in Foundations (more exercises)."""
+    steps = [
+        DrillStep(
+            "f3-1",
+            "Print two different messages (two print lines).",
+            lambda c: count_calls(c, "print") >= 2,
+            "build",
+            "Two complete print(...) lines.",
+            "⌘ →",
+            'print("one")\nprint("two")',
+        ),
+        DrillStep(
+            "f3-2",
+            "Store name and favorite_number, print both.",
+            lambda c: check_str_assign(c, "name")
+            and check_int_assign(c, "favorite_number")
+            and check_print_var(c, "name")
+            and check_print_var(c, "favorite_number"),
+            "build",
+            "Mix string and number variables.",
+            "↓",
+            'name = "Ada"\nfavorite_number = 7\nprint(name)\nprint(favorite_number)',
+        ),
+        DrillStep(
+            "f3-3",
+            'Print a label and a number together, e.g. print("score:", 10).',
+            lambda c: calls_function_with_args(c, "print", min_args=2),
+            "build",
+            "Comma separates multiple things in print.",
+            "⌘ →",
+            'print("score:", 10)',
+        ),
+        DrillStep(
+            "f3-4",
+            "Create city and print it.",
+            lambda c: check_str_assign(c, "city") and check_print_var(c, "city"),
+            "build",
+            "assign then print.",
+            "↓",
+            'city = "Seattle"\nprint(city)',
+        ),
+    ]
+    return Drill(
+        id="foundations-l3",
+        skill="basics",
+        difficulty=2,
+        title="Class 1 · Foundations · Lesson 3 — Build more",
+        prompt="More from-scratch practice with print and variables.",
+        starter="# Class 1 · Foundations · Lesson 3\n\n",
+        steps=steps,
+        tags=["foundations", "lesson-3", "build"],
+        path_order=3,
+        in_progressive=True,
+    )
+
+
+# ── Catalog tree ────────────────────────────────────────────
+
+CLASSES: list[ClassDef] = [
+    ClassDef(
+        id="foundations",
+        name="Foundations",
+        description="print, variables, strings, numbers",
+        number=1,
+        lessons=[
+            LessonDef(
+                1,
+                "foundations-l1",
+                "Type-along (endless)",
+                "dictation",
+                "Class 1 · Foundations · Lesson 1 — Type-along (endless)",
+                _foundations_l1,
+            ),
+            LessonDef(
+                2,
+                "foundations-l2",
+                "Build",
+                "build",
+                "Class 1 · Foundations · Lesson 2 — Build",
+                foundations_l2_drill,
+            ),
+            LessonDef(
+                3,
+                "foundations-l3",
+                "Build more",
+                "build",
+                "Class 1 · Foundations · Lesson 3 — Build more",
+                _foundations_l3,
+            ),
+        ],
+    ),
+    ClassDef(
+        id="decisions",
+        name="Decisions",
+        description="if, else, comparisons, and/or",
+        number=2,
+        lessons=[
+            LessonDef(
+                1,
+                "decisions-l1",
+                "Type-along (endless)",
+                "dictation",
+                "Class 2 · Decisions · Lesson 1 — Type-along (endless)",
+                _decisions_l1_drill,
+            ),
+            LessonDef(
+                2,
+                "decisions-l2",
+                "Build",
+                "build",
+                "Class 2 · Decisions · Lesson 2 — Build",
+                _decisions_l2_drill,
+            ),
+        ],
+    ),
+    ClassDef(
+        id="loops",
+        name="Loops",
+        description="for, while, range, accumulate",
+        number=3,
+        lessons=[
+            LessonDef(
+                1,
+                "loops-l1",
+                "Type-along (endless)",
+                "dictation",
+                "Class 3 · Loops · Lesson 1 — Type-along (endless)",
+                _loops_l1_drill,
+            ),
+            LessonDef(
+                2,
+                "loops-l2",
+                "Build",
+                "build",
+                "Class 3 · Loops · Lesson 2 — Build",
+                _loops_l2_drill,
+            ),
+        ],
+    ),
+]
+
+
+def get_class(class_id: str) -> ClassDef | None:
+    for c in CLASSES:
+        if c.id == class_id:
+            return c
+    return CLASSES[0] if CLASSES else None
+
+
+def catalog_payload() -> list[dict]:
+    out = []
+    for c in CLASSES:
+        out.append(
+            {
+                "id": c.id,
+                "number": c.number,
+                "name": c.name,
+                "description": c.description,
+                "lessons": [
+                    {
+                        "number": L.number,
+                        "id": L.id,
+                        "title": L.title,
+                        "role": L.role,
+                        "full_title": L.full_title,
+                    }
+                    for L in c.lessons
+                ],
+            }
+        )
+    return out
+
+
+def resolve_drill(class_id: str, lesson_number: int) -> tuple[LessonDef, Drill]:
+    cls = get_class(class_id) or CLASSES[0]
+    lesson = cls.lesson(lesson_number) or cls.lessons[0]
+    drill = lesson.resolve()
+    register_dynamic(drill)
+    return lesson, drill
+
+
+def supports_for_build_step(drill_id: str, step_index: int) -> list[dict]:
+    """Hint supports for foundations L2; generic for other build lessons."""
+    if drill_id == "foundations-l2" and 0 <= step_index < len(FOUNDATIONS_L2_TASKS):
+        t = FOUNDATIONS_L2_TASKS[step_index]
+        return [
+            {
+                "skill_id": s.skill_id,
+                "label": s.label,
+                "lesson_title": s.lesson_title,
+            }
+            for s in t.supports
+        ]
+    # Other build lessons: point at that class's Lesson 1
+    if drill_id.endswith("-l2") or drill_id.endswith("-l3"):
+        class_id = drill_id.rsplit("-", 1)[0]
+        cls = get_class(class_id)
+        if cls:
+            return [
+                {
+                    "skill_id": "lesson1",
+                    "label": f"Type-along: {cls.name} Lesson 1",
+                    "lesson_title": f"{cls.name} · Lesson 1",
+                }
+            ]
+    return []
+
+
+def hint_lines_for_step(drill: Drill, step_index: int) -> list[str]:
+    if step_index < 0 or step_index >= len(drill.steps):
+        return []
+    s = drill.steps[step_index]
+    if drill.id == "foundations-l2" and step_index < len(FOUNDATIONS_L2_TASKS):
+        return list(FOUNDATIONS_L2_TASKS[step_index].hint_lines)
+    if s.example and "\n" in s.example:
+        return s.example.split("\n")
+    if s.example:
+        return [s.example]
+    if s.label and not s.label[0].isupper() and "(" in s.label:
+        # label is code
+        return [s.label]
+    return [s.example] if s.example else []

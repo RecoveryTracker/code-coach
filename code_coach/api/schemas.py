@@ -1,0 +1,267 @@
+"""Request/response models for the Code Coach API."""
+
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+Mode = Literal["progressive", "skill", "random", "reps"]
+CoachStyle = Literal["dictation", "vocabulary"]
+
+
+class EvaluateRequest(BaseModel):
+    day: int = Field(default=1, ge=1)
+    code: str = ""
+    run: bool = False
+
+
+class RunRequest(BaseModel):
+    code: str = ""
+
+
+class CheckItem(BaseModel):
+    id: str | None = None
+    label: str
+    passed: bool
+
+
+class EvaluateResponse(BaseModel):
+    lesson_title: str
+    practice_path: str
+    code: str
+    stdout: str
+    stderr: str
+    exit_code: int
+    checks: list[CheckItem]
+    passed: int
+    total: int
+    next_label: str | None
+    next_concept: str | None = None
+    next_why: str | None = None
+    next_hint: str | None = None
+    next_example: str | None = None
+    next_suggest: str | None = None
+    ran: bool
+    complete: bool
+
+
+class RunResponse(BaseModel):
+    stdout: str
+    stderr: str
+    exit_code: int
+
+
+class SupportLinkInfo(BaseModel):
+    skill_id: str
+    label: str
+    lesson_title: str = "Foundations · Lesson 1"
+
+
+class WaypointInfo(BaseModel):
+    id: str
+    label: str
+    tip: str | None = None
+    keyboard_tip: str | None = None
+    hint_lines: list[str] = []
+    supports: list[SupportLinkInfo] = []
+    kind: str = "dictation"  # dictation | build
+
+
+class ChatRequest(BaseModel):
+    message: str = ""
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
+class ExplainRequest(BaseModel):
+    code: str = ""
+
+
+class ExplainLine(BaseModel):
+    line: int
+    depth: int = 0
+    source: str = ""
+    text: str
+
+
+class ExplainResponse(BaseModel):
+    ok: bool = True
+    summary: str
+    lines: list[ExplainLine] = []
+    output_notes: list[str] = []
+    error_note: str | None = None
+
+
+class GotoLessonRequest(BaseModel):
+    lesson_number: int | None = None
+    class_id: str | None = None
+    # relative step: lesson_delta ±1 or class_delta ±1
+    lesson_delta: int | None = None
+    class_delta: int | None = None
+
+
+class ReviewRequest(BaseModel):
+    skill_id: str
+
+
+class CurriculumClassInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    lessons: list[dict]
+
+
+class NavigateRequest(BaseModel):
+    """Free navigation across class / lesson / exercise."""
+    class_id: str | None = None
+    lesson_number: int | None = None
+    exercise_index: int | None = None  # 0-based; client mainly owns this
+    class_delta: int | None = None
+    lesson_delta: int | None = None
+    exercise_delta: int | None = None
+
+
+class LessonSummary(BaseModel):
+    day: int
+    id: str
+    title: str
+
+
+class LessonDetail(BaseModel):
+    day: int
+    id: str
+    title: str
+    starter_code: str
+    waypoints: list[WaypointInfo]
+
+
+class HealthResponse(BaseModel):
+    ok: bool
+    version: str
+
+
+class SkillInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    order: int
+    base_difficulty: int
+
+
+class ProgressSettingsUpdate(BaseModel):
+    mode: Mode | None = None
+    coach_level: int | None = Field(default=None, ge=1, le=2)
+    # alias accepted for older clients
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    selected_skills: list[str] | None = None
+    # Foundations type-along difficulty: 1 single lines … 5 functions
+    dictation_level: int | None = Field(default=None, ge=1, le=5)
+
+
+class ReviewDueItem(BaseModel):
+    skill_id: str
+    name: str
+    days: int
+
+
+class ProgressResponse(BaseModel):
+    mode: Mode
+    coach_level: int
+    difficulty: int  # alias of coach_level
+    selected_skills: list[str]
+    total_completes: int
+    unique_drills_done: int
+    total_drills: int
+    current_drill_id: str | None
+    by_skill: dict[str, Any]
+    updated_at: str
+    curriculum_class: str = "foundations"
+    curriculum_lesson: int = 1
+    review_skill: str | None = None
+    dictation_level: int = 1
+    class1_lines_done: int = 0
+    class1_batch: int = 0
+    # Per-class endless type-along lifetime lines
+    dictation_lines: dict[str, int] = {}
+    # Skills practiced before but not recently (light spaced repetition)
+    review_due: list[ReviewDueItem] = []
+
+
+class PracticeSession(BaseModel):
+    drill_id: str
+    title: str
+    skill: str
+    skill_name: str
+    difficulty: int
+    prompt: str
+    starter: str
+    steps: list[WaypointInfo]
+    mode: Mode
+    coach_level: int
+    coach_style: CoachStyle
+    meter: int  # alias coach_level
+    progress: ProgressResponse
+    is_lesson: bool = False
+    # Curriculum labels
+    class_id: str = "foundations"
+    class_number: int = 1
+    class_name: str = "Foundations"
+    lesson_number: int = 1
+    lesson_role: str = "dictation"  # dictation | build | review
+    is_review: bool = False
+    can_go_lesson_2: bool = True
+    # Catalog for nav UI
+    curriculum: list[dict] = []
+    exercise_count: int = 0
+    # Endless Foundations type-along
+    endless: bool = False
+    dictation_level: int = 1
+    dictation_level_label: str = "Single lines"
+    lines_done: int = 0
+
+
+class DrillEvaluateRequest(BaseModel):
+    drill_id: str
+    code: str = ""
+    run: bool = False
+    # Which exercise the student is currently on (0-based, client-owned).
+    # Focuses the coach's "type this line" message on that line, so the
+    # banner never references a different line than the exercise box.
+    exercise_index: int | None = None
+
+
+class DrillEvaluateResponse(BaseModel):
+    drill_id: str
+    title: str
+    skill: str
+    difficulty: int
+    prompt: str
+    code: str
+    stdout: str
+    stderr: str
+    exit_code: int
+    ran: bool
+    checks: list[CheckItem]
+    passed: int
+    total: int
+    complete: bool
+    coach_level: int = 1
+    coach_style: CoachStyle = "dictation"
+    next_label: str | None
+    next_concept: str | None = None
+    next_why: str | None = None
+    next_hint: str | None = None
+    next_example: str | None = None
+    next_suggest: str | None = None
+    next_vocab: str | None = None
+    accepts_own_values: bool = True
+    observation: str | None = None
+    guidance: str | None = None
+    adapt_example: str | None = None
+    tone: str | None = None
+    status: str | None = None
+    just_completed: bool = False
+    progress: ProgressResponse | None = None
