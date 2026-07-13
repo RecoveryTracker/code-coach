@@ -106,7 +106,7 @@ export function CurriculumNav({
         {chatOpen ? "Hide chat" : "Ask coach"}
       </button>
 
-      <div className={`cur-nav-status ${statusClass}`}>
+      <div className={`cur-nav-status ${statusClass}`} title={statusText}>
         <span className="cur-nav-status-glyph" aria-hidden>
           {STATUS_GLYPH[statusClass] ?? "•"}
         </span>

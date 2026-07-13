@@ -7,7 +7,25 @@ Level 2 (vocabulary): more recall; example still available.
 
 from __future__ import annotations
 
+import re
 from typing import Any
+
+# A whole-number assignment in a step's example: favorite_number = 7
+_INT_ASSIGN_RE = re.compile(r"^(\w+)\s*=\s*(-?\d+)\s*$", re.MULTILINE)
+
+
+def _quoted_number_note(code: str, example: str) -> str | None:
+    """The classic beginner slip: var = \"5\" where a number is expected.
+    Quotes turn the digits into text, so the check (rightly) fails — but the
+    student needs to hear WHY, not 'type this line'."""
+    for var, num in _INT_ASSIGN_RE.findall(example or ""):
+        quoted = rf"{re.escape(var)}\s*=\s*[\"']\s*-?\d+\s*[\"']"
+        if re.search(quoted, code):
+            return (
+                f"Not yet — quotes make it text, not a number. "
+                f"Drop them: {var} = {num}"
+            )
+    return None
 
 
 def build_adaptation(
@@ -119,6 +137,11 @@ def _whats_wrong(code: str, step: Any) -> str | None:
     if "Print(" in code and "print(" not in compact:
         return "Not yet — use lowercase print("
 
+    # Quoted digits where the goal wants a real number — diagnose it directly.
+    quoted_num = _quoted_number_note(code, ex)
+    if quoted_num:
+        return quoted_num
+
     if sid == "print":
         if "print" in lower and "print(" not in compact:
             return "Not yet — need parentheses: print(...)"
@@ -160,5 +183,11 @@ def _whats_wrong(code: str, step: Any) -> str | None:
 
     if sid == "print_favorite_number":
         return f"Not yet — type this line:\n{ex}"
+
+    # Build exercises aren't verbatim — don't say "type this line" (it sends
+    # students hunting for exact wording) and don't leak the solution here;
+    # the Hint ladder owns that. Dictation keeps the literal instruction.
+    if getattr(step, "concept", "") == "build":
+        return "Not yet — check the small details: quotes, parentheses, spelling. Hint can help."
 
     return f"Not yet — type this line:\n{ex}" if ex else "Not yet — keep going."
