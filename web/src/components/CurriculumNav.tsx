@@ -87,8 +87,9 @@ export function CurriculumNav({
 
   return (
     <div className="cur-nav" aria-label="Curriculum navigation">
-      {/* Left side, in order: coach tools, then the Not yet / Got it status —
-          all next to the code you're typing. Steppers follow. */}
+      {/* First line: coach tools, then the Not yet / Got it status — all
+          next to the code you're typing. */}
+      <div className="cur-nav-line">
       <button
         type="button"
         className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
@@ -113,9 +114,12 @@ export function CurriculumNav({
         <span className="cur-nav-status-text">{statusText}</span>
         {watching ? <span className="live-pulse">…</span> : null}
       </div>
+      </div>
 
-      {/* Each stepper is a bordered pill so its arrows can't be mistaken
-          for a neighbor's. Class uses « » (bigger jump) vs ‹ › elsewhere. */}
+      {/* Second line: ALL the navigation steppers together — Class sits with
+          Lesson and Exercise. Each is a bordered pill so its arrows can't be
+          mistaken for a neighbor's; Class uses « » (bigger jump) vs ‹ ›. */}
+      <div className="cur-nav-line">
       <div className="cur-nav-row">
         <span className="cur-nav-kind">Class</span>
         <button
@@ -263,7 +267,7 @@ export function CurriculumNav({
           </button>
         </div>
       ) : null}
-
+      </div>
     </div>
   );
 }

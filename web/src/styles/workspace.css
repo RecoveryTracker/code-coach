@@ -1144,12 +1144,22 @@ body.is-resizing .ws-split-row {
   border-color: var(--accent);
 }
 
+/* Two deliberate lines: coach tools + status on top, ALL steppers below
+   (Class lives in the same row as Lesson and Exercise). */
 .cur-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   padding: 6px 0 2px;
+}
+
+.cur-nav-line {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
 }
 
 /* Each stepper is a bordered pill: the arrows inside clearly belong to it,
@@ -1247,7 +1257,8 @@ body.is-resizing .ws-split-row {
   gap: 10px 12px;
 }
 
-/* Status sits on the left, right after the coach tools. */
+/* Status sits on the left, right after the coach tools — and now shares its
+   line with only those two buttons, so it can breathe. */
 .cur-nav-status {
   display: flex;
   align-items: center;
@@ -1255,8 +1266,7 @@ body.is-resizing .ws-split-row {
   font-size: 12px;
   font-weight: 600;
   min-width: 0;
-  flex: 0 1 auto;
-  max-width: 34%;
+  flex: 1 1 auto;
 }
 
 .cur-nav-status-text {
