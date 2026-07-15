@@ -110,6 +110,11 @@ export type PracticeSession = {
   lines_done?: number;
 };
 
+export type RequirementItem = {
+  label: string;
+  passed: boolean;
+};
+
 export type DrillEvaluateResult = {
   drill_id: string;
   title: string;
@@ -142,6 +147,8 @@ export type DrillEvaluateResult = {
   status: string | null;
   just_completed: boolean;
   progress: ProgressInfo | null;
+  /** Build exercises: the goal's pieces with live pass/fail. */
+  requirements?: RequirementItem[] | null;
 };
 
 /** One explained line from /api/explain. */

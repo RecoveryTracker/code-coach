@@ -32,7 +32,12 @@ from code_coach.dictation.bank import (
     check_str_assign,
 )
 from code_coach.dictation.session import make_class_dictation_batch
-from code_coach.skills.drills import Drill, DrillStep, register_dynamic
+from code_coach.skills.drills import (
+    Drill,
+    DrillStep,
+    register_dynamic,
+    requirements_check,
+)
 
 
 @dataclass
@@ -60,6 +65,28 @@ class ClassDef:
         return self.lessons[0] if self.lessons else None
 
 
+def _build_step(
+    sid: str,
+    goal: str,
+    requirements,
+    tip: str,
+    kb: str,
+    example: str,
+) -> DrillStep:
+    """A build exercise defined by its named requirements — the check passes
+    when all of them do, and the UI shows them as a live ✓/✗ checklist."""
+    return DrillStep(
+        sid,
+        goal,
+        requirements_check(requirements),
+        "build",
+        tip,
+        kb,
+        example,
+        requirements=requirements,
+    )
+
+
 # ── Decisions (if / else) content ───────────────────────────
 # Lesson 1 of every class is an ENDLESS verbatim type-along drilling that
 # class's exact syntax (the curated spine + generated variants live in
@@ -80,29 +107,36 @@ def _decisions_l1_drill() -> Drill:
 
 def _decisions_l2_drill() -> Drill:
     steps = [
-        DrillStep(
+        _build_step(
             "d2-1",
             "If score is greater than 10, print win.",
-            lambda c: uses_if(c) and compares(c) and calls_function(c, "print"),
-            "build",
+            [
+                ("an if line ending with :", uses_if),
+                ("a comparison (like score > 10)", compares),
+                ("a print(...) call", lambda c: calls_function(c, "print")),
+            ],
             "Use if and a comparison. Hint has the exact lines.",
             "⌘ → end of line",
             'score = 12\nif score > 10:\n    print("win")',
         ),
-        DrillStep(
+        _build_step(
             "d2-2",
             "Print even or odd for the number n.",
-            lambda c: uses_if_else(c),
-            "build",
+            [
+                ("an if line", uses_if),
+                ("an else: branch", uses_if_else),
+            ],
             "Use if / else and % 2.",
             "↓ new line in block",
             'n = 7\nif n % 2 == 0:\n    print("even")\nelse:\n    print("odd")',
         ),
-        DrillStep(
+        _build_step(
             "d2-3",
             "Print go only if age >= 18 and has_pass is True.",
-            lambda c: uses_if(c) and uses_and(c),
-            "build",
+            [
+                ("an if line", uses_if),
+                ("two conditions joined with and", uses_and),
+            ],
             "Combine two conditions with and.",
             "⌘ →",
             'age = 20\nhas_pass = True\nif age >= 18 and has_pass:\n    print("go")',
@@ -139,29 +173,34 @@ def _loops_l1_drill() -> Drill:
 
 def _loops_l2_drill() -> Drill:
     steps = [
-        DrillStep(
+        _build_step(
             "lp2-1",
             "Print the numbers 0, 1, 2 using a for loop.",
-            lambda c: uses_for(c) and calls_function(c, "range"),
-            "build",
+            [
+                ("a for line ending with :", uses_for),
+                ("range(...) after in", lambda c: calls_function(c, "range")),
+            ],
             "for i in range(3): print(i)",
             "↓",
             "for i in range(3):\n    print(i)",
         ),
-        DrillStep(
+        _build_step(
             "lp2-2",
             "Sum 1 through 5 into total, then print total.",
-            lambda c: uses_for(c) and references_name(c, "total"),
-            "build",
+            [
+                ("a for loop", uses_for),
+                ("use total inside", lambda c: references_name(c, "total")),
+            ],
             "Start total at 0, add each i, print once after the loop.",
             "⌘ →",
             "total = 0\nfor i in range(1, 6):\n    total = total + i\nprint(total)",
         ),
-        DrillStep(
+        _build_step(
             "lp2-3",
             "Count down from 3 to 1 with while, printing each time.",
-            lambda c: uses_while(c),
-            "build",
+            [
+                ("a while line with a condition", uses_while),
+            ],
             "while n > 0, print, then n = n - 1.",
             "↓",
             "n = 3\nwhile n > 0:\n    print(n)\n    n = n - 1",
@@ -195,41 +234,55 @@ def _foundations_l1() -> Drill:
 def _foundations_l3() -> Drill:
     """Extra build practice in Foundations (more exercises)."""
     steps = [
-        DrillStep(
+        _build_step(
             "f3-1",
             "Print two different messages (two print lines).",
-            lambda c: count_calls(c, "print") >= 2,
-            "build",
+            [
+                ("two separate print(...) lines", lambda c: count_calls(c, "print") >= 2),
+            ],
             "Two complete print(...) lines.",
             "⌘ →",
             'print("one")\nprint("two")',
         ),
-        DrillStep(
+        _build_step(
             "f3-2",
             "Store name and favorite_number, print both.",
-            lambda c: check_str_assign(c, "name")
-            and check_int_assign(c, "favorite_number")
-            and check_print_var(c, "name")
-            and check_print_var(c, "favorite_number"),
-            "build",
+            [
+                ('name = "..." (text in quotes)', lambda c: check_str_assign(c, "name")),
+                (
+                    "favorite_number = a whole number (NO quotes)",
+                    lambda c: check_int_assign(c, "favorite_number"),
+                ),
+                ("print(name)", lambda c: check_print_var(c, "name")),
+                (
+                    "print(favorite_number)",
+                    lambda c: check_print_var(c, "favorite_number"),
+                ),
+            ],
             "Mix string and number variables.",
             "↓",
             'name = "Ada"\nfavorite_number = 7\nprint(name)\nprint(favorite_number)',
         ),
-        DrillStep(
+        _build_step(
             "f3-3",
             'Print a label and a number together, e.g. print("score:", 10).',
-            lambda c: calls_function_with_args(c, "print", min_args=2),
-            "build",
+            [
+                (
+                    "ONE print with two things, separated by a comma",
+                    lambda c: calls_function_with_args(c, "print", min_args=2),
+                ),
+            ],
             "Comma separates multiple things in print.",
             "⌘ →",
             'print("score:", 10)',
         ),
-        DrillStep(
+        _build_step(
             "f3-4",
             "Create city and print it.",
-            lambda c: check_str_assign(c, "city") and check_print_var(c, "city"),
-            "build",
+            [
+                ('city = "..." (in quotes)', lambda c: check_str_assign(c, "city")),
+                ("print(city)", lambda c: check_print_var(c, "city")),
+            ],
             "assign then print.",
             "↓",
             'city = "Seattle"\nprint(city)',

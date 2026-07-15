@@ -233,6 +233,11 @@ class DrillEvaluateRequest(BaseModel):
     exercise_index: int | None = None
 
 
+class RequirementItem(BaseModel):
+    label: str
+    passed: bool
+
+
 class DrillEvaluateResponse(BaseModel):
     drill_id: str
     title: str
@@ -265,3 +270,5 @@ class DrillEvaluateResponse(BaseModel):
     status: str | None = None
     just_completed: bool = False
     progress: ProgressResponse | None = None
+    # Build exercises: the goal's pieces with live pass/fail (✓/✗ checklist)
+    requirements: list[RequirementItem] | None = None

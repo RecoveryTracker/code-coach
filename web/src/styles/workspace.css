@@ -870,6 +870,38 @@ body.is-resizing .ws-split-row {
   color: #f28b82;
 }
 
+/* ── Build-goal requirements checklist ── */
+.req-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 2px 0;
+}
+
+.req-list-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.req-item {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.req-item.ok {
+  color: var(--success);
+}
+
+.req-item.todo {
+  color: var(--text-muted);
+}
+
 /* ── Hint ladder ── */
 .hint-popover-text {
   margin: 0 0 8px;

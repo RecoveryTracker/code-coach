@@ -290,6 +290,21 @@ export function AdaptiveCoach({
               </div>
             ) : null}
           </div>
+          {/* Build exercises: live checklist of the goal's pieces, so
+              "what are they asking?" is answered right under the goal. */}
+          {isBuild && result?.requirements?.length ? (
+            <div className="req-list" aria-label="What this goal needs">
+              <span className="req-list-label">Needs:</span>
+              {result.requirements.map((r) => (
+                <span
+                  key={r.label}
+                  className={`req-item ${r.passed ? "ok" : "todo"}`}
+                >
+                  <span aria-hidden>{r.passed ? "✓" : "○"}</span> {r.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="coach-tips-row">
             {/* Build lessons keep the tip behind the Hint ladder (level 1);
                 showing it for free would spoil the first nudge. */}

@@ -444,6 +444,7 @@ def practice_evaluate(body: DrillEvaluateRequest) -> DrillEvaluateResponse:
         status=scored.get("status"),
         just_completed=just_completed,
         progress=progress_resp,
+        requirements=scored.get("requirements"),
     )
 
 

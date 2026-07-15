@@ -142,6 +142,15 @@ def _whats_wrong(code: str, step: Any) -> str | None:
     if quoted_num:
         return quoted_num
 
+    # Named requirements: say exactly which piece of the goal is missing.
+    reqs = getattr(step, "requirements", None)
+    if reqs:
+        unmet = [label for label, fn in reqs if not fn(code)]
+        if unmet:
+            shown = " · ".join(unmet[:2])
+            more = f" (+{len(unmet) - 2} more)" if len(unmet) > 2 else ""
+            return f"Not yet — missing: {shown}{more}"
+
     if sid == "print":
         if "print" in lower and "print(" not in compact:
             return "Not yet — need parentheses: print(...)"

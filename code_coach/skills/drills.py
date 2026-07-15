@@ -44,6 +44,21 @@ class DrillStep:
     why: str
     hint: str
     example: str
+    # Build exercises: the individual pieces the goal needs, each with a
+    # beginner-readable label. Shown as a live ✓/✗ checklist so the student
+    # can see exactly which part is still missing.
+    requirements: list[tuple[str, Callable[[str], bool]]] | None = None
+
+
+def requirements_check(
+    reqs: list[tuple[str, Callable[[str], bool]]],
+) -> Callable[[str], bool]:
+    """A step check that passes when every named requirement passes."""
+
+    def _check(code: str) -> bool:
+        return all(fn(code) for _, fn in reqs)
+
+    return _check
 
 
 @dataclass

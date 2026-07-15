@@ -15,7 +15,7 @@ from code_coach.dictation.bank import (
     check_print_var,
     check_str_assign,
 )
-from code_coach.skills.drills import Drill, DrillStep
+from code_coach.skills.drills import Drill, DrillStep, requirements_check
 
 
 @dataclass
@@ -31,16 +31,15 @@ class BuildTask:
     goal: str
     hint_lines: list[str]
     supports: list[SupportLink]
-    check: Callable[[str], bool]
+    # The pieces this goal needs, each beginner-labeled. The step check is
+    # derived from these (all must pass) and the UI shows them as ✓/✗.
+    requirements: list[tuple[str, Callable[[str], bool]]]
     tip: str
     keyboard_tip: str = "End of line: ⌘ →   ·   Down a line: ↓"
 
-
-def _and(*fns: Callable[[str], bool]) -> Callable[[str], bool]:
-    def _check(code: str) -> bool:
-        return all(f(code) for f in fns)
-
-    return _check
+    @property
+    def check(self) -> Callable[[str], bool]:
+        return requirements_check(self.requirements)
 
 
 FOUNDATIONS_L2_TASKS: list[BuildTask] = [
@@ -51,7 +50,9 @@ FOUNDATIONS_L2_TASKS: list[BuildTask] = [
         supports=[
             SupportLink("print_string", "Type-along: print a message"),
         ],
-        check=check_print_string,
+        requirements=[
+            ('a complete print("...") with your message in quotes', check_print_string),
+        ],
         tip="You need print and quotes around the text.",
     ),
     BuildTask(
@@ -62,10 +63,10 @@ FOUNDATIONS_L2_TASKS: list[BuildTask] = [
             SupportLink("assign_str", "Type-along: store text in a variable"),
             SupportLink("print_var", "Type-along: print a variable"),
         ],
-        check=_and(
-            lambda c: check_str_assign(c, "name"),
-            lambda c: check_print_var(c, "name"),
-        ),
+        requirements=[
+            ('name = "..." (any name, in quotes)', lambda c: check_str_assign(c, "name")),
+            ("print(name) — no quotes around name", lambda c: check_print_var(c, "name")),
+        ],
         tip="Two moves: assign with = and quotes, then print(name) without quotes around name.",
     ),
     BuildTask(
@@ -76,10 +77,10 @@ FOUNDATIONS_L2_TASKS: list[BuildTask] = [
             SupportLink("assign_str", "Type-along: store text in a variable"),
             SupportLink("print_var", "Type-along: print a variable"),
         ],
-        check=_and(
-            lambda c: check_str_assign(c, "city"),
-            lambda c: check_print_var(c, "city"),
-        ),
+        requirements=[
+            ('city = "..." (any city, in quotes)', lambda c: check_str_assign(c, "city")),
+            ("print(city)", lambda c: check_print_var(c, "city")),
+        ],
         tip="Same pattern as name — different variable.",
     ),
     BuildTask(
@@ -90,10 +91,13 @@ FOUNDATIONS_L2_TASKS: list[BuildTask] = [
             SupportLink("assign_int", "Type-along: store a number"),
             SupportLink("print_var", "Type-along: print a variable"),
         ],
-        check=_and(
-            lambda c: check_int_assign(c, "favorite_number"),
-            lambda c: check_print_var(c, "favorite_number"),
-        ),
+        requirements=[
+            (
+                "favorite_number = a whole number (NO quotes)",
+                lambda c: check_int_assign(c, "favorite_number"),
+            ),
+            ("print(favorite_number)", lambda c: check_print_var(c, "favorite_number")),
+        ],
         tip="Numbers usually have no quotes: favorite_number = 7",
     ),
     BuildTask(
@@ -109,12 +113,12 @@ FOUNDATIONS_L2_TASKS: list[BuildTask] = [
             SupportLink("assign_str", "Type-along: store text"),
             SupportLink("print_var", "Type-along: print a variable"),
         ],
-        check=_and(
-            lambda c: check_str_assign(c, "name"),
-            lambda c: check_str_assign(c, "city"),
-            lambda c: check_print_var(c, "name"),
-            lambda c: check_print_var(c, "city"),
-        ),
+        requirements=[
+            ('name = "..."', lambda c: check_str_assign(c, "name")),
+            ('city = "..."', lambda c: check_str_assign(c, "city")),
+            ("print(name)", lambda c: check_print_var(c, "name")),
+            ("print(city)", lambda c: check_print_var(c, "city")),
+        ],
         tip="Build it from the pieces you typed in Lesson 1.",
     ),
 ]
@@ -130,6 +134,7 @@ def foundations_l2_drill() -> Drill:
             why=t.tip,
             hint=t.keyboard_tip,
             example="\n".join(t.hint_lines),
+            requirements=t.requirements,
         )
         for t in FOUNDATIONS_L2_TASKS
     ]

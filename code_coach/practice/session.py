@@ -147,15 +147,21 @@ def evaluate_drill(
         complete = True
     style = coach_style_for(coach_level)
 
-    # Coach feedback focuses on the line the student is actually looking at.
-    # For dictation the client tells us the current exercise, so the "type this
-    # line" message matches the exercise box even when the buffer is out of the
-    # natural forward order (skipped, cleared, difficulty changed). Build
-    # lessons follow the sequential next_step.
+    # Coach feedback focuses on the exercise the student is actually looking
+    # at (the client sends its index). Falls back to the first unpassed step.
     focus_step = next_step
-    if is_dictation and drill.steps and exercise_index is not None:
+    if drill.steps and exercise_index is not None:
         idx = max(0, min(len(drill.steps) - 1, int(exercise_index)))
         focus_step = drill.steps[idx]
+
+    # Build exercises: per-requirement ✓/✗ so the student sees exactly which
+    # piece of the goal is still missing.
+    requirements = None
+    if focus_step is not None and getattr(focus_step, "requirements", None):
+        requirements = [
+            {"label": label, "passed": bool(fn(code))}
+            for label, fn in focus_step.requirements
+        ]
 
     next_label = None if complete else next_step.label
     next_concept = None if complete else next_step.concept
@@ -203,6 +209,7 @@ def evaluate_drill(
         "adapt_example": adapt["example"],
         "tone": adapt["tone"],
         "status": adapt.get("status"),
+        "requirements": requirements,
     }
 
 
