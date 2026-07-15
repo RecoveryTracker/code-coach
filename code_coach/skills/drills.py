@@ -48,6 +48,10 @@ class DrillStep:
     # beginner-readable label. Shown as a live ✓/✗ checklist so the student
     # can see exactly which part is still missing.
     requirements: list[tuple[str, Callable[[str], bool]]] | None = None
+    # When the goal pins exact output ("Print the numbers 0, 1, 2"), the step
+    # only completes once a Run produced exactly this stdout (whitespace
+    # normalized). None = structure-only checking.
+    expect_output: str | None = None
 
 
 def requirements_check(

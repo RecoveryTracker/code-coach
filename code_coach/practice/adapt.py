@@ -41,6 +41,7 @@ def build_adaptation(
     total: int,
     complete: bool,
     just_passed_label: str | None = None,
+    requirements: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     nonempty = [
         ln
@@ -78,7 +79,7 @@ def build_adaptation(
         }
 
     example = step.example
-    wrong_note = _whats_wrong(code, step)
+    wrong_note = _whats_wrong(code, step, requirements)
 
     if style == "dictation":
         # Zero abstraction: the example IS the task. No line numbers here —
@@ -126,7 +127,11 @@ def build_adaptation(
     }
 
 
-def _whats_wrong(code: str, step: Any) -> str | None:
+def _whats_wrong(
+    code: str,
+    step: Any,
+    requirements: list[dict[str, Any]] | None = None,
+) -> str | None:
     sid = getattr(step, "id", "") or ""
     compact = code.replace(" ", "")
     lower = code.lower()
@@ -143,13 +148,17 @@ def _whats_wrong(code: str, step: Any) -> str | None:
         return quoted_num
 
     # Named requirements: say exactly which piece of the goal is missing.
-    reqs = getattr(step, "requirements", None)
-    if reqs:
+    # Prefer the pre-evaluated list (includes the output-pinned row); fall
+    # back to re-evaluating the step's own requirements.
+    if requirements is not None:
+        unmet = [r["label"] for r in requirements if not r["passed"]]
+    else:
+        reqs = getattr(step, "requirements", None) or []
         unmet = [label for label, fn in reqs if not fn(code)]
-        if unmet:
-            shown = " · ".join(unmet[:2])
-            more = f" (+{len(unmet) - 2} more)" if len(unmet) > 2 else ""
-            return f"Not yet — missing: {shown}{more}"
+    if unmet:
+        shown = " · ".join(unmet[:2])
+        more = f" (+{len(unmet) - 2} more)" if len(unmet) > 2 else ""
+        return f"Not yet — missing: {shown}{more}"
 
     if sid == "print":
         if "print" in lower and "print(" not in compact:

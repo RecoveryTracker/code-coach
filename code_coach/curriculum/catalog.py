@@ -72,9 +72,12 @@ def _build_step(
     tip: str,
     kb: str,
     example: str,
+    expect_output: str | None = None,
 ) -> DrillStep:
     """A build exercise defined by its named requirements — the check passes
-    when all of them do, and the UI shows them as a live ✓/✗ checklist."""
+    when all of them do, and the UI shows them as a live ✓/✗ checklist.
+    expect_output (for goals that pin exact output) additionally requires a
+    Run whose stdout matches."""
     return DrillStep(
         sid,
         goal,
@@ -84,6 +87,7 @@ def _build_step(
         kb,
         example,
         requirements=requirements,
+        expect_output=expect_output,
     )
 
 
@@ -183,6 +187,7 @@ def _loops_l2_drill() -> Drill:
             "for i in range(3): print(i)",
             "↓",
             "for i in range(3):\n    print(i)",
+            expect_output="0\n1\n2",
         ),
         _build_step(
             "lp2-2",
@@ -194,6 +199,7 @@ def _loops_l2_drill() -> Drill:
             "Start total at 0, add each i, print once after the loop.",
             "⌘ →",
             "total = 0\nfor i in range(1, 6):\n    total = total + i\nprint(total)",
+            expect_output="15",
         ),
         _build_step(
             "lp2-3",
@@ -204,6 +210,7 @@ def _loops_l2_drill() -> Drill:
             "while n > 0, print, then n = n - 1.",
             "↓",
             "n = 3\nwhile n > 0:\n    print(n)\n    n = n - 1",
+            expect_output="3\n2\n1",
         ),
     ]
     return Drill(

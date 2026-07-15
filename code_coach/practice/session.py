@@ -121,19 +121,34 @@ def evaluate_drill(
     # sequential — a later construct genuinely depends on the earlier one.
     is_dictation = "dictation" in (drill.tags or [])
 
+    def _norm_out(text: str) -> str:
+        return "\n".join(
+            ln.rstrip() for ln in (text or "").strip().splitlines()
+        )
+
+    def _output_matches(step: Any) -> bool:
+        exp = getattr(step, "expect_output", None)
+        if exp is None:
+            return True
+        return ran and exit_code == 0 and _norm_out(stdout) == _norm_out(exp)
+
+    def _step_ok(step: Any) -> bool:
+        # Structure first; when the goal pins output, a Run must confirm it.
+        return bool(step.check(code)) and _output_matches(step)
+
     checks: list[dict[str, Any]] = []
     next_step = None
     passed = 0
     blocked = False
     for step in drill.steps:
         if is_dictation:
-            ok = bool(step.check(code))
+            ok = _step_ok(step)
             if not ok and next_step is None:
                 next_step = step
         elif blocked:
             ok = False
         else:
-            ok = bool(step.check(code))
+            ok = _step_ok(step)
             if not ok:
                 blocked = True
                 next_step = step
@@ -162,6 +177,18 @@ def evaluate_drill(
             {"label": label, "passed": bool(fn(code))}
             for label, fn in focus_step.requirements
         ]
+    # Output-pinned goals get a checklist row too: it only turns ✓ after a
+    # Run whose stdout matches.
+    if focus_step is not None and getattr(focus_step, "expect_output", None):
+        exp = focus_step.expect_output
+        pretty = ", ".join(exp.strip().splitlines())
+        matched = _output_matches(focus_step)
+        label = f"running it prints exactly: {pretty}"
+        if not ran:
+            label += "  (press Run ⌘⏎)"
+        requirements = (requirements or []) + [
+            {"label": label, "passed": matched}
+        ]
 
     next_label = None if complete else next_step.label
     next_concept = None if complete else next_step.concept
@@ -181,6 +208,7 @@ def evaluate_drill(
         passed=passed,
         total=len(drill.steps),
         complete=complete,
+        requirements=requirements,
     )
 
     return {

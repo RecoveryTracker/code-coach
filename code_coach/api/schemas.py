@@ -10,46 +10,10 @@ Mode = Literal["progressive", "skill", "random", "reps"]
 CoachStyle = Literal["dictation", "vocabulary"]
 
 
-class EvaluateRequest(BaseModel):
-    day: int = Field(default=1, ge=1)
-    code: str = ""
-    run: bool = False
-
-
-class RunRequest(BaseModel):
-    code: str = ""
-
-
 class CheckItem(BaseModel):
     id: str | None = None
     label: str
     passed: bool
-
-
-class EvaluateResponse(BaseModel):
-    lesson_title: str
-    practice_path: str
-    code: str
-    stdout: str
-    stderr: str
-    exit_code: int
-    checks: list[CheckItem]
-    passed: int
-    total: int
-    next_label: str | None
-    next_concept: str | None = None
-    next_why: str | None = None
-    next_hint: str | None = None
-    next_example: str | None = None
-    next_suggest: str | None = None
-    ran: bool
-    complete: bool
-
-
-class RunResponse(BaseModel):
-    stdout: str
-    stderr: str
-    exit_code: int
 
 
 class SupportLinkInfo(BaseModel):
@@ -122,20 +86,6 @@ class NavigateRequest(BaseModel):
     class_delta: int | None = None
     lesson_delta: int | None = None
     exercise_delta: int | None = None
-
-
-class LessonSummary(BaseModel):
-    day: int
-    id: str
-    title: str
-
-
-class LessonDetail(BaseModel):
-    day: int
-    id: str
-    title: str
-    starter_code: str
-    waypoints: list[WaypointInfo]
 
 
 class HealthResponse(BaseModel):
