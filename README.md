@@ -1,111 +1,186 @@
 # Code Coach
 
-**Product vision:** An AI coding coach that watches what you write and suggests
-the next useful change — always based on your current code, not a fixed script.
+A local, coach-first environment for learning Python by typing real code. It
+watches what you write, checks it as you go, and explains what's wrong in terms
+of the line you actually got wrong.
 
-A local, coach-first **IAE** (Integrated Agent Environment) for learning Python:
-an in-app editor, a curriculum of classes and lessons, a difficulty meter, an
-"explain my code" walkthrough, and student progress that survives restarts.
+Two tracks:
 
----
+- **Fundamentals** — Foundations, Decisions, Loops.
+- **LeetCode patterns** — 52 solutions across 13 patterns (Two Pointers, Hash
+  Maps, Sliding Window, Binary Search, Tree DFS/BFS, Graphs, Backtracking,
+  Heaps, Topological Sort, DP, and more), drilled as verbatim typing practice
+  for muscle memory.
 
-## What is an IAE here?
-
-Not a full IDE (no file tree, git, debugger). Not a chat-first agent workspace.
-
-**Integrated Agent Environment** means:
-
-1. You type in an in-app Monaco editor.
-2. The coach re-scores your steps from your *current* code on every keystroke.
-3. Run captures output/errors in the same shell.
-4. "Explain my code" gives a plain-English, line-by-line walkthrough of what you
-   wrote and why the output looks the way it does.
-5. Progress is saved on disk so you resume where you left off — and each lesson's
-   work is kept, so you can go back and study it.
-
-The agent is the **coach**, not a code generator you babysit.
+Everything runs on your machine. No API keys, no cloud calls.
 
 ---
 
-## The learning model
+## Setup
 
-Work flows **Class → Lesson → Exercise**. Two kinds of lesson:
-
-| Lesson kind | What you do | How it's checked |
-|-------------|-------------|------------------|
-| **Type-along** (dictation) | Copy the exact line shown, one at a time | Exact-line match |
-| **Build** | Solve a goal in your own code | **AST-based** structural checks (and, for some, output) |
-
-- **Class 1 · Foundations · Lesson 1** is an *endless* type-along — it never
-  graduates; new windows of lines load forever. A **difficulty meter (1–5)**
-  controls single lines → multi-line blocks → functions.
-- **Build lessons** validate the *structure* of your code by parsing it, not by
-  string-matching — so keywords inside a comment or string don't count as a
-  solution. Real code is required.
-- **Free mode** turns the coach off for plain coding. **Save / Load…** stores
-  named scripts in your browser.
-
-**Progress file:** `~/.code_coach/student_progress.json`
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  COACH STRIP   Class · Lesson · Exercise · difficulty · status │
-│                Explain my code · Ask coach                      │
-├──────────────────────────────────────────────────────────────┤
-│  EDITOR        Monaco (Python) — type here                     │
-├──────────────────────────────────────────────────────────────┤
-│  TERMINAL      Run output / errors                             │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Quick start (web IAE)
+You need **Python 3.10+** and **Node 18+**. On Windows, tick *"Add to PATH"* in
+both installers, then open a **new** terminal so the PATH change takes effect.
 
 ```bash
-cd "/Users/justinmonahan/Documents/GitHub/code-coach"
+git clone https://github.com/RecoveryTracker/code-coach.git
+cd code-coach
+```
 
-# one-shot helper (starts API on 8765 + UI on 5173)
-chmod +x scripts/dev.sh
+**Windows**
+
+```bash
+python -m venv .venv && .venv\Scripts\pip install -r requirements.txt && cd web && npm install
+```
+
+**macOS / Linux**
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd web && npm install
+```
+
+## Running it
+
+**Windows** — double-click `start.bat`, or:
+
+```bash
+start.bat
+```
+
+**macOS / Linux**
+
+```bash
 ./scripts/dev.sh
 ```
 
-Or two terminals:
+Either way you get the API on `127.0.0.1:8765`, the UI on `localhost:5173`, and
+a browser tab. To run them by hand instead:
 
 ```bash
-# terminal 1 — API (127.0.0.1:8765)
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn code_coach.api.server:app --reload --host 127.0.0.1 --port 8765
-
-# terminal 2 — UI (http://localhost:5173)
-cd web && npm install && npm run dev
+.venv/bin/python -m uvicorn code_coach.api.server:app --reload --host 127.0.0.1 --port 8765
 ```
 
-Open **http://localhost:5173**.
+```bash
+cd web && npm run dev
+```
 
-- Type in the editor → the coach re-scores live and advances when a line is done.
-- **Run** or **⌘⏎** → execute and show output.
-- **Explain my code** → line-by-line walkthrough + why the output looks that way.
-- **Start over** → reset the current lesson to its starter (the only thing that
-  clears your work).
-
-Your work is saved per lesson in `localStorage` and restored when you return.
+> **Heads up:** the venv's Python is not the same as the `python` on your PATH.
+> If you see `No module named uvicorn`, you're using the wrong one — go through
+> `.venv/bin/python` (or `.venv\Scripts\python.exe` on Windows).
 
 ---
 
-## CLI (still works)
+## How practice works
 
-The original file-watch CLI is still here (separate from the web app):
+Navigation is a breadcrumb: **Class › Lesson › Exercise**, with one back/forward
+pair that walks the whole curriculum in order — at the end of a lesson it rolls
+into the next one.
 
-```bash
-cd "/Users/justinmonahan/Documents/GitHub/code-coach"
-source .venv/bin/activate            # optional; pure stdlib for evaluate
+Each class has three lessons:
 
-python3 -m code_coach                 # check Learn-to-code day-01 if found nearby
-python3 -m code_coach --watch         # live update on save
-python3 -m code_coach --watch --file "/path/to/practice.py"
+| Lesson | What you do | How it's checked |
+|--------|-------------|------------------|
+| **1 · Type-along** | Copy exactly what's shown. Never ends — new material keeps loading. | Verbatim, indentation included |
+| **2 · Full solutions** | Type each solution start to finish | Verbatim |
+| **3 · Build from memory** | Write it yourself from the idea alone | AST structural checks, not string matching |
+
+**Chunk size** (on the Type this panel, lesson 1 only) sets how much you type
+before it's checked — a single line up to a whole function.
+
+Nothing auto-advances. When your code is right, **Continue** lights up and waits,
+so the finished code stays on screen to read.
+
+### When you get it wrong
+
+The coach names the line, not the whole block:
+
 ```
+Not yet — line 8 doesn't match.
+should be:  return []
+you typed:  return[]
+                  ^ here (character 7)
+```
+
+Indentation mistakes are called out separately, since stripped of whitespace the
+two lines look identical.
+
+### Checking your own work
+
+On LeetCode problems the **Problem** panel carries the question restated in
+plain words, worked examples, the pattern's template and pitfalls, and two
+buttons:
+
+- **Check my work** — diffs your whole attempt against the real solution and
+  points at the first line that differs. Works even with scratch code around it.
+- **Show answer** — the full reference solution, hidden until you ask.
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ Explain · Ask coach · status · Continue    Code Coach    Save … Run  │
+│ Hash Maps › 1. Type-along › 3 / 8   ‹ ›                              │
+│ ┌──────────────────────────────────────────────────────────────────┐ │
+│ │ coach message — fixed height, never shifts the editor            │ │
+│ └──────────────────────────────────────────────────────────────────┘ │
+├────────────────────────────────────┬─────────────────────────────────┤
+│                                    │  TYPE THIS      Chunk: [ … ]    │
+│  EDITOR (Monaco, Python)           ├─────────────────────────────────┤
+│                                    │  PROBLEM  + Check my work       │
+├────────────────────────────────────┴─────────────────────────────────┤
+│  TERMINAL — Run output / errors                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Every divider drags, and each pane keeps a minimum size so none can be hidden.
+Sizes persist.
+
+**Other controls:** **Run** (or `Ctrl`/`⌘`+`Enter`), **Explain my code** for a
+line-by-line walkthrough, **Free mode** to switch the coach off, **Save / Load…**
+for named scripts, **Start over** to clear a lesson.
+
+### Where your work is kept
+
+- **Code you type** — browser `localStorage`, one buffer per exercise per chunk
+  size. Your position in each lesson is restored when you come back.
+- **Progress and XP** — `~/.code_coach/student_progress.json`.
+
+Clearing site data wipes typed work; **Save** exports anything you want to keep.
+
+---
+
+## Security
+
+**The server executes the code in your editor.** It writes it to a temp file and
+runs it as a real subprocess with a 3-second timeout — no sandbox. That's the
+point of the app, but it means anyone who can reach the server can run arbitrary
+code on your machine.
+
+So it binds to `127.0.0.1` only, and rejects any request whose `Host` header
+isn't localhost (that check stops DNS-rebinding, which CORS alone won't).
+
+**Don't expose this to the internet** — not via a tunnel, not on `0.0.0.0` on an
+untrusted network. Sharing it safely means sandboxing the executor first. If a
+friend wants to try it, have them clone and run their own copy.
+
+---
+
+## API
+
+All local, `127.0.0.1:8765`.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`  | `/api/health` | version check |
+| `GET`  | `/api/skills` | list skills |
+| `GET` · `PUT` | `/api/progress` | read / update settings |
+| `GET`  | `/api/curriculum` | Class → Lesson tree |
+| `GET`  | `/api/practice/current` | active session (steps, study payload, position) |
+| `POST` | `/api/practice/evaluate` | `{drill_id, code, run?, exercise_index?}` → checks + coach message |
+| `POST` | `/api/practice/check-answer` | `{code, pattern_id, problem_number}` → diff against the real solution |
+| `POST` | `/api/practice/navigate` · `goto-lesson` · `more` · `review` · `back` | move around |
+| `POST` | `/api/practice/complete` | mark done + advance |
+| `POST` | `/api/explain` | `{code}` → line-by-line walkthrough |
+| `POST` | `/api/chat` | local keyboard/Python FAQ bot |
 
 ---
 
@@ -113,57 +188,55 @@ python3 -m code_coach --watch --file "/path/to/practice.py"
 
 ```text
 code-coach/
-  README.md
-  requirements.txt
-  scripts/dev.sh
+  start.bat               # Windows: both servers + browser
+  scripts/dev.sh          # macOS/Linux equivalent
   code_coach/
-    __main__.py
-    cli.py                # file-watch CLI
-    engine.py             # run code + score legacy day lessons (used by CLI)
-    checks.py             # AST predicates for build-lesson validation
-    explain.py            # plain-English code walkthrough (AST + traced run)
-    lessons/day01.py      # legacy day lesson (CLI only)
-    curriculum/           # Class → Lesson catalog + navigation runtime
-    dictation/            # endless type-along generators + local coach FAQ
-    skills/drills.py      # build-lesson drill bank (AST-checked)
-    practice/             # scoring + adaptive coach messages
-    progress/store.py     # atomic JSON progress persistence
-    api/
-      server.py           # FastAPI — practice/explain/chat/skills/progress
-      schemas.py
-  web/                    # Vite + React 19 + Monaco IAE shell
-    src/
-      App.tsx
-      components/
+    cli.py                # file-watch CLI (separate from the web app)
+    engine.py             # runs student code in a temp file
+    checks.py             # AST predicates for build lessons
+    explain.py            # plain-English walkthrough (AST + traced run)
+    curriculum/           # Class → Lesson catalog + navigation
+    dictation/bank.py     # type-along generators, verbatim + diff logic
+    leetcode/
+      problems.py         # 52 solutions across 13 patterns
+      bank.py             # solutions → exercises
+      study.py            # problem briefs + pattern lessons
+    practice/             # scoring + coach messages
+    progress/store.py     # atomic JSON persistence
+    api/server.py         # FastAPI
+  web/src/
+    App.tsx               # layout, resizing, draft persistence
+    components/
+      CurriculumNav.tsx   # breadcrumb navigation
+      TypeTarget.tsx      # "Type this" panel
+      StudyPanel.tsx      # problem + pattern lesson + self-check
+      EditorPane.tsx      # Monaco
   tests/                  # stdlib unittest (no pytest)
 ```
 
 ---
 
-## API (local, binds to 127.0.0.1 only)
-
-| Method | Path | Notes |
-|--------|------|-------|
-| `GET`  | `/api/health` | version check |
-| `GET`  | `/api/skills` | list skills |
-| `GET`  | `/api/progress` · `PUT` | read / update settings (mode, difficulty) |
-| `GET`  | `/api/curriculum` | Class → Lesson tree |
-| `GET`  | `/api/practice/current` | active session (steps, starter, position) |
-| `POST` | `/api/practice/evaluate` | `{drill_id, code, run?, exercise_index?}` → checks + coach + optional stdout |
-| `POST` | `/api/practice/navigate` · `goto-lesson` · `more` · `review` · `back` | move around the curriculum |
-| `POST` | `/api/practice/complete` | mark done + advance |
-| `POST` | `/api/explain` | `{code}` → line-by-line walkthrough + output notes |
-| `POST` | `/api/chat` | local keyboard/Python FAQ bot (no cloud) |
-
-Student code runs in a temp file with a 3-second timeout.
-
----
-
 ## Develop
 
-- Python 3.10+
-- Node 18+ for the web shell
-- No API keys required — everything is local.
-- **Tests:** `.venv/bin/python -m unittest discover -s tests` (stdlib unittest;
-  pytest is not used).
-- **Typecheck UI:** `cd web && npx tsc --noEmit`.
+```bash
+.venv/bin/python -m unittest discover -s tests
+```
+
+```bash
+.venv/bin/python -m ruff check code_coach tests
+```
+
+```bash
+cd web && npx tsc --noEmit
+```
+
+The LeetCode solutions are covered by tests that actually execute them against
+real cases — if you add a problem, add its test.
+
+### CLI
+
+The original file-watch CLI still works, independently of the web app:
+
+```bash
+python -m code_coach --watch --file "/path/to/practice.py"
+```
