@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { PracticeSession } from "../types";
 
 export type CurriculumClass = {
@@ -14,14 +15,6 @@ export type CurriculumClass = {
   }[];
 };
 
-const LEVEL_OPTIONS = [
-  { value: 1, label: "1 · Single lines" },
-  { value: 2, label: "2 · Lines+" },
-  { value: 3, label: "3 · Two-liners" },
-  { value: 4, label: "4 · Blocks" },
-  { value: 5, label: "5 · Functions" },
-];
-
 // Non-color status cue: color alone isn't enough (colorblind readers). A glyph
 // carries the same good/bad/working meaning without relying on red vs green.
 const STATUS_GLYPH: Record<string, string> = {
@@ -31,6 +24,11 @@ const STATUS_GLYPH: Record<string, string> = {
   idle: "•",
 };
 
+/** Strip the redundant tail from "Type-along (endless)" etc. */
+function lessonLabel(title: string): string {
+  return title.replace(/\s*\(endless\)\s*$/i, "").trim();
+}
+
 type Props = {
   session: PracticeSession;
   curriculum: CurriculumClass[];
@@ -38,21 +36,31 @@ type Props = {
   exerciseTotal: number;
   statusText: string;
   statusClass: string;
+  /** Check passed — light up Continue next to the status. */
+  exerciseDone: boolean;
+  onContinue: () => void;
   watching: boolean;
   chatOpen: boolean;
   onToggleChat: () => void;
   explainOpen: boolean;
   onToggleExplain: () => void;
-  onClassDelta: (d: number) => void;
-  onLessonDelta: (d: number) => void;
   onExerciseDelta: (d: number) => void;
   onSelectClass: (id: string) => void;
   onSelectLesson: (n: number) => void;
-  onDictationLevel?: (level: number) => void;
+  /** App title, centred on this line. */
+  brand: ReactNode;
+  /** Save / Load / Progress / Free mode / Start over / Run, right-aligned. */
+  toolbar: ReactNode;
 };
 
 /**
- * One compact row: Class · Lesson · Exercise + (endless difficulty) + status + Ask coach
+ * Where am I, and how do I move?
+ *
+ * Class › Lesson › Exercise is a hierarchy, so it reads as one breadcrumb path
+ * rather than three identical steppers competing for the same glance. Movement
+ * is a single ‹ › pair that walks the curriculum in order — it rolls into the
+ * next lesson (and class) at the end of one — so there's exactly one "forward".
+ * Jumping anywhere is the dropdowns' job.
  */
 export function CurriculumNav({
   session,
@@ -61,212 +69,156 @@ export function CurriculumNav({
   exerciseTotal,
   statusText,
   statusClass,
+  exerciseDone,
+  onContinue,
   watching,
   chatOpen,
   onToggleChat,
   explainOpen,
   onToggleExplain,
-  onClassDelta,
-  onLessonDelta,
   onExerciseDelta,
   onSelectClass,
   onSelectLesson,
-  onDictationLevel,
+  brand,
+  toolbar,
 }: Props) {
   const classId = session.class_id ?? "foundations";
   const lessonNum = session.lesson_number ?? 1;
-  const cls =
-    curriculum.find((c) => c.id === classId) ?? curriculum[0] ?? null;
+  const cls = curriculum.find((c) => c.id === classId) ?? curriculum[0] ?? null;
   const lessons = cls?.lessons ?? [];
   const totalEx = Math.max(1, exerciseTotal);
   const endless = Boolean(session.endless);
-  const linesDone = session.lines_done ?? 0;
-  const lifetime = linesDone + Math.min(exerciseIndex, totalEx - 1) + 1;
   const exDisplay = Math.min(exerciseIndex + 1, totalEx);
-  const dLevel = session.dictation_level ?? 1;
+  const linesDone = session.lines_done ?? 0;
+
+  // 17 classes in one flat list is a wall. Split the two things they actually
+  // are: language fundamentals, and the LeetCode pattern set.
+  const fundamentals = curriculum.filter((c) => !c.id.startsWith("lc-"));
+  const leetcode = curriculum.filter((c) => c.id.startsWith("lc-"));
 
   return (
     <div className="cur-nav" aria-label="Curriculum navigation">
-      {/* First line: coach tools, then the Not yet / Got it status — all
-          next to the code you're typing. */}
+      {/* Coach tools + the Not yet / Got it status. */}
       <div className="cur-nav-line">
-      <button
-        type="button"
-        className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
-        onClick={onToggleExplain}
-        title="The coach walks through your code line by line and explains the output"
-      >
-        {explainOpen ? "Hide explain" : "Explain my code"}
-      </button>
-
-      <button
-        type="button"
-        className="coach-chat-toggle"
-        onClick={onToggleChat}
-      >
-        {chatOpen ? "Hide chat" : "Ask coach"}
-      </button>
-
-      <div className={`cur-nav-status ${statusClass}`} title={statusText}>
-        <span className="cur-nav-status-glyph" aria-hidden>
-          {STATUS_GLYPH[statusClass] ?? "•"}
-        </span>
-        <span className="cur-nav-status-text">{statusText}</span>
-        {watching ? <span className="live-pulse">…</span> : null}
-      </div>
-      </div>
-
-      {/* Second line: ALL the navigation steppers together — Class sits with
-          Lesson and Exercise. Each is a bordered pill so its arrows can't be
-          mistaken for a neighbor's; Class uses « » (bigger jump) vs ‹ ›. */}
-      <div className="cur-nav-line">
-      <div className="cur-nav-row">
-        <span className="cur-nav-kind">Class</span>
         <button
           type="button"
-          className="cur-nav-arrow cur-nav-arrow-class"
-          onClick={() => onClassDelta(-1)}
-          aria-label="Previous class"
-          title="Previous class"
+          className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+          onClick={onToggleExplain}
+          title="The coach walks through your code line by line and explains the output"
         >
-          «
+          {explainOpen ? "Hide explain" : "Explain my code"}
         </button>
-        <select
-          className="cur-nav-select"
-          value={classId}
-          onChange={(e) => onSelectClass(e.target.value)}
-          aria-label="Choose class"
-        >
-          {curriculum.map((c, i) => (
-            <option key={c.id} value={c.id}>
-              Class {c.number ?? i + 1} — {c.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="cur-nav-arrow cur-nav-arrow-class"
-          onClick={() => onClassDelta(1)}
-          aria-label="Next class"
-          title="Next class"
-        >
-          »
-        </button>
-      </div>
 
-      <div className="cur-nav-row">
-        <span className="cur-nav-kind">Lesson</span>
-        <button
-          type="button"
-          className="cur-nav-arrow"
-          onClick={() => onLessonDelta(-1)}
-          aria-label="Previous lesson"
-          title="Previous lesson"
-        >
-          ‹
+        <button type="button" className="coach-chat-toggle" onClick={onToggleChat}>
+          {chatOpen ? "Hide chat" : "Ask coach"}
         </button>
-        <select
-          className="cur-nav-select"
-          value={lessonNum}
-          onChange={(e) => onSelectLesson(Number(e.target.value))}
-          aria-label="Choose lesson"
-        >
-          {lessons.map((L) => (
-            <option key={L.id} value={L.number}>
-              Lesson {L.number} — {L.title}
-              {L.role === "dictation" ? " (type)" : " (build)"}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="cur-nav-arrow"
-          onClick={() => onLessonDelta(1)}
-          aria-label="Next lesson"
-          title="Next lesson"
-        >
-          ›
-        </button>
-      </div>
 
-      <div className="cur-nav-row">
-        <span className="cur-nav-kind">Exercise</span>
-        <button
-          type="button"
-          className="cur-nav-arrow"
-          onClick={() => onExerciseDelta(-1)}
-          aria-label="Previous exercise"
-          title="Previous exercise"
-        >
-          ‹
-        </button>
-        <span
-          className="cur-nav-ex"
-          title={
-            endless
-              ? `Exercise ${lifetime} · endless type-along (window ${exDisplay}/${totalEx})`
-              : `Exercise ${exDisplay} of ${totalEx}`
-          }
-        >
-          {endless ? (
-            <>
-              {lifetime} <span className="cur-nav-inf">∞</span>
-            </>
-          ) : (
-            <>
-              {exDisplay} of {totalEx}
-            </>
-          )}
-        </span>
-        <button
-          type="button"
-          className="cur-nav-arrow"
-          onClick={() => onExerciseDelta(1)}
-          aria-label="Next exercise"
-          title="Next exercise"
-        >
-          ›
-        </button>
-      </div>
-
-      {endless && onDictationLevel ? (
-        <div className="cur-nav-row cur-nav-diff">
-          <span className="cur-nav-kind">Difficulty</span>
-          <button
-            type="button"
-            className="cur-nav-arrow"
-            disabled={dLevel <= 1}
-            onClick={() => onDictationLevel(dLevel - 1)}
-            aria-label="Easier dictation"
-            title="Easier"
-          >
-            ‹
-          </button>
-          <select
-            className="cur-nav-select cur-nav-select-diff"
-            value={dLevel}
-            onChange={(e) => onDictationLevel(Number(e.target.value))}
-            aria-label="Dictation difficulty"
-            title="Turn up for multi-line and functions. Stay in type-along forever."
-          >
-            {LEVEL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="cur-nav-arrow"
-            disabled={dLevel >= 5}
-            onClick={() => onDictationLevel(dLevel + 1)}
-            aria-label="Harder dictation"
-            title="Harder"
-          >
-            ›
-          </button>
+        <div className={`cur-nav-status ${statusClass}`} title={statusText}>
+          <span className="cur-nav-status-glyph" aria-hidden>
+            {STATUS_GLYPH[statusClass] ?? "•"}
+          </span>
+          <span className="cur-nav-status-text">{statusText}</span>
+          {watching ? <span className="live-pulse">…</span> : null}
+          {exerciseDone ? (
+            <button type="button" className="cur-nav-continue" onClick={onContinue}>
+              Continue →
+            </button>
+          ) : null}
         </div>
-      ) : null}
+
+        {brand}
+        {toolbar}
+      </div>
+
+      {/* The path: Class › Lesson › Exercise, then one prev/next pair. */}
+      <div className="cur-nav-line cur-nav-path-line">
+        <nav className="cur-path" aria-label="Where you are">
+          <span className="cur-crumb">
+            <select
+              className="cur-crumb-select"
+              value={classId}
+              onChange={(e) => onSelectClass(e.target.value)}
+              aria-label="Choose class"
+            >
+              <optgroup label="Fundamentals">
+                {fundamentals.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="LeetCode patterns">
+                {leetcode.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name.replace(/^LeetCode\s*[—-]\s*/, "")}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </span>
+
+          <span className="cur-path-sep" aria-hidden>
+            ›
+          </span>
+
+          <span className="cur-crumb">
+            <select
+              className="cur-crumb-select"
+              value={lessonNum}
+              onChange={(e) => onSelectLesson(Number(e.target.value))}
+              aria-label="Choose lesson"
+            >
+              {lessons.map((L) => (
+                <option key={L.id} value={L.number}>
+                  {L.number}. {lessonLabel(L.title)}
+                </option>
+              ))}
+            </select>
+          </span>
+
+          <span className="cur-path-sep" aria-hidden>
+            ›
+          </span>
+
+          <span
+            className="cur-path-ex"
+            title={
+              endless
+                ? `Exercise ${exDisplay} of ${totalEx} in this set · ${linesDone + exDisplay} done overall · keeps going`
+                : `Exercise ${exDisplay} of ${totalEx}`
+            }
+          >
+            {exDisplay} / {totalEx}
+            {endless ? <span className="cur-path-endless">keeps going</span> : null}
+          </span>
+
+          {/* Back / forward belong right after the thing they move. Pinned to
+              the far right they read as unrelated to the path. */}
+          <div
+            className="cur-step"
+            role="group"
+            aria-label="Move through the curriculum"
+          >
+            <button
+              type="button"
+              className="cur-step-btn"
+              onClick={() => onExerciseDelta(-1)}
+              aria-label="Previous exercise"
+              title="Back — rolls into the previous lesson at the start"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="cur-step-btn"
+              onClick={() => onExerciseDelta(1)}
+              aria-label="Next exercise"
+              title="Forward — rolls into the next lesson at the end"
+            >
+              ›
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import hashlib
 import random
 import re
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, NamedTuple
 
 
 # ── Line completeness checks (same spirit as day01) ─────────
@@ -88,18 +88,40 @@ def _code_lines(code: str) -> list[str]:
     return out
 
 
+def _relative_indents(lines: list[str]) -> list[int]:
+    """Each line's indent measured from the block's own left edge.
+
+    Relative, not absolute, so a block still matches when the student typed it
+    at a different base indent than the example — but the shape inside it
+    (what is nested under what) has to agree.
+    """
+    base = min(len(ln) - len(ln.lstrip()) for ln in lines)
+    return [(len(ln) - len(ln.lstrip())) - base for ln in lines]
+
+
 def check_block(code: str, expected: str) -> bool:
-    """True when the expected block appears as consecutive typed lines."""
+    """True when the expected block appears as consecutive typed lines.
+
+    Indentation counts. Comparing stripped text alone would accept a flat,
+    unindented copy of a function body — which passes the exercise and then
+    dies with IndentationError on Run. For Python practice the whitespace IS
+    the syntax, so a single-line target stays lenient while a multi-line block
+    must reproduce the nesting.
+    """
     exp = _code_lines(expected)
     if not exp:
         return False
     got = _code_lines(code)
     n = len(exp)
+    exp_text = [ln.strip() for ln in exp]
+    exp_indents = _relative_indents(exp)
     for i in range(0, max(0, len(got) - n + 1)):
         window = got[i : i + n]
         if len(window) != n:
             continue
-        if all(a.strip() == b.strip() for a, b in zip(window, exp)):
+        if [ln.strip() for ln in window] != exp_text:
+            continue
+        if _relative_indents(window) == exp_indents:
             return True
     return False
 
@@ -109,6 +131,86 @@ def make_block_check(expected: str) -> Callable[[str], bool]:
         return check_block(code, exp)
 
     return _check
+
+
+class BlockMismatch(NamedTuple):
+    """The first line of a block that doesn't match, and how it's wrong."""
+
+    lineno: int  # 1-based, within the block
+    want: str  # expected text, stripped
+    mine: str  # what the student typed, stripped ("" if absent)
+    want_indent: int  # expected indent, relative to the block's left edge
+    mine_indent: int
+    # "indent" when the text is right but the nesting isn't — those two need
+    # very different advice, and they look identical once stripped.
+    kind: str  # "text" | "indent" | "missing"
+
+
+def first_block_mismatch(code: str, expected: str) -> BlockMismatch | None:
+    """Where a not-yet-matching block first goes wrong.
+
+    Returns None when the block matches. Dumping a whole 8-line function back
+    at someone tells them nothing — the useful message is "line 8 differs", so
+    this finds the closest attempt and reports the first line that differs.
+
+    "Closest" is the window with the fewest differing lines, which keeps the
+    message on the block the student is actually working on rather than on
+    some unrelated earlier line that happens to share a first line.
+    """
+    exp = _code_lines(expected)
+    if not exp:
+        return None
+    got = _code_lines(code)
+    n = len(exp)
+    exp_text = [ln.strip() for ln in exp]
+    exp_indents = _relative_indents(exp)
+
+    best: tuple[int, int] | None = None  # (differing count, window start)
+    for i in range(0, max(0, len(got) - n + 1)):
+        window = got[i : i + n]
+        if len(window) != n:
+            continue
+        got_text = [ln.strip() for ln in window]
+        if got_text == exp_text and _relative_indents(window) == exp_indents:
+            return None
+        diffs = sum(1 for a, b in zip(got_text, exp_text) if a != b)
+        # `<=` so the LAST equally-close window wins: when someone has retyped
+        # a block, the attempt at the bottom is the one they're working on.
+        if best is None or diffs <= best[0]:
+            best = (diffs, i)
+
+    # Fewer lines typed than the block needs — point at the first missing one.
+    if best is None:
+        for idx, want_text in enumerate(exp_text):
+            if idx >= len(got) or got[idx].strip() != want_text:
+                mine = got[idx].strip() if idx < len(got) else ""
+                return BlockMismatch(
+                    idx + 1,
+                    want_text,
+                    mine,
+                    exp_indents[idx],
+                    0,
+                    "text" if mine else "missing",
+                )
+        return None
+
+    start = best[1]
+    window = got[start : start + n]
+    got_indents = _relative_indents(window)
+    for idx in range(n):
+        mine = window[idx].strip()
+        text_differs = mine != exp_text[idx]
+        indent_differs = got_indents[idx] != exp_indents[idx]
+        if text_differs or indent_differs:
+            return BlockMismatch(
+                idx + 1,
+                exp_text[idx],
+                mine,
+                exp_indents[idx],
+                got_indents[idx],
+                "text" if text_differs else "indent",
+            )
+    return None
 
 
 # Dictation difficulty (user-controlled; stay in endless mode):
@@ -141,6 +243,10 @@ class LineSpec:
     keyboard_tip: str
     family: str  # print | assign_str | … | multi | function
     level: int = 1  # minimum dictation difficulty that includes this
+    # Where this line came from, when it came from the LeetCode bank — lets the
+    # Study panel show the question and the pattern lesson behind the line.
+    pattern_id: str | None = None
+    problem_number: int | None = None
 
 
 # ── Keyboard tips (Mac — user is on MacBook / big TV) ───────

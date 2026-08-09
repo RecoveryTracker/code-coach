@@ -75,6 +75,13 @@ SKILLS: dict[str, Skill] = {
             order=80,
             base_difficulty=5,
         ),
+        Skill(
+            "leetcode",
+            "LeetCode patterns",
+            "interview patterns typed verbatim, then built from memory",
+            order=90,
+            base_difficulty=5,
+        ),
     ]
 }
 

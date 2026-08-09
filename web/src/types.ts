@@ -4,6 +4,43 @@ export type SupportLink = {
   lesson_title: string;
 };
 
+export type ProblemBriefInfo = {
+  number: number;
+  title: string;
+  difficulty: string;
+  statement: string;
+  examples: string[];
+  note: string;
+  idea: string;
+  complexity: string;
+  url: string;
+  /** Full reference solution — powers "show answer" / "check my work". */
+  solution: string;
+};
+
+export type CheckAnswerResult = {
+  ok: boolean;
+  matches: boolean;
+  note: string;
+  solution: string;
+  title: string;
+};
+
+export type PatternLessonInfo = {
+  id: string;
+  name: string;
+  summary: string;
+  when: string;
+  template: string;
+  steps: string[];
+  pitfalls: string[];
+};
+
+export type StudyInfo = {
+  problem: ProblemBriefInfo | null;
+  lesson: PatternLessonInfo | null;
+};
+
 export type WaypointInfo = {
   id: string;
   label: string;
@@ -12,6 +49,7 @@ export type WaypointInfo = {
   hint_lines?: string[];
   supports?: SupportLink[];
   kind?: string;
+  study?: StudyInfo | null;
 };
 
 export type CheckItem = {

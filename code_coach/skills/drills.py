@@ -52,6 +52,10 @@ class DrillStep:
     # only completes once a Run produced exactly this stdout (whitespace
     # normalized). None = structure-only checking.
     expect_output: str | None = None
+    # Which LeetCode pattern/problem this step teaches, when it came from the
+    # LeetCode bank. Drives the Study panel.
+    pattern_id: str | None = None
+    problem_number: int | None = None
 
 
 def requirements_check(

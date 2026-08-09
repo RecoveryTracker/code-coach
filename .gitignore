@@ -7,7 +7,11 @@ venv/
 .DS_Store
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 .data/
+
+# Locally-downloaded toolchain (a full Node runtime — ~90MB of binaries)
+.tools/
 
 # Web
 web/node_modules/

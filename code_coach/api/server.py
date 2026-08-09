@@ -14,6 +14,8 @@ from code_coach import __version__
 from code_coach.api.schemas import (
     ChatRequest,
     ChatResponse,
+    CheckAnswerRequest,
+    CheckAnswerResponse,
     CheckItem,
     DrillEvaluateRequest,
     DrillEvaluateResponse,
@@ -24,8 +26,10 @@ from code_coach.api.schemas import (
     ProgressResponse,
     ProgressSettingsUpdate,
     SkillInfo,
+    StudyInfo,
     WaypointInfo,
 )
+from code_coach.leetcode.bank import study_payload as leetcode_study_payload
 from code_coach.curriculum.catalog import (
     catalog_payload,
     hint_lines_for_step,
@@ -129,6 +133,9 @@ def _session_from_progress() -> PracticeSession:
         raw_supports = supports_for_build_step(drill.id, i)
         supports = [SupportLinkInfo(**x) for x in raw_supports]
         kind = "build" if role == "build" else "dictation"
+        raw_study = leetcode_study_payload(
+            getattr(s, "pattern_id", None), getattr(s, "problem_number", None)
+        )
         steps.append(
             WaypointInfo(
                 id=s.id,
@@ -138,6 +145,7 @@ def _session_from_progress() -> PracticeSession:
                 hint_lines=hint_lines,
                 supports=supports,
                 kind=kind,
+                study=StudyInfo(**raw_study) if raw_study else None,
             )
         )
 
@@ -335,6 +343,44 @@ def practice_back() -> PracticeSession:
     back_from_review(progress)
     _store.save(progress)
     return _session_from_progress()
+
+
+@app.post("/api/practice/check-answer", response_model=CheckAnswerResponse)
+def practice_check_answer(body: CheckAnswerRequest) -> CheckAnswerResponse:
+    """Diff the student's attempt against a problem's reference solution.
+
+    This is the self-check path: the drill's own grader is verbatim (Lesson 1)
+    or structural (Lesson 3), so neither tells you which line of YOUR answer is
+    off. Here the whole solution is the target, and the reply names the first
+    line that differs.
+    """
+    from code_coach.dictation.bank import check_block
+    from code_coach.leetcode.problems import get_pattern
+    from code_coach.practice.adapt import line_diff_note
+
+    if not body.pattern_id or body.problem_number is None:
+        raise HTTPException(status_code=400, detail="Need pattern_id and problem_number.")
+    pattern = get_pattern(body.pattern_id)
+    problem = (
+        next((p for p in pattern.problems if p.number == body.problem_number), None)
+        if pattern
+        else None
+    )
+    if problem is None:
+        raise HTTPException(
+            status_code=404, detail=f"No problem {body.problem_number}"
+        )
+
+    code = body.code or ""
+    matches = check_block(code, problem.code)
+    note = "" if matches else (line_diff_note(code, problem.code) or "")
+    return CheckAnswerResponse(
+        ok=True,
+        matches=matches,
+        note=note,
+        solution=problem.code,
+        title=problem.label,
+    )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

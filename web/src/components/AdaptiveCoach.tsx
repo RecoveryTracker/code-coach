@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { chatWithCoach, explainCode } from "../api";
 import {
   CurriculumNav,
@@ -9,7 +9,6 @@ import type {
   DrillEvaluateResult,
   ExplainResult,
   PracticeSession,
-  SupportLink,
 } from "../types";
 
 type Props = {
@@ -18,17 +17,21 @@ type Props = {
   checks: CheckItem[];
   exerciseIndex: number;
   exerciseDone: boolean;
-  onClassDelta: (d: number) => void;
-  onLessonDelta: (d: number) => void;
   onExerciseDelta: (d: number) => void;
   onSelectClass: (id: string) => void;
   onSelectLesson: (n: number) => void;
-  onReview: (skillId: string) => void;
+  /** Advance to the next exercise — only offered once the check passes. */
+  onContinue: () => void;
+  /** Begin dragging the explain panel's bottom edge. */
+  onExplainDragStart: () => void;
   onBackFromReview: () => void;
-  onDictationLevel?: (level: number) => void;
   watching: boolean;
   /** Current editor buffer — read fresh when the student asks for an explanation. */
   getCode: () => string;
+  /** App title, centred on the coach line (there's no header row anymore). */
+  brand: ReactNode;
+  /** Save / Load / Progress / Free mode / Start over / Run. */
+  toolbar: ReactNode;
 };
 
 export function AdaptiveCoach({
@@ -37,16 +40,16 @@ export function AdaptiveCoach({
   checks,
   exerciseIndex,
   exerciseDone,
-  onClassDelta,
-  onLessonDelta,
   onExerciseDelta,
   onSelectClass,
   onSelectLesson,
-  onReview,
+  onContinue,
+  onExplainDragStart,
   onBackFromReview,
-  onDictationLevel,
   watching,
   getCode,
+  brand,
+  toolbar,
 }: Props) {
   const total = session.steps.length || checks.length || 1;
   const endless = Boolean(session.endless);
@@ -55,26 +58,10 @@ export function AdaptiveCoach({
   const step = exerciseIndex < total ? session.steps[exerciseIndex] : null;
   const isBuild = session.lesson_role === "build" || step?.kind === "build";
   const isReview = Boolean(session.is_review);
-  const typeLine = step?.label ?? null;
-  const multiLine = Boolean(typeLine && typeLine.includes("\n"));
-  const hintLines = step?.hint_lines?.length
-    ? step.hint_lines
-    : typeLine
-      ? typeLine.split("\n")
-      : [];
-  const supports: SupportLink[] = step?.supports ?? [];
-  const tip = step?.tip ?? null;
-  const keyboardTip =
-    step?.keyboard_tip ?? "End of line: ⌘ →   ·   Down a line: ↓";
+  const multiLine = Boolean(step?.label && step.label.includes("\n"));
   const curriculum = (session.curriculum ?? []) as CurriculumClass[];
 
   const [chatOpen, setChatOpen] = useState(false);
-  // Hint ladder: 0 closed → 1 nudge → 2 shape → 3 full solution.
-  // Resets when the exercise changes so each problem starts un-spoiled.
-  const [hintLevel, setHintLevel] = useState(0);
-  useEffect(() => {
-    setHintLevel(0);
-  }, [exerciseIndex, session.drill_id]);
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState<
     { role: "you" | "coach"; text: string }[]
@@ -119,7 +106,8 @@ export function AdaptiveCoach({
     statusText = "Lesson done — change Class/Lesson to continue.";
     statusClass = "good";
   } else if (exerciseDone) {
-    statusText = endless ? "Got it — more coming…" : "Got it — next…";
+    // No trailing "more coming…" — nothing advances until Continue is pressed.
+    statusText = "Got it";
     statusClass = "good";
   } else if (result?.status === "error" || result?.tone === "error") {
     statusText = result.observation || "Error";
@@ -138,6 +126,17 @@ export function AdaptiveCoach({
         : "Type this";
     statusClass = "idle";
   }
+
+  // The coach's "line 8 doesn't match / should be / you typed" note is
+  // multi-line. The status strip is one line, so only the headline goes there
+  // and the aligned detail renders below in a monospace block.
+  const [statusHead, ...statusDetail] = statusText.split("\n");
+  const diffText = statusClass === "bad" ? statusDetail.join("\n") : "";
+  // Whatever the coach has to say when it isn't pointing at a bad line. The
+  // slot below is always rendered at a fixed height, so this keeps it useful
+  // rather than blank — and the editor never shifts when a message arrives.
+  const restingNote =
+    result?.guidance || step?.tip || session.prompt || "";
 
   async function sendChat() {
     const msg = chatInput.trim();
@@ -178,6 +177,8 @@ export function AdaptiveCoach({
           >
             {explainOpen ? "Hide explain" : "Explain my code"}
           </button>
+          {brand}
+          {toolbar}
         </div>
       ) : (
         <CurriculumNav
@@ -185,136 +186,41 @@ export function AdaptiveCoach({
           curriculum={curriculum}
           exerciseIndex={exerciseIndex}
           exerciseTotal={total}
-          statusText={statusText}
+          statusText={statusHead}
           statusClass={statusClass}
+          exerciseDone={exerciseDone}
+          onContinue={onContinue}
           watching={watching}
           chatOpen={chatOpen}
           onToggleChat={() => setChatOpen((o) => !o)}
           explainOpen={explainOpen}
           onToggleExplain={toggleExplain}
-          onClassDelta={onClassDelta}
-          onLessonDelta={onLessonDelta}
           onExerciseDelta={onExerciseDelta}
           onSelectClass={onSelectClass}
           onSelectLesson={onSelectLesson}
-          onDictationLevel={onDictationLevel}
+          brand={brand}
+          toolbar={toolbar}
         />
       )}
 
-      {complete ? (
-        <div className="coach-banner-row">
-          <span className="coach-banner-done">
-            All exercises in this lesson done. Use Class / Lesson to move on.
-          </span>
-        </div>
-      ) : (
-        <>
-          <div className="coach-banner-row">
-            <span className="coach-banner-label">
-              {isBuild
-                ? "Exercise"
-                : multiLine
-                  ? "Type this block"
-                  : "Type this"}
-            </span>
-            {isBuild ? (
-              <div className="coach-banner-goal">{typeLine}</div>
-            ) : (
-              <pre
-                className={`coach-banner-code${multiLine ? " multi" : ""}`}
-              >
-                {typeLine ?? "…"}
-              </pre>
-            )}
-            {isBuild ? (
-              <div className="hint-wrap">
-                <button
-                  type="button"
-                  className={`coach-chat-toggle hint-btn${hintLevel > 0 ? " active" : ""}`}
-                  onClick={() => setHintLevel((h) => (h + 1) % 4)}
-                  title="Each click reveals a bit more"
-                >
-                  {hintLevel === 0
-                    ? "Hint"
-                    : hintLevel === 1
-                      ? "More help"
-                      : hintLevel === 2
-                        ? "Show solution"
-                        : "Hide hint"}
-                </button>
-                {hintLevel > 0 ? (
-                  <div className="hint-popover">
-                    <div className="hint-popover-title">Think about it</div>
-                    <p className="hint-popover-text">
-                      {tip || keyboardTip || "What tool from this class fits?"}
-                    </p>
-                    {hintLevel >= 2 && hintLines.length > 0 ? (
-                      <>
-                        <div className="hint-popover-title">
-                          It starts like this
-                        </div>
-                        <pre className="hint-popover-code">
-                          {hintLines[0] +
-                            (hintLines.length > 1 ? "\n…" : "")}
-                        </pre>
-                      </>
-                    ) : null}
-                    {hintLevel >= 3 ? (
-                      <>
-                        <div className="hint-popover-title">Exact lines</div>
-                        <pre className="hint-popover-code">
-                          {hintLines.join("\n")}
-                        </pre>
-                      </>
-                    ) : null}
-                    {supports.length > 0 ? (
-                      <div className="hint-supports">
-                        <div className="hint-popover-title">
-                          Practice the basics first (click)
-                        </div>
-                        {supports.map((s) => (
-                          <button
-                            key={s.skill_id + s.label}
-                            type="button"
-                            className="hint-support-link"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => onReview(s.skill_id)}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          {/* Build exercises: live checklist of the goal's pieces, so
-              "what are they asking?" is answered right under the goal. */}
-          {isBuild && result?.requirements?.length ? (
-            <div className="req-list" aria-label="What this goal needs">
-              <span className="req-list-label">Needs:</span>
-              {result.requirements.map((r) => (
-                <span
-                  key={r.label}
-                  className={`req-item ${r.passed ? "ok" : "todo"}`}
-                >
-                  <span aria-hidden>{r.passed ? "✓" : "○"}</span> {r.label}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <div className="coach-tips-row">
-            {/* Build lessons keep the tip behind the Hint ladder (level 1);
-                showing it for free would spoil the first nudge. */}
-            {tip && !isBuild ? (
-              <span className="coach-tip">Tip: {tip}</span>
-            ) : null}
-            <span className="coach-kb">⌨ {keyboardTip}</span>
-          </div>
-        </>
-      )}
+      {/* The "type this" block now lives in <TypeTarget/>, in its own column
+          beside the editor, where a long solution has room to be seen. */}
+
+      {/* Always present, always the same height. Messages scroll inside it
+          instead of growing the strip and pushing the editor down. */}
+      <div className={`coach-msg ${statusClass}`} aria-live="polite">
+        {statusClass === "bad" ? (
+          // The full complaint goes here, where there's room. The one-line
+          // status strip only ever shows its first line.
+          diffText ? (
+            <pre className="coach-msg-diff">{statusText}</pre>
+          ) : (
+            <p className="coach-msg-alert">{statusText}</p>
+          )
+        ) : (
+          <p className="coach-msg-resting">{restingNote}</p>
+        )}
+      </div>
 
       {explainOpen ? (
         <div className="coach-explain">
@@ -376,6 +282,15 @@ export function AdaptiveCoach({
               <p className="explain-note">…</p>
             </div>
           )}
+          {/* Drag the bottom edge to size the panel. */}
+          <div
+            className="coach-explain-grip"
+            title="Drag to resize"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onExplainDragStart();
+            }}
+          />
         </div>
       ) : null}
 

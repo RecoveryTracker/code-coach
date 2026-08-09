@@ -22,6 +22,39 @@ class SupportLinkInfo(BaseModel):
     lesson_title: str = "Foundations · Lesson 1"
 
 
+class ProblemBriefInfo(BaseModel):
+    """The question behind the line you're typing, restated in our words."""
+
+    number: int
+    title: str
+    difficulty: str
+    statement: str
+    examples: list[str] = []
+    note: str = ""
+    idea: str = ""
+    complexity: str = ""
+    url: str = ""
+    # Full reference solution, for "show answer" / "check my work".
+    solution: str = ""
+
+
+class PatternLessonInfo(BaseModel):
+    """The reading that makes a pattern's problems make sense."""
+
+    id: str
+    name: str
+    summary: str
+    when: str
+    template: str
+    steps: list[str] = []
+    pitfalls: list[str] = []
+
+
+class StudyInfo(BaseModel):
+    problem: ProblemBriefInfo | None = None
+    lesson: PatternLessonInfo | None = None
+
+
 class WaypointInfo(BaseModel):
     id: str
     label: str
@@ -30,6 +63,8 @@ class WaypointInfo(BaseModel):
     hint_lines: list[str] = []
     supports: list[SupportLinkInfo] = []
     kind: str = "dictation"  # dictation | build
+    # Present only for LeetCode exercises — powers the Study panel.
+    study: StudyInfo | None = None
 
 
 class ChatRequest(BaseModel):
@@ -181,6 +216,23 @@ class DrillEvaluateRequest(BaseModel):
     # Focuses the coach's "type this line" message on that line, so the
     # banner never references a different line than the exercise box.
     exercise_index: int | None = None
+
+
+class CheckAnswerRequest(BaseModel):
+    """Compare the student's own attempt against a problem's real solution."""
+
+    code: str = ""
+    pattern_id: str | None = None
+    problem_number: int | None = None
+
+
+class CheckAnswerResponse(BaseModel):
+    ok: bool = True
+    matches: bool = False
+    # Where the first difference is, in plain language ("" when it matches).
+    note: str = ""
+    solution: str = ""
+    title: str = ""
 
 
 class RequirementItem(BaseModel):

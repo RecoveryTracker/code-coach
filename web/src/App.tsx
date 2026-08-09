@@ -20,7 +20,9 @@ import { AdaptiveCoach } from "./components/AdaptiveCoach";
 import { EditorPane } from "./components/EditorPane";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ScriptLibrary } from "./components/ScriptLibrary";
+import { StudyPanel } from "./components/StudyPanel";
 import { Terminal } from "./components/Terminal";
+import { TypeTarget } from "./components/TypeTarget";
 import type {
   DrillEvaluateResult,
   PracticeSession,
@@ -29,47 +31,141 @@ import type {
 
 const DEBOUNCE_MS = 180;
 
-function draftKey(id: string) {
-  return `code-coach:drill:${id}`;
+/**
+ * Every exercise gets its own buffer.
+ *
+ * The drill id alone isn't enough: it's shared by all exercises in a lesson,
+ * and it stays the same across difficulties (a class's Lesson 1 is `<class>-l1`
+ * at every level), so both used to spill their code into each other.
+ */
+type DraftSlot = { drillId: string; index: number; level: number };
+
+function draftKey({ drillId, index, level }: DraftSlot) {
+  return `code-coach:drill:${drillId}:lv${level}:ex${index}`;
 }
 
-function loadDraft(id: string): string | null {
+/** Pre-per-exercise key: one shared buffer for a whole lesson. */
+function legacyDraftKey(drillId: string) {
+  return `code-coach:drill:${drillId}`;
+}
+
+function loadDraft(slot: DraftSlot): string | null {
   try {
-    return localStorage.getItem(draftKey(id));
+    const found = localStorage.getItem(draftKey(slot));
+    if (found != null) return found;
+    // Work saved before drafts were split per exercise/difficulty lives under
+    // the old lesson-wide key. Adopt it for the first exercise rather than
+    // silently losing it; the original is left in place as a backstop.
+    if (slot.index === 0) {
+      return localStorage.getItem(legacyDraftKey(slot.drillId));
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-function saveDraft(id: string, code: string) {
+function saveDraft(slot: DraftSlot, code: string) {
   try {
-    localStorage.setItem(draftKey(id), code);
+    localStorage.setItem(draftKey(slot), code);
   } catch {
     /* ignore */
   }
 }
 
-function clearDraft(id: string) {
+/**
+ * Where you were in a lesson, so coming back doesn't dump you on exercise 1
+ * looking at a blank editor while your work sits in a slot you can't see.
+ */
+function posKey(drillId: string, level: number) {
+  return `code-coach:pos:${drillId}:lv${level}`;
+}
+
+function savePos(drillId: string, level: number, index: number) {
   try {
-    localStorage.removeItem(draftKey(id));
+    localStorage.setItem(posKey(drillId, level), String(index));
   } catch {
     /* ignore */
   }
 }
 
-type Layout = { term: number };
+function loadPos(drillId: string, level: number): number | null {
+  try {
+    const raw = localStorage.getItem(posKey(drillId, level));
+    if (raw == null) return null;
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Wipe every saved exercise in a lesson (Start over). */
+function clearLessonDrafts(drillId: string) {
+  try {
+    const prefix = `code-coach:drill:${drillId}:`;
+    const posPrefix = `code-coach:pos:${drillId}:`;
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith(prefix) || k.startsWith(posPrefix))) doomed.push(k);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * term  — terminal height
+ * sideW — right column width (wide layout) / sideH — its height when stacked
+ * ttH   — "Type this" height inside the right column; the rest is the problem
+ */
+type Layout = {
+  term: number;
+  sideW: number;
+  sideH: number;
+  ttH: number;
+  /** "Explain my code" panel — it lives in the auto-sized coach strip, so
+   *  without a fixed height it pushes the editor down as it fills. */
+  explainH: number;
+};
+
+const DEFAULT_LAYOUT: Layout = {
+  term: 140,
+  sideW: 430,
+  sideH: 300,
+  ttH: 240,
+  explainH: 200,
+};
+
+/** Every pane keeps at least this much, so a drag can never hide one. */
+const MIN_PANE = 90;
+const MIN_EDITOR = 280;
+/** Editor + right column together never shrink below this. */
+const MIN_WORK = 320;
 
 function loadLayout(): Layout {
   try {
-    const raw = localStorage.getItem("code-coach:workspace-layout-v2");
+    const raw = localStorage.getItem("code-coach:workspace-layout-v5");
     if (raw) {
-      const p = JSON.parse(raw) as Layout;
-      if (p.term) return p;
+      const p = JSON.parse(raw) as Partial<Layout>;
+      return { ...DEFAULT_LAYOUT, ...p };
     }
   } catch {
     /* ignore */
   }
-  return { term: 140 };
+  return DEFAULT_LAYOUT;
+}
+
+function clampNum(v: number, lo: number, hi: number): number {
+  // hi can fall below lo on very small windows — lo wins, nothing collapses.
+  return Math.max(lo, Math.min(v, Math.max(lo, hi)));
+}
+
+/** Matches the .ws-work stacking breakpoint in workspace.css. */
+function isStacked(): boolean {
+  return window.matchMedia("(max-width: 1050px)").matches;
 }
 
 const FREE_KEY = "code-coach:free-buffer";
@@ -103,10 +199,24 @@ export default function App() {
 
   const codeRef = useRef("");
   const drillRef = useRef<string | null>(null);
+  /** Difficulty the current buffers belong to — part of the draft key. */
+  const levelRef = useRef(1);
+
+  /** The slot the editor is currently showing. */
+  const slotNow = useCallback(
+    (index?: number): DraftSlot => ({
+      drillId: drillRef.current ?? "",
+      index: index ?? exerciseIndexRef.current,
+      level: levelRef.current,
+    }),
+    [],
+  );
   const evalSeq = useRef(0);
   const debounce = useRef<number | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<"coach" | "term" | null>(null);
+  const workRef = useRef<HTMLDivElement | null>(null);
+  const sideRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<"term" | "side" | "tt" | "explain" | null>(null);
   const freeModeRef = useRef(false);
 
   exerciseIndexRef.current = exerciseIndex;
@@ -181,23 +291,42 @@ export default function App() {
       setSession(s);
       setProgress(s.progress);
       drillRef.current = s.drill_id;
-      setExerciseIndex(0);
+      levelRef.current = s.dictation_level ?? 1;
+
+      // Resume where this lesson was left off. A fresh endless window
+      // (preserveCode) and Start over (forceClean) both belong at the top.
+      let startIndex = 0;
+      if (preserveCode == null && !forceClean) {
+        const saved = loadPos(s.drill_id, levelRef.current);
+        if (saved != null) {
+          startIndex = Math.max(0, Math.min(saved, s.steps.length - 1));
+        }
+      }
+
+      setExerciseIndex(startIndex);
+      exerciseIndexRef.current = startIndex;
       setExerciseDone(false);
       if (autoAdvanceTimer.current) {
         window.clearTimeout(autoAdvanceTimer.current);
         autoAdvanceTimer.current = null;
       }
 
+      const slot: DraftSlot = {
+        drillId: s.drill_id,
+        index: startIndex,
+        level: levelRef.current,
+      };
+
       let initial = s.starter;
       if (preserveCode != null) {
-        // Keep what the user already typed (next endless window, difficulty change)
+        // Keep what the user already typed (next endless window)
         initial = preserveCode;
-        saveDraft(s.drill_id, preserveCode);
+        saveDraft(slot, preserveCode);
       } else if (forceClean) {
-        clearDraft(s.drill_id);
+        clearLessonDrafts(s.drill_id);
         initial = s.starter;
       } else {
-        const draft = loadDraft(s.drill_id);
+        const draft = loadDraft(slot);
         if (draft != null && draft !== "") {
           initial = draft;
         }
@@ -208,13 +337,40 @@ export default function App() {
       setEditorRevision((n) => n + 1);
       setHasRun(false);
       setResult(null);
-      await score(s.drill_id, initial, false, 0);
+      await score(s.drill_id, initial, false, startIndex);
     },
     [score],
   );
 
   const loadSessionRef = useRef(loadSession);
   loadSessionRef.current = loadSession;
+
+  /**
+   * Move to another exercise in the same lesson: bank the current buffer under
+   * its own slot, then show whatever that exercise had (or a blank starter).
+   */
+  const goToExercise = useCallback(
+    (next: number, starter: string) => {
+      saveDraft(slotNow(), codeRef.current);
+
+      const incoming = loadDraft(slotNow(next));
+      const text = incoming ?? starter;
+
+      exerciseIndexRef.current = next;
+      setExerciseIndex(next);
+      setExerciseDone(false);
+      codeRef.current = text;
+      setSeedCode(text);
+      setEditorRevision((n) => n + 1);
+
+      const id = drillRef.current;
+      if (id) {
+        savePos(id, levelRef.current, next);
+        void score(id, text, false, next);
+      }
+    },
+    [score, slotNow],
+  );
 
   /** Advance to next *exercise* inside the lesson (automatic when complete). */
   const advanceExercise = useCallback(() => {
@@ -253,27 +409,11 @@ export default function App() {
       return;
     }
 
-    setExerciseIndex(next);
-    setExerciseDone(false);
-    const id = drillRef.current;
-    if (id) void score(id, codeRef.current, false, next);
-  }, [session, score]);
+    goToExercise(next, session.starter);
+  }, [session, goToExercise]);
 
-  // Auto-advance exercises shortly after the current one is completed
-  useEffect(() => {
-    if (freeMode || !exerciseDone || !session) return;
-    if (autoAdvanceTimer.current) window.clearTimeout(autoAdvanceTimer.current);
-    autoAdvanceTimer.current = window.setTimeout(() => {
-      autoAdvanceTimer.current = null;
-      advanceExercise();
-    }, 650);
-    return () => {
-      if (autoAdvanceTimer.current) {
-        window.clearTimeout(autoAdvanceTimer.current);
-        autoAdvanceTimer.current = null;
-      }
-    };
-  }, [exerciseDone, exerciseIndex, session, advanceExercise, freeMode]);
+  // No auto-advance. A correct answer lights up Continue and waits there, so
+  // the finished code stays on screen to be read.
 
   useEffect(() => {
     let cancelled = false;
@@ -320,7 +460,7 @@ export default function App() {
         debounce.current = null;
         const id = drillRef.current;
         if (!id) return;
-        saveDraft(id, codeRef.current);
+        saveDraft(slotNow(), codeRef.current);
         void score(id, codeRef.current, false);
       }, DEBOUNCE_MS);
     },
@@ -341,9 +481,9 @@ export default function App() {
     }
     const id = drillRef.current;
     if (!id) return;
-    saveDraft(id, codeRef.current);
+    saveDraft(slotNow(), codeRef.current);
     void score(id, codeRef.current, true);
-  }, [score]);
+  }, [score, slotNow]);
 
   const jumpTo = useCallback(
     async (body: {
@@ -356,7 +496,7 @@ export default function App() {
       // keep going. Arrive with forceClean=false so loadSession restores the
       // target lesson's saved work (or its starter on a first visit) instead
       // of wiping it.
-      if (drillRef.current) saveDraft(drillRef.current, codeRef.current);
+      if (drillRef.current) saveDraft(slotNow(), codeRef.current);
       try {
         const next = await navigateCurriculum(body);
         await loadSession(next, false);
@@ -376,15 +516,18 @@ export default function App() {
   const onDictationLevel = useCallback(
     async (level: number) => {
       try {
-        const keep = codeRef.current;
+        // Bank this level's work under its own slot, then let loadSession pull
+        // up whatever that difficulty had. Carrying the buffer across meant a
+        // level-1 single line sat in the editor when level 5 asked for a whole
+        // function.
+        saveDraft(slotNow(), codeRef.current);
         const s = await setDictationLevel(level);
-        // Keep typed work; only the coach target changes
-        await loadSession(s, false, keep);
+        await loadSession(s, false);
       } catch {
         /* stay */
       }
     },
-    [loadSession],
+    [loadSession, slotNow],
   );
 
   const onExerciseDelta = useCallback(
@@ -417,12 +560,9 @@ export default function App() {
         void jumpTo({ lesson_delta: 1 });
         return;
       }
-      setExerciseIndex(next);
-      setExerciseDone(false);
-      const id = drillRef.current;
-      if (id) void score(id, codeRef.current, false, next);
+      goToExercise(next, session.starter);
     },
-    [session, score, jumpTo],
+    [session, goToExercise, jumpTo],
   );
 
   const onReview = useCallback(
@@ -433,7 +573,7 @@ export default function App() {
           return;
         }
         // Keep the main lesson's work before detouring into review practice.
-        if (drillRef.current) saveDraft(drillRef.current, codeRef.current);
+        if (drillRef.current) saveDraft(slotNow(), codeRef.current);
         const next = await startReview(skillId);
         await loadSession(next, false);
       } catch {
@@ -445,7 +585,7 @@ export default function App() {
 
   const onBackFromReview = useCallback(async () => {
     // Returning from review restores the lesson's saved work, not a blank slate.
-    if (drillRef.current) saveDraft(drillRef.current, codeRef.current);
+    if (drillRef.current) saveDraft(slotNow(), codeRef.current);
     try {
       const next = await backFromReview();
       await loadSession(next, false);
@@ -480,16 +620,88 @@ export default function App() {
     if (session) void loadSession(session, false);
   }, [freeMode, session, loadSession]);
 
-  // Resize terminal height only
+  /**
+   * Clamp every stored size against what's actually on screen right now.
+   *
+   * The terminal's ceiling is measured, not guessed: the header and coach
+   * strip are `auto` rows, so a hardcoded reserve let the terminal squeeze the
+   * work area down to ~100px and crush the study panel to a sliver.
+   */
+  const clampLayout = useCallback((L: Layout): Layout => {
+    const shell = shellRef.current?.getBoundingClientRect();
+    const work = workRef.current?.getBoundingClientRect();
+    const side = sideRef.current?.getBoundingClientRect();
+    const next = { ...L };
+
+    if (shell) {
+      // Everything above the work area (header + coach strip) plus the
+      // work area's own floor is off-limits to the terminal.
+      const chrome = work ? work.top - shell.top : 120;
+      next.term = clampNum(L.term, 80, shell.height - chrome - MIN_WORK - 6);
+
+      // The explain panel sits inside that chrome, so its ceiling is whatever
+      // is left once the rest of the strip, the work floor and the terminal
+      // have taken their share. Opening it can never crush the editor.
+      const explainEl = document.querySelector(".coach-explain");
+      if (explainEl) {
+        const explainH = explainEl.getBoundingClientRect().height;
+        const chromeWithout = chrome - explainH;
+        next.explainH = clampNum(
+          L.explainH,
+          90,
+          shell.height - chromeWithout - MIN_WORK - next.term - 6,
+        );
+      }
+    }
+    if (work) {
+      if (isStacked()) {
+        next.sideH = clampNum(L.sideH, MIN_PANE * 2, work.height - MIN_PANE - 6);
+      } else {
+        next.sideW = clampNum(L.sideW, 260, work.width - MIN_EDITOR - 6);
+      }
+    }
+    // Side height follows from the two above, so clamp ttH against the space
+    // the side column will actually have, not the space it has this frame.
+    const sideH = isStacked() ? next.sideH : (work?.height ?? side?.height ?? 0);
+    if (sideH > 0) {
+      next.ttH = clampNum(L.ttH, MIN_PANE, sideH - MIN_PANE - 6);
+    }
+    return next;
+  }, []);
+
+  const sameLayout = (a: Layout, b: Layout) =>
+    a.term === b.term &&
+    a.sideW === b.sideW &&
+    a.sideH === b.sideH &&
+    a.ttH === b.ttH &&
+    a.explainH === b.explainH;
+
   useEffect(() => {
     const move = (e: PointerEvent) => {
       if (!drag.current || !shellRef.current) return;
-      const rect = shellRef.current.getBoundingClientRect();
-      if (drag.current === "term") {
-        const fromBottom = rect.bottom - e.clientY;
-        const h = Math.min(Math.max(fromBottom, 80), rect.height - 200);
-        setLayout({ term: h });
-      }
+      const shell = shellRef.current.getBoundingClientRect();
+      const work = workRef.current?.getBoundingClientRect();
+      const side = sideRef.current?.getBoundingClientRect();
+
+      setLayout((L) => {
+        let raw = L;
+        if (drag.current === "term") {
+          raw = { ...L, term: shell.bottom - e.clientY };
+        } else if (drag.current === "side" && work) {
+          raw = isStacked()
+            ? { ...L, sideH: work.bottom - e.clientY }
+            : { ...L, sideW: work.right - e.clientX };
+        } else if (drag.current === "tt" && side) {
+          raw = { ...L, ttH: e.clientY - side.top };
+        } else if (drag.current === "explain") {
+          const box = document.querySelector(".coach-explain");
+          if (box) {
+            raw = { ...L, explainH: e.clientY - box.getBoundingClientRect().top };
+          }
+        }
+        const next = clampLayout(raw);
+        return sameLayout(next, L) ? L : next;
+      });
     };
     const up = () => {
       if (!drag.current) return;
@@ -497,7 +709,7 @@ export default function App() {
       document.body.classList.remove("is-resizing");
       try {
         localStorage.setItem(
-          "code-coach:workspace-layout-v2",
+          "code-coach:workspace-layout-v5",
           JSON.stringify(layout),
         );
       } catch {
@@ -510,7 +722,20 @@ export default function App() {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, [layout]);
+  }, [layout, clampLayout]);
+
+  // Shrinking the window (or switching to the stacked layout) can leave a
+  // stored size larger than the space that's left.
+  useEffect(() => {
+    const reclamp = () =>
+      setLayout((L) => {
+        const next = clampLayout(L);
+        return sameLayout(next, L) ? L : next;
+      });
+    reclamp();
+    window.addEventListener("resize", reclamp);
+    return () => window.removeEventListener("resize", reclamp);
+  }, [ready, freeMode, clampLayout]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -541,90 +766,105 @@ export default function App() {
     result?.checks ??
     session.steps.map((s) => ({ label: s.label, passed: false }));
 
+  // App-level actions. These used to own a whole 44px header row of their own;
+  // they now ride along on the coach line, which buys that height back for the
+  // editor.
+  const toolbar = (
+    <div className="ws-top-actions">
+      <ScriptLibrary
+        source={freeMode ? "free" : "lesson"}
+        getCode={() => codeRef.current}
+        setCode={(code) => {
+          codeRef.current = code;
+          setSeedCode(code);
+          setEditorRevision((n) => n + 1);
+          if (freeMode) {
+            try {
+              localStorage.setItem(FREE_KEY, code);
+            } catch {
+              /* */
+            }
+          } else if (drillRef.current) {
+            saveDraft(slotNow(), code);
+            void score(drillRef.current, code, false);
+          }
+        }}
+      />
+      <button
+        type="button"
+        className={`ws-btn${progressOpen ? " primary" : ""}`}
+        onClick={() => setProgressOpen((o) => !o)}
+        title="Skills, type-along lines, and what's due for review"
+      >
+        Progress
+      </button>
+      <button
+        type="button"
+        className={`ws-btn${freeMode ? " primary" : ""}`}
+        onClick={toggleFreeMode}
+        title={
+          freeMode
+            ? "Turn the coach back on"
+            : "Code freely without coach prompts"
+        }
+      >
+        {freeMode ? "Coach on" : "Free mode"}
+      </button>
+      {!freeMode ? (
+        <button
+          type="button"
+          className="ws-btn"
+          onClick={() => {
+            if (!session) return;
+            // Start over wipes every exercise in this lesson, not just
+            // the one on screen.
+            clearLessonDrafts(session.drill_id);
+            void loadSession(session, true);
+          }}
+        >
+          Start over
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className="ws-btn primary"
+        onClick={onRun}
+        disabled={running}
+      >
+        {running ? "Running…" : "Run"}
+      </button>
+    </div>
+  );
+
+  const brand = <span className="ws-brand-inline">Code Coach</span>;
+
   return (
     <div
       className="ws-shell ws-shell-stack"
       ref={shellRef}
-      style={{ "--term-h": `${layout.term}px` } as CSSProperties}
+      style={
+        {
+          "--term-h": `${layout.term}px`,
+          "--side-w": `${layout.sideW}px`,
+          "--side-h": `${layout.sideH}px`,
+          "--tt-h": `${layout.ttH}px`,
+          "--explain-h": `${layout.explainH}px`,
+        } as CSSProperties
+      }
     >
-      <header className="ws-top">
-        <div className="ws-brand">
-          <strong>Code Coach</strong>
-        </div>
-        {/* No title breadcrumb here — the Class/Lesson steppers below carry
-            the same info. Free mode still labels itself in its banner. */}
-        <div className="ws-top-actions">
-          <ScriptLibrary
-            source={freeMode ? "free" : "lesson"}
-            getCode={() => codeRef.current}
-            setCode={(code) => {
-              codeRef.current = code;
-              setSeedCode(code);
-              setEditorRevision((n) => n + 1);
-              if (freeMode) {
-                try {
-                  localStorage.setItem(FREE_KEY, code);
-                } catch {
-                  /* */
-                }
-              } else if (drillRef.current) {
-                saveDraft(drillRef.current, code);
-                void score(drillRef.current, code, false);
-              }
-            }}
-          />
-          <button
-            type="button"
-            className={`ws-btn${progressOpen ? " primary" : ""}`}
-            onClick={() => setProgressOpen((o) => !o)}
-            title="Skills, type-along lines, and what's due for review"
-          >
-            Progress
-          </button>
-          <button
-            type="button"
-            className={`ws-btn${freeMode ? " primary" : ""}`}
-            onClick={toggleFreeMode}
-            title={
-              freeMode
-                ? "Turn the coach back on"
-                : "Code freely without coach prompts"
-            }
-          >
-            {freeMode ? "Coach on" : "Free mode"}
-          </button>
-          {!freeMode ? (
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => {
-                if (!session) return;
-                clearDraft(session.drill_id);
-                void loadSession(session, true);
-              }}
-            >
-              Start over
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="ws-btn primary"
-            onClick={onRun}
-            disabled={running}
-          >
-            {running ? "Running…" : "Run"}
-          </button>
-        </div>
-      </header>
-
-      {/* Coach strip — hidden in free mode */}
+      {/* Coach strip — hidden in free mode. The app toolbar rides on its
+          first line instead of owning a header row. */}
       {freeMode ? (
         <div className="coach-banner free-banner">
-          <span className="coach-banner-done">
-            Free mode — code anything. Use <strong>Save</strong> /{" "}
-            <strong>Load…</strong> for your scripts.{" "}
-            <strong>Coach on</strong> returns to practice.
-          </span>
+          <div className="cur-nav-line">
+            <span className="coach-banner-done">
+              Free mode — code anything. Use <strong>Save</strong> /{" "}
+              <strong>Load…</strong> for your scripts.{" "}
+              <strong>Coach on</strong> returns to practice.
+            </span>
+            {brand}
+            {toolbar}
+          </div>
         </div>
       ) : (
         <AdaptiveCoach
@@ -633,28 +873,70 @@ export default function App() {
           checks={checks}
           exerciseIndex={exerciseIndex}
           exerciseDone={exerciseDone}
-          onClassDelta={(d) => void jumpTo({ class_delta: d })}
-          onLessonDelta={(d) => void jumpTo({ lesson_delta: d })}
           onExerciseDelta={onExerciseDelta}
           onSelectClass={(id) =>
             void jumpTo({ class_id: id, lesson_number: 1 })
           }
           onSelectLesson={(n) => void jumpTo({ lesson_number: n })}
-          onReview={onReview}
+          onContinue={advanceExercise}
+          onExplainDragStart={() => {
+            drag.current = "explain";
+            document.body.classList.add("is-resizing");
+          }}
           onBackFromReview={onBackFromReview}
-          onDictationLevel={(n) => void onDictationLevel(n)}
           watching={watching}
           getCode={() => codeRef.current}
+          brand={brand}
+          toolbar={toolbar}
         />
       )}
 
-      <div className="ws-editor">
-        <EditorPane
-          code={seedCode}
-          revision={editorRevision}
-          onChange={onChange}
-          onRun={onRun}
-        />
+      {/* Editor left, code-to-type right. Stacks below ~1050px so the
+          target block never squeezes the editor into a gutter. */}
+      <div className={`ws-work${freeMode ? " solo" : ""}`} ref={workRef}>
+        <div className="ws-editor">
+          <EditorPane
+            code={seedCode}
+            revision={editorRevision}
+            onChange={onChange}
+            onRun={onRun}
+          />
+        </div>
+        {!freeMode ? (
+          <>
+            <div
+              className="ws-split-col"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                drag.current = "side";
+                document.body.classList.add("is-resizing");
+              }}
+            />
+            {/* Right column: what to type on top, the problem it comes from
+                below, with a divider you can slide between them. */}
+            <div className="ws-side" ref={sideRef}>
+              <TypeTarget
+                session={session}
+                result={result}
+                exerciseIndex={exerciseIndex}
+                onReview={onReview}
+                onDictationLevel={(n) => void onDictationLevel(n)}
+              />
+              <div
+                className="ws-split-side"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  drag.current = "tt";
+                  document.body.classList.add("is-resizing");
+                }}
+              />
+              <StudyPanel
+                study={session.steps[exerciseIndex]?.study ?? null}
+                getCode={() => codeRef.current}
+              />
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div
@@ -691,3 +973,4 @@ export default function App() {
     </div>
   );
 }
+

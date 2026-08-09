@@ -1,4 +1,5 @@
 import type {
+  CheckAnswerResult,
   DrillEvaluateResult,
   ExplainResult,
   PracticeMode,
@@ -122,6 +123,18 @@ export function startReview(skillId: string): Promise<PracticeSession> {
 
 export function backFromReview(): Promise<PracticeSession> {
   return request("/api/practice/back", { method: "POST", body: "{}" });
+}
+
+/** Diff your own attempt against a problem's real solution. */
+export function checkAnswer(body: {
+  code: string;
+  pattern_id: string;
+  problem_number: number;
+}): Promise<CheckAnswerResult> {
+  return request("/api/practice/check-answer", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function chatWithCoach(message: string): Promise<{ reply: string }> {

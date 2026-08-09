@@ -53,6 +53,8 @@ def specs_to_drill(
             why=s.tip,
             hint=s.keyboard_tip,
             example=s.example,
+            pattern_id=s.pattern_id,
+            problem_number=s.problem_number,
         )
         for s in specs
     ]
@@ -69,7 +71,9 @@ def specs_to_drill(
             f"Endless type-along · difficulty {level} ({level_label}). "
             "Turn difficulty up for multi-line and functions. Stay here as long as you want."
         ),
-        starter=starter or "# Class 1 · Foundations · Lesson 1 — endless type-along\n\n",
+        # Empty by default — see the note in leetcode.bank: starter comments
+        # get deleted every time and merge into the first typed line.
+        starter=starter or "",
         steps=steps,
         tags=["dictation", "class-1", "endless"],
         path_order=1,
@@ -115,6 +119,22 @@ def make_class_dictation_batch(
     if class_id == "foundations":
         return make_class1_batch(seed=seed, batch=batch, count=count, level=level)
 
+    # LeetCode classes type real solutions, so their material is a fixed
+    # ordered bank rather than a generator. Imported here (not at module top)
+    # because leetcode.bank imports specs_to_drill back out of this module.
+    from code_coach.leetcode.bank import is_leetcode_class, make_leetcode_batch
+
+    if is_leetcode_class(class_id):
+        return make_leetcode_batch(
+            class_id,
+            class_number=class_number,
+            class_name=class_name,
+            batch=batch,
+            count=count,
+            level=level,
+            drill_id=drill_id,
+        )
+
     specs = build_class_dictation_steps(
         class_id,
         seed=f"{seed}:batch:{batch}:lv{level}",
@@ -131,10 +151,7 @@ def make_class_dictation_batch(
         title=title,
         batch=batch,
         level=level,
-        starter=(
-            f"# Class {class_number} · {class_name} · Lesson 1 — "
-            "endless type-along\n\n"
-        ),
+        starter="",
     )
     drill.skill = _CLASS_SKILLS.get(class_id, drill.skill)
     drill.tags = ["dictation", class_id, "endless"]

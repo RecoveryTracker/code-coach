@@ -208,4 +208,62 @@ def _whats_wrong(
     if getattr(step, "concept", "") == "build":
         return "Not yet — check the small details: quotes, parentheses, spelling. Hint can help."
 
-    return f"Not yet — type this line:\n{ex}" if ex else "Not yet — keep going."
+    if not ex:
+        return "Not yet — keep going."
+
+    # Multi-line target: name the one line that differs. Echoing all 8 lines of
+    # a function back as one run-on sentence hides the single wrong character.
+    if "\n" in ex.strip():
+        note = line_diff_note(code, ex)
+        if note:
+            return note
+
+    return f"Not yet — type this line:\n{ex}"
+
+
+def _caret_hint(want: str, mine: str) -> str | None:
+    """Point at the first character that differs, when the line is close.
+
+    A near-miss like `return[]` vs `return []` is invisible in prose, so show
+    the column instead of asking someone to eyeball two similar strings.
+    """
+    if not mine:
+        return None
+    limit = min(len(want), len(mine))
+    col = next((i for i in range(limit) if want[i] != mine[i]), limit)
+    # Only useful when most of the line already agrees.
+    if col < max(1, min(len(want), len(mine)) // 3):
+        return None
+    return f"{' ' * col}^ here (character {col + 1})"
+
+
+def line_diff_note(code: str, ex: str) -> str | None:
+    from code_coach.dictation.bank import first_block_mismatch
+
+    m = first_block_mismatch(code or "", ex)
+    if m is None:
+        return None
+
+    if m.kind == "missing":
+        return f"Not yet — line {m.lineno} is missing. It should be:\n{m.want}"
+
+    if m.kind == "indent":
+        # The text is right, only the nesting is off. Stripped, the two lines
+        # look identical, so say it in words instead of showing a diff.
+        direction = "further in" if m.mine_indent < m.want_indent else "further out"
+        return (
+            f"Not yet — line {m.lineno} has the right code but the wrong "
+            f"indentation. Move it {direction}: {m.want_indent} spaces from the "
+            f"start of the block, not {m.mine_indent}.\n{m.want}"
+        )
+
+    lead = "you typed:  "
+    parts = [
+        f"Not yet — line {m.lineno} doesn't match.",
+        f"should be:  {m.want}",
+        f"{lead}{m.mine}",
+    ]
+    caret = _caret_hint(m.want, m.mine)
+    if caret:
+        parts.append(f"{' ' * len(lead)}{caret}")
+    return "\n".join(parts)

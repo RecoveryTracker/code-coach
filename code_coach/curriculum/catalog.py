@@ -32,6 +32,12 @@ from code_coach.dictation.bank import (
     check_str_assign,
 )
 from code_coach.dictation.session import make_class_dictation_batch
+from code_coach.leetcode.bank import (
+    leetcode_build_drill,
+    leetcode_solutions_drill,
+    make_leetcode_batch,
+)
+from code_coach.leetcode.problems import ALL_CLASS_ID, PATTERNS, problem_count
 from code_coach.skills.drills import (
     Drill,
     DrillStep,
@@ -153,7 +159,7 @@ def _decisions_l2_drill() -> Drill:
         difficulty=2,
         title="Class 2 · Decisions · Lesson 2 — Build",
         prompt="Build if/else from scratch. Use Hint for exact lines.",
-        starter="# Class 2 · Decisions · Lesson 2 — build these goals\n\n",
+        starter="",
         steps=steps,
         tags=["decisions", "lesson-2", "build"],
         path_order=11,
@@ -219,7 +225,7 @@ def _loops_l2_drill() -> Drill:
         difficulty=2,
         title="Class 3 · Loops · Lesson 2 — Build",
         prompt="Build loops from scratch. Hint shows exact lines.",
-        starter="# Class 3 · Loops · Lesson 2 — build these goals\n\n",
+        starter="",
         steps=steps,
         tags=["loops", "lesson-2", "build"],
         path_order=21,
@@ -301,7 +307,7 @@ def _foundations_l3() -> Drill:
         difficulty=2,
         title="Class 1 · Foundations · Lesson 3 — Build more",
         prompt="More from-scratch practice with print and variables.",
-        starter="# Class 1 · Foundations · Lesson 3\n\n",
+        starter="",
         steps=steps,
         tags=["foundations", "lesson-3", "build"],
         path_order=3,
@@ -393,6 +399,91 @@ CLASSES: list[ClassDef] = [
         ],
     ),
 ]
+
+
+# ── LeetCode classes ────────────────────────────────────────
+# One class per pattern, plus a first class that walks every answer in the
+# bank. All three lessons are optional side-quests: they sit after the
+# Foundations→Decisions→Loops spine and are not part of the progressive path.
+
+
+def _leetcode_class(
+    *,
+    class_id: str,
+    name: str,
+    description: str,
+    number: int,
+) -> ClassDef:
+    def _l1(cid: str = class_id, num: int = number, nm: str = name) -> Drill:
+        return make_leetcode_batch(
+            cid, class_number=num, class_name=nm, batch=0, level=1
+        )
+
+    def _l2(cid: str = class_id) -> Drill:
+        return leetcode_solutions_drill(cid)
+
+    def _l3(cid: str = class_id) -> Drill:
+        return leetcode_build_drill(cid)
+
+    prefix = f"Class {number} · {name}"
+    return ClassDef(
+        id=class_id,
+        name=name,
+        description=description,
+        number=number,
+        lessons=[
+            LessonDef(
+                1,
+                f"{class_id}-l1",
+                "Type-along (endless)",
+                "dictation",
+                f"{prefix} · Lesson 1 — Type-along (endless)",
+                _l1,
+            ),
+            LessonDef(
+                2,
+                f"{class_id}-l2",
+                "Full solutions",
+                "dictation",
+                f"{prefix} · Lesson 2 — Full solutions",
+                _l2,
+            ),
+            LessonDef(
+                3,
+                f"{class_id}-l3",
+                "Build from memory",
+                "build",
+                f"{prefix} · Lesson 3 — Build from memory",
+                _l3,
+            ),
+        ],
+    )
+
+
+def _build_leetcode_classes(first_number: int) -> list[ClassDef]:
+    out = [
+        _leetcode_class(
+            class_id=ALL_CLASS_ID,
+            name="LeetCode — Every Answer",
+            description=(
+                f"All {problem_count()} solutions end to end, in learning order"
+            ),
+            number=first_number,
+        )
+    ]
+    for offset, pattern in enumerate(sorted(PATTERNS, key=lambda p: p.order), start=1):
+        out.append(
+            _leetcode_class(
+                class_id=pattern.id,
+                name=f"LeetCode — {pattern.name}",
+                description=pattern.blurb,
+                number=first_number + offset,
+            )
+        )
+    return out
+
+
+CLASSES.extend(_build_leetcode_classes(first_number=len(CLASSES) + 1))
 
 
 def get_class(class_id: str) -> ClassDef | None:
