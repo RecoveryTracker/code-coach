@@ -18,6 +18,9 @@ Everything runs on your machine. No API keys, no cloud calls.
 
 ## Setup
 
+> **On Windows 11?** Follow **[SETUP-WINDOWS.md](SETUP-WINDOWS.md)** instead —
+> step-by-step from a machine with nothing installed, including troubleshooting.
+
 You need **Python 3.10+** and **Node 18+**. On Windows, tick *"Add to PATH"* in
 both installers, then open a **new** terminal so the PATH change takes effect.
 
