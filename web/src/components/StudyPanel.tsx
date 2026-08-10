@@ -51,15 +51,33 @@ export function StudyPanel({ study, getCode }: Props) {
     }
   }
 
+  // Watching a loop fill a list is just as useful in Foundations as it is on a
+  // LeetCode problem, so the visualiser is always available — only the
+  // question and pattern notes depend on there being a study payload.
+  const viz = (
+    <div className="study-section">
+      <div className="study-section-label">Watch it run</div>
+      <VizPanel
+        getCode={getCode}
+        patternId={patternId}
+        problemNumber={problemNo}
+        resetKey={`${patternId}:${problemNo}`}
+      />
+    </div>
+  );
+
   if (!study || (!study.problem && !study.lesson)) {
     return (
       <div className="study-panel">
         <div className="study-head">
           <span className="study-head-label">Problem</span>
         </div>
-        <div className="study-body study-none">
-          No problem write-up for this exercise — LeetCode classes show the
-          question and pattern notes here.
+        <div className="study-body">
+          <p className="study-none">
+            No write-up for this exercise — LeetCode classes show the question
+            and pattern notes here.
+          </p>
+          {viz}
         </div>
       </div>
     );
@@ -172,15 +190,7 @@ export function StudyPanel({ study, getCode }: Props) {
 
       {/* Watch the data move: arrays with the pointers sitting on them, the
           dict filling up, nodes wiring together — step by step. */}
-      <div className="study-section">
-        <div className="study-section-label">Watch it run</div>
-        <VizPanel
-          getCode={getCode}
-          patternId={patternId}
-          problemNumber={problemNo}
-          resetKey={`${patternId}:${problemNo}`}
-        />
-      </div>
+      {viz}
 
       {lesson ? (
         <div className="study-section">
