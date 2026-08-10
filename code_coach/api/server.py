@@ -27,6 +27,8 @@ from code_coach.api.schemas import (
     ProgressSettingsUpdate,
     SkillInfo,
     StudyInfo,
+    VisualizeRequest,
+    VisualizeResponse,
     WaypointInfo,
 )
 from code_coach.leetcode.bank import study_payload as leetcode_study_payload
@@ -380,6 +382,39 @@ def practice_check_answer(body: CheckAnswerRequest) -> CheckAnswerResponse:
         note=note,
         solution=problem.code,
         title=problem.label,
+    )
+
+
+@app.post("/api/visualize", response_model=VisualizeResponse)
+def visualize(body: VisualizeRequest) -> VisualizeResponse:
+    """Step-by-step picture of the data while the code runs.
+
+    Complements /api/explain: that one says what each line means, this one says
+    what `left`, `seen` and the node pointers actually held at each step.
+    """
+    from code_coach.leetcode.study import brief_for
+    from code_coach.visualize import suggest_call, trace_code
+
+    code = body.code or ""
+    call = (body.call or "").strip()
+
+    if not call:
+        examples: list[str] = []
+        if body.problem_number is not None:
+            brief = brief_for(body.problem_number)
+            if brief:
+                examples = list(brief.examples)
+        call = suggest_call(code, examples)
+
+    result = trace_code(code, call=call)
+    return VisualizeResponse(
+        ok=bool(result.get("ok")),
+        steps=result.get("steps", []),
+        truncated=bool(result.get("truncated")),
+        stdout=result.get("stdout", ""),
+        stderr=result.get("stderr", ""),
+        error=result.get("error"),
+        call=call,
     )
 
 

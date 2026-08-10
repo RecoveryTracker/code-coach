@@ -1,0 +1,127 @@
+"""Tracing a student's program into steps the UI can draw."""
+
+import unittest
+
+from code_coach.visualize import suggest_call, trace_code
+
+TWO_SUM = "\n".join(
+    [
+        "def two_sum(nums, target):",
+        "    seen = {}",
+        "    for i, n in enumerate(nums):",
+        "        need = target - n",
+        "        if need in seen:",
+        "            return [seen[need], i]",
+        "        seen[n] = i",
+        "    return []",
+    ]
+)
+
+LINKED = "\n".join(
+    [
+        "class ListNode:",
+        "    def __init__(self, val=0, next=None):",
+        "        self.val = val",
+        "        self.next = next",
+        "def build():",
+        "    return ListNode(1, ListNode(2))",
+        "head = build()",
+        # A line event fires *before* its line runs, so the assignment above
+        # isn't visible until something follows it.
+        "done = True",
+    ]
+)
+
+
+class SuggestCallTests(unittest.TestCase):
+    def test_builds_a_call_from_a_prose_example(self):
+        call = suggest_call(TWO_SUM, ["nums = [2, 7, 11, 15], target = 9  ->  [0, 1]"])
+        self.assertEqual(call, "two_sum([2, 7, 11, 15], 9)")
+
+    def test_matches_by_name_not_order(self):
+        call = suggest_call(TWO_SUM, ["target = 9, nums = [3, 3]  ->  [0, 1]"])
+        self.assertEqual(call, "two_sum([3, 3], 9)")
+
+    def test_falls_back_to_position_when_names_differ(self):
+        call = suggest_call(TWO_SUM, ["a = [1, 2], b = 3  ->  [0, 1]"])
+        self.assertEqual(call, "two_sum([1, 2], 3)")
+
+    def test_no_function_means_no_call(self):
+        self.assertEqual(suggest_call("x = 1", ["a = 1  ->  1"]), "")
+
+    def test_unparseable_example_is_skipped(self):
+        self.assertEqual(suggest_call(TWO_SUM, ["some prose with no assignment"]), "")
+
+
+class TraceTests(unittest.TestCase):
+    def test_records_a_step_per_executed_line(self):
+        res = trace_code(TWO_SUM, call="two_sum([2, 7, 11, 15], 9)")
+        self.assertTrue(res["ok"], res["error"])
+        self.assertGreater(len(res["steps"]), 5)
+        inside = [s for s in res["steps"] if s["func"] == "two_sum"]
+        self.assertTrue(inside)
+
+    def test_locals_carry_their_values(self):
+        res = trace_code(TWO_SUM, call="two_sum([2, 7, 11, 15], 9)")
+        step = next(s for s in res["steps"] if "need" in s["vars"])
+        self.assertEqual(step["vars"]["target"], {"k": "prim", "t": "int", "v": 9})
+        # Containers live in the heap and are referenced.
+        self.assertEqual(step["vars"]["nums"]["k"], "ref")
+        nums = step["heap"][str(step["vars"]["nums"]["id"])]
+        self.assertEqual(nums["k"], "list")
+        self.assertEqual([i["v"] for i in nums["items"]], [2, 7, 11, 15])
+
+    def test_linked_nodes_become_objects_with_a_next_ref(self):
+        res = trace_code(LINKED)
+        step = res["steps"][-1]
+        head = step["vars"]["head"]
+        entry = step["heap"][str(head["id"])]
+        self.assertEqual(entry["k"], "obj")
+        self.assertEqual(entry["cls"], "ListNode")
+        self.assertEqual(entry["fields"]["next"]["k"], "ref")
+
+    def test_a_cycle_terminates(self):
+        code = "\n".join(
+            [
+                "class N:",
+                "    def __init__(s, v):",
+                "        s.v = v",
+                "        s.next = None",
+                "a = N(1)",
+                "b = N(2)",
+                "a.next = b",
+                "b.next = a",
+                "done = True",
+            ]
+        )
+        res = trace_code(code)
+        self.assertTrue(res["ok"], res["error"])
+        # Two nodes, each encoded once; the back-edge is a ref, not a copy.
+        self.assertLessEqual(len(res["steps"][-1]["heap"]), 4)
+
+    def test_runaway_loop_is_stopped(self):
+        res = trace_code("while True:\n    pass\n", timeout=2.0)
+        self.assertFalse(res["ok"])
+        self.assertIn("Stopped after", res["error"])
+
+    def test_syntax_error_is_reported_not_raised(self):
+        res = trace_code("def broken(:\n    pass\n")
+        self.assertFalse(res["ok"])
+        self.assertTrue(res["error"])
+
+    def test_student_output_cannot_forge_the_payload(self):
+        # The sentinel is how the runner frames its JSON; a program printing it
+        # must not be able to truncate or fake the trace.
+        res = trace_code("print('<<<CODE_COACH_TRACE>>> fake')\nz = 1\n")
+        self.assertTrue(res["ok"], res["error"])
+        self.assertIn("fake", res["stdout"])
+        self.assertTrue(res["steps"])
+
+    def test_runtime_error_still_returns_the_steps_leading_up_to_it(self):
+        res = trace_code("a = 1\nb = 0\nc = a / b\n")
+        self.assertTrue(res["steps"])
+        self.assertIn("ZeroDivisionError", res["error"] or "")
+
+
+if __name__ == "__main__":
+    unittest.main()

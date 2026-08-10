@@ -189,6 +189,38 @@ export type DrillEvaluateResult = {
   requirements?: RequirementItem[] | null;
 };
 
+/* ── Visualiser ─────────────────────────────────────────── */
+
+/** A leaf value, or a pointer into the step's heap. */
+export type VizValue =
+  | { k: "prim"; t: "int" | "float" | "str" | "bool" | "none"; v: unknown; clipped?: boolean }
+  | { k: "ref"; id: number };
+
+export type VizHeapEntry =
+  | { k: "list"; tuple: boolean; n: number; items: VizValue[] }
+  | { k: "dict"; n: number; pairs: [VizValue, VizValue][] }
+  | { k: "set"; n: number; items: VizValue[] }
+  | { k: "obj"; cls: string; fields: Record<string, VizValue> }
+  | { k: "opaque"; cls: string; v: string };
+
+export type VizStep = {
+  line: number;
+  func: string;
+  vars: Record<string, VizValue>;
+  /** Keys arrive from JSON as strings. */
+  heap: Record<string, VizHeapEntry>;
+};
+
+export type VisualizeResult = {
+  ok: boolean;
+  steps: VizStep[];
+  truncated: boolean;
+  stdout: string;
+  stderr: string;
+  error: string | null;
+  call: string;
+};
+
 /** One explained line from /api/explain. */
 export type ExplainLine = {
   line: number;

@@ -24,6 +24,8 @@ type Props = {
   onContinue: () => void;
   /** Begin dragging the explain panel's bottom edge. */
   onExplainDragStart: () => void;
+  /** Begin dragging the message box's bottom edge. */
+  onMsgDragStart: () => void;
   onBackFromReview: () => void;
   watching: boolean;
   /** Current editor buffer — read fresh when the student asks for an explanation. */
@@ -45,6 +47,7 @@ export function AdaptiveCoach({
   onSelectLesson,
   onContinue,
   onExplainDragStart,
+  onMsgDragStart,
   onBackFromReview,
   watching,
   getCode,
@@ -220,6 +223,14 @@ export function AdaptiveCoach({
         ) : (
           <p className="coach-msg-resting">{restingNote}</p>
         )}
+        <div
+          className="coach-msg-grip"
+          title="Drag to resize — pull it right up if you want it out of the way"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            onMsgDragStart();
+          }}
+        />
       </div>
 
       {explainOpen ? (

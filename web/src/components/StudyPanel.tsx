@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { checkAnswer } from "../api";
+import { VizPanel } from "./VizPanel";
 import type { CheckAnswerResult, StudyInfo } from "../types";
 
 type Props = {
@@ -168,6 +169,18 @@ export function StudyPanel({ study, getCode }: Props) {
           </div>
         </div>
       ) : null}
+
+      {/* Watch the data move: arrays with the pointers sitting on them, the
+          dict filling up, nodes wiring together — step by step. */}
+      <div className="study-section">
+        <div className="study-section-label">Watch it run</div>
+        <VizPanel
+          getCode={getCode}
+          patternId={patternId}
+          problemNumber={problemNo}
+          resetKey={`${patternId}:${problemNo}`}
+        />
+      </div>
 
       {lesson ? (
         <div className="study-section">

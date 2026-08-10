@@ -129,6 +129,9 @@ type Layout = {
   /** "Explain my code" panel — it lives in the auto-sized coach strip, so
    *  without a fixed height it pushes the editor down as it fills. */
   explainH: number;
+  /** The green/red coach message box. Fixed so it can't shove the editor;
+   *  draggable so it can be a single line when you don't want the room. */
+  msgH: number;
 };
 
 const DEFAULT_LAYOUT: Layout = {
@@ -137,6 +140,7 @@ const DEFAULT_LAYOUT: Layout = {
   sideH: 300,
   ttH: 240,
   explainH: 200,
+  msgH: 96,
 };
 
 /** Every pane keeps at least this much, so a drag can never hide one. */
@@ -144,6 +148,13 @@ const MIN_PANE = 90;
 const MIN_EDITOR = 280;
 /** Editor + right column together never shrink below this. */
 const MIN_WORK = 320;
+/**
+ * …except when you're deliberately dragging a top panel bigger. Reserving the
+ * full MIN_WORK left the explain panel a ceiling of ~120px, so it could never
+ * be opened up enough to read. Expanding it is an explicit act — let the work
+ * area yield down to this instead.
+ */
+const MIN_WORK_YIELD = 170;
 
 function loadLayout(): Layout {
   try {
@@ -216,7 +227,7 @@ export default function App() {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const workRef = useRef<HTMLDivElement | null>(null);
   const sideRef = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<"term" | "side" | "tt" | "explain" | null>(null);
+  const drag = useRef<"term" | "side" | "tt" | "explain" | "msg" | null>(null);
   const freeModeRef = useRef(false);
 
   exerciseIndexRef.current = exerciseIndex;
@@ -639,18 +650,23 @@ export default function App() {
       const chrome = work ? work.top - shell.top : 120;
       next.term = clampNum(L.term, 80, shell.height - chrome - MIN_WORK - 6);
 
-      // The explain panel sits inside that chrome, so its ceiling is whatever
-      // is left once the rest of the strip, the work floor and the terminal
-      // have taken their share. Opening it can never crush the editor.
+      // The explain and message panels sit inside that chrome, so each one's
+      // ceiling is whatever is left once the rest of the strip, the terminal
+      // and a (reduced) work floor have taken their share.
+      const room = (el: Element | null, floor: number) => {
+        const own = el ? el.getBoundingClientRect().height : 0;
+        return shell.height - (chrome - own) - MIN_WORK_YIELD - next.term - 6 - floor;
+      };
+
+      // Fixed range, deliberately NOT measured against remaining space: this
+      // is a stored preference, and squeezing it on every reflow would
+      // overwrite the size you chose. The explain clamp below measures real
+      // chrome (which includes this box), so the work floor is still safe.
+      next.msgH = clampNum(L.msgH, 26, 260);
+
       const explainEl = document.querySelector(".coach-explain");
       if (explainEl) {
-        const explainH = explainEl.getBoundingClientRect().height;
-        const chromeWithout = chrome - explainH;
-        next.explainH = clampNum(
-          L.explainH,
-          90,
-          shell.height - chromeWithout - MIN_WORK - next.term - 6,
-        );
+        next.explainH = clampNum(L.explainH, 90, room(explainEl, 0));
       }
     }
     if (work) {
@@ -674,7 +690,8 @@ export default function App() {
     a.sideW === b.sideW &&
     a.sideH === b.sideH &&
     a.ttH === b.ttH &&
-    a.explainH === b.explainH;
+    a.explainH === b.explainH &&
+    a.msgH === b.msgH;
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -697,6 +714,11 @@ export default function App() {
           const box = document.querySelector(".coach-explain");
           if (box) {
             raw = { ...L, explainH: e.clientY - box.getBoundingClientRect().top };
+          }
+        } else if (drag.current === "msg") {
+          const box = document.querySelector(".coach-msg");
+          if (box) {
+            raw = { ...L, msgH: e.clientY - box.getBoundingClientRect().top };
           }
         }
         const next = clampLayout(raw);
@@ -849,6 +871,7 @@ export default function App() {
           "--side-h": `${layout.sideH}px`,
           "--tt-h": `${layout.ttH}px`,
           "--explain-h": `${layout.explainH}px`,
+          "--msg-h": `${layout.msgH}px`,
         } as CSSProperties
       }
     >
@@ -881,6 +904,10 @@ export default function App() {
           onContinue={advanceExercise}
           onExplainDragStart={() => {
             drag.current = "explain";
+            document.body.classList.add("is-resizing");
+          }}
+          onMsgDragStart={() => {
+            drag.current = "msg";
             document.body.classList.add("is-resizing");
           }}
           onBackFromReview={onBackFromReview}

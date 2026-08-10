@@ -6,6 +6,7 @@ import type {
   PracticeSession,
   ProgressInfo,
   SkillInfo,
+  VisualizeResult,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -123,6 +124,19 @@ export function startReview(skillId: string): Promise<PracticeSession> {
 
 export function backFromReview(): Promise<PracticeSession> {
   return request("/api/practice/back", { method: "POST", body: "{}" });
+}
+
+/** Step-through picture of the data while the code runs. */
+export function visualizeCode(body: {
+  code: string;
+  call?: string;
+  pattern_id?: string | null;
+  problem_number?: number | null;
+}): Promise<VisualizeResult> {
+  return request("/api/visualize", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 /** Diff your own attempt against a problem's real solution. */

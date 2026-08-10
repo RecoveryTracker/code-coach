@@ -235,6 +235,27 @@ class CheckAnswerResponse(BaseModel):
     title: str = ""
 
 
+class VisualizeRequest(BaseModel):
+    code: str = ""
+    # Appended before running. Blank means "work one out from the problem's
+    # examples" — a LeetCode answer only defines a function, so without a call
+    # there is nothing to watch.
+    call: str = ""
+    pattern_id: str | None = None
+    problem_number: int | None = None
+
+
+class VisualizeResponse(BaseModel):
+    ok: bool = True
+    steps: list[dict] = []
+    truncated: bool = False
+    stdout: str = ""
+    stderr: str = ""
+    error: str | None = None
+    # The call actually used, so the UI can show and let you edit it.
+    call: str = ""
+
+
 class RequirementItem(BaseModel):
     label: str
     passed: bool
