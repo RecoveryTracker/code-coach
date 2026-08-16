@@ -99,6 +99,29 @@ class TraceTests(unittest.TestCase):
         # Two nodes, each encoded once; the back-edge is a ref, not a copy.
         self.assertLessEqual(len(res["steps"][-1]["heap"]), 4)
 
+    def test_last_step_carries_the_returned_value(self):
+        # A `line` event fires before its line runs, so without capturing
+        # `return` the trace stops one step short of the answer.
+        res = trace_code(TWO_SUM, call="two_sum([2, 7, 11, 15], 9)")
+        last = res["steps"][-1]
+        self.assertIn("returned", last)
+        ref = last["returned"]
+        self.assertEqual(ref["k"], "ref")
+        entry = last["heap"][str(ref["id"])]
+        self.assertEqual([i["v"] for i in entry["items"]], [0, 1])
+
+    def test_module_return_is_not_recorded(self):
+        # Every module "returns" None when it finishes; showing that would put
+        # a meaningless final frame on every trace.
+        res = trace_code("x = 1\ny = 2\n")
+        self.assertFalse(any("returned" in s for s in res["steps"]))
+
+    def test_a_function_returning_none_still_reports_it(self):
+        res = trace_code("def f():\n    pass\nf()\n")
+        rets = [s for s in res["steps"] if "returned" in s]
+        self.assertEqual(len(rets), 1)
+        self.assertEqual(rets[0]["returned"]["t"], "none")
+
     def test_runaway_loop_is_stopped(self):
         res = trace_code("while True:\n    pass\n", timeout=2.0)
         self.assertFalse(res["ok"])

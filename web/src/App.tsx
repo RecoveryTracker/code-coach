@@ -18,6 +18,7 @@ import {
 } from "./api";
 import { AdaptiveCoach } from "./components/AdaptiveCoach";
 import { EditorPane } from "./components/EditorPane";
+import { LanguagePicker } from "./components/LanguagePicker";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
@@ -100,15 +101,27 @@ function loadPos(drillId: string, level: number): number | null {
   }
 }
 
-/** Wipe every saved exercise in a lesson (Start over). */
-function clearLessonDrafts(drillId: string) {
+function clearDraft(slot: DraftSlot) {
   try {
-    const prefix = `code-coach:drill:${drillId}:`;
-    const posPrefix = `code-coach:pos:${drillId}:`;
+    localStorage.removeItem(draftKey(slot));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Every saved editor buffer, everywhere. Only reachable from the Progress
+ * panel behind a confirmation — it destroys work you can't see from where you
+ * click. Deliberately leaves saved scripts and the free-mode buffer alone.
+ */
+function clearAllDrafts() {
+  try {
     const doomed: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && (k.startsWith(prefix) || k.startsWith(posPrefix))) doomed.push(k);
+      if (k && (k.startsWith("code-coach:drill:") || k.startsWith("code-coach:pos:"))) {
+        doomed.push(k);
+      }
     }
     doomed.forEach((k) => localStorage.removeItem(k));
   } catch {
@@ -132,6 +145,12 @@ type Layout = {
   /** The green/red coach message box. Fixed so it can't shove the editor;
    *  draggable so it can be a single line when you don't want the room. */
   msgH: number;
+  /** "Watch it run" — diagrams need more room than prose, and how much
+   *  depends on the structure, so it's yours to set. */
+  vizH: number;
+  /** Message box collapsed to a single line. The nav still shows the
+   *  correct/wrong headline, so nothing is lost by folding it away. */
+  msgCollapsed: boolean;
 };
 
 const DEFAULT_LAYOUT: Layout = {
@@ -140,7 +159,11 @@ const DEFAULT_LAYOUT: Layout = {
   sideH: 300,
   ttH: 240,
   explainH: 200,
-  msgH: 96,
+  // 64px ≈ three lines: enough for the usual "line N doesn't match / should
+  // be / you typed" without reserving space that's normally empty.
+  msgH: 64,
+  vizH: 260,
+  msgCollapsed: false,
 };
 
 /** Every pane keeps at least this much, so a drag can never hide one. */
@@ -227,7 +250,9 @@ export default function App() {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const workRef = useRef<HTMLDivElement | null>(null);
   const sideRef = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<"term" | "side" | "tt" | "explain" | "msg" | null>(null);
+  const drag = useRef<
+    "term" | "side" | "tt" | "explain" | "msg" | "viz" | null
+  >(null);
   const freeModeRef = useRef(false);
 
   exerciseIndexRef.current = exerciseIndex;
@@ -334,7 +359,9 @@ export default function App() {
         initial = preserveCode;
         saveDraft(slot, preserveCode);
       } else if (forceClean) {
-        clearLessonDrafts(s.drill_id);
+        // Only this exercise. Clearing the whole lesson from here would throw
+        // away work on every other exercise in it.
+        clearDraft(slot);
         initial = s.starter;
       } else {
         const draft = loadDraft(slot);
@@ -541,21 +568,45 @@ export default function App() {
     [loadSession, slotNow],
   );
 
+  /**
+   * The class one step either side of the current one, or null at the ends.
+   * Used to carry the *same lesson* across a class boundary.
+   */
+  const adjacentClass = useCallback(
+    (delta: number): string | null => {
+      const list = session?.curriculum ?? [];
+      const here = list.findIndex((c) => c.id === session?.class_id);
+      if (here < 0) return null;
+      const target = list[here + delta];
+      return target ? target.id : null;
+    },
+    [session],
+  );
+
+  /**
+   * Stepping exercises never changes what kind of practice you're doing.
+   *
+   * Running off either end moves to the next/previous CLASS at the same lesson
+   * number — type-along stays type-along, build-from-memory stays
+   * build-from-memory. It used to roll into the next lesson of the same class,
+   * which silently switched you from typing to building mid-flow.
+   */
   const onExerciseDelta = useCallback(
     (d: number) => {
       if (!session) return;
       const total = session.steps.length;
-      let next = exerciseIndexRef.current + d;
+      const next = exerciseIndexRef.current + d;
+      const lesson = session.lesson_number ?? 1;
+
       if (next < 0) {
-        if (session.endless) {
-          setExerciseIndex(0);
-          return;
-        }
-        // previous lesson, last exercise — jump lesson back
-        void jumpTo({ lesson_delta: -1 });
+        const prev = adjacentClass(-1);
+        if (prev) void jumpTo({ class_id: prev, lesson_number: lesson });
         return;
       }
+
       if (next >= total) {
+        // An endless type-along has more of its own material — load the next
+        // window rather than leaving the class.
         if (session.endless || session.drill_id === "class-1-dictation") {
           void (async () => {
             try {
@@ -568,12 +619,14 @@ export default function App() {
           })();
           return;
         }
-        void jumpTo({ lesson_delta: 1 });
+        const following = adjacentClass(1);
+        if (following) void jumpTo({ class_id: following, lesson_number: lesson });
         return;
       }
+
       goToExercise(next, session.starter);
     },
-    [session, goToExercise, jumpTo],
+    [session, goToExercise, jumpTo, adjacentClass],
   );
 
   const onReview = useCallback(
@@ -668,6 +721,10 @@ export default function App() {
       if (explainEl) {
         next.explainH = clampNum(L.explainH, 90, room(explainEl, 0));
       }
+      const vizEl = document.querySelector(".coach-viz");
+      if (vizEl) {
+        next.vizH = clampNum(L.vizH, 120, room(vizEl, 0));
+      }
     }
     if (work) {
       if (isStacked()) {
@@ -691,7 +748,9 @@ export default function App() {
     a.sideH === b.sideH &&
     a.ttH === b.ttH &&
     a.explainH === b.explainH &&
-    a.msgH === b.msgH;
+    a.msgH === b.msgH &&
+    a.vizH === b.vizH &&
+    a.msgCollapsed === b.msgCollapsed;
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -719,6 +778,11 @@ export default function App() {
           const box = document.querySelector(".coach-msg");
           if (box) {
             raw = { ...L, msgH: e.clientY - box.getBoundingClientRect().top };
+          }
+        } else if (drag.current === "viz") {
+          const box = document.querySelector(".coach-viz");
+          if (box) {
+            raw = { ...L, vizH: e.clientY - box.getBoundingClientRect().top };
           }
         }
         const next = clampLayout(raw);
@@ -788,11 +852,45 @@ export default function App() {
     result?.checks ??
     session.steps.map((s) => ({ label: s.label, passed: false }));
 
+  /**
+   * Clear the editor for the exercise you're looking at — nothing else.
+   * It deliberately doesn't touch the other exercises' buffers or move you off
+   * this one: a button on the main toolbar shouldn't be able to destroy work
+   * you can't currently see.
+   */
+  const onStartOver = () => {
+    if (!session) return;
+    clearDraft(slotNow());
+    const blank = session.starter;
+    codeRef.current = blank;
+    setSeedCode(blank);
+    setEditorRevision((n) => n + 1);
+    setExerciseDone(false);
+    setHasRun(false);
+    setResult(null);
+    const id = drillRef.current;
+    if (id) void score(id, blank, false, exerciseIndexRef.current);
+  };
+
   // App-level actions. These used to own a whole 44px header row of their own;
   // they now ride along on the coach line, which buys that height back for the
   // editor.
   const toolbar = (
     <div className="ws-top-actions">
+      <LanguagePicker
+        current={session?.language ?? "python"}
+        onChanged={() => {
+          // Reload the session so drills, starter and editor mode all come
+          // back in the new language.
+          void (async () => {
+            try {
+              await loadSession(await fetchCurrentPractice(), false);
+            } catch {
+              /* stay */
+            }
+          })();
+        }}
+      />
       <ScriptLibrary
         source={freeMode ? "free" : "lesson"}
         getCode={() => codeRef.current}
@@ -836,15 +934,10 @@ export default function App() {
         <button
           type="button"
           className="ws-btn"
-          onClick={() => {
-            if (!session) return;
-            // Start over wipes every exercise in this lesson, not just
-            // the one on screen.
-            clearLessonDrafts(session.drill_id);
-            void loadSession(session, true);
-          }}
+          onClick={onStartOver}
+          title="Clear the editor for this exercise only — your other exercises are untouched"
         >
-          Start over
+          Clear editor
         </button>
       ) : null}
       <button
@@ -871,7 +964,8 @@ export default function App() {
           "--side-h": `${layout.sideH}px`,
           "--tt-h": `${layout.ttH}px`,
           "--explain-h": `${layout.explainH}px`,
-          "--msg-h": `${layout.msgH}px`,
+          "--msg-h": `${layout.msgCollapsed ? 26 : layout.msgH}px`,
+          "--viz-h": `${layout.vizH}px`,
         } as CSSProperties
       }
     >
@@ -896,6 +990,8 @@ export default function App() {
           checks={checks}
           exerciseIndex={exerciseIndex}
           exerciseDone={exerciseDone}
+          onClassDelta={(d) => void jumpTo({ class_delta: d })}
+          onLessonDelta={(d) => void jumpTo({ lesson_delta: d })}
           onExerciseDelta={onExerciseDelta}
           onSelectClass={(id) =>
             void jumpTo({ class_id: id, lesson_number: 1 })
@@ -907,7 +1003,27 @@ export default function App() {
             document.body.classList.add("is-resizing");
           }}
           onMsgDragStart={() => {
+            if (layout.msgCollapsed) return;
             drag.current = "msg";
+            document.body.classList.add("is-resizing");
+          }}
+          msgCollapsed={layout.msgCollapsed}
+          onToggleMsg={() =>
+            setLayout((L) => {
+              const next = { ...L, msgCollapsed: !L.msgCollapsed };
+              try {
+                localStorage.setItem(
+                  "code-coach:workspace-layout-v5",
+                  JSON.stringify(next),
+                );
+              } catch {
+                /* ignore */
+              }
+              return next;
+            })
+          }
+          onVizDragStart={() => {
+            drag.current = "viz";
             document.body.classList.add("is-resizing");
           }}
           onBackFromReview={onBackFromReview}
@@ -927,6 +1043,10 @@ export default function App() {
             revision={editorRevision}
             onChange={onChange}
             onRun={onRun}
+            language={session.editor_language ?? "python"}
+            fileName={`practice.${
+              session.language === "dart" ? "dart" : "py"
+            }`}
           />
         </div>
         {!freeMode ? (
@@ -994,6 +1114,10 @@ export default function App() {
           onGotoClass={(id) => {
             setProgressOpen(false);
             void jumpTo({ class_id: id, lesson_number: 1 });
+          }}
+          onClearAll={() => {
+            clearAllDrafts();
+            if (session) void loadSession(session, true);
           }}
         />
       ) : null}

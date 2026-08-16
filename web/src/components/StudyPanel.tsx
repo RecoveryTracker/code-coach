@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { checkAnswer } from "../api";
-import { VizPanel } from "./VizPanel";
 import type { CheckAnswerResult, StudyInfo } from "../types";
 
 type Props = {
@@ -51,21 +50,6 @@ export function StudyPanel({ study, getCode }: Props) {
     }
   }
 
-  // Watching a loop fill a list is just as useful in Foundations as it is on a
-  // LeetCode problem, so the visualiser is always available — only the
-  // question and pattern notes depend on there being a study payload.
-  const viz = (
-    <div className="study-section">
-      <div className="study-section-label">Watch it run</div>
-      <VizPanel
-        getCode={getCode}
-        patternId={patternId}
-        problemNumber={problemNo}
-        resetKey={`${patternId}:${problemNo}`}
-      />
-    </div>
-  );
-
   if (!study || (!study.problem && !study.lesson)) {
     return (
       <div className="study-panel">
@@ -77,7 +61,6 @@ export function StudyPanel({ study, getCode }: Props) {
             No write-up for this exercise — LeetCode classes show the question
             and pattern notes here.
           </p>
-          {viz}
         </div>
       </div>
     );
@@ -188,9 +171,6 @@ export function StudyPanel({ study, getCode }: Props) {
         </div>
       ) : null}
 
-      {/* Watch the data move: arrays with the pointers sitting on them, the
-          dict filling up, nodes wiring together — step by step. */}
-      {viz}
 
       {lesson ? (
         <div className="study-section">

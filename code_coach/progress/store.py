@@ -62,6 +62,9 @@ class StudentProgress:
     review_return_class: str | None = None
     # Current exercise index (optional; client also tracks)
     exercise_index: int = 0
+    # Which language the drills are in. Only Python is implemented; see
+    # code_coach/languages.py for what a second one needs.
+    language: str = "python"
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -149,8 +152,20 @@ class StudentProgress:
             ),
             review_return_class=raw.get("review_return_class"),
             exercise_index=int(raw.get("exercise_index") or 0),
+            # Unknown ids fall back to Python rather than failing to load.
+            language=_known_language(raw.get("language")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
+
+
+def _known_language(value: object) -> str:
+    """A stored language id, or Python. Imported lazily so the progress store
+    stays free of app-level imports."""
+    from code_coach.languages import DEFAULT_LANGUAGE, get_language
+
+    if not value:
+        return DEFAULT_LANGUAGE
+    return get_language(str(value)).id
 
 
 def default_progress() -> StudentProgress:

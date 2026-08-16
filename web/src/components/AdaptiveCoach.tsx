@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { chatWithCoach, explainCode } from "../api";
+import { VizPanel } from "./VizPanel";
 import {
   CurriculumNav,
   type CurriculumClass,
@@ -17,6 +18,8 @@ type Props = {
   checks: CheckItem[];
   exerciseIndex: number;
   exerciseDone: boolean;
+  onClassDelta: (d: number) => void;
+  onLessonDelta: (d: number) => void;
   onExerciseDelta: (d: number) => void;
   onSelectClass: (id: string) => void;
   onSelectLesson: (n: number) => void;
@@ -26,6 +29,11 @@ type Props = {
   onExplainDragStart: () => void;
   /** Begin dragging the message box's bottom edge. */
   onMsgDragStart: () => void;
+  /** Message box folded to a single line. */
+  msgCollapsed: boolean;
+  onToggleMsg: () => void;
+  /** Begin dragging the "Watch it run" panel's bottom edge. */
+  onVizDragStart: () => void;
   onBackFromReview: () => void;
   watching: boolean;
   /** Current editor buffer — read fresh when the student asks for an explanation. */
@@ -42,12 +50,17 @@ export function AdaptiveCoach({
   checks,
   exerciseIndex,
   exerciseDone,
+  onClassDelta,
+  onLessonDelta,
   onExerciseDelta,
   onSelectClass,
   onSelectLesson,
   onContinue,
   onExplainDragStart,
   onMsgDragStart,
+  msgCollapsed,
+  onToggleMsg,
+  onVizDragStart,
   onBackFromReview,
   watching,
   getCode,
@@ -65,6 +78,7 @@ export function AdaptiveCoach({
   const curriculum = (session.curriculum ?? []) as CurriculumClass[];
 
   const [chatOpen, setChatOpen] = useState(false);
+  const [vizOpen, setVizOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState<
     { role: "you" | "coach"; text: string }[]
@@ -198,9 +212,13 @@ export function AdaptiveCoach({
           onToggleChat={() => setChatOpen((o) => !o)}
           explainOpen={explainOpen}
           onToggleExplain={toggleExplain}
+          onClassDelta={onClassDelta}
+          onLessonDelta={onLessonDelta}
           onExerciseDelta={onExerciseDelta}
           onSelectClass={onSelectClass}
           onSelectLesson={onSelectLesson}
+          vizOpen={vizOpen}
+          onToggleViz={() => setVizOpen((o) => !o)}
           brand={brand}
           toolbar={toolbar}
         />
@@ -211,27 +229,87 @@ export function AdaptiveCoach({
 
       {/* Always present, always the same height. Messages scroll inside it
           instead of growing the strip and pushing the editor down. */}
-      <div className={`coach-msg ${statusClass}`} aria-live="polite">
-        {statusClass === "bad" ? (
-          // The full complaint goes here, where there's room. The one-line
-          // status strip only ever shows its first line.
-          diffText ? (
-            <pre className="coach-msg-diff">{statusText}</pre>
+      <div
+        className={`coach-msg ${statusClass}${msgCollapsed ? " collapsed" : ""}`}
+        aria-live="polite"
+      >
+        <button
+          type="button"
+          className="coach-msg-fold"
+          onClick={onToggleMsg}
+          title={
+            msgCollapsed
+              ? "Expand the coach's notes"
+              : "Collapse to a single line"
+          }
+          aria-expanded={!msgCollapsed}
+        >
+          {msgCollapsed ? "▾" : "▴"}
+        </button>
+
+        {/* Content scrolls in here so the grip below stays put at the
+            panel's bottom edge, the way the other panels' grips do. */}
+        <div className="coach-msg-body">
+          {msgCollapsed ? (
+            <p className="coach-msg-oneline">{statusHead}</p>
+          ) : statusClass === "bad" ? (
+            // The full complaint goes here, where there's room. The one-line
+            // status strip only ever shows its first line.
+            diffText ? (
+              <pre className="coach-msg-diff">{statusText}</pre>
+            ) : (
+              <p className="coach-msg-alert">{statusText}</p>
+            )
           ) : (
-            <p className="coach-msg-alert">{statusText}</p>
-          )
-        ) : (
-          <p className="coach-msg-resting">{restingNote}</p>
-        )}
-        <div
-          className="coach-msg-grip"
-          title="Drag to resize — pull it right up if you want it out of the way"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            onMsgDragStart();
-          }}
-        />
+            <p className="coach-msg-resting">{restingNote}</p>
+          )}
+        </div>
+
+        {!msgCollapsed ? (
+          <div
+            className="coach-msg-grip"
+            title="Drag to resize"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onMsgDragStart();
+            }}
+          />
+        ) : null}
       </div>
+
+      {/* Sits alongside "Explain my code" — same shape of tool, same place.
+          It was buried at the bottom of the Problem panel's scroll area,
+          which is a ~95px box, so nobody ever found it. */}
+      {vizOpen ? (
+        <div className="coach-viz">
+          <div className="coach-explain-head">
+            <span className="coach-explain-title">Watch it run</span>
+            <button
+              type="button"
+              className="coach-chat-toggle"
+              onClick={() => setVizOpen(false)}
+            >
+              Hide
+            </button>
+          </div>
+          <div className="coach-viz-body">
+            <VizPanel
+              getCode={getCode}
+              patternId={step?.study?.lesson?.id ?? null}
+              problemNumber={step?.study?.problem?.number ?? null}
+              resetKey={`${session.drill_id}:${exerciseIndex}`}
+            />
+          </div>
+          <div
+            className="coach-explain-grip"
+            title="Drag to resize"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onVizDragStart();
+            }}
+          />
+        </div>
+      ) : null}
 
       {explainOpen ? (
         <div className="coach-explain">

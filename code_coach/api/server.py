@@ -25,6 +25,7 @@ from code_coach.api.schemas import (
     PracticeSession,
     ProgressResponse,
     ProgressSettingsUpdate,
+    LanguageInfo,
     SkillInfo,
     StudyInfo,
     VisualizeRequest,
@@ -124,6 +125,9 @@ def _session_from_progress() -> PracticeSession:
         progress.current_drill_id = drill.id
         _store.save(progress)
 
+    from code_coach.languages import get_language
+
+    lang = get_language(getattr(progress, "language", None))
     skill = get_skill(drill.skill)
     level = progress.coach_level
     meta = lesson_meta_for_drill(drill.id, progress)
@@ -190,6 +194,8 @@ def _session_from_progress() -> PracticeSession:
         dictation_level=d_level,
         dictation_level_label=DICTATION_LEVEL_LABELS.get(d_level, f"Level {d_level}"),
         lines_done=progress.lines_for(meta["class_id"]),
+        language=lang.id,
+        editor_language=lang.monaco,
     )
 
 
@@ -212,6 +218,18 @@ def skills() -> list[SkillInfo]:
     ]
 
 
+@app.get("/api/languages", response_model=list[LanguageInfo])
+def languages() -> list[LanguageInfo]:
+    """Languages the drills can be written in.
+
+    Only Python is implemented; the rest are listed with a note saying what's
+    missing, so the picker shows the roadmap instead of hiding it.
+    """
+    from code_coach.languages import languages_payload
+
+    return [LanguageInfo(**x) for x in languages_payload()]
+
+
 @app.get("/api/progress", response_model=ProgressResponse)
 def get_progress() -> ProgressResponse:
     return _progress_response()
@@ -228,6 +246,18 @@ def update_progress(body: ProgressSettingsUpdate) -> ProgressResponse:
         progress.coach_level = max(1, min(2, int(level)))
     if body.selected_skills is not None:
         progress.selected_skills = list(body.selected_skills)
+    if body.language is not None:
+        # Refuse rather than silently store a language with no drills behind
+        # it — the picker would then look like it worked.
+        from code_coach.languages import get_language
+
+        lang = get_language(body.language)
+        if lang.id != body.language or not lang.available:
+            raise HTTPException(
+                status_code=400,
+                detail=lang.note or f"{body.language} isn't available yet.",
+            )
+        progress.language = lang.id
     if body.dictation_level is not None:
         progress.dictation_level = max(1, min(5, int(body.dictation_level)))
         # New difficulty → fresh endless window at this level, in the class

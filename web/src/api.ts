@@ -2,6 +2,7 @@ import type {
   CheckAnswerResult,
   DrillEvaluateResult,
   ExplainResult,
+  LanguageInfo,
   PracticeMode,
   PracticeSession,
   ProgressInfo,
@@ -25,6 +26,10 @@ export function fetchSkills(): Promise<SkillInfo[]> {
   return request("/api/skills");
 }
 
+export function fetchLanguages(): Promise<LanguageInfo[]> {
+  return request("/api/languages");
+}
+
 export function fetchProgress(): Promise<ProgressInfo> {
   return request("/api/progress");
 }
@@ -35,6 +40,7 @@ export function updateProgress(body: {
   difficulty?: number;
   selected_skills?: string[];
   dictation_level?: number;
+  language?: string;
 }): Promise<ProgressInfo> {
   return request("/api/progress", {
     method: "PUT",

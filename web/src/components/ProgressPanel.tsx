@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { PracticeSession, ProgressInfo } from "../types";
 
 type Props = {
@@ -5,6 +6,8 @@ type Props = {
   session: PracticeSession;
   onClose: () => void;
   onGotoClass: (classId: string) => void;
+  /** Throw away every saved editor buffer, everywhere. */
+  onClearAll: () => void;
 };
 
 /** Map a skill to the class whose endless Lesson 1 practices it. */
@@ -18,7 +21,15 @@ const SKILL_TO_CLASS: Record<string, string> = {
  * Study overview: per-skill mastery, type-along lines per class, and
  * "due for review" skills (practiced before, but not in the last few days).
  */
-export function ProgressPanel({ progress, session, onClose, onGotoClass }: Props) {
+export function ProgressPanel({
+  progress,
+  session,
+  onClose,
+  onGotoClass,
+  onClearAll,
+}: Props) {
+  // Two-step: this wipes work you can't see from here, so it asks first.
+  const [confirming, setConfirming] = useState(false);
   const skills = Object.entries(progress.by_skill ?? {});
   const lines = progress.dictation_lines ?? {};
   const due = progress.review_due ?? [];
@@ -116,6 +127,54 @@ export function ProgressPanel({ progress, session, onClose, onGotoClass }: Props
           <p className="progress-note">
             {progress.total_completes} lesson completions overall.
           </p>
+
+          <section className="progress-danger">
+            <div className="progress-section-title">Start over</div>
+            {confirming ? (
+              <>
+                <p className="progress-danger-warn">
+                  This deletes the code you've typed in <strong>every</strong>{" "}
+                  exercise, in every class and every chunk size. Saved scripts
+                  (Load…) and your skill progress are kept. It can't be undone.
+                </p>
+                <div className="progress-danger-actions">
+                  <button
+                    type="button"
+                    className="ws-btn danger"
+                    onClick={() => {
+                      onClearAll();
+                      setConfirming(false);
+                      onClose();
+                    }}
+                  >
+                    Yes, delete all my typed code
+                  </button>
+                  <button
+                    type="button"
+                    className="ws-btn"
+                    onClick={() => setConfirming(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="progress-note">
+                  Clears every saved editor buffer so you can start the whole
+                  curriculum fresh. To clear just the exercise you're on, use{" "}
+                  <strong>Clear editor</strong> on the toolbar.
+                </p>
+                <button
+                  type="button"
+                  className="ws-btn"
+                  onClick={() => setConfirming(true)}
+                >
+                  Clear all typed code…
+                </button>
+              </>
+            )}
+          </section>
         </div>
       </div>
     </div>

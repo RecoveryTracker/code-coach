@@ -105,6 +105,137 @@
   cursor: pointer;
 }
 
+/* ── Language menu ──────────────────────────────────────── */
+
+.lang-wrap {
+  position: relative;
+}
+
+.lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  z-index: 40;
+  width: 270px;
+  padding: 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+.lang-menu-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 2px 6px 6px;
+}
+
+.lang-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.lang-item:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+
+.lang-item.on {
+  background: var(--accent-soft);
+}
+
+.lang-item.off {
+  cursor: not-allowed;
+}
+
+.lang-item-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lang-item-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lang-item.off .lang-item-name {
+  color: var(--text-dim);
+}
+
+.lang-item-tick {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.lang-item-soon {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+}
+
+.lang-item-note {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+.lang-error {
+  margin: 6px 6px 2px;
+  font-size: 11px;
+  color: var(--danger);
+}
+
+.ws-btn.danger {
+  background: var(--danger);
+  border-color: transparent;
+  color: #2a0d0b;
+  font-weight: 650;
+}
+
+/* Destructive corner of the Progress panel — visually fenced off. */
+.progress-danger {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.progress-danger-warn {
+  margin: 4px 0 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.progress-danger-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .ws-btn.primary {
   background: var(--accent);
   border-color: transparent;
@@ -889,6 +1020,29 @@ body.is-resizing .ws-split-row {
   min-height: 0;
 }
 
+/* Same shape as the explain panel — it's the same kind of tool. Taller,
+   because a stepped-through structure needs the room. */
+.coach-viz {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+  /* Height is yours — a tree needs far more room than a short array, and only
+     you know which you're looking at. Drag the bottom edge. */
+  height: var(--viz-h, 260px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.coach-viz-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 10px;
+}
+
 .coach-explain-grip {
   flex-shrink: 0;
   height: 7px;
@@ -1316,7 +1470,30 @@ body.is-resizing .coach-explain-grip {
 }
 
 .cur-crumb {
+  display: flex;
+  align-items: center;
+  gap: 1px;
   min-width: 0;
+}
+
+/* Step one class / one lesson at a time, without opening the dropdown. */
+.cur-crumb-arrow {
+  flex-shrink: 0;
+  width: 18px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cur-crumb-arrow:hover {
+  background: var(--bg);
+  color: var(--accent);
 }
 
 /* Reads as text in a path, not as a form field — the caret is the only hint
@@ -1824,17 +2001,30 @@ body.is-resizing .coach-explain-grip {
   flex-wrap: wrap;
 }
 
+/* Back / Next as a joined pair — stepping is the main interaction, so these
+   are proper buttons rather than arrows tucked beside the slider. */
+.viz-steps {
+  display: flex;
+  gap: 2px;
+}
+
 .viz-step-btn {
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--border);
+  min-width: 58px;
+  height: 26px;
+  border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
-  color: var(--text-muted);
-  border-radius: 5px;
-  font-size: 14px;
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1;
-  padding: 0;
+  padding: 0 9px;
   cursor: pointer;
+}
+
+.viz-step-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .viz-step-btn:disabled {
@@ -1842,9 +2032,23 @@ body.is-resizing .coach-explain-grip {
   cursor: default;
 }
 
+.viz-speed {
+  height: 26px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Scrubber gets its own full-width line under the buttons. */
 .viz-slider {
-  flex: 1;
+  flex: 1 0 100%;
   min-width: 70px;
+  margin-top: 2px;
   accent-color: var(--accent);
 }
 
@@ -1911,6 +2115,28 @@ body.is-resizing .coach-explain-grip {
   text-transform: none;
 }
 
+/* The frame where a function hands its answer back. */
+.viz-returned {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid var(--success);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: var(--success-soft);
+}
+
+.viz-returned-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--success);
+  padding-top: 3px;
+}
+
 .viz-var {
   display: flex;
   align-items: flex-start;
@@ -1950,11 +2176,143 @@ body.is-resizing .coach-explain-grip {
   color: var(--text-dim);
 }
 
-/* Arrays: boxed cells with the index above and any pointer variable below,
-   which is the whole point for two-pointer and sliding-window work. */
-.viz-array-cells {
-  display: flex;
-  gap: 2px;
+/* One line under each picture saying what it shows. */
+.viz-caption {
+  margin: 5px 0 0;
+  max-width: 46em;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.viz-inline-note {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.viz-inline-note strong {
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+/* ── Drawn diagrams (SVG) ───────────────────────────────── */
+
+.vd {
+  display: block;
+  overflow: visible;
+}
+
+.vd-empty {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+/* Array cells and linked-list nodes */
+.vd-cell,
+.vd-node {
+  fill: var(--bg);
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+}
+
+.vd-cell.on,
+.vd-node.on {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.8;
+}
+
+.vd-cell.more {
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+
+.vd-node-split {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.vd-circle {
+  fill: var(--bg-elevated);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.vd-circle.on {
+  fill: var(--accent);
+}
+
+.vd-circle.on + .vd-val {
+  fill: #0b1020;
+}
+
+.vd-val {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.vd-idx {
+  fill: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+}
+
+.vd-null {
+  fill: var(--text-dim);
+  font-size: 13px;
+}
+
+/* Edges between nodes, and the pointer arrows aimed at a cell */
+.vd-edge {
+  stroke: var(--text-muted);
+  stroke-width: 1.4;
+  fill: none;
+}
+
+.vd-edge.cyclic {
+  stroke: var(--danger);
+  stroke-dasharray: 4 3;
+}
+
+.vd-ptr-line {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.vd-ptr-name {
+  fill: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.vd-arrowfill {
+  fill: var(--text-muted);
+}
+
+/* The shaded span between two bracketing pointers — the sliding window, the
+   binary-search range, the region the two pointers have squeezed to. */
+.vd-window {
+  fill: var(--accent);
+  opacity: 0.16;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.vd-window-label {
+  fill: var(--accent);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* Backward links in a doubly-linked list, under the row. */
+.vd-edge.back {
+  stroke: var(--text-dim);
+  stroke-dasharray: 3 2;
 }
 
 .viz-cell {
@@ -2214,36 +2572,78 @@ body.is-resizing .coach-explain-grip {
    that appears here used to grow it and shove the editor and Type-this panel
    down mid-typing. Reserving the space means messages come and go without a
    single pixel of reflow; long ones scroll inside. */
+/* Same shape as the explain and watch-it-run panels: fixed height, a
+   scrolling body, and the resize grip pinned to the bottom edge. */
 .coach-msg {
-  /* Defaults to fitting a 4-line "line N doesn't match" diff, but the height
-     is yours — drag the bottom edge down to a single line if you'd rather
-     have the room. Content scrolls; the box never resizes itself. */
   position: relative;
-  height: var(--msg-h, 96px);
+  height: var(--msg-h, 64px);
   flex-shrink: 0;
   margin-top: 4px;
-  padding: 7px 10px 10px;
   border: 1px solid var(--border);
   border-left-width: 3px;
   border-radius: 6px;
   background: var(--bg-elevated);
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
 }
 
-/* Sticky so it stays reachable at the bottom edge even when the message
-   inside has been scrolled. */
-.coach-msg-grip {
-  position: sticky;
-  bottom: -10px;
-  left: 0;
-  height: 7px;
-  margin: 3px -10px -10px;
-  cursor: row-resize;
-  border-radius: 0 0 4px 4px;
+.coach-msg-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 10px;
+}
+
+.coach-msg.collapsed .coach-msg-body {
+  padding: 4px 10px;
+}
+
+.coach-msg-oneline {
+  margin: 0;
+  padding-right: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fold control, pinned to the corner so it doesn't move with the content. */
+.coach-msg-fold {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  z-index: 2;
+  width: 20px;
+  height: 18px;
+  border: none;
   background: transparent;
+  color: var(--text-dim);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.coach-msg-fold:hover {
+  background: var(--bg);
+  color: var(--accent);
+}
+
+/* Last child of the flex column, so it sits on the bottom edge like the
+   other panels' grips rather than scrolling with the text. */
+.coach-msg-grip {
+  flex-shrink: 0;
+  height: 7px;
+  cursor: row-resize;
+  background: var(--border);
   transition: background 0.1s ease;
 }
 

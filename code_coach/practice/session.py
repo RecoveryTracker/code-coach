@@ -337,6 +337,7 @@ def progress_summary(progress: StudentProgress) -> dict[str, Any]:
         or "foundations",
         "curriculum_lesson": int(getattr(progress, "curriculum_lesson", 1) or 1),
         "review_skill": getattr(progress, "review_skill", None),
+        "language": getattr(progress, "language", "python") or "python",
         "dictation_level": max(
             1, min(5, int(getattr(progress, "dictation_level", 1) or 1))
         ),

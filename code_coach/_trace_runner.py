@@ -104,7 +104,10 @@ def _encode(value: object, heap: dict, seen: dict, depth: int = 0) -> dict:
     return {"k": "ref", "id": ref}
 
 
-def _snapshot(frame) -> dict:
+_MISSING = object()
+
+
+def _snapshot(frame, returned: object = _MISSING) -> dict:
     heap: dict = {}
     seen: dict = {}
     local_vars = {}
@@ -115,8 +118,17 @@ def _snapshot(frame) -> dict:
             local_vars[name] = _encode(value, heap, seen)
         except Exception:
             local_vars[name] = {"k": "prim", "t": "str", "v": "<unreadable>"}
-    return {"line": frame.f_lineno, "func": frame.f_code.co_name,
+    snap = {"line": frame.f_lineno, "func": frame.f_code.co_name,
             "vars": local_vars, "heap": heap}
+    # A `line` event fires BEFORE its line runs, so the last one only ever
+    # shows the state just short of the answer. `return` fires after the value
+    # is computed — that's the frame that actually finishes the story.
+    if returned is not _MISSING:
+        try:
+            snap["returned"] = _encode(returned, heap, seen)
+        except Exception:
+            snap["returned"] = {"k": "prim", "t": "str", "v": "<unreadable>"}
+    return snap
 
 
 def main() -> int:
@@ -132,14 +144,20 @@ def main() -> int:
         # Only the student's file; skip our own frames and the stdlib.
         if frame.f_code.co_filename != target:
             return None
-        if event != "line":
+        if event not in ("line", "return"):
             return tracer
         if len(steps) >= MAX_STEPS:
             truncated = True
             sys.settrace(None)
             return None
         try:
-            steps.append(_snapshot(frame))
+            if event == "return":
+                # Skip the module's own return — it carries no useful value and
+                # would tack a bare "returned None" onto the end.
+                if frame.f_code.co_name != "<module>":
+                    steps.append(_snapshot(frame, arg))
+            else:
+                steps.append(_snapshot(frame))
         except Exception:
             pass
         return tracer

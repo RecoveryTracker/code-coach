@@ -61,6 +61,20 @@ export type CheckItem = {
 export type PracticeMode = "progressive" | "skill" | "random" | "reps";
 export type CoachStyle = "dictation" | "vocabulary";
 
+/** A language the drills can be written in. Only Python is implemented. */
+export type LanguageInfo = {
+  id: string;
+  name: string;
+  /** Monaco's syntax-highlighting id. */
+  monaco: string;
+  extension: string;
+  available: boolean;
+  /** Why it isn't selectable yet. */
+  note: string;
+  /** Which pieces exist: runner / checks / bank / tracer. */
+  ready: string[];
+};
+
 export type SkillInfo = {
   id: string;
   name: string;
@@ -97,6 +111,7 @@ export type ProgressInfo = {
   curriculum_lesson?: number;
   review_skill?: string | null;
   dictation_level?: number;
+  language?: string;
   class1_lines_done?: number;
   class1_batch?: number;
   /** Per-class endless type-along lifetime lines. */
@@ -146,6 +161,9 @@ export type PracticeSession = {
   dictation_level?: number;
   dictation_level_label?: string;
   lines_done?: number;
+  language?: string;
+  /** Monaco id for the current language. */
+  editor_language?: string;
 };
 
 export type RequirementItem = {
@@ -209,6 +227,8 @@ export type VizStep = {
   vars: Record<string, VizValue>;
   /** Keys arrive from JSON as strings. */
   heap: Record<string, VizHeapEntry>;
+  /** Present on the frame where a function returns — the value it handed back. */
+  returned?: VizValue;
 };
 
 export type VisualizeResult = {

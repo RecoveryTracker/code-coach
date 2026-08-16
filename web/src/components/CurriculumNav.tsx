@@ -44,6 +44,10 @@ type Props = {
   onToggleChat: () => void;
   explainOpen: boolean;
   onToggleExplain: () => void;
+  vizOpen: boolean;
+  onToggleViz: () => void;
+  onClassDelta: (d: number) => void;
+  onLessonDelta: (d: number) => void;
   onExerciseDelta: (d: number) => void;
   onSelectClass: (id: string) => void;
   onSelectLesson: (n: number) => void;
@@ -76,6 +80,10 @@ export function CurriculumNav({
   onToggleChat,
   explainOpen,
   onToggleExplain,
+  vizOpen,
+  onToggleViz,
+  onClassDelta,
+  onLessonDelta,
   onExerciseDelta,
   onSelectClass,
   onSelectLesson,
@@ -109,6 +117,15 @@ export function CurriculumNav({
           {explainOpen ? "Hide explain" : "Explain my code"}
         </button>
 
+        <button
+          type="button"
+          className={`coach-chat-toggle${vizOpen ? " active" : ""}`}
+          onClick={onToggleViz}
+          title="Step through your code and watch the arrays, pointers and nodes change"
+        >
+          {vizOpen ? "Hide picture" : "Watch it run"}
+        </button>
+
         <button type="button" className="coach-chat-toggle" onClick={onToggleChat}>
           {chatOpen ? "Hide chat" : "Ask coach"}
         </button>
@@ -134,6 +151,15 @@ export function CurriculumNav({
       <div className="cur-nav-line cur-nav-path-line">
         <nav className="cur-path" aria-label="Where you are">
           <span className="cur-crumb">
+            <button
+              type="button"
+              className="cur-crumb-arrow"
+              onClick={() => onClassDelta(-1)}
+              aria-label="Previous class"
+              title="Previous class"
+            >
+              ‹
+            </button>
             <select
               className="cur-crumb-select"
               value={classId}
@@ -155,6 +181,15 @@ export function CurriculumNav({
                 ))}
               </optgroup>
             </select>
+            <button
+              type="button"
+              className="cur-crumb-arrow"
+              onClick={() => onClassDelta(1)}
+              aria-label="Next class"
+              title="Next class"
+            >
+              ›
+            </button>
           </span>
 
           <span className="cur-path-sep" aria-hidden>
@@ -162,6 +197,15 @@ export function CurriculumNav({
           </span>
 
           <span className="cur-crumb">
+            <button
+              type="button"
+              className="cur-crumb-arrow"
+              onClick={() => onLessonDelta(-1)}
+              aria-label="Previous lesson"
+              title="Previous lesson — rolls into the class before it"
+            >
+              ‹
+            </button>
             <select
               className="cur-crumb-select"
               value={lessonNum}
@@ -174,6 +218,15 @@ export function CurriculumNav({
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="cur-crumb-arrow"
+              onClick={() => onLessonDelta(1)}
+              aria-label="Next lesson"
+              title="Next lesson — rolls into the next class after the last one"
+            >
+              ›
+            </button>
           </span>
 
           <span className="cur-path-sep" aria-hidden>

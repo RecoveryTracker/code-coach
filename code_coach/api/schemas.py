@@ -136,6 +136,19 @@ class SkillInfo(BaseModel):
     base_difficulty: int
 
 
+class LanguageInfo(BaseModel):
+    id: str
+    name: str
+    # Monaco's syntax-highlighting id.
+    monaco: str
+    extension: str
+    available: bool
+    # Why it isn't selectable yet.
+    note: str = ""
+    # Which pieces exist: runner / checks / bank / tracer.
+    ready: list[str] = []
+
+
 class ProgressSettingsUpdate(BaseModel):
     mode: Mode | None = None
     coach_level: int | None = Field(default=None, ge=1, le=2)
@@ -144,6 +157,8 @@ class ProgressSettingsUpdate(BaseModel):
     selected_skills: list[str] | None = None
     # Foundations type-along difficulty: 1 single lines … 5 functions
     dictation_level: int | None = Field(default=None, ge=1, le=5)
+    # Only languages marked available are accepted.
+    language: str | None = None
 
 
 class ReviewDueItem(BaseModel):
@@ -167,6 +182,7 @@ class ProgressResponse(BaseModel):
     curriculum_lesson: int = 1
     review_skill: str | None = None
     dictation_level: int = 1
+    language: str = "python"
     class1_lines_done: int = 0
     class1_batch: int = 0
     # Per-class endless type-along lifetime lines
@@ -206,6 +222,9 @@ class PracticeSession(BaseModel):
     dictation_level: int = 1
     dictation_level_label: str = "Single lines"
     lines_done: int = 0
+    # Language the drill is written in, so the editor highlights it correctly.
+    language: str = "python"
+    editor_language: str = "python"
 
 
 class DrillEvaluateRequest(BaseModel):
