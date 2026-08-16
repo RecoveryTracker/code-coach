@@ -911,6 +911,69 @@ BRIEFS: dict[int, ProblemBrief] = {
 # ── Lookup ──────────────────────────────────────────────────
 
 
+"""Runnable calls for problems whose examples can't be parsed into one.
+
+The visualiser derives a call from the worked example, which works when the
+example is literal data (`nums = [2, 7, 11, 15], target = 9`). It can't work
+when the input is a *structure* — a tree written as `[3,9,20,null,null,15,7]`,
+a linked list written as `[1,2,4]`, or a class you're meant to poke at. Those
+need building, so they're written out here.
+
+Without these the visualiser either showed nothing or, worse, guessed a call
+like `reverse_list(1)` that crashed. Each one uses the classes that problem's
+pattern already defines in its preamble.
+"""
+
+_LIST_3 = "ListNode(1, ListNode(2, ListNode(3)))"
+# 4 / 2 7 / 1 3 6 9 — a full, balanced tree that's also a valid BST.
+_TREE_7 = (
+    "TreeNode(4, TreeNode(2, TreeNode(1), TreeNode(3)), "
+    "TreeNode(7, TreeNode(6), TreeNode(9)))"
+)
+
+DEMO_CALLS: dict[int, str] = {
+    # Linked lists — the example shows values, not nodes.
+    206: f"reverse_list({_LIST_3})",
+    21: "merge_two_lists(ListNode(1, ListNode(2, ListNode(4))), "
+        "ListNode(1, ListNode(3, ListNode(4))))",
+    141: "has_cycle(ListNode(3, ListNode(2, ListNode(0))))",
+    19: f"remove_nth_from_end({_LIST_3}, 2)",
+    # Trees — the example is level-order with nulls, not constructor calls.
+    104: f"max_depth({_TREE_7})",
+    226: f"invert_tree({_TREE_7})",
+    112: "has_path_sum(TreeNode(5, TreeNode(4, TreeNode(11)), TreeNode(8)), 20)",
+    543: f"diameter_of_binary_tree({_TREE_7})",
+    98: f"is_valid_bst({_TREE_7})",
+    102: f"level_order({_TREE_7})",
+    199: f"right_side_view({_TREE_7})",
+    103: f"zigzag_level_order({_TREE_7})",
+    # Grids and graphs.
+    733: "flood_fill([[1, 1, 1], [1, 1, 0], [1, 0, 1]], 1, 1, 2)",
+    133: "clone_graph(Node(1, [Node(2)]))",
+    973: "k_closest([[1, 3], [-2, 2], [5, 8], [0, 1]], 2)",
+    # Counts plus edge lists — prose in the example, not a literal.
+    207: "can_finish(2, [[1, 0]])",
+    210: "find_order(4, [[1, 0], [2, 0], [3, 1], [3, 2]])",
+    # A class, so exercise it rather than calling one function.
+    155: (
+        "s = MinStack()\n"
+        "s.push(-2)\n"
+        "s.push(0)\n"
+        "s.push(-3)\n"
+        "smallest = s.get_min()\n"
+        "s.pop()\n"
+        "smallest = s.get_min()"
+    ),
+}
+
+
+def demo_call_for(number: int | None) -> str:
+    """A hand-written call for problems the example can't produce one for."""
+    if number is None:
+        return ""
+    return DEMO_CALLS.get(number, "")
+
+
 def brief_for(number: int) -> ProblemBrief | None:
     return BRIEFS.get(number)
 

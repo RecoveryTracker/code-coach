@@ -57,12 +57,25 @@ def _calls_anything(code: str) -> bool:
     return False
 
 
-def _parse_example_args(example: str) -> dict[str, Any]:
-    """`nums = [2, 7, 11, 15], target = 9  ->  [0, 1]` → {'nums': [...], 'target': 9}
+def _split_top_level(text: str) -> list[str]:
+    """Split on commas that separate arguments, not ones inside a literal."""
+    parts, depth, current = [], 0, ""
+    for ch in text:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append(current)
+            current = ""
+            continue
+        current += ch
+    parts.append(current)
+    return [p.strip() for p in parts if p.strip()]
 
-    Splits on the commas that separate assignments, not the ones inside a
-    literal, by trying progressively longer prefixes until one parses.
-    """
+
+def _parse_example_args(example: str) -> dict[str, Any]:
+    """`nums = [2, 7, 11, 15], target = 9  ->  [0, 1]` → {'nums': [...], 'target': 9}"""
     inputs = _ARROW.split(example)[0].strip()
     if not inputs:
         return {}
@@ -71,20 +84,8 @@ def _parse_example_args(example: str) -> dict[str, Any]:
     except SyntaxError:
         # Commas between assignments make this invalid as one statement, so
         # rebuild it as separate lines and retry.
-        parts, depth, current = [], 0, ""
-        for ch in inputs:
-            if ch in "([{":
-                depth += 1
-            elif ch in ")]}":
-                depth -= 1
-            if ch == "," and depth == 0:
-                parts.append(current)
-                current = ""
-                continue
-            current += ch
-        parts.append(current)
         try:
-            tree = ast.parse("\n".join(p.strip() for p in parts if p.strip()))
+            tree = ast.parse("\n".join(_split_top_level(inputs)))
         except SyntaxError:
             return {}
 
@@ -102,6 +103,24 @@ def _parse_example_args(example: str) -> dict[str, Any]:
     return out
 
 
+def _parse_example_values(example: str) -> list[Any]:
+    """Bare literals, in order: `["eat","tea"]  ->  [["eat","tea"]]` → [[...]]
+
+    Plenty of examples skip the parameter names and just show the input, so
+    matching on names alone leaves those problems with no runnable call at all.
+    """
+    inputs = _ARROW.split(example)[0].strip()
+    if not inputs:
+        return []
+    out: list[Any] = []
+    for part in _split_top_level(inputs):
+        try:
+            out.append(ast.literal_eval(part))
+        except (ValueError, SyntaxError):
+            return []  # a non-literal means this isn't a positional example
+    return out
+
+
 def suggest_call(code: str, examples: list[str]) -> str:
     """A call line that will actually exercise the student's function.
 
@@ -115,6 +134,7 @@ def suggest_call(code: str, examples: list[str]) -> str:
     fn = funcs[-1]
     params = [a.arg for a in fn.args.args]
 
+    # Named form first: `nums = [...], target = 9`.
     for example in examples:
         values = _parse_example_args(example)
         if not values:
@@ -126,6 +146,12 @@ def suggest_call(code: str, examples: list[str]) -> str:
         else:
             continue
         return f"{fn.name}({', '.join(args)})"
+
+    # Then the bare form: `["eat","tea"]` with no parameter names at all.
+    for example in examples:
+        positional = _parse_example_values(example)
+        if len(positional) == len(params) and params:
+            return f"{fn.name}({', '.join(repr(v) for v in positional)})"
 
     return f"{fn.name}()" if not params else ""
 

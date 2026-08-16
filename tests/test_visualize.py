@@ -146,5 +146,53 @@ class TraceTests(unittest.TestCase):
         self.assertIn("ZeroDivisionError", res["error"] or "")
 
 
+class EveryProblemIsWatchableTests(unittest.TestCase):
+    """A problem with no runnable call shows an empty visualiser, which reads
+    as the feature being broken rather than as missing data."""
+
+    def test_every_problem_produces_a_call(self):
+        from code_coach.leetcode.problems import PATTERNS
+        from code_coach.leetcode.study import brief_for, demo_call_for
+
+        missing = []
+        for pattern in PATTERNS:
+            for problem in pattern.problems:
+                brief = brief_for(problem.number)
+                examples = list(brief.examples) if brief else []
+                call = demo_call_for(problem.number) or suggest_call(
+                    problem.code, examples
+                )
+                if not call:
+                    missing.append(f"#{problem.number} {problem.title}")
+        self.assertEqual(
+            missing,
+            [],
+            "add a DEMO_CALLS entry in leetcode/study.py for these",
+        )
+
+    def test_structure_problems_actually_run(self):
+        # These are the ones the example can't describe: a linked list, a
+        # tree, and a class. Before DEMO_CALLS they either did nothing or
+        # guessed a call like reverse_list(1) and crashed.
+        from code_coach.leetcode.problems import PATTERNS
+        from code_coach.leetcode.study import demo_call_for
+
+        by_number = {
+            p.number: (p, pattern)
+            for pattern in PATTERNS
+            for p in pattern.problems
+        }
+        for number in (206, 104, 155):
+            problem, pattern = by_number[number]
+            preamble = "\n".join(pattern.preamble)
+            code = f"{preamble}\n{problem.code}" if preamble else problem.code
+            res = trace_code(code, call=demo_call_for(number))
+            with self.subTest(problem=number):
+                self.assertTrue(res["ok"], res["error"])
+                self.assertIsNone(res["error"])
+                inside = [s for s in res["steps"] if s["func"] != "<module>"]
+                self.assertGreater(len(inside), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

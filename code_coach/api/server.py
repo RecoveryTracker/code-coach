@@ -422,12 +422,17 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
     Complements /api/explain: that one says what each line means, this one says
     what `left`, `seen` and the node pointers actually held at each step.
     """
-    from code_coach.leetcode.study import brief_for
+    from code_coach.leetcode.study import brief_for, demo_call_for
     from code_coach.visualize import suggest_call, trace_code
 
     code = body.code or ""
     call = (body.call or "").strip()
 
+    if not call:
+        # A hand-written call wins: these are the problems whose input is a
+        # structure (a tree, a linked list, a class) that no amount of parsing
+        # the example can build.
+        call = demo_call_for(body.problem_number)
     if not call:
         examples: list[str] = []
         if body.problem_number is not None:
