@@ -52,12 +52,12 @@ LANGUAGES: tuple[Language, ...] = (
         name="Dart (Flutter)",
         monaco="dart",
         extension="dart",
-        available=False,
+        available=True,
         note=(
-            "Not yet — needs a Dart SDK runner, structural checks, and the "
-            "solutions written in Dart. The typing drills themselves are "
-            "language-agnostic and will work as soon as those land."
+            "Run needs the Dart SDK on your PATH. Watch it run is Python-only "
+            "for now — everything else works."
         ),
+        ready=("runner", "checks", "bank"),
     ),
 )
 

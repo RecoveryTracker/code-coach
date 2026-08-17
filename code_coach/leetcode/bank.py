@@ -54,12 +54,46 @@ _ATOM_MAX = 34
 # Window sizes for the middle difficulties.
 _WINDOW_FOR_LEVEL = {3: 2, 4: 5}
 
-# Lines that read as fragments when a window starts on them.
-_FRAGMENT_STARTS = ("else:", "elif ", "except", "finally:", ")", "]", "}", "or ", "and ")
+# Lines that read as fragments when a window starts on them. Dart's closers
+# and continuations differ from Python's, so both sets are listed — a line
+# starting with `}` or `..` is no more a sensible opening than `elif ` is.
+_FRAGMENT_STARTS = (
+    "else:", "elif ", "except", "finally:", "or ", "and ",
+    ")", "]", "}", "};", "});", "})",
+    "} else", "..", "?", ":",
+)
 
 
 def is_leetcode_class(class_id: str) -> bool:
     return class_id in LEETCODE_CLASS_IDS
+
+
+def patterns_for_language(language: str) -> tuple[Pattern, ...]:
+    """The solution bank in the chosen language.
+
+    Both banks carry the same problems in the same order, so switching
+    language keeps your place in the curriculum.
+    """
+    if language == "dart":
+        from code_coach.leetcode.problems_dart import PATTERNS as DART_PATTERNS
+
+        return DART_PATTERNS
+    return PATTERNS
+
+
+def current_language() -> str:
+    """The student's chosen language.
+
+    Read here rather than threaded through every call: the bank is reached
+    from drill generation, catalog building and the study panel, and each of
+    those would otherwise need a language argument it doesn't care about.
+    """
+    try:
+        from code_coach.progress.store import ProgressStore
+
+        return getattr(ProgressStore().load(), "language", "python") or "python"
+    except Exception:
+        return "python"
 
 
 # ── Units ───────────────────────────────────────────────────
@@ -75,11 +109,12 @@ class Unit:
     problem_number: int | None = None
 
 
-def _patterns_for(class_id: str) -> tuple[Pattern, ...]:
+def _patterns_for(class_id: str, language: str | None = None) -> tuple[Pattern, ...]:
+    patterns = patterns_for_language(language or current_language())
     if class_id == ALL_CLASS_ID:
-        return PATTERNS
-    pattern = get_pattern(class_id)
-    return (pattern,) if pattern else ()
+        return patterns
+    found = next((p for p in patterns if p.id == class_id), None)
+    return (found,) if found else ()
 
 
 def _lines(code: str) -> list[str]:
@@ -153,10 +188,14 @@ def _units_for_problem(problem: Problem, pattern: Pattern, level: int) -> list[U
 
 
 @lru_cache(maxsize=None)
-def _units(class_id: str, level: int) -> tuple[Unit, ...]:
-    """All material for a class at one difficulty, in learning order."""
+def _units(class_id: str, level: int, language: str = "python") -> tuple[Unit, ...]:
+    """All material for a class at one difficulty, in learning order.
+
+    `language` is part of the cache key, not decoration — without it the first
+    language to warm the cache would be served to the other.
+    """
     out: list[Unit] = []
-    for pattern in _patterns_for(class_id):
+    for pattern in _patterns_for(class_id, language):
         for block in pattern.preamble:
             out.append(
                 Unit(
@@ -179,7 +218,7 @@ def _units(class_id: str, level: int) -> tuple[Unit, ...]:
 
 
 def unit_count(class_id: str, level: int) -> int:
-    return len(_units(class_id, max(1, min(5, level))))
+    return len(_units(class_id, max(1, min(5, level)), current_language()))
 
 
 # ── Lesson 1 — endless verbatim type-along ──────────────────
@@ -205,7 +244,7 @@ def _spec_for(unit: Unit, position: int) -> LineSpec:
 def leetcode_specs(class_id: str, *, batch: int, count: int, level: int) -> list[LineSpec]:
     """The `batch`-th window of this class's material, wrapping at the end."""
     level = max(1, min(5, int(level)))
-    units = _units(class_id, level)
+    units = _units(class_id, level, current_language())
     if not units:
         return []
     start = (batch * count) % len(units)
@@ -228,7 +267,7 @@ def make_leetcode_batch(
 
     level = max(1, min(5, int(level)))
     specs = leetcode_specs(class_id, batch=batch, count=count, level=level)
-    units = _units(class_id, level)
+    units = _units(class_id, level, current_language())
     total = len(units) or 1
     done = min((batch * count) % total + count, total)
 
@@ -333,52 +372,78 @@ def _top_level_names(code: str) -> tuple[list[str], list[str]]:
     return funcs, classes
 
 
-def _requirements_for(problem: Problem) -> list[tuple[str, Callable[[str], bool]]]:
+def _requirements_for(
+    problem: Problem, language: str = "python"
+) -> list[tuple[str, Callable[[str], bool]]]:
     """The structural pieces a from-memory attempt must contain.
 
     Derived from the reference solution rather than hand-written, so it stays
     honest: it asks for the shape of the algorithm, not one exact phrasing.
     """
     code = problem.code
-    funcs, classes = _top_level_names(code)
+    if language == "dart":
+        from code_coach import dart_checks as chk
+
+        names = chk.top_level_names
+        defines_fn = chk.defines_function
+        defines_cls = chk.defines_class
+        uses_for_fn, uses_while_fn, uses_if_fn = chk.uses_for, chk.uses_while, chk.uses_if
+        returns_fn = chk.returns_value
+        fn_label = "{name}(...)"
+        cls_label = "class {name}"
+    else:
+        names = _top_level_names
+        defines_fn = defines_function
+        defines_cls = _defines_class
+        uses_for_fn, uses_while_fn, uses_if_fn = uses_for, uses_while, uses_if
+        returns_fn = returns_value
+        fn_label = "def {name}(...)"
+        cls_label = "class {name}:"
+
+    funcs, classes = names(code)
     reqs: list[tuple[str, Callable[[str], bool]]] = []
 
     if classes:
         name = classes[0]
-        reqs.append((f"class {name}:", lambda c, n=name: _defines_class(c, n)))
+        reqs.append(
+            (cls_label.format(name=name), lambda c, n=name: defines_cls(c, n))
+        )
     elif funcs:
         name = funcs[0]
-        reqs.append((f"def {name}(...)", lambda c, n=name: defines_function(c, n)))
+        reqs.append(
+            (fn_label.format(name=name), lambda c, n=name: defines_fn(c, n))
+        )
         # Where there's an inner helper (backtrack, dfs, depth…) it IS the
         # pattern, so ask for it by name.
         if funcs[1:]:
             helper = funcs[1]
             reqs.append(
                 (
-                    f"an inner helper — def {helper}(...)",
-                    lambda c, n=helper: defines_function(c, n),
+                    f"an inner helper — {helper}(...)",
+                    lambda c, n=helper: defines_fn(c, n),
                 )
             )
 
-    if uses_while(code):
-        reqs.append(("a while loop", uses_while))
-    if uses_for(code):
-        reqs.append(("a for loop", uses_for))
-    if uses_if(code) and len(reqs) < 4:
-        reqs.append(("an if that decides something", uses_if))
-    if returns_value(code):
-        reqs.append(("a return that hands back a value", returns_value))
+    if uses_while_fn(code):
+        reqs.append(("a while loop", uses_while_fn))
+    if uses_for_fn(code):
+        reqs.append(("a for loop", uses_for_fn))
+    if uses_if_fn(code) and len(reqs) < 4:
+        reqs.append(("an if that decides something", uses_if_fn))
+    if returns_fn(code):
+        reqs.append(("a return that hands back a value", returns_fn))
 
     return reqs[:5]
 
 
 def leetcode_build_drill(class_id: str) -> Drill:
     """Write each solution from the idea alone — no line to copy."""
-    patterns = _patterns_for(class_id)
+    language = current_language()
+    patterns = _patterns_for(class_id, language)
     steps: list[DrillStep] = []
     for pattern in patterns:
         for problem in pattern.problems:
-            reqs = _requirements_for(problem)
+            reqs = _requirements_for(problem, language)
             steps.append(
                 DrillStep(
                     id=f"{pattern.id}-build-{problem.number}",
@@ -423,7 +488,12 @@ def study_payload(
 
     if not pattern_id:
         return None
-    pattern = get_pattern(pattern_id)
+    # Look the pattern up in the active language's bank so the complexity and
+    # idea shown match the code on screen.
+    patterns = patterns_for_language(current_language())
+    pattern = next((p for p in patterns if p.id == pattern_id), None) or get_pattern(
+        pattern_id
+    )
     out: dict[str, Any] = {"problem": None, "lesson": None}
 
     lesson = lesson_for(pattern_id)

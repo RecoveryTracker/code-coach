@@ -504,7 +504,9 @@ def practice_evaluate(body: DrillEvaluateRequest) -> DrillEvaluateResponse:
         raise HTTPException(status_code=404, detail=f"Unknown drill {body.drill_id}")
     stdout, stderr, exit_code = "", "", 0
     if body.run:
-        stdout, stderr, exit_code = run_code(body.code)
+        stdout, stderr, exit_code = run_code(
+            body.code, language=getattr(progress, "language", "python")
+        )
 
     scored = evaluate_drill(
         drill,

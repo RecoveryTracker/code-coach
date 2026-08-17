@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,9 @@ from typing import Any
 
 # Cap runaway student programs (e.g. while True).
 RUN_TIMEOUT_SECONDS = 3.0
+# Dart compiles before it runs, so a first execution costs seconds that have
+# nothing to do with the student's loop. Its own ceiling, not Python's.
+DART_TIMEOUT_SECONDS = 25.0
 # Hard CPU-seconds cap enforced in-kernel (belt-and-suspenders with the timeout).
 # RLIMIT_CPU is honored on Linux and macOS.
 CPU_SECONDS = 5
@@ -88,6 +92,25 @@ def load_code(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _interpreter_for(path: Path) -> list[str] | None:
+    """The command that runs this file, or None if we can't run its kind.
+
+    Dart is found on PATH; `shutil.which` resolves the .bat shim that the
+    Flutter SDK installs on Windows.
+    """
+    suffix = path.suffix.lower()
+    if suffix == ".py":
+        return [sys.executable, str(path)]
+    if suffix == ".dart":
+        dart = shutil.which("dart")
+        return [dart, "run", str(path)] if dart else None
+    return [sys.executable, str(path)]
+
+
+def dart_available() -> bool:
+    return shutil.which("dart") is not None
+
+
 def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, str, int]:
     """Execute a student file with a wall-clock timeout, in-kernel CPU/memory
     caps, a new session (so a timeout kills the whole process group, not just
@@ -107,7 +130,16 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
         popen_kwargs["preexec_fn"] = _apply_limits
         popen_kwargs["start_new_session"] = True
 
-    proc = subprocess.Popen([sys.executable, str(path)], **popen_kwargs)
+    argv = _interpreter_for(path)
+    if argv is None:
+        return (
+            "",
+            "Dart isn't on your PATH. Install the Dart or Flutter SDK and "
+            "reopen your terminal, then try Run again.",
+            127,
+        )
+
+    proc = subprocess.Popen(argv, **popen_kwargs)
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
         return _cap_output(stdout), _cap_output(stderr), proc.returncode
@@ -128,10 +160,21 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
         return stdout, stderr, 124
 
 
-def run_code(code: str, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, str, int]:
+def run_code(
+    code: str,
+    *,
+    timeout: float | None = None,
+    language: str = "python",
+) -> tuple[str, str, int]:
+    """Run a snippet in the given language. The extension picks the runner."""
+    is_dart = language == "dart"
+    suffix = ".dart" if is_dart else ".py"
+    if timeout is None:
+        timeout = DART_TIMEOUT_SECONDS if is_dart else RUN_TIMEOUT_SECONDS
+
     with tempfile.NamedTemporaryFile(
         mode="w",
-        suffix=".py",
+        suffix=suffix,
         encoding="utf-8",
         delete=False,
     ) as tmp:
