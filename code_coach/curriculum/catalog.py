@@ -33,6 +33,7 @@ from code_coach.dictation.bank import (
 )
 from code_coach.dictation.session import make_class_dictation_batch
 from code_coach.leetcode.bank import (
+    is_leetcode_class,
     leetcode_build_drill,
     leetcode_solutions_drill,
     make_leetcode_batch,
@@ -493,9 +494,31 @@ def get_class(class_id: str) -> ClassDef | None:
     return CLASSES[0] if CLASSES else None
 
 
-def catalog_payload() -> list[dict]:
+def classes_for_language(language: str) -> list[ClassDef]:
+    """Classes that actually have material in this language.
+
+    Foundations, Decisions and Loops are generated from Python line pools —
+    there is no Dart equivalent yet, and offering them in Dart handed out
+    Python exercises to type into a .dart file, so every answer failed and
+    Run couldn't work. Better to show only what exists.
+    """
+    if language == "dart":
+        return [c for c in CLASSES if is_leetcode_class(c.id)]
+    return list(CLASSES)
+
+
+def first_class_for_language(language: str) -> str:
+    available = classes_for_language(language)
+    return available[0].id if available else CLASSES[0].id
+
+
+def class_available_in(class_id: str, language: str) -> bool:
+    return any(c.id == class_id for c in classes_for_language(language))
+
+
+def catalog_payload(language: str = "python") -> list[dict]:
     out = []
-    for c in CLASSES:
+    for c in classes_for_language(language):
         out.append(
             {
                 "id": c.id,

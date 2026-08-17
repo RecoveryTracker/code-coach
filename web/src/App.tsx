@@ -39,10 +39,18 @@ const DEBOUNCE_MS = 180;
  * and it stays the same across difficulties (a class's Lesson 1 is `<class>-l1`
  * at every level), so both used to spill their code into each other.
  */
-type DraftSlot = { drillId: string; index: number; level: number };
+type DraftSlot = {
+  drillId: string;
+  index: number;
+  level: number;
+  language: string;
+};
 
-function draftKey({ drillId, index, level }: DraftSlot) {
-  return `code-coach:drill:${drillId}:lv${level}:ex${index}`;
+function draftKey({ drillId, index, level, language }: DraftSlot) {
+  // Language belongs in the key: the drill id is the same in both languages,
+  // so without it your Python answer shows up in the Dart editor.
+  const lang = language === "python" ? "" : `:${language}`;
+  return `code-coach:drill:${drillId}${lang}:lv${level}:ex${index}`;
 }
 
 /** Pre-per-exercise key: one shared buffer for a whole lesson. */
@@ -78,21 +86,27 @@ function saveDraft(slot: DraftSlot, code: string) {
  * Where you were in a lesson, so coming back doesn't dump you on exercise 1
  * looking at a blank editor while your work sits in a slot you can't see.
  */
-function posKey(drillId: string, level: number) {
-  return `code-coach:pos:${drillId}:lv${level}`;
+function posKey(drillId: string, level: number, language = "python") {
+  const lang = language === "python" ? "" : `:${language}`;
+  return `code-coach:pos:${drillId}${lang}:lv${level}`;
 }
 
-function savePos(drillId: string, level: number, index: number) {
+function savePos(
+  drillId: string,
+  level: number,
+  index: number,
+  language: string,
+) {
   try {
-    localStorage.setItem(posKey(drillId, level), String(index));
+    localStorage.setItem(posKey(drillId, level, language), String(index));
   } catch {
     /* ignore */
   }
 }
 
-function loadPos(drillId: string, level: number): number | null {
+function loadPos(drillId: string, level: number, language: string): number | null {
   try {
-    const raw = localStorage.getItem(posKey(drillId, level));
+    const raw = localStorage.getItem(posKey(drillId, level, language));
     if (raw == null) return null;
     const n = Number.parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
@@ -235,6 +249,8 @@ export default function App() {
   const drillRef = useRef<string | null>(null);
   /** Difficulty the current buffers belong to — part of the draft key. */
   const levelRef = useRef(1);
+  /** Language the current buffers belong to — also part of the key. */
+  const languageRef = useRef("python");
 
   /** The slot the editor is currently showing. */
   const slotNow = useCallback(
@@ -242,6 +258,7 @@ export default function App() {
       drillId: drillRef.current ?? "",
       index: index ?? exerciseIndexRef.current,
       level: levelRef.current,
+      language: languageRef.current,
     }),
     [],
   );
@@ -328,12 +345,13 @@ export default function App() {
       setProgress(s.progress);
       drillRef.current = s.drill_id;
       levelRef.current = s.dictation_level ?? 1;
+      languageRef.current = s.language ?? "python";
 
       // Resume where this lesson was left off. A fresh endless window
       // (preserveCode) and Start over (forceClean) both belong at the top.
       let startIndex = 0;
       if (preserveCode == null && !forceClean) {
-        const saved = loadPos(s.drill_id, levelRef.current);
+        const saved = loadPos(s.drill_id, levelRef.current, languageRef.current);
         if (saved != null) {
           startIndex = Math.max(0, Math.min(saved, s.steps.length - 1));
         }
@@ -351,6 +369,7 @@ export default function App() {
         drillId: s.drill_id,
         index: startIndex,
         level: levelRef.current,
+        language: languageRef.current,
       };
 
       let initial = s.starter;
@@ -403,7 +422,7 @@ export default function App() {
 
       const id = drillRef.current;
       if (id) {
-        savePos(id, levelRef.current, next);
+        savePos(id, levelRef.current, next, languageRef.current);
         void score(id, text, false, next);
       }
     },

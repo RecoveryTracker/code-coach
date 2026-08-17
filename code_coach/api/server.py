@@ -120,6 +120,23 @@ def _progress_response() -> ProgressResponse:
 
 def _session_from_progress() -> PracticeSession:
     progress = _store.load()
+
+    # A class with no material in the chosen language would hand out Python
+    # exercises to type into a .dart file. Move to one that exists instead.
+    from code_coach.curriculum.catalog import (
+        class_available_in,
+        first_class_for_language,
+    )
+
+    lang_id = getattr(progress, "language", "python") or "python"
+    current_class = progress.curriculum_class or "foundations"
+    if not class_available_in(current_class, lang_id):
+        progress.curriculum_class = first_class_for_language(lang_id)
+        progress.curriculum_lesson = 1
+        progress.current_drill_id = None
+        progress.review_skill = None
+        _store.save(progress)
+
     drill = get_active_drill(progress)
     if progress.current_drill_id != drill.id:
         progress.current_drill_id = drill.id
@@ -188,7 +205,7 @@ def _session_from_progress() -> PracticeSession:
         lesson_role=role,
         is_review=role == "review",
         can_go_lesson_2=True,
-        curriculum=catalog_payload(),
+        curriculum=catalog_payload(lang.id),
         exercise_count=len(steps),
         endless=endless,
         dictation_level=d_level,
@@ -312,7 +329,8 @@ def practice_more_lines() -> PracticeSession:
 
 @app.get("/api/curriculum")
 def curriculum_tree() -> list[dict]:
-    return catalog_payload()
+    progress = _store.load()
+    return catalog_payload(getattr(progress, "language", "python") or "python")
 
 
 @app.post("/api/practice/goto-lesson", response_model=PracticeSession)
