@@ -549,14 +549,22 @@ def class_available_in(class_id: str, language: str) -> bool:
 
 
 def catalog_payload(language: str = "python") -> list[dict]:
+    from code_coach.fundamentals.base import bank_for
+
+    bank = bank_for(language)
     out = []
     for c in classes_for_language(language):
+        # A language may name a class differently — SQL's third class is
+        # "Grouping & Joins", because SQL doesn't loop.
+        declared = bank.get(c.id) if bank else None
         out.append(
             {
                 "id": c.id,
                 "number": c.number,
-                "name": c.name,
-                "description": c.description,
+                "name": declared.name if declared else c.name,
+                "description": (
+                    declared.description if declared else c.description
+                ),
                 "lessons": [
                     {
                         "number": L.number,

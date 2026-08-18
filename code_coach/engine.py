@@ -110,6 +110,63 @@ def _interpreter_for(path: Path) -> list[str] | None:
     return [sys.executable, str(path)]
 
 
+# Compiled languages: (compiler candidates, extra args). The binary lands
+# beside the source and is removed with it.
+_COMPILERS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    ".c": (("gcc", "clang"), ("-std=c17", "-lm")),
+    ".cpp": (("g++", "clang++"), ("-std=c++17",)),
+    ".rs": (("rustc",), ("-O",)),
+}
+
+
+def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
+    """Build the source, then run what came out."""
+    suffix = path.suffix.lower()
+    candidates, extra = _COMPILERS[suffix]
+    compiler = next((c for c in candidates if shutil.which(c)), None)
+    if compiler is None:
+        names = " or ".join(candidates)
+        return (
+            "",
+            f"{names} isn't on your PATH, so this can't be compiled. The "
+            "type-along drills still work — only Run needs the toolchain.",
+            127,
+        )
+
+    exe = path.with_suffix(".exe" if os.name == "nt" else ".out")
+    if suffix == ".rs":
+        build = [compiler, *extra, "-o", str(exe), str(path)]
+    else:
+        build = [compiler, str(path), *extra, "-o", str(exe)]
+
+    try:
+        built = subprocess.run(
+            build, capture_output=True, text=True, timeout=timeout
+        )
+    except subprocess.TimeoutExpired:
+        return "", f"Compiler timed out after {timeout:g}s.", 124
+    if built.returncode != 0:
+        return "", _cap_output(built.stderr or built.stdout), built.returncode
+
+    try:
+        ran = subprocess.run(
+            [str(exe)],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            stdin=subprocess.DEVNULL,
+        )
+        return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
+    except subprocess.TimeoutExpired:
+        return "", f"Program timed out after {timeout:g}s.", 124
+    finally:
+        for leftover in (exe, exe.with_suffix(".pdb")):
+            try:
+                leftover.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
 def dart_available() -> bool:
     return shutil.which("dart") is not None
 
@@ -166,7 +223,19 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
         return stdout, stderr, 124
 
 
-_SUFFIXES = {"dart": ".dart", "javascript": ".js", "python": ".py"}
+_SUFFIXES = {
+    "dart": ".dart",
+    "javascript": ".js",
+    "typescript": ".ts",
+    "c": ".c",
+    "cpp": ".cpp",
+    "rust": ".rs",
+    "python": ".py",
+}
+
+# Languages that compile before they run get a longer clock — the wait is the
+# toolchain, not the student's loop.
+_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust"}
 
 
 def run_code(
@@ -176,10 +245,24 @@ def run_code(
     language: str = "python",
 ) -> tuple[str, str, int]:
     """Run a snippet in the given language. The extension picks the runner."""
-    is_dart = language == "dart"
+    if language == "sql":
+        from code_coach.sql_runner import run_sql
+
+        return run_sql(code)
+
+    if language == "typescript":
+        return (
+            "",
+            "TypeScript can't be run here yet — it needs a compiler step. The "
+            "type-along drills work; use JavaScript if you want to press Run.",
+            127,
+        )
+
     suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
-        timeout = DART_TIMEOUT_SECONDS if is_dart else RUN_TIMEOUT_SECONDS
+        timeout = (
+            DART_TIMEOUT_SECONDS if language in _SLOW_LANGUAGES else RUN_TIMEOUT_SECONDS
+        )
 
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -190,6 +273,8 @@ def run_code(
         tmp.write(code)
         tmp_path = Path(tmp.name)
     try:
+        if suffix in _COMPILERS:
+            return _compile_then_run(tmp_path, timeout)
         return run_file(tmp_path, timeout=timeout)
     finally:
         try:

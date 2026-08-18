@@ -13,7 +13,7 @@ from code_coach.fundamentals.base import (
     specs_for,
 )
 
-DECLARED = ("dart", "javascript")
+DECLARED = ("dart", "javascript", "typescript", "c", "cpp", "rust", "sql")
 
 
 class BankShapeTests(unittest.TestCase):
@@ -86,6 +86,76 @@ class WindowTests(unittest.TestCase):
         for spec in specs_for("javascript", "loops", batch=0, count=6, level=4):
             with self.subTest(code=spec.example[:30]):
                 self.assertTrue(spec.check(spec.example))
+
+
+class LanguageRegistryTests(unittest.TestCase):
+    def test_every_available_language_has_material(self):
+        from code_coach.languages import LANGUAGES
+
+        for lang in LANGUAGES:
+            if not lang.available:
+                continue
+            with self.subTest(language=lang.id):
+                self.assertTrue(
+                    classes_with_material(lang.id),
+                    f"{lang.id} is offered but has no classes",
+                )
+
+    def test_a_language_can_rename_its_classes(self):
+        # SQL doesn't loop, so its third class is Grouping & Joins.
+        bank = bank_for("sql")
+        self.assertIsNotNone(bank)
+        self.assertEqual(bank.get("loops").name, "Grouping & Joins")
+        self.assertEqual(bank.get("foundations").name, "Queries")
+
+
+class SqlRunnerTests(unittest.TestCase):
+    """SQL runs in-process on sqlite3, so this needs nothing installed."""
+
+    def test_a_select_returns_a_table(self):
+        from code_coach.sql_runner import run_sql
+
+        out, err, code = run_sql("SELECT name FROM users ORDER BY name LIMIT 2;")
+        self.assertEqual(code, 0, err)
+        self.assertIn("Alex", out)
+        self.assertIn("name", out)
+
+    def test_an_aggregate_works(self):
+        from code_coach.sql_runner import run_sql
+
+        out, err, code = run_sql("SELECT COUNT(*) AS n FROM users;")
+        self.assertEqual(code, 0, err)
+        self.assertIn("5", out)
+
+    def test_a_join_works(self):
+        from code_coach.sql_runner import run_sql
+
+        out, _, code = run_sql(
+            "SELECT u.name, SUM(o.price) AS total FROM users u "
+            "JOIN orders o ON o.user_id = u.id GROUP BY u.name;"
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("Alex", out)
+
+    def test_a_broken_query_reports_rather_than_raises(self):
+        from code_coach.sql_runner import run_sql
+
+        out, err, code = run_sql("SELECT * FROM nope;")
+        self.assertEqual(code, 1)
+        self.assertIn("SQL error", err)
+
+    def test_nulls_are_shown_not_blank(self):
+        from code_coach.sql_runner import run_sql
+
+        out, _, _ = run_sql("SELECT email FROM users WHERE email IS NULL;")
+        self.assertIn("NULL", out)
+
+    def test_the_database_is_rebuilt_each_run(self):
+        from code_coach.sql_runner import run_sql
+
+        run_sql("DELETE FROM users;")
+        out, _, _ = run_sql("SELECT COUNT(*) AS n FROM users;")
+        self.assertIn("5", out)
 
 
 @unittest.skipUnless(dart_available(), "Dart SDK not on PATH")

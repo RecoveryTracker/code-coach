@@ -71,45 +71,65 @@ LANGUAGES: tuple[Language, ...] = (
         ),
         ready=("fundamentals", "runner", "checks"),
     ),
-    # Listed so the roadmap is visible. Each needs a fundamentals bank in
-    # code_coach/fundamentals — see base.py for the shape.
     Language(
         id="typescript",
         name="TypeScript",
         monaco="typescript",
         extension="ts",
-        note="Not yet — needs a fundamentals bank.",
-    ),
-    Language(
-        id="c",
-        name="C",
-        monaco="c",
-        extension="c",
-        note="Not yet — needs a fundamentals bank and a compile-then-run runner.",
-    ),
-    Language(
-        id="cpp",
-        name="C++",
-        monaco="cpp",
-        extension="cpp",
-        note="Not yet — needs a fundamentals bank and a compile-then-run runner.",
-    ),
-    Language(
-        id="rust",
-        name="Rust",
-        monaco="rust",
-        extension="rs",
-        note="Not yet — needs a fundamentals bank and a rustc runner.",
+        available=True,
+        note=(
+            "Fundamentals only. Run isn't wired up — TypeScript needs a "
+            "compile step; use JavaScript if you want to execute."
+        ),
+        ready=("fundamentals", "checks"),
     ),
     Language(
         id="sql",
         name="SQL",
         monaco="sql",
         extension="sql",
+        available=True,
         note=(
-            "Not yet — needs a fundamentals bank, and queries run against a "
-            "sample database rather than printing output."
+            "Fundamentals only. Run executes your query against a small "
+            "sample database — users and orders — and prints the rows."
         ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="c",
+        name="C",
+        monaco="c",
+        extension="c",
+        available=True,
+        note=(
+            "Fundamentals only. Run needs gcc or clang on your PATH; without "
+            "one the drills still work, only Run won't."
+        ),
+        ready=("fundamentals", "runner", "checks"),
+    ),
+    Language(
+        id="cpp",
+        name="C++",
+        monaco="cpp",
+        extension="cpp",
+        available=True,
+        note=(
+            "Fundamentals only. Run needs g++ or clang++ on your PATH; "
+            "without one the drills still work, only Run won't."
+        ),
+        ready=("fundamentals", "runner", "checks"),
+    ),
+    Language(
+        id="rust",
+        name="Rust",
+        monaco="rust",
+        extension="rs",
+        available=True,
+        note=(
+            "Fundamentals only. Run needs rustc on your PATH; without it the "
+            "drills still work, only Run won't."
+        ),
+        ready=("fundamentals", "runner", "checks"),
     ),
 )
 

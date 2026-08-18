@@ -134,7 +134,15 @@ def material_count(language: str, class_id: str, level: int) -> int:
 
 def _register_all() -> None:
     """Import the per-language banks for their side effects."""
-    from code_coach.fundamentals import dart, javascript  # noqa: F401
+    from code_coach.fundamentals import (  # noqa: F401
+        c,
+        cpp,
+        dart,
+        javascript,
+        rust,
+        sql,
+        typescript,
+    )
 
 
 _register_all()
