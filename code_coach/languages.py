@@ -66,10 +66,10 @@ LANGUAGES: tuple[Language, ...] = (
         extension="js",
         available=True,
         note=(
-            "Fundamentals only for now — the LeetCode solutions haven't been "
-            "written in JavaScript yet. Run needs Node on your PATH."
+            "Run needs Node on your PATH. Watch it run is Python-only for now "
+            "— everything else works."
         ),
-        ready=("fundamentals", "runner", "checks"),
+        ready=("fundamentals", "runner", "checks", "bank"),
     ),
     Language(
         id="typescript",

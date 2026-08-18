@@ -1,9 +1,10 @@
-"""Structural checks for Dart build lessons.
+"""Structural checks for the C-family languages — Dart, JavaScript, and any
+other build lessons written with braces and parentheses.
 
 Python's build lessons parse the student's code with `ast`, which won't help
-here — there is no Dart parser in the standard library, and shelling out to
-`dart analyze` for every keystroke would be far too slow for a check that runs
-on a debounce.
+here: there is no parser for these languages in the standard library, and
+shelling out to a real one for every keystroke would be far too slow for a
+check that runs on a debounce.
 
 So these are text checks, written to be hard to satisfy by accident: comments
 and string literals are stripped first, so the word `while` inside a comment
@@ -19,7 +20,9 @@ _LINE_COMMENT = re.compile(r"//[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 # Dart strings: '...', "...", and their raw/interpolated forms. Good enough to
 # stop keywords inside message text from counting as structure.
-_STRINGS = re.compile(r"""(?:r?'(?:\\.|[^'\\])*'|r?"(?:\\.|[^"\\])*")""")
+_STRINGS = re.compile(
+    r"""(?:r?'(?:\\.|[^'\\])*'|r?"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)"""
+)
 
 
 def strip_noise(code: str) -> str:
@@ -55,12 +58,19 @@ def defines_function(code: str, name: str) -> bool:
     modifier like `void`. A plain call `foo(1)` must not count as defining it.
     """
     clean = strip_noise(code)
+
+    # JavaScript's other shape: `const twoSum = (a, b) => ...` or
+    # `const twoSum = function (a, b) {`. The name is bound, not declared.
+    assigned = rf"\b(?:const|let|var)\s+{re.escape(name)}\s*=\s*(?:async\s*)?(?:function\b|\(|[A-Za-z_$]\w*\s*=>)"
+    if re.search(assigned, clean):
+        return True
+
     # A definition is followed by a parameter list and then `{` or `=>`.
     pattern = rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?:async\s*)?(?:\{{|=>)"
     for match in re.finditer(pattern, clean):
         before = clean[: match.start()].rstrip()
         # A call sits after `=`, `(`, `,`, `return`, or an operator; a
-        # definition sits after a type, `void`, or the start of a line.
+        # definition sits after a type, `void`, `function`, or a line start.
         if before.endswith(("=", "(", ",", "return", "+", "-", "*", "&&", "||", "!")):
             continue
         return True
@@ -80,15 +90,26 @@ def top_level_names(code: str) -> tuple[list[str], list[str]]:
     clean = strip_noise(code)
     classes = re.findall(r"\bclass\s+([A-Za-z_]\w*)", clean)
     funcs: list[str] = []
-    # A declaration looks like `<type> name(params) {` or `... => ...`.
+    keywords = {"if", "for", "while", "switch", "catch", "return", "function"}
+
+    # `<type> name(params) {`, `function name(params) {`, or `... => ...`.
     decl = re.compile(
-        r"(?:^|\n)\s*(?:[A-Za-z_][\w<>,?\s\[\]]*\s+)?([a-z_]\w*)\s*\([^;{}]*\)\s*"
-        r"(?:async\s*)?(?:\{|=>)"
+        r"(?:^|\n)\s*(?:(?:export|async)\s+)*(?:function\s+|[A-Za-z_][\w<>,?\s\[\]]*\s+)?"
+        r"([a-zA-Z_$]\w*)\s*\([^;{}]*\)\s*(?:async\s*)?(?:\{|=>)"
     )
     for match in decl.finditer(clean):
         name = match.group(1)
-        if name in {"if", "for", "while", "switch", "catch", "return"}:
+        if name in keywords or name in funcs:
             continue
+        funcs.append(name)
+
+    # `const name = (…) => …` — declared by binding rather than by keyword.
+    arrow = re.compile(
+        r"(?:^|\n)\s*(?:const|let|var)\s+([a-zA-Z_$]\w*)\s*=\s*"
+        r"(?:async\s*)?(?:function\b|\(|[A-Za-z_$]\w*\s*=>)"
+    )
+    for match in arrow.finditer(clean):
+        name = match.group(1)
         if name not in funcs:
             funcs.append(name)
     return funcs, classes

@@ -1,35 +1,51 @@
-"""The Dart bank, and the text-based checks that stand in for an AST."""
+"""The Dart and JavaScript banks, and the checks that stand in for an AST."""
 
 import unittest
 
-from code_coach import dart_checks as chk
+from code_coach import brace_checks as chk
 from code_coach.engine import dart_available, run_code
 from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
 from code_coach.leetcode.problems_dart import PATTERNS as DART_PATTERNS
+from code_coach.leetcode.problems_js import PATTERNS as JS_PATTERNS
+
+TRANSLATED = {"dart": DART_PATTERNS, "javascript": JS_PATTERNS}
 
 
 class ParityTests(unittest.TestCase):
-    """Switching language must keep your place, so both banks line up."""
+    """Switching language must keep your place, so every bank lines up."""
 
     def test_same_patterns_in_the_same_order(self):
-        self.assertEqual(
-            [p.id for p in DART_PATTERNS], [p.id for p in PY_PATTERNS]
-        )
-
-    def test_same_problems_in_the_same_order(self):
-        for dart, py in zip(DART_PATTERNS, PY_PATTERNS):
-            with self.subTest(pattern=py.id):
+        for language, patterns in TRANSLATED.items():
+            with self.subTest(language=language):
                 self.assertEqual(
-                    [p.number for p in dart.problems],
-                    [p.number for p in py.problems],
+                    [p.id for p in patterns], [p.id for p in PY_PATTERNS]
                 )
 
-    def test_solutions_are_actually_dart(self):
-        for pattern in DART_PATTERNS:
-            for problem in pattern.problems:
-                with self.subTest(problem=problem.number):
-                    self.assertNotIn("def ", problem.code)
-                    self.assertIn("{", problem.code)
+    def test_same_problems_in_the_same_order(self):
+        for language, patterns in TRANSLATED.items():
+            for translated, py in zip(patterns, PY_PATTERNS):
+                with self.subTest(language=language, pattern=py.id):
+                    self.assertEqual(
+                        [p.number for p in translated.problems],
+                        [p.number for p in py.problems],
+                    )
+
+    def test_solutions_are_not_python(self):
+        for language, patterns in TRANSLATED.items():
+            for pattern in patterns:
+                for problem in pattern.problems:
+                    with self.subTest(language=language, problem=problem.number):
+                        self.assertNotIn("def ", problem.code)
+                        self.assertIn("{", problem.code)
+
+    def test_the_bank_is_selected_by_language(self):
+        from code_coach.leetcode.bank import patterns_for_language
+
+        self.assertIs(patterns_for_language("dart"), DART_PATTERNS)
+        self.assertIs(patterns_for_language("javascript"), JS_PATTERNS)
+        self.assertIs(patterns_for_language("python"), PY_PATTERNS)
+        # An unknown language falls back rather than failing.
+        self.assertIs(patterns_for_language("cobol"), PY_PATTERNS)
 
     def test_imports_come_before_declarations_in_preambles(self):
         # Dart rejects a directive that follows a declaration, and these
@@ -75,6 +91,21 @@ class DartCheckTests(unittest.TestCase):
     def test_arrow_definition_is_recognised(self):
         self.assertTrue(chk.defines_function("int f(int a) => a * 2;", "f"))
 
+    def test_javascript_function_keyword(self):
+        code = "function twoSum(nums, target) {\n  return [];\n}"
+        self.assertTrue(chk.defines_function(code, "twoSum"))
+        funcs, _ = chk.top_level_names(code)
+        self.assertIn("twoSum", funcs)
+
+    def test_javascript_arrow_binding(self):
+        # `const f = (n) => n * 2` declares by binding, not by keyword.
+        self.assertTrue(chk.defines_function("const f = (n) => n * 2;", "f"))
+        funcs, _ = chk.top_level_names("const f = (n) => n * 2;")
+        self.assertIn("f", funcs)
+
+    def test_template_literal_contents_are_ignored(self):
+        self.assertFalse(chk.uses_while("const s = `while (x) {}`;"))
+
     def test_class_detection(self):
         self.assertTrue(chk.defines_class("class MinStack {}", "MinStack"))
         self.assertFalse(chk.defines_class("// class MinStack {}", "MinStack"))
@@ -117,6 +148,46 @@ class DartRunsTests(unittest.TestCase):
         out, err, code = run_code("void main() { int x = ; }", language="dart")
         self.assertNotEqual(code, 0)
         self.assertIn("Error", err)
+
+
+class JavaScriptRunsTests(unittest.TestCase):
+    """Node ships with the project's own toolchain, so these always run."""
+
+    def test_hash_map_solutions_run_and_answer_correctly(self):
+        pattern = next(p for p in JS_PATTERNS if p.id == "lc-hashmap")
+        src = "\n\n".join(
+            list(pattern.preamble) + [p.code for p in pattern.problems]
+        )
+        src += (
+            "\n\nconsole.log(JSON.stringify(twoSum([2, 7, 11, 15], 9)));\n"
+            "console.log(containsDuplicate([1, 2, 3, 1]));\n"
+            "console.log(isAnagram('anagram', 'nagaram'));\n"
+            "console.log(groupAnagrams(['eat', 'tea', 'tan']).length);\n"
+        )
+        out, err, code = run_code(src, language="javascript")
+        self.assertEqual(code, 0, err[:400])
+        self.assertEqual(out.split(), ["[0,1]", "true", "true", "2"])
+
+    def test_linked_list_solutions_run(self):
+        pattern = next(p for p in JS_PATTERNS if p.id == "lc-linked-list")
+        src = "\n\n".join(
+            list(pattern.preamble) + [p.code for p in pattern.problems]
+        )
+        src += (
+            "\n\nlet head = null;\n"
+            "for (const v of [3, 2, 1]) head = new ListNode(v, head);\n"
+            "let n = reverseList(head);\nconst out = [];\n"
+            "while (n) { out.push(n.val); n = n.next; }\n"
+            "console.log(JSON.stringify(out));\n"
+        )
+        out, err, code = run_code(src, language="javascript")
+        self.assertEqual(code, 0, err[:400])
+        self.assertEqual(out.strip(), "[3,2,1]")
+
+    def test_a_syntax_error_is_reported_not_raised(self):
+        out, err, code = run_code("const x = ;", language="javascript")
+        self.assertNotEqual(code, 0)
+        self.assertTrue(err.strip())
 
 
 if __name__ == "__main__":

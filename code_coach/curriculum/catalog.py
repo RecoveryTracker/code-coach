@@ -525,10 +525,11 @@ def classes_for_language(language: str) -> list[ClassDef]:
     from code_coach.fundamentals.base import has_fundamentals
     from code_coach.leetcode.bank import patterns_for_language
 
-    has_leetcode = bool(patterns_for_language(language)) and language in {
-        "python",
-        "dart",
-    }
+    # A language has the LeetCode classes when it has its own solution bank —
+    # patterns_for_language falls back to Python's, so check by identity.
+    from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
+
+    has_leetcode = patterns_for_language(language) is not PY_PATTERNS
     out: list[ClassDef] = []
     for c in CLASSES:
         if is_leetcode_class(c.id):

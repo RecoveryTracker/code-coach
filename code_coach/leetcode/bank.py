@@ -78,6 +78,10 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.leetcode.problems_dart import PATTERNS as DART_PATTERNS
 
         return DART_PATTERNS
+    if language == "javascript":
+        from code_coach.leetcode.problems_js import PATTERNS as JS_PATTERNS
+
+        return JS_PATTERNS
     return PATTERNS
 
 
@@ -381,8 +385,8 @@ def _requirements_for(
     honest: it asks for the shape of the algorithm, not one exact phrasing.
     """
     code = problem.code
-    if language == "dart":
-        from code_coach import dart_checks as chk
+    if language in ("dart", "javascript", "typescript"):
+        from code_coach import brace_checks as chk
 
         names = chk.top_level_names
         defines_fn = chk.defines_function
