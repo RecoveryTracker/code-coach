@@ -3,12 +3,17 @@
 import unittest
 
 from code_coach import brace_checks as chk
-from code_coach.engine import dart_available, run_code
+from code_coach.engine import dart_available, run_code, typescript_available
 from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
 from code_coach.leetcode.problems_dart import PATTERNS as DART_PATTERNS
 from code_coach.leetcode.problems_js import PATTERNS as JS_PATTERNS
+from code_coach.leetcode.problems_ts import PATTERNS as TS_PATTERNS
 
-TRANSLATED = {"dart": DART_PATTERNS, "javascript": JS_PATTERNS}
+TRANSLATED = {
+    "dart": DART_PATTERNS,
+    "javascript": JS_PATTERNS,
+    "typescript": TS_PATTERNS,
+}
 
 
 class ParityTests(unittest.TestCase):
@@ -43,6 +48,7 @@ class ParityTests(unittest.TestCase):
 
         self.assertIs(patterns_for_language("dart"), DART_PATTERNS)
         self.assertIs(patterns_for_language("javascript"), JS_PATTERNS)
+        self.assertIs(patterns_for_language("typescript"), TS_PATTERNS)
         self.assertIs(patterns_for_language("python"), PY_PATTERNS)
         # An unknown language falls back rather than failing.
         self.assertIs(patterns_for_language("cobol"), PY_PATTERNS)
@@ -105,6 +111,34 @@ class DartCheckTests(unittest.TestCase):
 
     def test_template_literal_contents_are_ignored(self):
         self.assertFalse(chk.uses_while("const s = `while (x) {}`;"))
+
+    def test_typescript_return_annotation_still_reads_as_a_definition(self):
+        # `function f(...): number[] {` — the annotation sits between the
+        # parameter list and the brace, and used to hide the definition.
+        code = "function twoSum(nums: number[], target: number): number[] {\n  return [];\n}"
+        self.assertTrue(chk.defines_function(code, "twoSum"))
+        funcs, _ = chk.top_level_names(code)
+        self.assertIn("twoSum", funcs)
+
+    def test_typescript_annotated_arrow_is_a_definition(self):
+        code = "const ok = (c: string): boolean => c.length > 0;"
+        self.assertTrue(chk.defines_function(code, "ok"))
+
+    def test_every_translated_bank_yields_a_function_requirement(self):
+        # A build lesson with no "write this function" line would let an empty
+        # answer look half-right.
+        from code_coach.leetcode.bank import _requirements_for
+
+        for language, patterns in TRANSLATED.items():
+            problem = patterns[0].problems[0]
+            labels = [
+                label for label, _ in _requirements_for(problem, language)
+            ]
+            with self.subTest(language=language):
+                self.assertTrue(
+                    any("twoSum" in label for label in labels),
+                    f"{language}: {labels}",
+                )
 
     def test_class_detection(self):
         self.assertTrue(chk.defines_class("class MinStack {}", "MinStack"))
@@ -188,6 +222,32 @@ class JavaScriptRunsTests(unittest.TestCase):
         out, err, code = run_code("const x = ;", language="javascript")
         self.assertNotEqual(code, 0)
         self.assertTrue(err.strip())
+
+
+@unittest.skipUnless(typescript_available(), "tsc not available")
+class TypeScriptRunsTests(unittest.TestCase):
+    def test_hash_map_solutions_type_check_and_run(self):
+        pattern = next(p for p in TS_PATTERNS if p.id == "lc-hashmap")
+        src = "\n\n".join(
+            list(pattern.preamble) + [p.code for p in pattern.problems]
+        )
+        src += (
+            "\n\nconsole.log(JSON.stringify(twoSum([2, 7, 11, 15], 9)));\n"
+            "console.log(containsDuplicate([1, 2, 3, 1]));\n"
+        )
+        out, err, code = run_code(src, language="typescript")
+        self.assertEqual(code, 0, err[:500])
+        self.assertEqual(out.split(), ["[0,1]", "true"])
+
+    def test_a_type_error_stops_the_run(self):
+        # The whole point of TypeScript — running past a type error would
+        # teach exactly the wrong lesson.
+        out, err, code = run_code(
+            'const x: number = "nope";\nconsole.log(x);', language="typescript"
+        )
+        self.assertNotEqual(code, 0)
+        self.assertIn("TS2322", err)
+        self.assertEqual(out, "")
 
 
 if __name__ == "__main__":

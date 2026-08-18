@@ -65,8 +65,14 @@ def defines_function(code: str, name: str) -> bool:
     if re.search(assigned, clean):
         return True
 
-    # A definition is followed by a parameter list and then `{` or `=>`.
-    pattern = rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?:async\s*)?(?:\{{|=>)"
+    # A definition is followed by a parameter list, optionally a return-type
+    # annotation, and then `{` or `=>`. Without allowing the annotation,
+    # `function twoSum(...): number[] {` reads as a call rather than a
+    # definition, and the build lesson stops asking for the function at all.
+    pattern = (
+        rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^;{{=]+)?"
+        r"\s*(?:async\s*)?(?:\{|=>)"
+    )
     for match in re.finditer(pattern, clean):
         before = clean[: match.start()].rstrip()
         # A call sits after `=`, `(`, `,`, `return`, or an operator; a
@@ -95,7 +101,7 @@ def top_level_names(code: str) -> tuple[list[str], list[str]]:
     # `<type> name(params) {`, `function name(params) {`, or `... => ...`.
     decl = re.compile(
         r"(?:^|\n)\s*(?:(?:export|async)\s+)*(?:function\s+|[A-Za-z_][\w<>,?\s\[\]]*\s+)?"
-        r"([a-zA-Z_$]\w*)\s*\([^;{}]*\)\s*(?:async\s*)?(?:\{|=>)"
+        r"([a-zA-Z_$]\w*)\s*\([^;{}]*\)\s*(?::\s*[^;{=]+)?\s*(?:async\s*)?(?:\{|=>)"
     )
     for match in decl.finditer(clean):
         name = match.group(1)

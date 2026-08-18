@@ -119,6 +119,88 @@ _COMPILERS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 }
 
 
+def _find_tsc() -> Path | None:
+    """The TypeScript compiler, preferring the copy the web app already has.
+
+    Looking here first means TypeScript works out of the box for anyone who
+    has run `npm install` in web/ — no separate global install.
+    """
+    local = (
+        Path(__file__).resolve().parent.parent
+        / "web"
+        / "node_modules"
+        / "typescript"
+        / "bin"
+        / "tsc"
+    )
+    if local.exists():
+        return local
+    found = shutil.which("tsc")
+    return Path(found) if found else None
+
+
+def typescript_available() -> bool:
+    return _find_tsc() is not None and shutil.which("node") is not None
+
+
+def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
+    """Type-check and compile to JavaScript, then run that.
+
+    `--noEmitOnError` so a type error stops the run and gets reported — the
+    type checking is the reason to write TypeScript at all, and silently
+    running past it would teach the wrong lesson.
+    """
+    tsc = _find_tsc()
+    node = shutil.which("node")
+    if tsc is None or node is None:
+        return (
+            "",
+            "TypeScript needs Node and the TypeScript compiler. Run "
+            "`npm install` in the web folder, then try again.",
+            127,
+        )
+
+    built = path.with_suffix(".js")
+    try:
+        compiled = subprocess.run(
+            [
+                node,
+                str(tsc),
+                str(path),
+                "--target", "es2020",
+                "--module", "commonjs",
+                "--skipLibCheck",
+                "--noEmitOnError",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return "", f"Type-checking timed out after {timeout:g}s.", 124
+
+    if compiled.returncode != 0:
+        # tsc reports errors on stdout, not stderr.
+        return "", _cap_output(compiled.stdout or compiled.stderr), compiled.returncode
+
+    try:
+        ran = subprocess.run(
+            [node, str(built)],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            stdin=subprocess.DEVNULL,
+        )
+        return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
+    except subprocess.TimeoutExpired:
+        return "", f"Program timed out after {timeout:g}s.", 124
+    finally:
+        try:
+            built.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
     """Build the source, then run what came out."""
     suffix = path.suffix.lower()
@@ -235,7 +317,7 @@ _SUFFIXES = {
 
 # Languages that compile before they run get a longer clock — the wait is the
 # toolchain, not the student's loop.
-_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust"}
+_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust", "typescript"}
 
 
 def run_code(
@@ -249,14 +331,6 @@ def run_code(
         from code_coach.sql_runner import run_sql
 
         return run_sql(code)
-
-    if language == "typescript":
-        return (
-            "",
-            "TypeScript can't be run here yet — it needs a compiler step. The "
-            "type-along drills work; use JavaScript if you want to press Run.",
-            127,
-        )
 
     suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
@@ -273,6 +347,8 @@ def run_code(
         tmp.write(code)
         tmp_path = Path(tmp.name)
     try:
+        if suffix == ".ts":
+            return _run_typescript(tmp_path, timeout)
         if suffix in _COMPILERS:
             return _compile_then_run(tmp_path, timeout)
         return run_file(tmp_path, timeout=timeout)

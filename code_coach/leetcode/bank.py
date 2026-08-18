@@ -82,6 +82,10 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.leetcode.problems_js import PATTERNS as JS_PATTERNS
 
         return JS_PATTERNS
+    if language == "typescript":
+        from code_coach.leetcode.problems_ts import PATTERNS as TS_PATTERNS
+
+        return TS_PATTERNS
     return PATTERNS
 
 

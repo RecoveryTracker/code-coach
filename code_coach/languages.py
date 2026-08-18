@@ -78,10 +78,10 @@ LANGUAGES: tuple[Language, ...] = (
         extension="ts",
         available=True,
         note=(
-            "Fundamentals only. Run isn't wired up — TypeScript needs a "
-            "compile step; use JavaScript if you want to execute."
+            "Run type-checks with tsc before executing, so a type error stops "
+            "it. Watch it run is Python-only for now."
         ),
-        ready=("fundamentals", "checks"),
+        ready=("fundamentals", "runner", "checks", "bank"),
     ),
     Language(
         id="sql",
