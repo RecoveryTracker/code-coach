@@ -106,6 +106,9 @@ def get_active_drill(progress: StudentProgress) -> Drill:
             seed="local-student",
             batch=batch,
             level=level,
+            # From the caller's progress, not read again inside — this is the
+            # request's language, and it's already in hand here.
+            language=getattr(progress, "language", "python") or "python",
         )
         register_dynamic(drill)
         return drill

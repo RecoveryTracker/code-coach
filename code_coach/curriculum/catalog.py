@@ -105,6 +105,20 @@ def _build_step(
 # too hard — pure muscle memory for parens, quotes, colons, comparisons.
 
 
+def _active_language() -> str:
+    """The student's language, read once at drill-construction time.
+
+    Only the curriculum entry points do this; everything below takes it as an
+    argument, so the drill builders stay testable without a progress file.
+    """
+    try:
+        from code_coach.progress.store import ProgressStore
+
+        return getattr(ProgressStore().load(), "language", "python") or "python"
+    except Exception:
+        return "python"
+
+
 def _decisions_l1_drill() -> Drill:
     return make_class_dictation_batch(
         "decisions",
@@ -113,6 +127,7 @@ def _decisions_l1_drill() -> Drill:
         seed="local-student",
         batch=0,
         level=1,
+        language=_active_language(),
     )
 
 
@@ -179,6 +194,7 @@ def _loops_l1_drill() -> Drill:
         seed="local-student",
         batch=0,
         level=1,
+        language=_active_language(),
     )
 
 
@@ -242,6 +258,7 @@ def _foundations_l1() -> Drill:
         seed="local-student",
         batch=0,
         level=1,
+        language=_active_language(),
     )
 
 
@@ -497,14 +514,29 @@ def get_class(class_id: str) -> ClassDef | None:
 def classes_for_language(language: str) -> list[ClassDef]:
     """Classes that actually have material in this language.
 
-    Foundations, Decisions and Loops are generated from Python line pools —
-    there is no Dart equivalent yet, and offering them in Dart handed out
-    Python exercises to type into a .dart file, so every answer failed and
-    Run couldn't work. Better to show only what exists.
+    A class is offered when the language has something to put in it: the
+    LeetCode classes need a solution bank, the fundamentals classes need
+    declared snippets. Offering one without material handed out Python
+    exercises to type into a .dart file, so every answer failed.
     """
-    if language == "dart":
-        return [c for c in CLASSES if is_leetcode_class(c.id)]
-    return list(CLASSES)
+    if language == "python":
+        return list(CLASSES)
+
+    from code_coach.fundamentals.base import has_fundamentals
+    from code_coach.leetcode.bank import patterns_for_language
+
+    has_leetcode = bool(patterns_for_language(language)) and language in {
+        "python",
+        "dart",
+    }
+    out: list[ClassDef] = []
+    for c in CLASSES:
+        if is_leetcode_class(c.id):
+            if has_leetcode:
+                out.append(c)
+        elif has_fundamentals(language, c.id):
+            out.append(c)
+    return out
 
 
 def first_class_for_language(language: str) -> str:

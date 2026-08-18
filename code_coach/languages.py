@@ -45,7 +45,7 @@ LANGUAGES: tuple[Language, ...] = (
         monaco="python",
         extension="py",
         available=True,
-        ready=("runner", "checks", "bank", "tracer"),
+        ready=("fundamentals", "runner", "checks", "bank", "tracer"),
     ),
     Language(
         id="dart",
@@ -57,7 +57,59 @@ LANGUAGES: tuple[Language, ...] = (
             "Run needs the Dart SDK on your PATH. Watch it run is Python-only "
             "for now — everything else works."
         ),
-        ready=("runner", "checks", "bank"),
+        ready=("fundamentals", "runner", "checks", "bank"),
+    ),
+    Language(
+        id="javascript",
+        name="JavaScript",
+        monaco="javascript",
+        extension="js",
+        available=True,
+        note=(
+            "Fundamentals only for now — the LeetCode solutions haven't been "
+            "written in JavaScript yet. Run needs Node on your PATH."
+        ),
+        ready=("fundamentals", "runner", "checks"),
+    ),
+    # Listed so the roadmap is visible. Each needs a fundamentals bank in
+    # code_coach/fundamentals — see base.py for the shape.
+    Language(
+        id="typescript",
+        name="TypeScript",
+        monaco="typescript",
+        extension="ts",
+        note="Not yet — needs a fundamentals bank.",
+    ),
+    Language(
+        id="c",
+        name="C",
+        monaco="c",
+        extension="c",
+        note="Not yet — needs a fundamentals bank and a compile-then-run runner.",
+    ),
+    Language(
+        id="cpp",
+        name="C++",
+        monaco="cpp",
+        extension="cpp",
+        note="Not yet — needs a fundamentals bank and a compile-then-run runner.",
+    ),
+    Language(
+        id="rust",
+        name="Rust",
+        monaco="rust",
+        extension="rs",
+        note="Not yet — needs a fundamentals bank and a rustc runner.",
+    ),
+    Language(
+        id="sql",
+        name="SQL",
+        monaco="sql",
+        extension="sql",
+        note=(
+            "Not yet — needs a fundamentals bank, and queries run against a "
+            "sample database rather than printing output."
+        ),
     ),
 )
 

@@ -113,9 +113,40 @@ def make_class_dictation_batch(
     count: int = WINDOW_SIZE,
     level: int = 1,
     drill_id: str | None = None,
+    language: str = "python",
 ) -> Any:
     """Endless Lesson-1 type-along for ANY class — the easy fallback layer that
-    drills exactly the syntax this class's build lessons need."""
+    drills exactly the syntax this class's build lessons need.
+
+    `language` is passed in rather than read from saved progress: resolving it
+    here would make drill construction depend on ambient state, and the tests
+    would then pass or fail according to which language was last selected.
+    """
+    # A non-Python language draws its fundamentals from a declared bank rather
+    # than the Python generators — see code_coach/fundamentals.
+    from code_coach.fundamentals.base import CLASS_IDS, has_fundamentals, specs_for
+
+    if language != "python" and class_id in CLASS_IDS:
+        if not has_fundamentals(language, class_id):
+            return None
+        specs = specs_for(
+            language, class_id, batch=batch, count=count, level=level
+        )
+        title = (
+            f"Class {class_number} · {class_name} · Lesson 1 — Type-along (endless)"
+        )
+        drill = specs_to_drill(
+            specs,
+            drill_id=drill_id or f"{class_id}-l1",
+            title=title,
+            batch=batch,
+            level=level,
+            starter="",
+        )
+        drill.skill = _CLASS_SKILLS.get(class_id, drill.skill)
+        drill.tags = ["dictation", class_id, "endless", language]
+        return drill
+
     if class_id == "foundations":
         return make_class1_batch(seed=seed, batch=batch, count=count, level=level)
 

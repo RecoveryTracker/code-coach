@@ -104,6 +104,9 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix == ".dart":
         dart = shutil.which("dart")
         return [dart, "run", str(path)] if dart else None
+    if suffix in (".js", ".mjs"):
+        node = shutil.which("node")
+        return [node, str(path)] if node else None
     return [sys.executable, str(path)]
 
 
@@ -132,10 +135,13 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
 
     argv = _interpreter_for(path)
     if argv is None:
+        tool = {"": "the runtime", ".dart": "Dart", ".js": "Node", ".mjs": "Node"}.get(
+            path.suffix.lower(), "the runtime"
+        )
         return (
             "",
-            "Dart isn't on your PATH. Install the Dart or Flutter SDK and "
-            "reopen your terminal, then try Run again.",
+            f"{tool} isn't on your PATH. Install it and reopen your terminal, "
+            "then try Run again.",
             127,
         )
 
@@ -160,6 +166,9 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
         return stdout, stderr, 124
 
 
+_SUFFIXES = {"dart": ".dart", "javascript": ".js", "python": ".py"}
+
+
 def run_code(
     code: str,
     *,
@@ -168,7 +177,7 @@ def run_code(
 ) -> tuple[str, str, int]:
     """Run a snippet in the given language. The extension picks the runner."""
     is_dart = language == "dart"
-    suffix = ".dart" if is_dart else ".py"
+    suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
         timeout = DART_TIMEOUT_SECONDS if is_dart else RUN_TIMEOUT_SECONDS
 
