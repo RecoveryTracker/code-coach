@@ -489,16 +489,23 @@ def leetcode_build_drill(class_id: str) -> Drill:
 
 
 def study_payload(
-    pattern_id: str | None, problem_number: int | None
+    pattern_id: str | None,
+    problem_number: int | None,
+    language: str = "python",
 ) -> dict[str, Any] | None:
-    """Question + pattern lesson for one exercise, or None if not LeetCode."""
+    """Question + pattern lesson for one exercise, or None if not LeetCode.
+
+    `language` is a parameter, not looked up here: this runs once per step, so
+    resolving it internally meant re-reading and re-parsing the progress file
+    eight times to build one session.
+    """
     from code_coach.leetcode.study import brief_for, lesson_for
 
     if not pattern_id:
         return None
     # Look the pattern up in the active language's bank so the complexity and
     # idea shown match the code on screen.
-    patterns = patterns_for_language(current_language())
+    patterns = patterns_for_language(language)
     pattern = next((p for p in patterns if p.id == pattern_id), None) or get_pattern(
         pattern_id
     )

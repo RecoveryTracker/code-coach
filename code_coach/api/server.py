@@ -157,7 +157,9 @@ def _session_from_progress() -> PracticeSession:
         supports = [SupportLinkInfo(**x) for x in raw_supports]
         kind = "build" if role == "build" else "dictation"
         raw_study = leetcode_study_payload(
-            getattr(s, "pattern_id", None), getattr(s, "problem_number", None)
+            getattr(s, "pattern_id", None),
+            getattr(s, "problem_number", None),
+            lang.id,
         )
         steps.append(
             WaypointInfo(

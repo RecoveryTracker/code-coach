@@ -104,34 +104,56 @@ export function CurriculumNav({
   const fundamentals = curriculum.filter((c) => !c.id.startsWith("lc-"));
   const leetcode = curriculum.filter((c) => c.id.startsWith("lc-"));
 
+  // For the "Python only" tooltips on the tools that can't run here.
+  const LANGUAGE_NAMES: Record<string, string> = {
+    python: "Python",
+    dart: "Dart",
+    javascript: "JavaScript",
+    typescript: "TypeScript",
+    sql: "SQL",
+    c: "C",
+    cpp: "C++",
+    rust: "Rust",
+  };
+  const languageName =
+    LANGUAGE_NAMES[session.language ?? "python"] ?? session.language ?? "this language";
+
   return (
     <div className="cur-nav" aria-label="Curriculum navigation">
       {/* Coach tools + the Not yet / Got it status. */}
       <div className="cur-nav-line">
-        {/* Python-only: it reads the code with Python's own parser. */}
-        {session.can_explain !== false ? (
-          <button
-            type="button"
-            className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
-            onClick={onToggleExplain}
-            title="The coach walks through your code line by line and explains the output"
-          >
-            {explainOpen ? "Hide explain" : "Explain my code"}
-          </button>
-        ) : null}
+        {/* Shown even where it can't work, so the feature stays discoverable —
+            but disabled, with the reason on hover. Python-only: it reads the
+            code with Python's own parser. */}
+        <button
+          type="button"
+          className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+          onClick={onToggleExplain}
+          disabled={session.can_explain === false}
+          title={
+            session.can_explain === false
+              ? `Python only — it reads your code with Python's own parser, ` +
+                `and there's no reader for ${languageName} yet.`
+              : "The coach walks through your code line by line and explains the output"
+          }
+        >
+          {explainOpen ? "Hide explain" : "Explain my code"}
+        </button>
 
-        {/* Only where a tracer exists. Offering it elsewhere meant pressing it
-            returned a parse error from the Python tracer. */}
-        {session.can_visualize !== false ? (
-          <button
-            type="button"
-            className={`coach-chat-toggle${vizOpen ? " active" : ""}`}
-            onClick={onToggleViz}
-            title="Step through your code and watch the arrays, pointers and nodes change"
-          >
-            {vizOpen ? "Hide picture" : "Watch it run"}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className={`coach-chat-toggle${vizOpen ? " active" : ""}`}
+          onClick={onToggleViz}
+          disabled={session.can_visualize === false}
+          title={
+            session.can_visualize === false
+              ? `Python only — it steps through the program as it runs, and ` +
+                `there's no tracer for ${languageName} yet.`
+              : "Step through your code and watch the arrays, pointers and nodes change"
+          }
+        >
+          {vizOpen ? "Hide picture" : "Watch it run"}
+        </button>
 
         <button type="button" className="coach-chat-toggle" onClick={onToggleChat}>
           {chatOpen ? "Hide chat" : "Ask coach"}
@@ -199,10 +221,6 @@ export function CurriculumNav({
             </button>
           </span>
 
-          <span className="cur-path-sep" aria-hidden>
-            ›
-          </span>
-
           <span className="cur-crumb">
             <button
               type="button"
@@ -234,10 +252,6 @@ export function CurriculumNav({
             >
               ›
             </button>
-          </span>
-
-          <span className="cur-path-sep" aria-hidden>
-            ›
           </span>
 
           <span

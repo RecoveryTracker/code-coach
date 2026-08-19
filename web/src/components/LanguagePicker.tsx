@@ -51,17 +51,30 @@ export function LanguagePicker({ current, onChanged }: Props) {
     };
   }, [open]);
 
-  const active = langs.find((l) => l.id === current);
+  // What the button says right now. Set on click so the label changes on the
+  // same frame, rather than after the round trips have finished — the work
+  // takes ~40ms but waiting to acknowledge the click made it feel stalled.
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    setPending(null);
+  }, [current]);
+
+  const shownId = pending ?? current;
+  const active = langs.find((l) => l.id === shownId);
 
   async function choose(lang: LanguageInfo) {
     if (!lang.available || lang.id === current || busy) return;
+    // Acknowledge immediately: close the menu and show the new name.
+    setOpen(false);
+    setPending(lang.id);
     setBusy(true);
     setError(null);
     try {
       await updateProgress({ language: lang.id });
       onChanged(lang.id);
-      setOpen(false);
     } catch (e) {
+      setPending(null);
+      setOpen(true);
       setError(e instanceof Error ? e.message : "Couldn't switch language.");
     } finally {
       setBusy(false);
@@ -72,11 +85,11 @@ export function LanguagePicker({ current, onChanged }: Props) {
     <div className="lang-wrap" ref={wrap}>
       <button
         type="button"
-        className={`ws-btn${open ? " primary" : ""}`}
+        className={`ws-btn${open ? " primary" : ""}${busy ? " working" : ""}`}
         onClick={() => setOpen((o) => !o)}
         title="Which language the drills are written in"
       >
-        {active?.name ?? current}
+        {active?.name ?? shownId}
       </button>
 
       {open ? (
@@ -87,11 +100,12 @@ export function LanguagePicker({ current, onChanged }: Props) {
               key={lang.id}
               type="button"
               role="menuitemradio"
-              aria-checked={lang.id === current}
-              className={`lang-item${lang.id === current ? " on" : ""}${
+              // Menu is already closing; don't grey every row on the way out.
+              aria-checked={lang.id === shownId}
+              className={`lang-item${lang.id === shownId ? " on" : ""}${
                 lang.available ? "" : " off"
               }`}
-              disabled={!lang.available || busy}
+              disabled={!lang.available}
               onClick={() => void choose(lang)}
               title={lang.available ? "" : lang.note}
             >

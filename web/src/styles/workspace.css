@@ -111,6 +111,24 @@
   position: relative;
 }
 
+/* A quiet pulse while the switch completes — the label has already changed,
+   this just says the rest is still catching up. */
+.ws-btn.working {
+  animation: lang-working 0.9s ease-in-out infinite;
+}
+
+@keyframes lang-working {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-btn.working {
+    animation: none;
+  }
+}
+
 .lang-menu {
   position: absolute;
   right: 0;
@@ -997,6 +1015,20 @@ body.is-resizing .ws-split-row {
   color: var(--accent);
 }
 
+/* Kept visible in languages that can't support it, so the feature stays
+   discoverable — the tooltip says why it's off. Plain cursor: the
+   not-allowed symbol reads as a scolding for something that isn't a mistake. */
+.coach-chat-toggle:disabled {
+  opacity: 0.4;
+  border-style: dashed;
+  cursor: default;
+}
+
+.coach-chat-toggle:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
 .coach-chat {
   margin-top: 4px;
   border: 1px solid var(--border);
@@ -1463,10 +1495,13 @@ body.is-resizing .coach-explain-grip {
   padding: 3px 4px 3px 8px;
 }
 
-.cur-path-sep {
-  color: var(--text-dim);
-  font-size: 14px;
-  flex-shrink: 0;
+/* Crumbs are separated by a thin rule rather than a "›". The chevron looked
+   exactly like the ‹ › stepper buttons beside it, so half the arrows on the
+   row did nothing when clicked. */
+.cur-crumb + .cur-crumb {
+  margin-left: 6px;
+  padding-left: 7px;
+  border-left: 1px solid var(--border);
 }
 
 .cur-crumb {
