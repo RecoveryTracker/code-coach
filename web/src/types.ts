@@ -164,6 +164,10 @@ export type PracticeSession = {
   language?: string;
   /** Monaco id for the current language. */
   editor_language?: string;
+  /** "Watch it run" needs a tracer — Python only, for now. */
+  can_visualize?: boolean;
+  /** "Explain my code" reads the code with Python's ast — Python only. */
+  can_explain?: boolean;
 };
 
 export type RequirementItem = {

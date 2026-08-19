@@ -213,6 +213,8 @@ def _session_from_progress() -> PracticeSession:
         lines_done=progress.lines_for(meta["class_id"]),
         language=lang.id,
         editor_language=lang.monaco,
+        can_visualize="tracer" in lang.ready,
+        can_explain="explainer" in lang.ready,
     )
 
 
@@ -440,8 +442,23 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
     Complements /api/explain: that one says what each line means, this one says
     what `left`, `seen` and the node pointers actually held at each step.
     """
+    from code_coach.languages import get_language
     from code_coach.leetcode.study import brief_for, demo_call_for
     from code_coach.visualize import suggest_call, trace_code
+
+    # The tracer is sys.settrace, so it only understands Python. Feeding it a
+    # SQL query produced "SyntaxError: invalid syntax", which says nothing
+    # useful about why.
+    lang = get_language(getattr(_store.load(), "language", "python"))
+    if "tracer" not in lang.ready:
+        return VisualizeResponse(
+            ok=False,
+            error=(
+                f"Watch it run only works in Python — it steps through the "
+                f"program as it executes, and there's no tracer for "
+                f"{lang.name} yet. Switch to Python to use it."
+            ),
+        )
 
     code = body.code or ""
     call = (body.call or "").strip()
@@ -482,6 +499,21 @@ def explain(body: ExplainRequest) -> ExplainResponse:
     """Plain-English walkthrough of the student's current code + why it
     outputs what it does. Local AST + traced run — no cloud AI."""
     from code_coach.explain import explain_code
+    from code_coach.languages import get_language
+
+    # It reads the code with Python's `ast`, so anything else came back as
+    # "Python can't run this — there's a syntax error", which blames the
+    # student for writing correct SQL.
+    lang = get_language(getattr(_store.load(), "language", "python"))
+    if "explainer" not in lang.ready:
+        return ExplainResponse(
+            ok=False,
+            summary=(
+                f"Explain my code only works in Python — it reads the code "
+                f"with Python's own parser, and there's no reader for "
+                f"{lang.name} yet."
+            ),
+        )
 
     return ExplainResponse(**explain_code(body.code or ""))
 

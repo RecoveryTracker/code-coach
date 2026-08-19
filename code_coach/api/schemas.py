@@ -225,6 +225,11 @@ class PracticeSession(BaseModel):
     # Language the drill is written in, so the editor highlights it correctly.
     language: str = "python"
     editor_language: str = "python"
+    # "Watch it run" needs a tracer, and "Explain my code" reads the code with
+    # Python's `ast`. Only Python has either. Without these the buttons are
+    # offered everywhere and fail with a parse error about Python syntax.
+    can_visualize: bool = True
+    can_explain: bool = True
 
 
 class DrillEvaluateRequest(BaseModel):

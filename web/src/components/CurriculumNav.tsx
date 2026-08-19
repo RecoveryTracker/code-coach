@@ -108,23 +108,30 @@ export function CurriculumNav({
     <div className="cur-nav" aria-label="Curriculum navigation">
       {/* Coach tools + the Not yet / Got it status. */}
       <div className="cur-nav-line">
-        <button
-          type="button"
-          className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
-          onClick={onToggleExplain}
-          title="The coach walks through your code line by line and explains the output"
-        >
-          {explainOpen ? "Hide explain" : "Explain my code"}
-        </button>
+        {/* Python-only: it reads the code with Python's own parser. */}
+        {session.can_explain !== false ? (
+          <button
+            type="button"
+            className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+            onClick={onToggleExplain}
+            title="The coach walks through your code line by line and explains the output"
+          >
+            {explainOpen ? "Hide explain" : "Explain my code"}
+          </button>
+        ) : null}
 
-        <button
-          type="button"
-          className={`coach-chat-toggle${vizOpen ? " active" : ""}`}
-          onClick={onToggleViz}
-          title="Step through your code and watch the arrays, pointers and nodes change"
-        >
-          {vizOpen ? "Hide picture" : "Watch it run"}
-        </button>
+        {/* Only where a tracer exists. Offering it elsewhere meant pressing it
+            returned a parse error from the Python tracer. */}
+        {session.can_visualize !== false ? (
+          <button
+            type="button"
+            className={`coach-chat-toggle${vizOpen ? " active" : ""}`}
+            onClick={onToggleViz}
+            title="Step through your code and watch the arrays, pointers and nodes change"
+          >
+            {vizOpen ? "Hide picture" : "Watch it run"}
+          </button>
+        ) : null}
 
         <button type="button" className="coach-chat-toggle" onClick={onToggleChat}>
           {chatOpen ? "Hide chat" : "Ask coach"}

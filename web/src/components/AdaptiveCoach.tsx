@@ -187,13 +187,15 @@ export function AdaptiveCoach({
           >
             ← Back to lesson
           </button>
-          <button
-            type="button"
-            className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
-            onClick={toggleExplain}
-          >
-            {explainOpen ? "Hide explain" : "Explain my code"}
-          </button>
+          {session.can_explain !== false ? (
+            <button
+              type="button"
+              className={`coach-chat-toggle${explainOpen ? " active" : ""}`}
+              onClick={toggleExplain}
+            >
+              {explainOpen ? "Hide explain" : "Explain my code"}
+            </button>
+          ) : null}
           {brand}
           {toolbar}
         </div>
@@ -280,7 +282,7 @@ export function AdaptiveCoach({
       {/* Sits alongside "Explain my code" — same shape of tool, same place.
           It was buried at the bottom of the Problem panel's scroll area,
           which is a ~95px box, so nobody ever found it. */}
-      {vizOpen ? (
+      {vizOpen && session.can_visualize !== false ? (
         <div className="coach-viz">
           <div className="coach-explain-head">
             <span className="coach-explain-title">Watch it run</span>
@@ -311,7 +313,7 @@ export function AdaptiveCoach({
         </div>
       ) : null}
 
-      {explainOpen ? (
+      {explainOpen && session.can_explain !== false ? (
         <div className="coach-explain">
           <div className="coach-explain-head">
             <span className="coach-explain-title">

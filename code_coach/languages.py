@@ -45,7 +45,7 @@ LANGUAGES: tuple[Language, ...] = (
         monaco="python",
         extension="py",
         available=True,
-        ready=("fundamentals", "runner", "checks", "bank", "tracer"),
+        ready=("fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
     ),
     Language(
         id="dart",
