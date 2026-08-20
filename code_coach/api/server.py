@@ -202,6 +202,23 @@ def _session_from_progress() -> PracticeSession:
 
     # Lesson 1 of every class is the endless type-along fallback layer.
     endless = int(meta.get("lesson_number") or 1) == 1 and role == "dictation"
+
+    # How big this class really is, and where this window of 8 sits in it. The
+    # window counter alone resets to 1/8 every time you load more, which reads
+    # as going back to the start when you've actually moved forward.
+    class_total, class_position = 0, 0
+    if endless:
+        class_id_now = progress.curriculum_class or "foundations"
+        d_level_now = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
+        if class_id_now.startswith("lc-"):
+            from code_coach.leetcode.bank import unit_count
+
+            class_total = unit_count(class_id_now, d_level_now)
+        if class_total:
+            # Windows wrap at the end of the class, so the position does too.
+            class_position = (
+                progress.batch_for(class_id_now) * len(steps)
+            ) % class_total
     d_level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
     from code_coach.dictation.bank import DICTATION_LEVEL_LABELS
 
@@ -229,6 +246,8 @@ def _session_from_progress() -> PracticeSession:
         can_go_lesson_2=True,
         curriculum=catalog_payload(lang.id),
         exercise_count=len(steps),
+        class_total=class_total,
+        class_position=class_position,
         endless=endless,
         dictation_level=d_level,
         dictation_level_label=DICTATION_LEVEL_LABELS.get(d_level, f"Level {d_level}"),
@@ -589,27 +608,28 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
     from code_coach.leetcode.study import brief_for, demo_call_for
     from code_coach.visualize import suggest_call, trace_code
 
-    # The tracer is sys.settrace, so it only understands Python. Feeding it a
-    # SQL query produced "SyntaxError: invalid syntax", which says nothing
-    # useful about why.
+    # Python is traced with sys.settrace and JavaScript with Node's inspector.
+    # Everything else has no tracer, and feeding one a SQL query produced
+    # "SyntaxError: invalid syntax", which says nothing useful about why.
     lang = get_language(getattr(_store.load(), "language", "python"))
     if "tracer" not in lang.ready:
         return VisualizeResponse(
             ok=False,
             error=(
-                f"Watch it run only works in Python — it steps through the "
-                f"program as it executes, and there's no tracer for "
-                f"{lang.name} yet. Switch to Python to use it."
+                f"Code tracing works in Python and JavaScript — it steps "
+                f"through the program as it executes, and there's no tracer "
+                f"for {lang.name} yet."
             ),
         )
 
     code = body.code or ""
     call = (body.call or "").strip()
 
-    if not call:
+    if not call and lang.id == "python":
         # A hand-written call wins: these are the problems whose input is a
         # structure (a tree, a linked list, a class) that no amount of parsing
-        # the example can build.
+        # the example can build. They're written in Python, so they're only
+        # usable when Python is what's running.
         call = demo_call_for(body.problem_number)
     if not call:
         examples: list[str] = []
@@ -617,9 +637,9 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
             brief = brief_for(body.problem_number)
             if brief:
                 examples = list(brief.examples)
-        call = suggest_call(code, examples)
+        call = suggest_call(code, examples, language=lang.id)
 
-    result = trace_code(code, call=call)
+    result = trace_code(code, call=call, language=lang.id)
     return VisualizeResponse(
         ok=bool(result.get("ok")),
         steps=result.get("steps", []),
@@ -644,19 +664,31 @@ def explain(body: ExplainRequest) -> ExplainResponse:
     from code_coach.explain import explain_code
     from code_coach.languages import get_language
 
-    # It reads the code with Python's `ast`, so anything else came back as
-    # "Python can't run this — there's a syntax error", which blames the
-    # student for writing correct SQL.
     lang = get_language(getattr(_store.load(), "language", "python"))
     if "explainer" not in lang.ready:
+        # Reading the code needs a reader for that language. Without this,
+        # SQL came back as "Python can't run this — there's a syntax error",
+        # which blames the student for writing correct SQL.
         return ExplainResponse(
             ok=False,
             summary=(
-                f"Explain my code only works in Python — it reads the code "
-                f"with Python's own parser, and there's no reader for "
-                f"{lang.name} yet."
+                f"Explain my code works in Python and JavaScript so far — "
+                f"there's no reader for {lang.name} yet."
             ),
         )
+
+    if lang.id in ("javascript", "typescript"):
+        from code_coach.explain_js import explain_js
+        from code_coach.visualize import suggest_call, trace_code
+
+        code = body.code or ""
+        # A traced run lets the explanation talk about what actually happened,
+        # not only what the code says — the same pairing the Python explainer
+        # uses. Without a call there's nothing to run but the definitions, so
+        # the walkthrough stands on its own rather than reporting a non-run.
+        call = suggest_call(code, [], language=lang.id)
+        trace = trace_code(code, call=call, language=lang.id) if call else None
+        return ExplainResponse(**explain_js(code, trace))
 
     return ExplainResponse(**explain_code(body.code or ""))
 

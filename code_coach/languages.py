@@ -66,10 +66,10 @@ LANGUAGES: tuple[Language, ...] = (
         extension="js",
         available=True,
         note=(
-            "Run needs Node on your PATH. Watch it run is Python-only for now "
-            "— everything else works."
+            "Run and code tracing both need Node on your PATH. Everything "
+            "else works offline."
         ),
-        ready=("fundamentals", "runner", "checks", "bank"),
+        ready=("fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
     ),
     Language(
         id="typescript",

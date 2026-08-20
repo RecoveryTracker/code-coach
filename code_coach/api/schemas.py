@@ -217,6 +217,11 @@ class PracticeSession(BaseModel):
     # Catalog for nav UI
     curriculum: list[dict] = []
     exercise_count: int = 0
+    # Everything this class holds, not just the current window of 8. Without
+    # it the counter resets to 1/8 each window and progress looks like a loop.
+    class_total: int = 0
+    # How far into that total the current window starts.
+    class_position: int = 0
     # Endless Foundations type-along
     endless: bool = False
     dictation_level: int = 1

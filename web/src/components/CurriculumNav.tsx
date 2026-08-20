@@ -98,6 +98,12 @@ export function CurriculumNav({
   const endless = Boolean(session.endless);
   const exDisplay = Math.min(exerciseIndex + 1, totalEx);
   const linesDone = session.lines_done ?? 0;
+  const classTotal = session.class_total ?? 0;
+  // 1-based, and clamped so the last line of a class reads as N of N rather
+  // than wrapping to 0 the moment you finish it.
+  const classPos = classTotal
+    ? Math.min((session.class_position ?? 0) + exerciseIndex + 1, classTotal)
+    : 0;
 
   // 17 classes in one flat list is a wall. Split the two things they actually
   // are: language fundamentals, and the LeetCode pattern set.
@@ -257,12 +263,19 @@ export function CurriculumNav({
           <span
             className="cur-path-ex"
             title={
-              endless
-                ? `Exercise ${exDisplay} of ${totalEx} in this set · ${linesDone + exDisplay} done overall · keeps going`
-                : `Exercise ${exDisplay} of ${totalEx}`
+              classTotal
+                ? `Line ${classPos} of ${classTotal} in this class · ` +
+                  `exercise ${exDisplay} of ${totalEx} in this set · ` +
+                  `${linesDone + exDisplay} typed overall`
+                : endless
+                  ? `Exercise ${exDisplay} of ${totalEx} in this set · ${linesDone + exDisplay} done overall · keeps going`
+                  : `Exercise ${exDisplay} of ${totalEx}`
             }
           >
-            {exDisplay} / {totalEx}
+            {/* Counting the whole class rather than the window: loading the
+                next eight used to reset this to 1/8, which reads as looping
+                back to the start when you've moved forward. */}
+            {classTotal ? `${classPos} / ${classTotal}` : `${exDisplay} / ${totalEx}`}
             {endless ? <span className="cur-path-endless">keeps going</span> : null}
           </span>
 

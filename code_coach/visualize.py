@@ -22,7 +22,19 @@ from typing import Any
 from code_coach.engine import RUN_TIMEOUT_SECONDS
 
 _RUNNER = Path(__file__).with_name("_trace_runner.py")
+_JS_RUNNER = Path(__file__).with_name("_js_trace_runner.js")
 _SENTINEL = "<<<CODE_COACH_TRACE>>>"
+
+
+def _node_argv(target: Path) -> list[str]:
+    """JavaScript is traced by Node's own inspector, driven in-process.
+
+    JavaScript has no sys.settrace: you can't enumerate the variables of a
+    scope from inside the language. The debugger protocol can, so the runner
+    pauses on each statement and reads the scope chain, and emits exactly the
+    payload the Python tracer does.
+    """
+    return ["node", str(_JS_RUNNER), str(target)]
 
 # "nums = [2, 7, 11, 15], target = 9  ->  [0, 1]" — split the inputs from the
 # expected result, which we don't need in order to make the call.
@@ -121,13 +133,61 @@ def _parse_example_values(example: str) -> list[Any]:
     return out
 
 
-def suggest_call(code: str, examples: list[str]) -> str:
+# `function twoSum(nums, target) {` and `const twoSum = (nums, target) =>`.
+_JS_FUNCTION = re.compile(
+    r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)"
+    r"|^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*"
+    r"(?:async\s*)?\(([^)]*)\)\s*=>",
+    re.MULTILINE,
+)
+
+
+def _js_functions(code: str) -> list[tuple[str, list[str]]]:
+    """Top-level function names and their parameters, without a JS parser.
+
+    Only used to guess a demo call, so a regex is honest here: the worst case
+    is no suggestion, and the student can type their own call.
+    """
+    out: list[tuple[str, list[str]]] = []
+    for match in _JS_FUNCTION.finditer(code):
+        name = match.group(1) or match.group(3)
+        raw = match.group(2) if match.group(1) else match.group(4)
+        if not name:
+            continue
+        params = [
+            p.strip().split("=")[0].strip()
+            for p in (raw or "").split(",")
+            if p.strip()
+        ]
+        out.append((name, params))
+    return out
+
+
+def _literal(value: Any, language: str) -> str:
+    """A source literal for this value in the target language.
+
+    JSON happens to be valid JavaScript for everything an example contains,
+    and it's what turns Python's True/None into true/null rather than leaving
+    a ReferenceError in the generated call.
+    """
+    if language in ("javascript", "typescript"):
+        try:
+            return json.dumps(value)
+        except (TypeError, ValueError):
+            return repr(value)
+    return repr(value)
+
+
+def suggest_call(code: str, examples: list[str], language: str = "python") -> str:
     """A call line that will actually exercise the student's function.
 
     Matches the example's variable names to the function's parameters, so
     `two_sum(nums, target)` plus `nums = [...], target = 9` becomes
     `two_sum([...], 9)`. Falls back to positional order when the names differ.
     """
+    if language in ("javascript", "typescript"):
+        return _suggest_js_call(code, examples, language)
+
     funcs = _top_level_functions(code)
     if not funcs:
         return ""
@@ -156,29 +216,78 @@ def suggest_call(code: str, examples: list[str]) -> str:
     return f"{fn.name}()" if not params else ""
 
 
+def _suggest_js_call(code: str, examples: list[str], language: str) -> str:
+    """The same idea for JavaScript, wrapped in console.log so the answer shows.
+
+    Python's tracer reports the returned value on the return event; the
+    inspector doesn't hand one back the same way, so the result is printed
+    instead and lands in the run's output.
+    """
+    funcs = _js_functions(code)
+    if not funcs:
+        return ""
+    name, params = funcs[-1]
+
+    for example in examples:
+        values = _parse_example_args(example)
+        if not values:
+            continue
+        if all(p in values for p in params):
+            args = [_literal(values[p], language) for p in params]
+        elif len(values) == len(params):
+            args = [_literal(v, language) for v in values.values()]
+        else:
+            continue
+        return f"console.log({name}({', '.join(args)}));"
+
+    for example in examples:
+        positional = _parse_example_values(example)
+        if len(positional) == len(params) and params:
+            args = [_literal(v, language) for v in positional]
+            return f"console.log({name}({', '.join(args)}));"
+
+    return f"console.log({name}());" if not params else ""
+
+
 def trace_code(
     code: str,
     *,
     call: str = "",
     timeout: float = RUN_TIMEOUT_SECONDS,
+    language: str = "python",
 ) -> dict[str, Any]:
     """Run `code` (optionally followed by `call`) and return execution steps."""
     source = code if not call.strip() else f"{code.rstrip()}\n\n{call.strip()}\n"
 
+    if language in ("javascript", "typescript"):
+        suffix, argv = ".js", _node_argv
+    else:
+        suffix, argv = ".py", None
+
     tmp_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", encoding="utf-8", delete=False
+            mode="w", suffix=suffix, encoding="utf-8", delete=False
         ) as tmp:
             tmp.write(source)
             tmp_path = Path(tmp.name)
 
+        command = (
+            argv(tmp_path)
+            if argv
+            else [sys.executable, str(_RUNNER), str(tmp_path)]
+        )
         proc = subprocess.run(
-            [sys.executable, str(_RUNNER), str(tmp_path)],
+            command,
             capture_output=True,
             text=True,
             timeout=timeout,
             stdin=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        return _empty(
+            "Watching JavaScript run needs Node on your PATH — install it from "
+            "nodejs.org and restart the app."
         )
     except subprocess.TimeoutExpired:
         return _empty(
