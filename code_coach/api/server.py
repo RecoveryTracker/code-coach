@@ -63,7 +63,19 @@ from code_coach.api.schemas import (
     NavigateRequest,
     ReviewRequest,
     SupportLinkInfo,
+    TypingCatalogResponse,
+    TypingDrillResponse,
+    TypingModeInfo,
+    TypingSectionInfo,
+    TypingTargetInfo,
 )
+from code_coach.typing.drills import (
+    MODES_BY_ID as TYPING_MODES_BY_ID,
+    SECTIONS_BY_ID as TYPING_SECTIONS_BY_ID,
+    build_drill as build_typing_drill,
+    catalog as typing_sections,
+)
+from code_coach.typing.keys import FINGER_NAMES, finger_for, keyboard_payload
 
 app = FastAPI(
     title="Code Coach",
@@ -223,6 +235,63 @@ def _session_from_progress() -> PracticeSession:
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(ok=True, version=__version__)
+
+
+@app.get("/api/typing/catalog", response_model=TypingCatalogResponse)
+def typing_catalog() -> TypingCatalogResponse:
+    """Sections, the modes each one supports, and the keyboard to draw."""
+    return TypingCatalogResponse(
+        sections=[
+            TypingSectionInfo(
+                id=s["id"],
+                name=s["name"],
+                description=s["description"],
+                modes=[TypingModeInfo(**m) for m in s["modes"]],
+            )
+            for s in typing_sections()
+        ],
+        keyboard=keyboard_payload(),
+        fingers=FINGER_NAMES,
+    )
+
+
+@app.get("/api/typing/drill", response_model=TypingDrillResponse)
+def typing_drill(
+    section: str,
+    mode: str,
+    seed: str = "typing",
+    count: int = 30,
+) -> TypingDrillResponse:
+    """One generated run. `seed` varies the draw, so a retry isn't identical."""
+    if section not in TYPING_SECTIONS_BY_ID:
+        raise HTTPException(status_code=404, detail=f"no typing section {section!r}")
+    if mode not in TYPING_MODES_BY_ID:
+        raise HTTPException(status_code=404, detail=f"no typing mode {mode!r}")
+    drill = build_typing_drill(
+        section, mode, seed=seed, count=max(4, min(count, 120))
+    )
+    return TypingDrillResponse(
+        id=drill.id,
+        section=drill.section,
+        section_name=TYPING_SECTIONS_BY_ID[drill.section].name,
+        mode=drill.mode,
+        mode_name=TYPING_MODES_BY_ID[drill.mode].name,
+        description=drill.description,
+        hidden=drill.hidden,
+        scoring=drill.scoring,  # type: ignore[arg-type]
+        targets=[
+            TypingTargetInfo(
+                text=t.text,
+                prompt=t.prompt,
+                shift=t.shift,
+                note=t.note,
+                # The finger for the first character, which is the one the
+                # keyboard highlights when the target comes up.
+                finger=finger_for(t.text[0]) if t.text else "th",
+            )
+            for t in drill.targets
+        ],
+    )
 
 
 @app.get("/api/skills", response_model=list[SkillInfo])

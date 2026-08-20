@@ -1,0 +1,466 @@
+/* The typing trainer.
+ *
+ * Dark, high-contrast and mostly out of the way: while a run is going the only
+ * things that should pull the eye are the target and the key that lights up.
+ * Everything else sits back until the run is over.
+ */
+
+.typing-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0e1116;
+  color: #e6edf3;
+  overflow: auto;
+}
+
+.typing-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #222a35;
+  flex: 0 0 auto;
+}
+
+.typing-trainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem clamp(0.5rem, 3vw, 2.5rem) 2rem;
+  max-width: 78rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.typing-loading,
+.typing-error {
+  padding: 2rem;
+  color: #9aa7b6;
+}
+.typing-error {
+  color: #ff8f8f;
+}
+
+/* ── Picker ─────────────────────────────────────────────── */
+
+.typing-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.typing-sections,
+.typing-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.typing-chip,
+.typing-mode {
+  background: #171c24;
+  color: #b9c4d0;
+  border: 1px solid #262f3b;
+  border-radius: 999px;
+  padding: 0.28rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.typing-chip:hover,
+.typing-mode:hover {
+  background: #1e2530;
+  color: #e6edf3;
+}
+.typing-chip.on {
+  background: #2f6feb;
+  border-color: #2f6feb;
+  color: #fff;
+}
+.typing-mode.on {
+  background: #1b3a2a;
+  border-color: #2ea043;
+  color: #7ee2a8;
+}
+
+.typing-blurb {
+  margin: 0;
+  color: #8b97a5;
+  font-size: 0.85rem;
+}
+
+/* ── Live numbers ───────────────────────────────────────── */
+
+.typing-hud {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid #1c232d;
+  border-bottom: 1px solid #1c232d;
+}
+
+.typing-stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 4.5rem;
+}
+.typing-stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #e6edf3;
+}
+.typing-stat.big .typing-stat-value {
+  font-size: 2rem;
+}
+.typing-stat.hot .typing-stat-value {
+  color: #ffb454;
+}
+.typing-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6e7b8b;
+}
+
+/* ── The target ─────────────────────────────────────────── */
+
+.typing-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 11rem;
+  text-align: center;
+}
+
+.typing-start {
+  margin: 0;
+  color: #6e7b8b;
+  font-size: 0.9rem;
+}
+
+/* Whack-a-key: one big character, and a pop each time it changes so a repeat
+   of the same key still reads as a new prompt. */
+.typing-bigkey {
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  color: #7ee2a8;
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  animation: typing-pop 0.16s ease-out;
+}
+.typing-bigkey.wrong {
+  color: #ff7b72;
+  animation: typing-shake 0.16s ease-out;
+}
+
+@keyframes typing-pop {
+  from {
+    transform: scale(0.72);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes typing-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-0.4rem);
+  }
+  75% {
+    transform: translateX(0.4rem);
+  }
+}
+
+.typing-shift {
+  color: #ffb454;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.typing-cue {
+  margin: 0;
+  color: #9fb4ff;
+  font-size: 1.1rem;
+}
+
+.typing-text {
+  margin: 0;
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: clamp(1.05rem, 2.4vw, 1.7rem);
+  line-height: 1.65;
+  max-width: 52rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.typing-text .done {
+  color: #6e7b8b;
+}
+.typing-text .todo {
+  color: #cdd9e5;
+}
+/* The cursor is a block behind the next character, not a thin line — at this
+   size a caret disappears against the monospace grid. */
+.typing-text .at {
+  background: #2f6feb;
+  color: #fff;
+  border-radius: 2px;
+}
+
+.typing-note {
+  margin: 0;
+  color: #8b97a5;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.typing-upnext {
+  display: flex;
+  gap: 1rem;
+  color: #4d5866;
+  font-size: 0.95rem;
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+}
+
+.typing-progress {
+  width: min(40rem, 100%);
+  height: 3px;
+  background: #1c232d;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.typing-progress-fill {
+  height: 100%;
+  background: #2ea043;
+  transition: width 0.15s ease-out;
+}
+
+/* ── Results ────────────────────────────────────────────── */
+
+.typing-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+.typing-results h3,
+.typing-results h4 {
+  margin: 0;
+  font-weight: 600;
+}
+.typing-results h4 {
+  color: #8b97a5;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.typing-result-grid {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.typing-weak {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.typing-weak-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.4rem;
+  padding: 0.4rem 0.5rem;
+  background: #171c24;
+  border: 1px solid #2a333f;
+  border-radius: 6px;
+}
+.typing-weak-char {
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: 1.1rem;
+  color: #ffb454;
+}
+.typing-weak-num {
+  font-size: 0.78rem;
+  color: #cdd9e5;
+}
+.typing-weak-ms {
+  font-size: 0.68rem;
+  color: #6e7b8b;
+}
+
+.typing-again {
+  margin-top: 0.5rem;
+  background: #2f6feb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.4rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.typing-again:hover {
+  background: #4184ff;
+}
+
+/* ── Keyboard ───────────────────────────────────────────── */
+
+.tk-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: stretch;
+  user-select: none;
+  margin-top: 0.5rem;
+}
+
+.tk-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.tk-key {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  height: 2.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #171c24;
+  border: 1px solid #262f3b;
+  border-bottom-width: 2px;
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: 0.9rem;
+  color: #b9c4d0;
+  transition: transform 0.08s, background 0.08s, box-shadow 0.08s;
+}
+
+.tk-shifted {
+  font-size: 0.62rem;
+  color: #5b6675;
+  line-height: 1;
+}
+.tk-char {
+  line-height: 1.1;
+}
+
+.tk-blank {
+  background: transparent;
+  border-color: transparent;
+}
+
+.tk-space {
+  flex: 1;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: #5b6675;
+}
+.tk-row-space {
+  padding: 0 12rem;
+}
+
+/* Out-of-section keys stay visible — you still need the shape of the board to
+   locate anything — but recede. */
+.tk-out {
+  opacity: 0.32;
+}
+
+/* Finger colours. Warm for the left hand, cool for the right, so which hand
+   moves is readable before you've read anything. */
+.tk-finger-lp {
+  border-top: 2px solid #e5534b;
+}
+.tk-finger-lr {
+  border-top: 2px solid #e08a3c;
+}
+.tk-finger-lm {
+  border-top: 2px solid #d9b03c;
+}
+.tk-finger-li {
+  border-top: 2px solid #8bc34a;
+}
+.tk-finger-ri {
+  border-top: 2px solid #3cc7b4;
+}
+.tk-finger-rm {
+  border-top: 2px solid #3c9ae0;
+}
+.tk-finger-rr {
+  border-top: 2px solid #7c6ce0;
+}
+.tk-finger-rp {
+  border-top: 2px solid #c86ce0;
+}
+.tk-finger-th {
+  border-top: 2px solid #4d5866;
+}
+
+/* The key being asked for. The pulse keeps it findable in peripheral vision,
+   which is the whole point of a reaction drill. */
+.tk-target {
+  background: #1d3a5c;
+  color: #fff;
+  box-shadow: 0 0 0 2px #2f6feb, 0 0 1.2rem rgba(47, 111, 235, 0.55);
+  animation: tk-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes tk-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #2f6feb, 0 0 0.8rem rgba(47, 111, 235, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #4184ff, 0 0 1.6rem rgba(65, 132, 255, 0.75);
+  }
+}
+
+.tk-hit {
+  background: #1b4a2c;
+  color: #7ee2a8;
+  transform: translateY(2px);
+}
+.tk-miss {
+  background: #4a1f1c;
+  color: #ff9d95;
+  transform: translateY(2px);
+}
+
+.tk-shift-hint {
+  align-self: center;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #3a4451;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.tk-shift-hint.on {
+  opacity: 1;
+  color: #ffb454;
+}
+
+@media (max-width: 720px) {
+  .tk-key {
+    height: 2.1rem;
+    font-size: 0.72rem;
+  }
+  .tk-row-space {
+    padding: 0 4rem;
+  }
+}

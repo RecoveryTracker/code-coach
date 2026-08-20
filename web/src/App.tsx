@@ -24,6 +24,7 @@ import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
 import { Terminal } from "./components/Terminal";
 import { TypeTarget } from "./components/TypeTarget";
+import TypingTrainer from "./components/TypingTrainer";
 import type {
   DrillEvaluateResult,
   PracticeSession,
@@ -238,6 +239,9 @@ export default function App() {
   const [watching, setWatching] = useState(false);
   const [freeMode, setFreeMode] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
+  // The typing trainer takes the whole screen: it listens on every keypress,
+  // so it can't share a window with an editor that wants the same keys.
+  const [typingOpen, setTypingOpen] = useState(false);
   /** Current exercise within the active lesson. */
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseDone, setExerciseDone] = useState(false);
@@ -939,6 +943,14 @@ export default function App() {
       </button>
       <button
         type="button"
+        className="ws-btn"
+        onClick={() => setTypingOpen(true)}
+        title="Keyboard practice — key sections, symbols, speed and vocabulary"
+      >
+        Typing
+      </button>
+      <button
+        type="button"
         className={`ws-btn${freeMode ? " primary" : ""}`}
         onClick={toggleFreeMode}
         title={
@@ -971,6 +983,24 @@ export default function App() {
   );
 
   const brand = <span className="ws-brand-inline">Code Coach</span>;
+
+  if (typingOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Typing</span>
+          <button
+            type="button"
+            className="ws-btn"
+            onClick={() => setTypingOpen(false)}
+          >
+            Back to code
+          </button>
+        </div>
+        <TypingTrainer />
+      </div>
+    );
+  }
 
   return (
     <div

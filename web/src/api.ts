@@ -7,6 +7,8 @@ import type {
   PracticeSession,
   ProgressInfo,
   SkillInfo,
+  TypingCatalog,
+  TypingDrill,
   VisualizeResult,
 } from "./types";
 
@@ -155,6 +157,27 @@ export function checkAnswer(body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/** Typing sections, their modes, and the keyboard layout to draw. */
+export function fetchTypingCatalog(): Promise<TypingCatalog> {
+  return request("/api/typing/catalog");
+}
+
+/** One generated run. The seed varies the draw, so "again" isn't a repeat. */
+export function fetchTypingDrill(
+  section: string,
+  mode: string,
+  seed: string,
+  count = 30,
+): Promise<TypingDrill> {
+  const query = new URLSearchParams({
+    section,
+    mode,
+    seed,
+    count: String(count),
+  });
+  return request(`/api/typing/drill?${query}`);
 }
 
 export function chatWithCoach(message: string): Promise<{ reply: string }> {

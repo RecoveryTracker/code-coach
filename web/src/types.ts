@@ -1,3 +1,56 @@
+// ── Typing trainer ──────────────────────────────────────────
+
+export type TypingKey = {
+  char: string;
+  shifted: string;
+  row: string;
+  finger: string;
+  reach: number;
+};
+
+export type TypingMode = {
+  id: string;
+  name: string;
+  description: string;
+  /** Show only the current target — nothing coming up next. */
+  hidden: boolean;
+  by_name: boolean;
+};
+
+export type TypingSection = {
+  id: string;
+  name: string;
+  description: string;
+  modes: TypingMode[];
+};
+
+export type TypingCatalog = {
+  sections: TypingSection[];
+  keyboard: TypingKey[][];
+  fingers: Record<string, string>;
+};
+
+export type TypingTarget = {
+  text: string;
+  prompt: string;
+  shift: boolean;
+  /** A definition or a verse reference — shown beside the target. */
+  note: string;
+  finger: string;
+};
+
+export type TypingDrill = {
+  id: string;
+  section: string;
+  section_name: string;
+  mode: string;
+  mode_name: string;
+  description: string;
+  hidden: boolean;
+  scoring: "reaction" | "wpm";
+  targets: TypingTarget[];
+};
+
 export type SupportLink = {
   skill_id: string;
   label: string;

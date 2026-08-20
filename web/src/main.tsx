@@ -5,6 +5,7 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles/iae.css";
 import "./styles/workspace.css";
+import "./styles/typing.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

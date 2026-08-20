@@ -280,6 +280,52 @@ class VisualizeResponse(BaseModel):
     call: str = ""
 
 
+# ── Typing trainer ──────────────────────────────────────────
+
+
+class TypingModeInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    hidden: bool
+    by_name: bool
+
+
+class TypingSectionInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    modes: list[TypingModeInfo]
+
+
+class TypingCatalogResponse(BaseModel):
+    sections: list[TypingSectionInfo]
+    # The layout, so the on-screen keyboard is drawn from the same model the
+    # drills are generated from.
+    keyboard: list[list[dict[str, Any]]]
+    fingers: dict[str, str]
+
+
+class TypingTargetInfo(BaseModel):
+    text: str
+    prompt: str
+    shift: bool
+    note: str
+    finger: str
+
+
+class TypingDrillResponse(BaseModel):
+    id: str
+    section: str
+    section_name: str
+    mode: str
+    mode_name: str
+    description: str
+    hidden: bool
+    scoring: Literal["reaction", "wpm"]
+    targets: list[TypingTargetInfo]
+
+
 class RequirementItem(BaseModel):
     label: str
     passed: bool
