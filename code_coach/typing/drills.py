@@ -32,6 +32,13 @@ from code_coach.typing.texts import (
     VERSES,
     Passage,
 )
+from code_coach.typing.snippets import (
+    FRACTALS,
+    SCHOOL,
+    TRICKS,
+    USEFUL,
+    VISUALS,
+)
 from code_coach.typing.vocab import GENERAL, TECHNICAL, meaning_for
 
 # ── Sections: which characters a drill draws from ───────────
@@ -61,6 +68,11 @@ CODING_SYMBOLS = (
     "_", "-", ">", "<", "!", "&", "|", "*", "/", "+", "#", "$", "%",
     "@", "^", "~", "?", "\\", "`",
 )
+
+
+# Everything a code snippet can contain, so the code sections aren't gated to
+# a subset of the board.
+EVERYTHING_CHARS = ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS
 
 
 @dataclass(frozen=True)
@@ -146,6 +158,37 @@ SECTIONS: tuple[Section, ...] = (
         "The vocabulary of documentation and code review.",
         ALL_LETTERS,
         tuple(w.word for w in TECHNICAL),
+    ),
+    # Real code, so the punctuation is practised in the shapes it appears in.
+    Section(
+        "school", "First Code",
+        "The lines everyone writes first — loops, conditions, a function.",
+        EVERYTHING_CHARS,
+        passages=SCHOOL,
+    ),
+    Section(
+        "tricks", "Code Tricks",
+        "One-liners worth stealing: swaps, comprehensions, the good defaults.",
+        EVERYTHING_CHARS,
+        passages=TRICKS,
+    ),
+    Section(
+        "visuals", "Drawings",
+        "Short programs that print a picture. Type one, then go run it.",
+        EVERYTHING_CHARS,
+        passages=VISUALS,
+    ),
+    Section(
+        "fractals", "Fractals",
+        "The famous ones are shorter than you think. z = z * z + c is all of it.",
+        EVERYTHING_CHARS,
+        passages=FRACTALS,
+    ),
+    Section(
+        "useful", "Useful Bits",
+        "Lines and commands you'll type for the rest of your career.",
+        EVERYTHING_CHARS,
+        passages=USEFUL,
     ),
     Section(
         "scripture", "Scripture",

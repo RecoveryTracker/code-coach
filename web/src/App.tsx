@@ -344,6 +344,13 @@ export default function App() {
       s: PracticeSession,
       forceClean = false,
       preserveCode?: string | null,
+      /**
+       * Land on this exercise instead of the one this language was left on.
+       * Used when switching language: the point of switching is to see the
+       * same problem written another way, so the position follows you rather
+       * than each language keeping its own bookmark.
+       */
+      carryIndex?: number,
     ) => {
       setSession(s);
       setProgress(s.progress);
@@ -354,7 +361,9 @@ export default function App() {
       // Resume where this lesson was left off. A fresh endless window
       // (preserveCode) and Start over (forceClean) both belong at the top.
       let startIndex = 0;
-      if (preserveCode == null && !forceClean) {
+      if (carryIndex != null) {
+        startIndex = Math.max(0, Math.min(carryIndex, s.steps.length - 1));
+      } else if (preserveCode == null && !forceClean) {
         const saved = loadPos(s.drill_id, levelRef.current, languageRef.current);
         if (saved != null) {
           startIndex = Math.max(0, Math.min(saved, s.steps.length - 1));
@@ -904,10 +913,12 @@ export default function App() {
         current={session?.language ?? "python"}
         onChanged={() => {
           // Reload the session so drills, starter and editor mode all come
-          // back in the new language.
+          // back in the new language — but stay on the exercise you were on,
+          // so switching shows you the same problem in the other language.
+          const stayOn = exerciseIndexRef.current;
           void (async () => {
             try {
-              await loadSession(await fetchCurrentPractice(), false);
+              await loadSession(await fetchCurrentPractice(), false, null, stayOn);
             } catch {
               /* stay */
             }

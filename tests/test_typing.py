@@ -10,6 +10,7 @@ from __future__ import annotations
 import unittest
 
 from code_coach.typing import english
+from code_coach.typing.snippets import ALL_SNIPPETS
 from code_coach.typing.drills import (
     MODES_BY_ID,
     SECTIONS,
@@ -214,6 +215,22 @@ class DrillTests(unittest.TestCase):
                 continue
             for target in build_drill(entry["id"], "perfect", seed="t").targets:
                 self.assertGreaterEqual(len(target.text), 15, entry["id"])
+
+    def test_no_snippet_contains_a_newline(self) -> None:
+        """A target spanning two lines can't be typed as one target."""
+        for passage in ALL_SNIPPETS:
+            self.assertNotIn("\n", passage.text, passage.text)
+            self.assertNotIn("\t", passage.text, passage.text)
+
+    def test_every_snippet_says_what_it_does(self) -> None:
+        for passage in ALL_SNIPPETS:
+            self.assertTrue(passage.source.strip(), passage.text)
+
+    def test_code_sections_serve_their_own_snippets(self) -> None:
+        for section_id in ("school", "tricks", "visuals", "fractals", "useful"):
+            wanted = {p.text for p in SECTIONS_BY_ID[section_id].passages}
+            for target in build_drill(section_id, "speed", seed="t").targets:
+                self.assertIn(target.text, wanted, section_id)
 
     def test_named_keys_have_speakable_names(self) -> None:
         self.assertEqual(name_for("|"), "pipe")
