@@ -51,6 +51,54 @@ export type TypingDrill = {
   targets: TypingTarget[];
 };
 
+export type TypingFinger = {
+  finger: string;
+  name: string;
+  hand: "left" | "right";
+  home: string;
+  keys: string[];
+  note: string;
+};
+
+export type TypingHomeKey = {
+  char: string;
+  finger: string;
+  name: string;
+  /** The two keys with a raised bump — how you find home without looking. */
+  anchor: boolean;
+};
+
+export type TypingGuide = {
+  fingers: TypingFinger[];
+  home_row: TypingHomeKey[];
+  tips: { title: string; body: string }[];
+  faq: { question: string; answer: string }[];
+};
+
+export type TypingRecord = {
+  section: string;
+  mode: string;
+  section_name: string;
+  mode_name: string;
+  best_wpm: number;
+  best_accuracy: number;
+  best_reaction_ms: number;
+  best_streak: number;
+  runs: number;
+  total_keys: number;
+  last_wpm: number;
+  last_accuracy: number;
+  updated: string;
+};
+
+export type TypingRunResult = {
+  record: TypingRecord;
+  beat_wpm: boolean;
+  beat_accuracy: boolean;
+  beat_reaction: boolean;
+  beat_streak: boolean;
+};
+
 export type SupportLink = {
   skill_id: string;
   label: string;

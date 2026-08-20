@@ -326,6 +326,75 @@ class TypingDrillResponse(BaseModel):
     targets: list[TypingTargetInfo]
 
 
+class TypingFingerInfo(BaseModel):
+    finger: str
+    name: str
+    hand: Literal["left", "right"]
+    home: str
+    keys: list[str]
+    note: str
+
+
+class TypingHomeKeyInfo(BaseModel):
+    char: str
+    finger: str
+    name: str
+    # The two keys with a raised bump, which is how you find home by feel.
+    anchor: bool
+
+
+class TypingArticle(BaseModel):
+    title: str
+    body: str
+
+
+class TypingQuestion(BaseModel):
+    question: str
+    answer: str
+
+
+class TypingGuideResponse(BaseModel):
+    fingers: list[TypingFingerInfo]
+    home_row: list[TypingHomeKeyInfo]
+    tips: list[TypingArticle]
+    faq: list[TypingQuestion]
+
+
+class TypingRecordInfo(BaseModel):
+    section: str
+    mode: str
+    section_name: str
+    mode_name: str
+    best_wpm: int
+    best_accuracy: int
+    best_reaction_ms: int
+    best_streak: int
+    runs: int
+    total_keys: int
+    last_wpm: int
+    last_accuracy: int
+    updated: str
+
+
+class TypingRunRequest(BaseModel):
+    section: str
+    mode: str
+    wpm: int = Field(ge=0, le=100000)
+    accuracy: int = Field(ge=0, le=100)
+    reaction_ms: int = Field(ge=0, le=600000)
+    streak: int = Field(ge=0)
+    keystrokes: int = Field(ge=0)
+
+
+class TypingRunResponse(BaseModel):
+    record: TypingRecordInfo
+    # Which of the four numbers this run beat, so the UI can call it out.
+    beat_wpm: bool
+    beat_accuracy: bool
+    beat_reaction: bool
+    beat_streak: bool
+
+
 class RequirementItem(BaseModel):
     label: str
     passed: bool

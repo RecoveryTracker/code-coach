@@ -6,6 +6,8 @@ FastAPI server for the Code Coach IAE.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -65,6 +67,10 @@ from code_coach.api.schemas import (
     SupportLinkInfo,
     TypingCatalogResponse,
     TypingDrillResponse,
+    TypingGuideResponse,
+    TypingRecordInfo,
+    TypingRunRequest,
+    TypingRunResponse,
     TypingModeInfo,
     TypingSectionInfo,
     TypingTargetInfo,
@@ -75,6 +81,8 @@ from code_coach.typing.drills import (
     build_drill as build_typing_drill,
     catalog as typing_sections,
 )
+from code_coach.typing.guide import guide_payload
+from code_coach.typing.records import Record, RecordStore
 from code_coach.typing.keys import FINGER_NAMES, finger_for, keyboard_payload
 
 app = FastAPI(
@@ -253,6 +261,70 @@ def typing_catalog() -> TypingCatalogResponse:
         keyboard=keyboard_payload(),
         fingers=FINGER_NAMES,
     )
+
+
+_typing_records = RecordStore()
+
+
+def _record_info(record: Record) -> TypingRecordInfo:
+    """Attach display names, so the board reads without a second lookup."""
+    section = TYPING_SECTIONS_BY_ID.get(record.section)
+    mode = TYPING_MODES_BY_ID.get(record.mode)
+    return TypingRecordInfo(
+        section=record.section,
+        mode=record.mode,
+        section_name=section.name if section else record.section,
+        mode_name=mode.name if mode else record.mode,
+        best_wpm=record.best_wpm,
+        best_accuracy=record.best_accuracy,
+        best_reaction_ms=record.best_reaction_ms,
+        best_streak=record.best_streak,
+        runs=record.runs,
+        total_keys=record.total_keys,
+        last_wpm=record.last_wpm,
+        last_accuracy=record.last_accuracy,
+        updated=record.updated,
+    )
+
+
+@app.get("/api/typing/records", response_model=list[TypingRecordInfo])
+def typing_records() -> list[TypingRecordInfo]:
+    """Every section-and-mode you've finished a run on, best first."""
+    return [_record_info(r) for r in _typing_records.all_records()]
+
+
+@app.post("/api/typing/records", response_model=TypingRunResponse)
+def typing_submit_run(body: TypingRunRequest) -> TypingRunResponse:
+    """Record a finished run and report what it beat."""
+    if body.section not in TYPING_SECTIONS_BY_ID:
+        raise HTTPException(
+            status_code=404, detail=f"no typing section {body.section!r}"
+        )
+    if body.mode not in TYPING_MODES_BY_ID:
+        raise HTTPException(status_code=404, detail=f"no typing mode {body.mode!r}")
+    record, improvement = _typing_records.submit(
+        section=body.section,
+        mode=body.mode,
+        wpm=body.wpm,
+        accuracy=body.accuracy,
+        reaction_ms=body.reaction_ms,
+        streak=body.streak,
+        keystrokes=body.keystrokes,
+        when=datetime.now().isoformat(timespec="seconds"),
+    )
+    return TypingRunResponse(
+        record=_record_info(record),
+        beat_wpm=improvement.wpm,
+        beat_accuracy=improvement.accuracy,
+        beat_reaction=improvement.reaction,
+        beat_streak=improvement.streak,
+    )
+
+
+@app.get("/api/typing/guide", response_model=TypingGuideResponse)
+def typing_guide() -> TypingGuideResponse:
+    """Finger assignments, technique and the FAQ — the teaching half."""
+    return TypingGuideResponse(**guide_payload())
 
 
 @app.get("/api/typing/drill", response_model=TypingDrillResponse)

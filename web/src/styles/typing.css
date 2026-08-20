@@ -43,7 +43,404 @@
   color: #ff8f8f;
 }
 
+/* ── Tabs ───────────────────────────────────────────────── */
+
+.typing-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid #1c232d;
+}
+
+.typing-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6e7b8b;
+  padding: 0.45rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.typing-tab:hover {
+  color: #cdd9e5;
+}
+.typing-tab.on {
+  color: #e6edf3;
+  border-bottom-color: #2f6feb;
+}
+
 /* ── Picker ─────────────────────────────────────────────── */
+
+.typing-blurb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* The mistake-handling switch. Both settings are legitimate practice, so
+   neither is styled as the "correct" one. */
+.typing-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #6e7b8b;
+}
+.typing-toggle button {
+  background: #171c24;
+  border: 1px solid #262f3b;
+  color: #8b97a5;
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.typing-toggle button.on {
+  background: #253449;
+  border-color: #2f6feb;
+  color: #cdd9e5;
+}
+
+.typing-fix {
+  margin: 0;
+  color: #ff9d95;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Personal bests ─────────────────────────────────────── */
+
+.typing-bests {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.tr-best {
+  background: #3d2f0c;
+  border: 1px solid #7a5c11;
+  color: #ffd166;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+.tr-prev {
+  color: #6e7b8b;
+  font-size: 0.8rem;
+}
+
+.typing-records {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem 0 2rem;
+}
+
+.tr-totals {
+  display: flex;
+  gap: 2rem;
+  color: #8b97a5;
+  font-size: 0.85rem;
+}
+.tr-totals strong {
+  color: #e6edf3;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-group h4 {
+  margin: 0 0 0.35rem;
+  color: #9fb4ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.tr-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #5b6675;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid #1c232d;
+}
+.tr-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid #161c24;
+  color: #b9c4d0;
+}
+.tr-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tr-table td.strong {
+  color: #7ee2a8;
+  font-weight: 600;
+}
+.tr-table td.dim {
+  color: #5b6675;
+}
+.tr-table tr.clickable {
+  cursor: pointer;
+}
+.tr-table tr.clickable:hover td {
+  background: #171c24;
+  color: #e6edf3;
+}
+
+.tr-empty {
+  padding: 2rem 0;
+  color: #8b97a5;
+}
+
+/* ── Guide ──────────────────────────────────────────────── */
+
+.typing-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1rem 0 3rem;
+  max-width: 52rem;
+}
+
+.tg-section h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.tg-lede,
+.tg-caption,
+.tg-hint {
+  color: #8b97a5;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+.tg-caption,
+.tg-hint {
+  font-size: 0.78rem;
+}
+
+.tg-hands {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+  padding: 1rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tg-hand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tg-hand-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #5b6675;
+  margin-bottom: 0.4rem;
+}
+/* Fingers hang from a common knuckle line, so their different lengths read
+   the way a hand does. */
+.tg-fingers {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+.tg-finger {
+  width: 2.1rem;
+  border: 1px solid #262f3b;
+  border-radius: 1rem 1rem 0.3rem 0.3rem;
+  background: #171c24;
+  color: #b9c4d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0.35rem;
+  gap: 0.2rem;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.12s;
+}
+.tg-finger:hover {
+  background: #1e2530;
+  transform: translateY(-2px);
+}
+.tg-finger.open {
+  background: #1d3a5c;
+  color: #fff;
+  box-shadow: 0 0 0 2px #2f6feb;
+}
+.tg-finger-home {
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: 0.95rem;
+}
+.tg-finger-keys {
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: 0.55rem;
+  color: #5b6675;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.1em;
+}
+.tg-palm {
+  width: 9.6rem;
+  height: 2.2rem;
+  border: 1px solid #262f3b;
+  border-top: none;
+  border-radius: 0 0 1.2rem 1.2rem;
+  background: #12171e;
+}
+
+.tg-thumb-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+.tg-thumb {
+  background: #171c24;
+  border: 1px solid #262f3b;
+  border-radius: 999px;
+  color: #8b97a5;
+  padding: 0.3rem 1.4rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.tg-thumb.open {
+  background: #1d3a5c;
+  color: #fff;
+  box-shadow: 0 0 0 2px #2f6feb;
+}
+
+.tg-detail {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: #12171e;
+  border: 1px solid #1c232d;
+  border-radius: 8px;
+}
+.tg-detail h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+}
+.tg-detail p {
+  margin: 0.35rem 0 0;
+  color: #b9c4d0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.tg-detail-keys {
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: #7ee2a8 !important;
+}
+.tg-detail code {
+  color: #ffb454;
+}
+
+.tg-homerow {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+.tg-homekey {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #171c24;
+  border: 1px solid #262f3b;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  color: #cdd9e5;
+}
+.tg-homekey.anchor {
+  color: #ffd166;
+}
+.tg-bump {
+  position: absolute;
+  bottom: 0.32rem;
+  width: 0.7rem;
+  height: 2px;
+  border-radius: 2px;
+  background: #ffd166;
+}
+
+.tg-tips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.tg-tip {
+  background: #12171e;
+  border: 1px solid #1c232d;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+.tg-tip h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  color: #9fb4ff;
+}
+.tg-tip p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #b9c4d0;
+}
+
+.tg-faq {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #1c232d;
+}
+.tg-q {
+  border-bottom: 1px solid #1c232d;
+}
+.tg-q button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: none;
+  border: none;
+  color: #cdd9e5;
+  text-align: left;
+  padding: 0.65rem 0;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.tg-q button:hover {
+  color: #fff;
+}
+.tg-q.open button {
+  color: #9fb4ff;
+}
+.tg-caret {
+  color: #5b6675;
+  font-size: 1rem;
+  flex: 0 0 auto;
+}
+.tg-q p {
+  margin: 0 0 0.85rem;
+  padding-right: 2rem;
+  color: #8b97a5;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
 
 .typing-picker {
   display: flex;
@@ -208,6 +605,15 @@
 }
 .typing-text .todo {
   color: #cdd9e5;
+}
+/* A character you typed wrong and haven't backed out yet. */
+.typing-text .bad {
+  color: #ff7b72;
+  background: #3d1a17;
+  border-radius: 2px;
+}
+.typing-text.bad .at {
+  background: #b5342b;
 }
 /* The cursor is a block behind the next character, not a thin line — at this
    size a caret disappears against the monospace grid. */

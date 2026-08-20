@@ -14,6 +14,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+from code_coach.typing import english
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -259,12 +260,33 @@ MODES: tuple[Mode, ...] = (
         by_name=True,
     ),
     Mode(
+        "sweep", "Every Key Once",
+        "Every key in this section, exactly once, in an order you've not seen.",
+        hidden=True,
+    ),
+    Mode(
         "drill", "Key Runs",
         "Short bursts from this section, with what's coming up visible.",
     ),
     Mode(
+        "pairs", "Key Pairs",
+        "The combinations hands actually learn — th, er, ing, => and the rest.",
+    ),
+    Mode(
         "words", "Words",
         "Real words built from this section's keys.",
+    ),
+    Mode(
+        "common", "Common Words",
+        "The words that make up most of English. This is the ordinary practice.",
+    ),
+    Mode(
+        "timed", "One Minute",
+        "Sixty seconds of common words. The standard way to measure a speed.",
+    ),
+    Mode(
+        "perfect", "No Mistakes",
+        "One wrong key and the line starts again. Builds accuracy, tests nerve.",
     ),
     Mode(
         "speed", "Speed Run",
@@ -346,12 +368,58 @@ def build_drill(
             prompt = name_for(ch) if mode.by_name else ch
             targets.append(Target(text=ch, prompt=prompt, shift=needs_shift(ch)))
 
+    elif mode.id == "sweep":
+        # Every key exactly once. A shuffle rather than a draw, so the run
+        # covers the section completely and can't dwell on the easy keys —
+        # and a fresh order each time means you can't learn the sequence
+        # instead of the keys.
+        pool = list(section.chars)
+        rng.shuffle(pool)
+        for position, ch in enumerate(pool, start=1):
+            targets.append(
+                Target(
+                    text=ch,
+                    prompt=ch,
+                    shift=needs_shift(ch),
+                    note=f"{position} of {len(pool)}",
+                )
+            )
+
     elif mode.id == "drill":
         # Short runs, so the hand learns a shape rather than one key.
         size = 4
         for _ in range(max(1, count // size)):
             run = "".join(_no_repeats(rng, section.chars, size))
             targets.append(Target(text=run, prompt=run))
+        scoring = "wpm"
+
+    elif mode.id == "pairs":
+        for pair in _pairs_for(section, rng, max(8, count // 2)):
+            targets.append(Target(text=pair, prompt=pair))
+        scoring = "wpm"
+
+    elif mode.id in ("common", "timed"):
+        # "One Minute" is the same material with a clock over it; the timing
+        # is the trainer's job, so all that changes here is how much is
+        # queued up. Sixty seconds at a fast pace is a lot of words.
+        pool = english.words_typeable_from(section.chars) or english.COMMON_WORDS
+        wanted = 220 if mode.id == "timed" else max(12, count // 2)
+        for word in _no_repeats(rng, pool, wanted):
+            targets.append(Target(text=word, prompt=word))
+        scoring = "wpm"
+
+    elif mode.id == "perfect":
+        # Fewer, longer targets: a restart has to cost something to matter,
+        # but not so much that a slip near the end is punishing. Short
+        # symbol tokens are excluded — restarting "->" tests nothing.
+        long_enough = [p for p in _speed_passages(section, rng) if len(p.text) >= 18]
+        if not long_enough:
+            picks = rng.sample(CODE_SNIPPETS, k=min(4, len(CODE_SNIPPETS)))
+            long_enough = [Passage(s, "code") for s in picks]
+        for passage in long_enough[:4]:
+            targets.append(
+                Target(text=passage.text, prompt=passage.text, note=passage.source)
+            )
         scoring = "wpm"
 
     elif mode.id == "words":
@@ -386,6 +454,34 @@ def build_drill(
         hidden=mode.hidden,
         scoring=scoring,
     )
+
+
+def _pairs_for(
+    section: Section, rng: random.Random, wanted: int
+) -> list[str]:
+    """The combinations this section is actually made of.
+
+    Real English bigrams where the section has the letters for them, real code
+    digraphs where it has the symbols, and generated pairs only as a last
+    resort — a made-up pair drills the transition without teaching anything
+    you'll meet again.
+    """
+    allowed = set(section.chars)
+    real = [
+        p
+        for p in (*english.BIGRAMS, *english.TRIGRAMS)
+        if set(p) <= allowed
+    ]
+    code = [p for p in english.CODE_PAIRS if set(p) <= allowed]
+    pool = real + code
+    if len(pool) >= 6:
+        return list(rng.sample(pool, k=min(wanted, len(pool))))
+    # Sections of pure symbols or digits have no real combinations, so build
+    # them from the section's own keys.
+    made: list[str] = []
+    for _ in range(wanted):
+        made.append("".join(_no_repeats(rng, section.chars, 2)))
+    return made
 
 
 def _meaning(section: Section, word: str) -> str:
@@ -424,6 +520,15 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     # "Name to key" needs a name that isn't simply the key — naming the letter
     # K tells you it's K, so it only makes sense for symbols.
     if mode.id == "recall" and len(_named_chars(section)) < 4:
+        return False
+    # The common-word modes are only honest where the section can actually
+    # type common words. Home Row alone reaches about a dozen of them, which
+    # is a word list, not a speed test.
+    if mode.id in ("common", "timed"):
+        if len(english.words_typeable_from(section.chars)) < 60:
+            return False
+    # A sweep has to be worth sweeping.
+    if mode.id == "sweep" and len(section.chars) < 6:
         return False
     return True
 

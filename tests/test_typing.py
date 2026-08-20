@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import unittest
 
+from code_coach.typing import english
 from code_coach.typing.drills import (
     MODES_BY_ID,
     SECTIONS,
@@ -157,6 +158,62 @@ class DrillTests(unittest.TestCase):
         for entry in catalog():
             for mode in entry["modes"]:
                 self.assertIn(mode["id"], MODES_BY_ID)
+
+    def test_sweep_asks_for_every_key_exactly_once(self) -> None:
+        for entry in catalog():
+            if not any(m["id"] == "sweep" for m in entry["modes"]):
+                continue
+            section = SECTIONS_BY_ID[entry["id"]]
+            targets = build_drill(entry["id"], "sweep", seed="t").targets
+            self.assertEqual(
+                sorted(t.text for t in targets), sorted(section.chars), entry["id"]
+            )
+
+    def test_sweep_order_changes_with_the_seed(self) -> None:
+        """A fixed order would let you learn the sequence, not the keys."""
+        first = [t.text for t in build_drill("letters", "sweep", seed="a").targets]
+        second = [t.text for t in build_drill("letters", "sweep", seed="b").targets]
+        self.assertNotEqual(first, second)
+        self.assertEqual(sorted(first), sorted(second))
+
+    def test_common_words_only_where_the_section_can_type_them(self) -> None:
+        offered = {
+            entry["id"]
+            for entry in catalog()
+            if any(m["id"] == "common" for m in entry["modes"])
+        }
+        # Single rows can't reach enough of English to measure a speed on.
+        self.assertNotIn("home", offered)
+        self.assertNotIn("bottom", offered)
+        self.assertNotIn("symbols", offered)
+        self.assertIn("letters", offered)
+
+    def test_common_words_need_no_key_outside_the_section(self) -> None:
+        for entry in catalog():
+            if not any(m["id"] == "common" for m in entry["modes"]):
+                continue
+            allowed = set(SECTIONS_BY_ID[entry["id"]].chars)
+            for target in build_drill(entry["id"], "common", seed="t").targets:
+                self.assertFalse(
+                    set(target.text.lower()) - allowed, f"{entry['id']}: {target.text}"
+                )
+
+    def test_timed_queues_enough_words_for_a_fast_minute(self) -> None:
+        """Running out of words mid-test would end the minute early."""
+        targets = build_drill("letters", "timed", seed="t").targets
+        self.assertGreaterEqual(len(targets), 200)
+
+    def test_pairs_prefer_real_combinations(self) -> None:
+        real = set(english.BIGRAMS) | set(english.TRIGRAMS)
+        targets = build_drill("letters", "pairs", seed="t").targets
+        self.assertTrue(all(t.text in real for t in targets))
+
+    def test_perfect_targets_are_long_enough_to_be_a_test(self) -> None:
+        for entry in catalog():
+            if not any(m["id"] == "perfect" for m in entry["modes"]):
+                continue
+            for target in build_drill(entry["id"], "perfect", seed="t").targets:
+                self.assertGreaterEqual(len(target.text), 15, entry["id"])
 
     def test_named_keys_have_speakable_names(self) -> None:
         self.assertEqual(name_for("|"), "pipe")

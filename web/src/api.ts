@@ -9,6 +9,9 @@ import type {
   SkillInfo,
   TypingCatalog,
   TypingDrill,
+  TypingGuide,
+  TypingRecord,
+  TypingRunResult,
   VisualizeResult,
 } from "./types";
 
@@ -178,6 +181,32 @@ export function fetchTypingDrill(
     count: String(count),
   });
   return request(`/api/typing/drill?${query}`);
+}
+
+/** Finger assignments, technique notes and the FAQ. */
+export function fetchTypingGuide(): Promise<TypingGuide> {
+  return request("/api/typing/guide");
+}
+
+/** Personal bests for every section and mode you've finished. */
+export function fetchTypingRecords(): Promise<TypingRecord[]> {
+  return request("/api/typing/records");
+}
+
+/** Submit a finished run; the reply says which bests it beat. */
+export function submitTypingRun(body: {
+  section: string;
+  mode: string;
+  wpm: number;
+  accuracy: number;
+  reaction_ms: number;
+  streak: number;
+  keystrokes: number;
+}): Promise<TypingRunResult> {
+  return request("/api/typing/records", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function chatWithCoach(message: string): Promise<{ reply: string }> {
