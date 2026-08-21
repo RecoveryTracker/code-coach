@@ -255,6 +255,10 @@ def leetcode_specs(class_id: str, *, batch: int, count: int, level: int) -> list
     units = _units(class_id, level, current_language())
     if not units:
         return []
+    # Never serve more exercises than the class has answers. A class with four
+    # whole solutions was padded out to eight by handing each one over twice,
+    # which read as "1 of 4" and then kept going past four.
+    count = min(count, len(units))
     start = (batch * count) % len(units)
     return [
         _spec_for(units[(start + i) % len(units)], start + i) for i in range(count)
@@ -277,7 +281,10 @@ def make_leetcode_batch(
     specs = leetcode_specs(class_id, batch=batch, count=count, level=level)
     units = _units(class_id, level, current_language())
     total = len(units) or 1
-    done = min((batch * count) % total + count, total)
+    # The window may have been trimmed to fit the class, so count what was
+    # actually served rather than what was asked for.
+    served = len(specs) or 1
+    done = min((batch * served) % total + served, total)
 
     title = f"Class {class_number} · {class_name} · Lesson 1 — Type-along (endless)"
     drill = specs_to_drill(

@@ -303,8 +303,20 @@ class TypingSectionInfo(BaseModel):
     modes: list[TypingModeInfo]
 
 
+class TypingThemeInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    # Which modes it can drive, so the picker can grey out the rest.
+    has_words: bool
+    has_passages: bool
+
+
 class TypingCatalogResponse(BaseModel):
     sections: list[TypingSectionInfo]
+    # What the words and lines are about — a separate choice from which keys
+    # you're drilling.
+    themes: list[TypingThemeInfo]
     # The layout, so the on-screen keyboard is drawn from the same model the
     # drills are generated from.
     keyboard: list[list[dict[str, Any]]]
@@ -325,6 +337,8 @@ class TypingDrillResponse(BaseModel):
     section_name: str
     mode: str
     mode_name: str
+    theme: str
+    theme_name: str
     description: str
     hidden: bool
     scoring: Literal["reaction", "wpm"]
@@ -363,6 +377,33 @@ class TypingGuideResponse(BaseModel):
     home_row: list[TypingHomeKeyInfo]
     tips: list[TypingArticle]
     faq: list[TypingQuestion]
+
+
+class TypingLessonInfo(BaseModel):
+    number: int
+    title: str
+    why: str
+    section: str
+    mode: str
+    theme: str
+    section_name: str
+    mode_name: str
+    theme_name: str
+    target_wpm: int
+    target_accuracy: int
+    done: bool
+    best_wpm: int
+    best_accuracy: int
+    runs: int
+
+
+class TypingCourseResponse(BaseModel):
+    lessons: list[TypingLessonInfo]
+    total: int
+    done: int
+    # The lesson to carry on with. Nothing is locked — a lesson you can't
+    # reach is a lesson you can't practise.
+    current: int
 
 
 class TypingRecordInfo(BaseModel):

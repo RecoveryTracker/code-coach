@@ -24,8 +24,18 @@ export type TypingSection = {
   modes: TypingMode[];
 };
 
+/** What the words and lines say — a separate choice from which keys. */
+export type TypingTheme = {
+  id: string;
+  name: string;
+  description: string;
+  has_words: boolean;
+  has_passages: boolean;
+};
+
 export type TypingCatalog = {
   sections: TypingSection[];
+  themes: TypingTheme[];
   keyboard: TypingKey[][];
   fingers: Record<string, string>;
 };
@@ -45,6 +55,8 @@ export type TypingDrill = {
   section_name: string;
   mode: string;
   mode_name: string;
+  theme: string;
+  theme_name: string;
   description: string;
   hidden: boolean;
   scoring: "reaction" | "wpm";
@@ -73,6 +85,32 @@ export type TypingGuide = {
   home_row: TypingHomeKey[];
   tips: { title: string; body: string }[];
   faq: { question: string; answer: string }[];
+};
+
+export type TypingLesson = {
+  number: number;
+  title: string;
+  why: string;
+  section: string;
+  mode: string;
+  theme: string;
+  section_name: string;
+  mode_name: string;
+  theme_name: string;
+  target_wpm: number;
+  target_accuracy: number;
+  done: boolean;
+  best_wpm: number;
+  best_accuracy: number;
+  runs: number;
+};
+
+export type TypingCourse = {
+  lessons: TypingLesson[];
+  total: number;
+  done: number;
+  /** The lesson to carry on with. Nothing is locked. */
+  current: number;
 };
 
 export type TypingRecord = {

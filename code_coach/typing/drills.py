@@ -29,6 +29,7 @@ from code_coach.typing.texts import (
     THEMED,
     CONSCIOUS_LINES,
     CONSCIOUS_WORDS,
+    TYPING_LINES,
     VERSES,
     Passage,
 )
@@ -73,6 +74,11 @@ CODING_SYMBOLS = (
 # Everything a code snippet can contain, so the code sections aren't gated to
 # a subset of the board.
 EVERYTHING_CHARS = ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS
+
+# What an unthemed drill types. Passages about typing and about improving at
+# something, plus the affirmations, because the repetition happens either way
+# and it may as well leave something behind.
+DEFAULT_LINES: tuple[Passage, ...] = TYPING_LINES + AFFIRMATIONS
 
 
 @dataclass(frozen=True)
@@ -146,73 +152,91 @@ SECTIONS: tuple[Section, ...] = (
         "Letters, numbers and symbols together, which is what real typing is.",
         ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS,
     ),
-    # The repetition has to happen anyway; these leave something behind.
-    Section(
+)
+
+SECTIONS_BY_ID = {s.id: s for s in SECTIONS}
+
+
+# ── Themes: what the words and lines are *about* ────────────
+#
+# Which keys you're drilling and what text you're drilling them on are two
+# different choices, and they were tangled together as one list. "Scripture"
+# isn't a step in learning the keyboard the way "Top Row" is — it's what the
+# sentences say. Separating them means the sections read as a curriculum, and
+# the passages you'd actually like in your head can turn up in any of them.
+
+
+@dataclass(frozen=True)
+class Theme:
+    id: str
+    name: str
+    description: str
+    words: tuple[str, ...] = field(default_factory=tuple)
+    passages: tuple[Passage, ...] = field(default_factory=tuple)
+    meanings: dict[str, str] = field(default_factory=dict)
+
+
+THEMES: tuple[Theme, ...] = (
+    Theme(
+        "mixed", "Mixed",
+        "Ordinary English, plus whatever suits the keys you picked.",
+    ),
+    Theme(
         "vocab", "Vocabulary",
         "Words worth knowing, with their meaning shown as you type them.",
-        ALL_LETTERS,
         tuple(w.word for w in GENERAL),
     ),
-    Section(
+    Theme(
         "jargon", "Programming Words",
         "The vocabulary of documentation and code review.",
-        ALL_LETTERS,
         tuple(w.word for w in TECHNICAL),
     ),
-    # Real code, so the punctuation is practised in the shapes it appears in.
-    Section(
-        "school", "First Code",
-        "The lines everyone writes first — loops, conditions, a function.",
-        EVERYTHING_CHARS,
-        passages=SCHOOL,
-    ),
-    Section(
-        "tricks", "Code Tricks",
-        "One-liners worth stealing: swaps, comprehensions, the good defaults.",
-        EVERYTHING_CHARS,
-        passages=TRICKS,
-    ),
-    Section(
-        "visuals", "Drawings",
-        "Short programs that print a picture. Type one, then go run it.",
-        EVERYTHING_CHARS,
-        passages=VISUALS,
-    ),
-    Section(
-        "fractals", "Fractals",
-        "The famous ones are shorter than you think. z = z * z + c is all of it.",
-        EVERYTHING_CHARS,
-        passages=FRACTALS,
-    ),
-    Section(
-        "useful", "Useful Bits",
-        "Lines and commands you'll type for the rest of your career.",
-        EVERYTHING_CHARS,
-        passages=USEFUL,
-    ),
-    Section(
+    Theme(
         "scripture", "Scripture",
-        "Verses and passages, King James Version. The reference shows with each one.",
-        ALL_LETTERS,
+        "Verses and passages, King James Version, each with its reference.",
         passages=VERSES + THEMED + CHAPTERS,
     ),
-    Section(
+    Theme(
         "affirmations", "Affirmations",
         "Lines worth repeating, since you're going to repeat something anyway.",
-        ALL_LETTERS,
         passages=AFFIRMATIONS,
     ),
-    Section(
+    Theme(
         "conscious", "Conscious Words",
         "Roots, reasoning and livity — words from reggae and festival culture.",
-        ALL_LETTERS,
         tuple(w for w, _ in CONSCIOUS_WORDS),
         passages=CONSCIOUS_LINES,
         meanings=dict(CONSCIOUS_WORDS),
     ),
+    Theme(
+        "school", "First Code",
+        "The lines everyone writes first — loops, conditions, a function.",
+        passages=SCHOOL,
+    ),
+    Theme(
+        "tricks", "Code Tricks",
+        "One-liners worth stealing: swaps, comprehensions, the good defaults.",
+        passages=TRICKS,
+    ),
+    Theme(
+        "visuals", "Drawings",
+        "Short programs that print a picture. Type one, then go run it.",
+        passages=VISUALS,
+    ),
+    Theme(
+        "fractals", "Fractals",
+        "The famous ones are shorter than you think. z = z * z + c is all of it.",
+        passages=FRACTALS,
+    ),
+    Theme(
+        "useful", "Useful Bits",
+        "Lines and commands you'll type for the rest of your career.",
+        passages=USEFUL,
+    ),
 )
 
-SECTIONS_BY_ID = {s.id: s for s in SECTIONS}
+THEMES_BY_ID = {t.id: t for t in THEMES}
+DEFAULT_THEME = THEMES[0]
 
 
 def _named_chars(section: Section) -> tuple[str, ...]:
@@ -292,6 +316,10 @@ class Mode:
 
 MODES: tuple[Mode, ...] = (
     Mode(
+        "random", "Random",
+        "An ordinary mix from these keys — words, runs and lines, shuffled.",
+    ),
+    Mode(
         "whack", "Whack-a-Key",
         "One key lights up. Hit it as fast as you can — you can't see what's next.",
         hidden=True,
@@ -364,6 +392,7 @@ class TypingDrill:
     id: str
     section: str
     mode: str
+    theme: str
     name: str
     description: str
     targets: list[Target]
@@ -396,16 +425,29 @@ def build_drill(
     section_id: str,
     mode_id: str,
     *,
+    theme_id: str = "mixed",
     seed: str = "typing",
     count: int = 30,
 ) -> TypingDrill:
     section = SECTIONS_BY_ID.get(section_id) or SECTIONS[0]
     mode = MODES_BY_ID.get(mode_id) or MODES[0]
-    rng = _rng(f"{section.id}:{mode.id}:{seed}")
+    theme = THEMES_BY_ID.get(theme_id) or DEFAULT_THEME
+    # A theme with nothing usable for this mode would give an empty drill, so
+    # fall back rather than hand back a blank screen.
+    if not _theme_fits(theme, mode):
+        theme = _fallback_theme(mode)
+    rng = _rng(f"{section.id}:{mode.id}:{theme.id}:{seed}")
     targets: list[Target] = []
     scoring = "reaction"
 
-    if mode.id in ("whack", "recall"):
+    if mode.id == "random":
+        # The plain default: a shuffle of everything this section can offer,
+        # so it reads like ordinary typing practice rather than an exercise in
+        # one narrow thing. Nothing is hidden and nothing is a game.
+        targets = _random_mix(section, theme, rng, count)
+        scoring = "wpm"
+
+    elif mode.id in ("whack", "recall"):
         pool = _named_chars(section) if mode.by_name else section.chars
         for ch in _no_repeats(rng, pool, count):
             prompt = name_for(ch) if mode.by_name else ch
@@ -455,10 +497,27 @@ def build_drill(
         # Fewer, longer targets: a restart has to cost something to matter,
         # but not so much that a slip near the end is punishing. Short
         # symbol tokens are excluded — restarting "->" tests nothing.
-        long_enough = [p for p in _speed_passages(section, rng) if len(p.text) >= 18]
-        if not long_enough:
-            picks = rng.sample(CODE_SNIPPETS, k=min(4, len(CODE_SNIPPETS)))
-            long_enough = [Passage(s, "code") for s in picks]
+        available = _speed_passages(section, theme, rng)
+        long_enough = [p for p in available if len(p.text) >= 18]
+        if not long_enough and available:
+            # A section whose material is all short tokens gets them strung
+            # together instead. Borrowing code snippets here asked a
+            # punctuation-only section for letters.
+            # Grouped so every line is worth restarting for. Grouping by a
+            # fixed size left a trailing line of one short token, and simply
+            # dropping that left sections with nothing at all.
+            joined: list[Passage] = []
+            batch: list[str] = []
+            for item in available:
+                batch.append(item.text)
+                if len(" ".join(batch)) >= 18:
+                    joined.append(Passage(" ".join(batch), "tokens"))
+                    batch = []
+            if batch and joined:
+                # Fold the remainder into the last line rather than losing it.
+                last = joined[-1]
+                joined[-1] = Passage(f"{last.text} {' '.join(batch)}", last.source)
+            long_enough = joined
         for passage in long_enough[:4]:
             targets.append(
                 Target(text=passage.text, prompt=passage.text, note=passage.source)
@@ -466,37 +525,93 @@ def build_drill(
         scoring = "wpm"
 
     elif mode.id == "words":
-        for word in _no_repeats(rng, section.words, max(6, count // 3)):
+        # _mode_fits keeps this mode off sections that can't spell anything,
+        # so the pool is non-empty; the guard is here because an empty draw
+        # raises rather than returning nothing.
+        pool = _words_for(section, theme) or english.COMMON_WORDS
+        for word in _no_repeats(rng, pool, max(6, count // 3)):
             targets.append(
-                Target(text=word, prompt=word, note=_meaning(section, word))
+                Target(text=word, prompt=word, note=_meaning(theme, word))
             )
         scoring = "wpm"
 
     elif mode.id == "define":
-        # The definition is the prompt; the word is the answer.
-        for word in _no_repeats(rng, section.words, max(6, count // 3)):
+        # The definition is the prompt; the word is the answer — so only words
+        # that actually have one can be asked about.
+        defined = tuple(
+            w for w in _words_for(section, theme) if _meaning(theme, w)
+        ) or tuple(w for w in theme.words if _meaning(theme, w))
+        for word in _no_repeats(rng, defined, max(6, count // 3)):
             targets.append(
-                Target(text=word, prompt=_meaning(section, word), note=word)
+                Target(text=word, prompt=_meaning(theme, word), note=word)
             )
         scoring = "wpm"
 
     else:  # speed
-        for passage in _speed_passages(section, rng):
+        for passage in _speed_passages(section, theme, rng):
             targets.append(
                 Target(text=passage.text, prompt=passage.text, note=passage.source)
             )
         scoring = "wpm"
 
+    suffix = "" if theme.id == "mixed" else f"-{theme.id}"
+    named = "" if theme.id == "mixed" else f" · {theme.name}"
     return TypingDrill(
-        id=f"typing-{section.id}-{mode.id}",
+        id=f"typing-{section.id}-{mode.id}{suffix}",
         section=section.id,
         mode=mode.id,
-        name=f"{section.name} · {mode.name}",
+        theme=theme.id,
+        name=f"{section.name} · {mode.name}{named}",
         description=mode.description,
         targets=targets,
         hidden=mode.hidden,
         scoring=scoring,
     )
+
+
+def _random_mix(
+    section: Section, theme: Theme, rng: random.Random, count: int
+) -> list[Target]:
+    """Ordinary typing: a run of full lines, drawn at random.
+
+    Random means the *text* is unpredictable, not the format. Cycling between
+    single words, two-key pairs and whole sentences within one run turns a
+    plain drill into a tour of the other modes, and each switch costs you the
+    rhythm you'd just settled into.
+
+    So every target here is a line. Which lines depends on what the section
+    and theme can supply, and the fallbacks in `_speed_passages` already know
+    how to build one out of nothing but a row of keys.
+    """
+    wanted = max(6, count // 3)
+
+    # Draw several times: each call samples a handful, and a long run wants
+    # more variety than one sample gives. Duplicates are dropped afterwards,
+    # since independent samples overlap.
+    lines: list[Passage] = []
+    seen: set[str] = set()
+    for _ in range(6):
+        for passage in _speed_passages(section, theme, rng):
+            if passage.text not in seen:
+                seen.add(passage.text)
+                lines.append(passage)
+
+    # Only if the real material ran out. A line of shuffled words reads as
+    # filler next to actual prose, so it's a last resort rather than variety.
+    words = _words_for(section, theme)
+    if len(lines) < wanted and words:
+        while len(lines) < wanted:
+            picked = _no_repeats(rng, words, rng.randint(6, 10))
+            line = " ".join(picked)
+            if line in seen:
+                continue
+            seen.add(line)
+            lines.append(Passage(line, "from these keys"))
+
+    rng.shuffle(lines)
+    return [
+        Target(text=p.text, prompt=p.text, note=p.source) for p in lines[:wanted]
+    ]
 
 
 def _pairs_for(
@@ -527,25 +642,134 @@ def _pairs_for(
     return made
 
 
-def _meaning(section: Section, word: str) -> str:
-    """A section's own definitions win; the shared vocabulary is the fallback."""
-    return section.meanings.get(word) or meaning_for(word)
+def _meaning(theme: Theme, word: str) -> str:
+    """A theme's own definitions win; the shared vocabulary is the fallback."""
+    return theme.meanings.get(word) or meaning_for(word)
 
 
-def _speed_passages(section: Section, rng: random.Random) -> list[Passage]:
-    # A section that brought its own text uses it — that text is the point.
+def _words_for(section: Section, theme: Theme) -> tuple[str, ...]:
+    """Which word list to draw from.
+
+    A theme's words are the whole point of picking it, but they only work if
+    the section can type them — Home Row can't spell "idempotent". When it
+    can't, the section's own list stands in rather than serving words with
+    keys you haven't been taught yet.
+    """
+    allowed = set(section.chars)
+    if theme.words:
+        usable = tuple(w for w in theme.words if set(w.lower()) <= allowed)
+        if len(usable) >= 6:
+            return usable
+    if section.words:
+        return section.words
+    # The Mixed theme has no list of its own, and neither does All Letters —
+    # ordinary English is what "mixed" means. Empty when nothing fits, which
+    # is the honest answer for the number row: falling back to the full word
+    # list served "point" and "great" to a section made of digits.
+    return english.words_typeable_from(section.chars)
+
+
+def _theme_fits(theme: Theme, mode: Mode) -> bool:
+    """Whether a theme has anything to offer this mode."""
+    if mode.id == "define":
+        # Prompting with a definition needs definitions. Ordinary English
+        # words don't carry them, so "mixed" can't drive this mode.
+        return any(_meaning(theme, word) for word in theme.words)
+    if mode.id == "words":
+        return bool(theme.words)
+    return True
+
+
+def _fallback_theme(mode: Mode) -> Theme:
+    """What to use when the chosen theme can't drive the chosen mode."""
+    if mode.id == "define":
+        return THEMES_BY_ID["vocab"]
+    return DEFAULT_THEME
+
+
+def _speed_passages(
+    section: Section, theme: Theme, rng: random.Random
+) -> list[Passage]:
+    # A theme that brought its own text uses it — that text is the point of
+    # having chosen it.
+    if theme.passages:
+        return list(rng.sample(theme.passages, k=min(6, len(theme.passages))))
     if section.passages:
         return list(rng.sample(section.passages, k=min(6, len(section.passages))))
-    if section.id == "coding":
-        picks = rng.sample(CODE_SNIPPETS, k=min(6, len(CODE_SNIPPETS)))
-        return [Passage(s, "code") for s in picks]
-    if section.id in ("symbols", "numbers"):
-        picks = rng.sample(CODE_TOKENS, k=min(12, len(CODE_TOKENS)))
-        return [Passage(t, "token") for t in picks]
-    if section.id == "everything":
-        return [Passage(rng.choice(PARAGRAPHS), "on typing")]
-    picks = rng.sample(SENTENCES, k=min(4, len(SENTENCES)))
-    return [Passage(s, "pangram") for s in picks]
+    if section.id in ("symbols", "coding"):
+        # Tokens rather than whole code lines: these sections are punctuation
+        # only, and `print(f"{name}")` would be asking for letters they don't
+        # teach. Whole lines of code live in Everything with a code theme.
+        # `\n`, `0x` and `$_` are filtered out for the same reason.
+        allowed = set(section.chars)
+        usable = [t for t in (*CODE_TOKENS, *english.CODE_PAIRS) if set(t) <= allowed]
+        # Several tokens to a line. On their own they're two keystrokes each,
+        # which is a key-pair drill wearing a line drill's name.
+        return [
+            Passage(" ".join(rng.sample(usable, k=min(6, len(usable)))), "tokens")
+            for _ in range(6)
+        ]
+    if section.id == "numbers":
+        # Numbers used to borrow the code tokens, which meant a digits drill
+        # asked for `>=`. Generate digit strings instead — several to a line,
+        # in the widths numbers actually come in, so a line here is the same
+        # shape of thing as a line anywhere else.
+        def _number(width: int) -> str:
+            return "".join(rng.choice(DIGITS) for _ in range(width))
+
+        return [
+            Passage(
+                " ".join(_number(rng.choice((2, 3, 4, 4, 5, 6))) for _ in range(5)),
+                "numbers",
+            )
+            for _ in range(6)
+        ]
+    # The default material: passages about typing and about getting better at
+    # things. Twenty minutes of this is twenty minutes of reading something
+    # worth reading, where a pangram is twenty minutes of "quick brown fox".
+    allowed = set(section.chars) | {" "}
+    worthwhile = [p for p in DEFAULT_LINES if set(p.text.lower()) <= allowed]
+    if len(worthwhile) >= 4:
+        return list(rng.sample(worthwhile, k=min(6, len(worthwhile))))
+
+    # Pangrams need the whole alphabet by definition, so a row section can't
+    # type one — Home Row was being handed "crazy Fredrick bought many very
+    # exquisite opal jewels".
+    usable = [s for s in SENTENCES if set(s.lower()) <= allowed]
+    if usable:
+        picks = rng.sample(usable, k=min(4, len(usable)))
+        return [Passage(s, "pangram") for s in picks]
+
+    # Lines made from the section's own words instead. Not English, but every
+    # word is real and every key is one you've been taught.
+    if section.words:
+        lines = []
+        for _ in range(4):
+            words = _no_repeats(rng, section.words, 6)
+            lines.append(Passage(" ".join(words), "from these keys"))
+        return lines
+
+    # Bottom Row has neither words nor sentences — z x c v b n m has no
+    # vowels — so its lines are runs of its own keys, in groups.
+    return [
+        Passage(
+            " ".join(
+                "".join(_no_repeats(rng, section.chars, 4)) for _ in range(5)
+            ),
+            "from these keys",
+        )
+        for _ in range(4)
+    ]
+
+
+def _themes_typeable_in(section: Section) -> bool:
+    """Whether any theme's words can be typed from this section's keys."""
+    allowed = set(section.chars)
+    for theme in THEMES:
+        usable = [w for w in theme.words if set(w.lower()) <= allowed]
+        if len(usable) >= 6:
+            return True
+    return False
 
 
 def _mode_fits(mode: Mode, section: Section) -> bool:
@@ -555,11 +779,15 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     teaches nothing — 'words' made of consonants, or being asked to recall
     where the letter K is by being told "k".
     """
-    if mode.id in ("words", "define") and not section.words:
-        return False
-    # "Meaning to word" needs definitions to prompt with.
-    if mode.id == "define" and not _meaning(section, section.words[0]):
-        return False
+    # Words and definitions can come from the section or from a theme, so a
+    # section with no list of its own still offers them when a theme can fill
+    # in — Bottom Row can't, because z x c v b n m has no vowels.
+    if mode.id in ("words", "define"):
+        if not section.words and not _themes_typeable_in(section):
+            return False
+    if mode.id == "define" and section.words:
+        if not _meaning(DEFAULT_THEME, section.words[0]):
+            return False
     # "Name to key" needs a name that isn't simply the key — naming the letter
     # K tells you it's K, so it only makes sense for symbols.
     if mode.id == "recall" and len(_named_chars(section)) < 4:
@@ -597,4 +825,21 @@ def catalog() -> list[dict]:
             ],
         }
         for s in SECTIONS
+    ]
+
+
+def theme_catalog() -> list[dict]:
+    """Themes, and which modes each one can actually supply."""
+    return [
+        {
+            "id": t.id,
+            "name": t.name,
+            "description": t.description,
+            # A theme with no word list can't drive Words or Meaning to Word,
+            # so the picker can grey it out rather than serve a fallback the
+            # reader didn't ask for.
+            "has_words": bool(t.words),
+            "has_passages": bool(t.passages),
+        }
+        for t in THEMES
     ]

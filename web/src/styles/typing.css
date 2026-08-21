@@ -448,38 +448,217 @@
   gap: 0.5rem;
 }
 
-.typing-sections,
-.typing-modes {
+/* One row of named controls rather than a wall of chips. The labels matter:
+   without them "Home Row" and "Key Pairs" look like the same kind of choice. */
+.typing-controls {
   display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
   flex-wrap: wrap;
-  gap: 0.35rem;
 }
 
-.typing-chip,
-.typing-mode {
+.typing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.typing-field > span {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #6e7b8b;
+}
+.typing-field select {
+  background: #171c24;
+  color: #e6edf3;
+  border: 1px solid #2a333f;
+  border-radius: 6px;
+  padding: 0.32rem 0.6rem;
+  font-size: 0.88rem;
+  min-width: 11rem;
+  cursor: pointer;
+}
+.typing-field select:hover {
+  border-color: #2f6feb;
+}
+
+.typing-restart {
   background: #171c24;
   color: #b9c4d0;
-  border: 1px solid #262f3b;
-  border-radius: 999px;
-  padding: 0.28rem 0.8rem;
+  border: 1px solid #2a333f;
+  border-radius: 6px;
+  padding: 0.34rem 0.9rem;
   font-size: 0.82rem;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
-.typing-chip:hover,
-.typing-mode:hover {
+.typing-restart:hover {
   background: #1e2530;
   color: #e6edf3;
 }
-.typing-chip.on {
-  background: #2f6feb;
-  border-color: #2f6feb;
+
+/* ── Course ─────────────────────────────────────────────── */
+
+.typing-course {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem 0 3rem;
+  max-width: 46rem;
+}
+
+.tc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.tc-headline h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+}
+.tc-headline p {
+  margin: 0;
+  color: #8b97a5;
+  font-size: 0.85rem;
+  max-width: 30rem;
+  line-height: 1.5;
+}
+
+.tc-progress-block {
+  min-width: 11rem;
+}
+.tc-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.tc-count strong {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+.tc-count span {
+  color: #6e7b8b;
+  font-size: 0.8rem;
+}
+.tc-bar {
+  margin-top: 0.35rem;
+  height: 5px;
+  border-radius: 3px;
+  background: #1c232d;
+  overflow: hidden;
+}
+.tc-bar-fill {
+  height: 100%;
+  background: #2ea043;
+  transition: width 0.3s ease-out;
+}
+
+/* One obvious way in, for someone who doesn't want to choose. */
+.tc-continue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  background: #1d3a5c;
+  border: 1px solid #2f6feb;
+  border-radius: 10px;
+  padding: 0.8rem 1.1rem;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.tc-continue:hover {
+  background: #234a76;
+}
+.tc-continue-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9fc4ff;
+}
+.tc-continue-title {
+  font-size: 1.05rem;
   color: #fff;
 }
-.typing-mode.on {
-  background: #1b3a2a;
-  border-color: #2ea043;
+
+.tc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tc-lesson > button {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  width: 100%;
+  text-align: left;
+  background: #12171e;
+  border: 1px solid #1c232d;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.tc-lesson > button:hover {
+  background: #171c24;
+  border-color: #2a333f;
+}
+.tc-lesson.current > button {
+  border-color: #2f6feb;
+}
+.tc-lesson.done > button {
+  opacity: 0.62;
+}
+
+.tc-num {
+  flex: 0 0 1.7rem;
+  height: 1.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1c232d;
+  color: #8b97a5;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.tc-lesson.done .tc-num {
+  background: #1b4a2c;
   color: #7ee2a8;
+}
+.tc-lesson.current .tc-num {
+  background: #2f6feb;
+  color: #fff;
+}
+
+.tc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.tc-title {
+  color: #e6edf3;
+  font-size: 0.92rem;
+}
+.tc-why {
+  color: #8b97a5;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.tc-meta {
+  color: #5b6675;
+  font-size: 0.72rem;
+}
+.tc-meta em {
+  color: #ffb454;
+  font-style: normal;
 }
 
 .typing-blurb {

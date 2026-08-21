@@ -8,6 +8,7 @@ import type {
   ProgressInfo,
   SkillInfo,
   TypingCatalog,
+  TypingCourse,
   TypingDrill,
   TypingGuide,
   TypingRecord,
@@ -172,15 +173,22 @@ export function fetchTypingDrill(
   section: string,
   mode: string,
   seed: string,
+  theme = "mixed",
   count = 30,
 ): Promise<TypingDrill> {
   const query = new URLSearchParams({
     section,
     mode,
+    theme,
     seed,
     count: String(count),
   });
   return request(`/api/typing/drill?${query}`);
+}
+
+/** The numbered course, with progress folded in. */
+export function fetchTypingCourse(): Promise<TypingCourse> {
+  return request("/api/typing/course");
 }
 
 /** Finger assignments, technique notes and the FAQ. */

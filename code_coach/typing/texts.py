@@ -197,6 +197,137 @@ THEMED: tuple[Passage, ...] = (
 )
 
 
+# ── On typing, and on getting better at things ──────────────
+# The default material. Typing practice is twenty minutes of reading a line
+# and reproducing it, so the line may as well be about what you're doing —
+# these say the useful things a typing course would otherwise bury in a help
+# page nobody opens.
+
+TYPING_LINES: tuple[Passage, ...] = (
+    _p(
+        "Accuracy comes first and speed arrives on its own. Every mistake "
+        "costs you three things: noticing it, deleting it, and typing it "
+        "again — which is slower than having typed it carefully.",
+        "on practice",
+    ),
+    _p(
+        "The whole trick is returning to the home row. After a reach, the "
+        "finger comes back, so your hands always know where they are and the "
+        "next key is a known distance away instead of a fresh search.",
+        "on technique",
+    ),
+    _p(
+        "Looking down is the habit that caps your speed, because your eyes "
+        "leave the text and have to find their place again when they return. "
+        "It feels slower not to look, for about a week.",
+        "on technique",
+    ),
+    _p(
+        "Ten minutes a day beats an hour on Sunday. This is motor learning, "
+        "and motor learning consolidates between sessions rather than during "
+        "them — the rest is part of the practice.",
+        "on practice",
+    ),
+    _p(
+        "Most people are fluent across the letters and hunt for a brace, a "
+        "pipe or a tilde. That is where the time actually goes, so that is "
+        "what is worth drilling.",
+        "on practice",
+    ),
+    _p(
+        "Your speed will get worse when you stop looking down, and that is "
+        "the usual reason people give up. You are trading a technique with a "
+        "low ceiling for one with a high ceiling, and the new one starts "
+        "slower.",
+        "on getting better",
+    ),
+    _p(
+        "Any consistent finger assignment beats an inconsistent one. The "
+        "standard one is worth learning because it minimises how far each "
+        "finger travels, and retraining costs a couple of weeks and then pays "
+        "out for the rest of your life.",
+        "on technique",
+    ),
+    _p(
+        "Fast typing is not produced one key at a time. The hand learns "
+        "combinations, and the combinations that stay slow are the ones you "
+        "never drilled apart from the words around them.",
+        "on technique",
+    ),
+    _p(
+        "Keep your wrists off the desk. Resting them anchors your hands, so "
+        "reaches become finger stretches instead of small movements of the "
+        "whole hand.",
+        "on technique",
+    ),
+    _p(
+        "Practise the thing you are bad at, not the thing you enjoy. It is "
+        "less pleasant and it is most of the improvement, which is why almost "
+        "everyone plateaus at the level where practice stopped being "
+        "uncomfortable.",
+        "on getting better",
+    ),
+    _p(
+        "Slow down until you stop making mistakes, then let the speed come "
+        "back on its own. Typing fast and wrong trains typing fast and wrong.",
+        "on practice",
+    ),
+    _p(
+        "The keys do not move. Your hands can learn where they are and leave "
+        "your eyes free to read what you are actually writing, which is the "
+        "entire point of learning this.",
+        "on technique",
+    ),
+    _p(
+        "Measure something. A number you check occasionally tells you whether "
+        "the last month of practice did anything, and without one you will "
+        "assume it did.",
+        "on getting better",
+    ),
+    _p(
+        "Comfort is not the goal and neither is speed. The goal is that "
+        "typing stops taking up any of your attention, so that all of it is "
+        "available for the thing you are writing.",
+        "on getting better",
+    ),
+    _p(
+        "Capital A uses the right Shift and capital L uses the left. Reaching "
+        "for the near Shift with the same hand contorts it and costs more "
+        "than the reach saves.",
+        "on technique",
+    ),
+    _p(
+        "The bumps on F and J are there so you can find home position without "
+        "looking. Put your index fingers on them, let the rest fall into "
+        "place, and you are ready to start.",
+        "on technique",
+    ),
+    _p(
+        "Difficulty is the point. A drill you sail through is a drill that is "
+        "measuring something you already had, and a run of small failures is "
+        "what learning actually looks like from the inside.",
+        "on getting better",
+    ),
+    _p(
+        "Errors cluster. If a word keeps breaking, it is almost never the "
+        "whole word — it is one transition inside it, and finding that "
+        "transition is worth more than another hundred repetitions.",
+        "on getting better",
+    ),
+    _p(
+        "You will be typing for the rest of your working life. Almost nothing "
+        "else you could spend two weeks learning gets used quite that often.",
+        "on getting better",
+    ),
+    _p(
+        "Rhythm matters more than bursts. A steady pace with even gaps between "
+        "keystrokes is faster over a paragraph than sprinting between pauses, "
+        "and it is far easier to keep accurate.",
+        "on technique",
+    ),
+)
+
+
 # ── Affirmations ────────────────────────────────────────────
 # Written in the second person rather than the first: you are typing them to
 # yourself, and "you" reads as encouragement where "I" reads as a script.

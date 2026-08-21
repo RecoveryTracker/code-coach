@@ -57,7 +57,7 @@ from code_coach.practice.session import (
     mark_drill_complete,
     progress_summary,
 )
-from code_coach.progress.store import ProgressStore
+from code_coach.progress.store import ProgressStore, StudentProgress
 from code_coach.skills.catalog import get_skill, list_skills
 from code_coach.skills.drills import get_drill, set_class1_batch
 from code_coach.api.schemas import (
@@ -66,6 +66,7 @@ from code_coach.api.schemas import (
     ReviewRequest,
     SupportLinkInfo,
     TypingCatalogResponse,
+    TypingCourseResponse,
     TypingDrillResponse,
     TypingGuideResponse,
     TypingRecordInfo,
@@ -74,12 +75,15 @@ from code_coach.api.schemas import (
     TypingModeInfo,
     TypingSectionInfo,
     TypingTargetInfo,
+    TypingThemeInfo,
 )
 from code_coach.typing.drills import (
     MODES_BY_ID as TYPING_MODES_BY_ID,
     SECTIONS_BY_ID as TYPING_SECTIONS_BY_ID,
+    THEMES_BY_ID as TYPING_THEMES_BY_ID,
     build_drill as build_typing_drill,
     catalog as typing_sections,
+    theme_catalog as typing_themes,
 )
 from code_coach.typing.guide import guide_payload
 from code_coach.typing.records import Record, RecordStore
@@ -216,6 +220,9 @@ def _session_from_progress() -> PracticeSession:
             class_total = unit_count(class_id_now, d_level_now)
         if class_total:
             # Windows wrap at the end of the class, so the position does too.
+            # `len(steps)` is what was actually served, which is smaller than
+            # the nominal window whenever the class has fewer answers than
+            # that.
             class_position = (
                 progress.batch_for(class_id_now) * len(steps)
             ) % class_total
@@ -277,6 +284,7 @@ def typing_catalog() -> TypingCatalogResponse:
             )
             for s in typing_sections()
         ],
+        themes=[TypingThemeInfo(**t) for t in typing_themes()],
         keyboard=keyboard_payload(),
         fingers=FINGER_NAMES,
     )
@@ -304,6 +312,19 @@ def _record_info(record: Record) -> TypingRecordInfo:
         last_accuracy=record.last_accuracy,
         updated=record.updated,
     )
+
+
+@app.get("/api/typing/course", response_model=TypingCourseResponse)
+def typing_course() -> TypingCourseResponse:
+    """The numbered path through the keyboard, with your progress folded in."""
+    from dataclasses import asdict
+
+    from code_coach.typing.course import course_payload
+
+    records = {
+        f"{r.section}:{r.mode}": asdict(r) for r in _typing_records.all_records()
+    }
+    return TypingCourseResponse(**course_payload(records))
 
 
 @app.get("/api/typing/records", response_model=list[TypingRecordInfo])
@@ -350,6 +371,7 @@ def typing_guide() -> TypingGuideResponse:
 def typing_drill(
     section: str,
     mode: str,
+    theme: str = "mixed",
     seed: str = "typing",
     count: int = 30,
 ) -> TypingDrillResponse:
@@ -358,8 +380,10 @@ def typing_drill(
         raise HTTPException(status_code=404, detail=f"no typing section {section!r}")
     if mode not in TYPING_MODES_BY_ID:
         raise HTTPException(status_code=404, detail=f"no typing mode {mode!r}")
+    if theme not in TYPING_THEMES_BY_ID:
+        raise HTTPException(status_code=404, detail=f"no typing theme {theme!r}")
     drill = build_typing_drill(
-        section, mode, seed=seed, count=max(4, min(count, 120))
+        section, mode, theme_id=theme, seed=seed, count=max(4, min(count, 120))
     )
     return TypingDrillResponse(
         id=drill.id,
@@ -367,6 +391,8 @@ def typing_drill(
         section_name=TYPING_SECTIONS_BY_ID[drill.section].name,
         mode=drill.mode,
         mode_name=TYPING_MODES_BY_ID[drill.mode].name,
+        theme=drill.theme,
+        theme_name=TYPING_THEMES_BY_ID[drill.theme].name,
         description=drill.description,
         hidden=drill.hidden,
         scoring=drill.scoring,  # type: ignore[arg-type]
@@ -467,6 +493,38 @@ def practice_current() -> PracticeSession:
     return _session_from_progress()
 
 
+def _next_class_after(
+    class_id: str, progress: StudentProgress, batch: int, level: int
+) -> str | None:
+    """The class to move on to, once this one's material is used up.
+
+    Returns None while there's more of this class left, for classes with no
+    fixed end (Foundations generates its lines), and at the last class — where
+    there is nowhere further to go and wrapping is the right behaviour.
+    """
+    if not class_id.startswith("lc-"):
+        return None
+
+    from code_coach.curriculum.catalog import classes_for_language
+    from code_coach.dictation.bank import WINDOW_SIZE
+    from code_coach.leetcode.bank import unit_count
+
+    total = unit_count(class_id, level)
+    # The window is trimmed to fit a small class, so the stride is whichever
+    # is smaller. Using the nominal eight here meant a four-answer class was
+    # counted as finished after half a pass.
+    stride = min(WINDOW_SIZE, total) or WINDOW_SIZE
+    if not total or batch * stride < total:
+        return None
+
+    language = getattr(progress, "language", "python") or "python"
+    ids = [c.id for c in classes_for_language(language)]
+    if class_id not in ids:
+        return None
+    position = ids.index(class_id)
+    return ids[position + 1] if position + 1 < len(ids) else None
+
+
 @app.post("/api/practice/more", response_model=PracticeSession)
 def practice_more_lines() -> PracticeSession:
     """Next window of the current class's Lesson-1 type-along (endless)."""
@@ -480,6 +538,17 @@ def practice_more_lines() -> PracticeSession:
     progress.add_lines(class_id, WINDOW_SIZE)
     batch = progress.bump_batch(class_id)
     level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
+
+    # A pattern class holds a fixed set of answers. Once you've been through
+    # them, looping back to the top is busywork — the next pattern is the
+    # point. Foundations is genuinely endless (its lines are generated), so
+    # only the LeetCode classes graduate.
+    graduated = _next_class_after(class_id, progress, batch, level)
+    if graduated:
+        goto_position(progress, class_id=graduated, lesson_number=1)
+        progress.exercise_index = 0
+        _store.save(progress)
+        return _session_from_progress()
     if class_id == "foundations":
         set_class1_batch(seed="local-student", batch=batch, level=level)
         progress.current_drill_id = "class-1-dictation"

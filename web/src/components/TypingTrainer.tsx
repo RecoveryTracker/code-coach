@@ -7,6 +7,7 @@ import type {
   TypingRunResult,
   TypingSection,
 } from "../types";
+import TypingCoursePanel from "./TypingCourse";
 import TypingGuidePanel from "./TypingGuide";
 import TypingKeyboard, { type KeyStat } from "./TypingKeyboard";
 import TypingRecords from "./TypingRecords";
@@ -23,7 +24,7 @@ import TypingRecords from "./TypingRecords";
  */
 
 type Phase = "idle" | "running" | "done";
-type Tab = "practice" | "learn" | "records";
+type Tab = "course" | "practice" | "learn" | "records";
 
 /**
  * What happens when you hit a wrong key.
@@ -67,10 +68,17 @@ function loadSettings(): { mistakes: MistakeMode } {
 
 export default function TypingTrainer() {
   const [catalog, setCatalog] = useState<TypingCatalog | null>(null);
-  const [sectionId, setSectionId] = useState("home");
-  const [modeId, setModeId] = useState("whack");
+  // Opens on the whole keyboard with an ordinary mixed drill. Landing on a
+  // menu, or on a reflex game, makes you choose something before you can type
+  // — and the point of opening this is to type.
+  const [sectionId, setSectionId] = useState("everything");
+  const [modeId, setModeId] = useState("random");
+  // What the words say, which is a separate choice from which keys they use.
+  const [themeId, setThemeId] = useState("mixed");
   const [drill, setDrill] = useState<TypingDrill | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Practice is the front door — a drill is already loaded and waiting. The
+  // course is a tab away for anyone who wants to be walked through it.
   const [tab, setTab] = useState<Tab>("practice");
   const [mistakes, setMistakes] = useState<MistakeMode>(
     () => loadSettings().mistakes,
@@ -125,32 +133,36 @@ export default function TypingTrainer() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  const loadDrill = useCallback(async (nextSection: string, nextMode: string) => {
-    setError(null);
-    try {
-      const next = await fetchTypingDrill(
-        nextSection,
-        nextMode,
-        String(Date.now()),
-      );
-      submitted.current = false;
-      setDrill(next);
-      setPhase("idle");
-      setIndex(0);
-      setTyped("");
-      setFlash(null);
-      setCombo(0);
-      setBestCombo(0);
-      setStats({});
-      setHits(0);
-      setMisses(0);
-      setRestarts(0);
-      setElapsed(0);
-      setOutcome(null);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }, []);
+  const loadDrill = useCallback(
+    async (nextSection: string, nextMode: string, nextTheme: string) => {
+      setError(null);
+      try {
+        const next = await fetchTypingDrill(
+          nextSection,
+          nextMode,
+          String(Date.now()),
+          nextTheme,
+        );
+        submitted.current = false;
+        setDrill(next);
+        setPhase("idle");
+        setIndex(0);
+        setTyped("");
+        setFlash(null);
+        setCombo(0);
+        setBestCombo(0);
+        setStats({});
+        setHits(0);
+        setMisses(0);
+        setRestarts(0);
+        setElapsed(0);
+        setOutcome(null);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [],
+  );
 
   // Picking a section whose modes don't include the current one has to land
   // somewhere valid — Bottom Row has no Words mode, so it isn't offered there.
@@ -161,32 +173,41 @@ export default function TypingTrainer() {
         : next.modes[0].id;
       setSectionId(next.id);
       setModeId(keepMode);
-      void loadDrill(next.id, keepMode);
+      void loadDrill(next.id, keepMode, themeId);
     },
-    [loadDrill, modeId],
+    [loadDrill, modeId, themeId],
   );
 
   const chooseMode = useCallback(
     (next: string) => {
       setModeId(next);
-      void loadDrill(sectionId, next);
+      void loadDrill(sectionId, next, themeId);
     },
-    [loadDrill, sectionId],
+    [loadDrill, sectionId, themeId],
+  );
+
+  const chooseTheme = useCallback(
+    (next: string) => {
+      setThemeId(next);
+      void loadDrill(sectionId, modeId, next);
+    },
+    [loadDrill, modeId, sectionId],
   );
 
   const jumpTo = useCallback(
-    (nextSection: string, nextMode: string) => {
+    (nextSection: string, nextMode: string, nextTheme = themeId) => {
       setTab("practice");
       setSectionId(nextSection);
       setModeId(nextMode);
-      void loadDrill(nextSection, nextMode);
+      setThemeId(nextTheme);
+      void loadDrill(nextSection, nextMode, nextTheme);
     },
-    [loadDrill],
+    [loadDrill, themeId],
   );
 
   useEffect(() => {
-    if (catalog && !drill) void loadDrill(sectionId, modeId);
-  }, [catalog, drill, loadDrill, modeId, sectionId]);
+    if (catalog && !drill) void loadDrill(sectionId, modeId, themeId);
+  }, [catalog, drill, loadDrill, modeId, sectionId, themeId]);
 
   // ── The clock ─────────────────────────────────────────────
 
@@ -407,6 +428,12 @@ export default function TypingTrainer() {
   const byName = mode?.by_name ?? false;
   const revealKey = !byName || flash?.ok === false;
 
+  // Which drills actually read from a text source, and so have something for
+  // the theme to change.
+  const usesText = ["random", "words", "define", "speed", "perfect"].includes(
+    modeId,
+  );
+
   // ── Render ────────────────────────────────────────────────
 
   if (error) {
@@ -422,6 +449,7 @@ export default function TypingTrainer() {
 
   const tabs: [Tab, string][] = [
     ["practice", "Practice"],
+    ["course", "Course"],
     ["learn", "Learn"],
     ["records", "Records"],
   ];
@@ -441,6 +469,9 @@ export default function TypingTrainer() {
         ))}
       </div>
 
+      {tab === "course" && (
+        <TypingCoursePanel revision={recordRevision} onStart={jumpTo} />
+      )}
       {tab === "learn" && <TypingGuidePanel />}
       {tab === "records" && (
         <TypingRecords revision={recordRevision} onPick={jumpTo} />
@@ -448,34 +479,44 @@ export default function TypingTrainer() {
 
       {tab === "practice" && (
         <>
+          {/* Eighteen sections and eleven modes as chips was a wall of
+              buttons. Two named dropdowns say the same thing in one line and
+              make it obvious which choice is which. */}
           <div className="typing-picker">
-            <div className="typing-sections">
-              {catalog.sections.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`typing-chip ${s.id === sectionId ? "on" : ""}`}
-                  onClick={() => chooseSection(s)}
+            <div className="typing-controls">
+              <label className="typing-field">
+                <span>Keys</span>
+                <select
+                  value={sectionId}
+                  onChange={(e) => {
+                    const next = catalog.sections.find(
+                      (s) => s.id === e.target.value,
+                    );
+                    if (next) chooseSection(next);
+                  }}
                 >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-            <div className="typing-modes">
-              {section.modes.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`typing-mode ${m.id === modeId ? "on" : ""}`}
-                  onClick={() => chooseMode(m.id)}
-                  title={m.description}
+                  {catalog.sections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="typing-field">
+                <span>Drill</span>
+                <select
+                  value={modeId}
+                  onChange={(e) => chooseMode(e.target.value)}
                 >
-                  {m.name}
-                </button>
-              ))}
-            </div>
-            <div className="typing-blurb-row">
-              <p className="typing-blurb">{mode?.description ?? section.description}</p>
+                  {section.modes.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <div
                 className="typing-toggle"
                 title={
@@ -500,7 +541,44 @@ export default function TypingTrainer() {
                   Must delete
                 </button>
               </div>
+
+              {/* Only the text-based drills have text to theme. Offering it
+                  on Whack-a-Key would be a control that does nothing. */}
+              {usesText && (
+                <label className="typing-field">
+                  <span>Text</span>
+                  <select
+                    value={themeId}
+                    onChange={(e) => chooseTheme(e.target.value)}
+                  >
+                    {catalog.themes
+                      .filter(
+                        (t) =>
+                          modeId !== "words" && modeId !== "define"
+                            ? true
+                            : t.has_words,
+                      )
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+
+              <button
+                type="button"
+                className="typing-restart"
+                onClick={() => void loadDrill(sectionId, modeId, themeId)}
+                title="A fresh set from the same drill"
+              >
+                New set
+              </button>
             </div>
+            <p className="typing-blurb">
+              {mode?.description ?? section.description}
+            </p>
           </div>
 
           <div className="typing-hud">
@@ -582,7 +660,7 @@ export default function TypingTrainer() {
               <button
                 type="button"
                 className="typing-again"
-                onClick={() => void loadDrill(sectionId, modeId)}
+                onClick={() => void loadDrill(sectionId, modeId, themeId)}
               >
                 Go again
               </button>

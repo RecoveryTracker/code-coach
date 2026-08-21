@@ -15,8 +15,11 @@ from code_coach.typing.drills import (
     MODES_BY_ID,
     SECTIONS,
     SECTIONS_BY_ID,
+    THEMES,
+    THEMES_BY_ID,
     build_drill,
     catalog,
+    theme_catalog,
 )
 from code_coach.typing.keys import (
     ALL_KEYS,
@@ -127,18 +130,40 @@ class DrillTests(unittest.TestCase):
         second = build_drill("symbols", "drill", seed="fixed").targets
         self.assertEqual([t.text for t in first], [t.text for t in second])
 
-    def test_passage_sections_serve_their_own_text(self) -> None:
-        """Scripture speed drills must be scripture, not the stock pangrams."""
-        for section_id in ("scripture", "affirmations", "conscious"):
-            section = SECTIONS_BY_ID[section_id]
-            wanted = {p.text for p in section.passages}
-            drill = build_drill(section_id, "speed", seed="t")
+    def test_themed_speed_runs_serve_their_own_text(self) -> None:
+        """Picking Scripture must give scripture, not the stock pangrams."""
+        for theme_id in ("scripture", "affirmations", "conscious", "tricks"):
+            wanted = {p.text for p in THEMES_BY_ID[theme_id].passages}
+            drill = build_drill("letters", "speed", theme_id=theme_id, seed="t")
+            for target in drill.targets:
+                self.assertIn(target.text, wanted, theme_id)
+
+    def test_the_theme_travels_with_any_section(self) -> None:
+        """Which keys and what the words say are independent choices."""
+        wanted = {p.text for p in THEMES_BY_ID["scripture"].passages}
+        for section_id in ("home", "letters", "everything", "coding"):
+            drill = build_drill(section_id, "speed", theme_id="scripture", seed="t")
             for target in drill.targets:
                 self.assertIn(target.text, wanted, section_id)
 
     def test_scripture_passages_carry_their_reference(self) -> None:
-        for target in build_drill("scripture", "speed", seed="t").targets:
+        drill = build_drill("letters", "speed", theme_id="scripture", seed="t")
+        for target in drill.targets:
             self.assertTrue(target.note.strip(), target.text)
+
+    def test_a_theme_a_mode_cannot_use_falls_back(self) -> None:
+        """Scripture has no word list, so Words mode can't be driven by it —
+        but asking for it must not produce an empty drill."""
+        drill = build_drill("letters", "words", theme_id="scripture", seed="t")
+        self.assertTrue(drill.targets)
+        self.assertNotEqual(drill.theme, "scripture")
+
+    def test_define_never_falls_back_to_words_with_no_meaning(self) -> None:
+        for theme_id in ("mixed", "scripture", "useful"):
+            drill = build_drill("letters", "define", theme_id=theme_id, seed="t")
+            for target in drill.targets:
+                self.assertTrue(target.prompt.strip(), f"{theme_id}: {target.text}")
+                self.assertNotEqual(target.prompt, target.text)
 
     def test_unknown_ids_fall_back_rather_than_crash(self) -> None:
         drill = build_drill("nope", "nope", seed="t")
@@ -154,6 +179,29 @@ class DrillTests(unittest.TestCase):
         self.assertEqual(
             [e["id"] for e in catalog()], [s.id for s in SECTIONS]
         )
+
+    def test_every_section_and_mode_works_with_every_theme(self) -> None:
+        """The theme is an independent axis, so no combination may break."""
+        for entry in catalog():
+            for mode in entry["modes"]:
+                for theme in theme_catalog():
+                    drill = build_drill(
+                        entry["id"], mode["id"], theme_id=theme["id"], seed="x"
+                    )
+                    self.assertTrue(
+                        drill.targets,
+                        f"{entry['id']}/{mode['id']}/{theme['id']} is empty",
+                    )
+
+    def test_theme_catalog_reports_what_each_can_drive(self) -> None:
+        for entry in theme_catalog():
+            theme = THEMES_BY_ID[entry["id"]]
+            self.assertEqual(entry["has_words"], bool(theme.words))
+            self.assertEqual(entry["has_passages"], bool(theme.passages))
+
+    def test_mixed_is_the_default_and_brings_no_content_of_its_own(self) -> None:
+        self.assertEqual(THEMES[0].id, "mixed")
+        self.assertFalse(THEMES[0].passages)
 
     def test_every_offered_mode_is_a_real_mode(self) -> None:
         for entry in catalog():
@@ -226,11 +274,80 @@ class DrillTests(unittest.TestCase):
         for passage in ALL_SNIPPETS:
             self.assertTrue(passage.source.strip(), passage.text)
 
-    def test_code_sections_serve_their_own_snippets(self) -> None:
-        for section_id in ("school", "tricks", "visuals", "fractals", "useful"):
-            wanted = {p.text for p in SECTIONS_BY_ID[section_id].passages}
-            for target in build_drill(section_id, "speed", seed="t").targets:
-                self.assertIn(target.text, wanted, section_id)
+    def test_code_themes_serve_their_own_snippets(self) -> None:
+        for theme_id in ("school", "tricks", "visuals", "fractals", "useful"):
+            wanted = {p.text for p in THEMES_BY_ID[theme_id].passages}
+            drill = build_drill("everything", "speed", theme_id=theme_id, seed="t")
+            for target in drill.targets:
+                self.assertIn(target.text, wanted, theme_id)
+
+    def test_random_never_serves_words_the_section_cannot_type(self) -> None:
+        """The number row was being handed "point" and "great"."""
+        for section_id in ("numbers", "symbols", "coding", "home", "bottom"):
+            allowed = set(SECTIONS_BY_ID[section_id].chars)
+            drill = build_drill(section_id, "random", seed="t")
+            self.assertTrue(drill.targets, section_id)
+            for target in drill.targets:
+                # Space is always allowed; every other key has to be one the
+                # section actually teaches. Exempting whole lines here hid
+                # Home Row being handed a pangram.
+                self.assertFalse(
+                    set(target.text.lower()) - allowed - {" "},
+                    f"{section_id}: {target.text!r}",
+                )
+
+    def test_a_section_never_asks_for_a_key_it_does_not_teach(self) -> None:
+        """A pangram needs the whole alphabet, so a single row can't type one —
+        and a punctuation-only section can't type `print(f"{name}")`."""
+        for section_id in ("home", "top", "bottom", "numbers", "symbols", "coding"):
+            allowed = set(SECTIONS_BY_ID[section_id].chars) | {" "}
+            for mode_id in ("speed", "random", "perfect"):
+                for target in build_drill(section_id, mode_id, seed="t").targets:
+                    self.assertFalse(
+                        set(target.text.lower()) - allowed,
+                        f"{section_id}/{mode_id}: {target.text!r}",
+                    )
+
+    def test_random_never_repeats_a_line(self) -> None:
+        """Independent samples overlap, so the same passage turned up twice."""
+        for section_id in ("everything", "letters", "home", "numbers"):
+            texts = [t.text for t in build_drill(section_id, "random", seed="t").targets]
+            self.assertEqual(len(texts), len(set(texts)), section_id)
+
+    def test_random_serves_real_prose_before_shuffled_words(self) -> None:
+        """A line of shuffled words reads as filler next to actual writing."""
+        targets = build_drill("everything", "random", seed="t").targets
+        filler = [t for t in targets if t.note == "from these keys"]
+        self.assertEqual(filler, [])
+
+    def test_the_default_drill_is_about_typing(self) -> None:
+        """Twenty minutes of practice may as well say something useful."""
+        notes = {t.note for t in build_drill("everything", "random", seed="t").targets}
+        self.assertTrue(
+            any(n.startswith("on ") for n in notes), notes
+        )
+
+    def test_random_keeps_one_format_throughout(self) -> None:
+        """Random means the text is unpredictable, not the format. Cycling
+        between single words, key pairs and sentences inside one run turns a
+        plain drill into a tour of the other modes."""
+        for section_id in ("everything", "letters", "home", "numbers", "symbols"):
+            targets = build_drill(section_id, "random", seed="t").targets
+            self.assertTrue(targets, section_id)
+            lengths = [len(t.text) for t in targets]
+            # Every target is a line, so none of them is a lone key or pair.
+            self.assertGreater(min(lengths), 6, f"{section_id}: {targets}")
+
+    def test_random_reads_as_lines_not_single_words(self) -> None:
+        targets = build_drill("letters", "random", seed="t").targets
+        self.assertTrue(all(" " in t.text for t in targets))
+
+    def test_sections_are_a_curriculum_not_a_content_list(self) -> None:
+        """Scripture isn't a step in learning the keyboard the way Top Row is."""
+        section_ids = {s.id for s in SECTIONS}
+        for content in ("scripture", "affirmations", "conscious", "school"):
+            self.assertNotIn(content, section_ids)
+            self.assertIn(content, THEMES_BY_ID)
 
     def test_named_keys_have_speakable_names(self) -> None:
         self.assertEqual(name_for("|"), "pipe")
