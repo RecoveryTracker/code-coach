@@ -87,7 +87,12 @@ from code_coach.typing.drills import (
 )
 from code_coach.typing.guide import guide_payload
 from code_coach.typing.records import Record, RecordStore
-from code_coach.typing.keys import FINGER_NAMES, finger_for, keyboard_payload
+from code_coach.typing.keys import (
+    FINGER_NAMES,
+    SYMBOL_NAMES,
+    finger_for,
+    keyboard_payload,
+)
 
 app = FastAPI(
     title="Code Coach",
@@ -287,6 +292,7 @@ def typing_catalog() -> TypingCatalogResponse:
         themes=[TypingThemeInfo(**t) for t in typing_themes()],
         keyboard=keyboard_payload(),
         fingers=FINGER_NAMES,
+        names=dict(SYMBOL_NAMES),
     )
 
 

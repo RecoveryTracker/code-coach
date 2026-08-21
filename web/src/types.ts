@@ -38,6 +38,8 @@ export type TypingCatalog = {
   themes: TypingTheme[];
   keyboard: TypingKey[][];
   fingers: Record<string, string>;
+  /** Spoken names for punctuation, e.g. "|" → "pipe". */
+  names: Record<string, string>;
 };
 
 export type TypingTarget = {

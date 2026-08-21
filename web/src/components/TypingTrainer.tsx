@@ -434,6 +434,37 @@ export default function TypingTrainer() {
     modeId,
   );
 
+  /**
+   * A short punctuation target, named key by key.
+   *
+   * Only for short symbol runs: spelling out a whole sentence would be noise,
+   * and letters name themselves. Shift is called out because a target like
+   * `!=` gives no hint that one of its two keys needs it.
+   */
+  const spelled = useMemo(() => {
+    const text = target?.text ?? "";
+    if (!catalog || !text || text.length > 4) return "";
+    const symbols = [...text].filter((c) => catalog.names[c]);
+    if (symbols.length === 0) return "";
+    // The keyboard model knows which characters need Shift: a character a key
+    // produces only with Shift held.
+    const needsShift = (c: string) =>
+      catalog.keyboard.some((row) =>
+        row.some((k) => k.shifted === c && k.char !== c),
+      );
+
+    const chars = [...text];
+    const allShifted = chars.every(needsShift);
+    const parts = chars.map((c) => {
+      const name = catalog.names[c] ?? c;
+      // Saying "(Shift)" after every one of three shifted keys is noise; say
+      // it once at the end instead.
+      return allShifted || !needsShift(c) ? name : `${name} (Shift)`;
+    });
+    const spellings = parts.join(", then ");
+    return allShifted ? `${spellings} — all with Shift` : spellings;
+  }, [catalog, target]);
+
   // ── Render ────────────────────────────────────────────────
 
   if (error) {
@@ -748,6 +779,11 @@ export default function TypingTrainer() {
                   )}
                 </div>
               )}
+
+              {/* Symbol targets spelled out. `!=` is two keys and one of them
+                  needs Shift, and neither of those facts is visible in the
+                  two characters themselves. */}
+              {spelled && <p className="typing-spelled">{spelled}</p>}
 
               {wrongPrefix && (
                 <p className="typing-fix">Backspace to fix</p>

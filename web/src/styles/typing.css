@@ -12,6 +12,17 @@
   background: #0e1116;
   color: #e6edf3;
   overflow: auto;
+
+  /* No programming ligatures anywhere in here. Cascadia Code and Fira Code
+     draw `!=` as ≠, `=>` as ⇒ and `>=` as ≥ — a single glyph that is on no
+     key, shown to someone whose whole task is to find the keys. Everything
+     in this screen must be the literal characters you have to press. */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0, "dlig" 0;
+}
+.typing-shell * {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0, "calt" 0, "dlig" 0;
 }
 
 .typing-topbar {
@@ -100,6 +111,14 @@
   background: #253449;
   border-color: #2f6feb;
   color: #cdd9e5;
+}
+
+/* "hyphen, then equals" — how to produce the target, in words. */
+.typing-spelled {
+  margin: 0;
+  color: #7ee2a8;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
 }
 
 .typing-fix {

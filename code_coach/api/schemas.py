@@ -321,6 +321,9 @@ class TypingCatalogResponse(BaseModel):
     # drills are generated from.
     keyboard: list[list[dict[str, Any]]]
     fingers: dict[str, str]
+    # Spoken names for the punctuation, so a target like "!=" can be spelled
+    # out as the keys it's made of.
+    names: dict[str, str]
 
 
 class TypingTargetInfo(BaseModel):
