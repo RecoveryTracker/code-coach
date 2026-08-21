@@ -91,7 +91,17 @@ export default function TypingKeyboard({
               : null;
 
             const classes = ["tk-key", `tk-finger-${key.finger}`];
-            if (isTarget) classes.push("tk-target");
+            if (isTarget) {
+              classes.push("tk-target");
+              // Which of the two labels is the one being asked for. Guessing
+              // it was always the shifted one dimmed the answer whenever it
+              // wasn't.
+              classes.push(
+                target === key.shifted && key.shifted !== key.char
+                  ? "tk-want-shifted"
+                  : "tk-want-plain",
+              );
+            }
             if (isFlash) classes.push(flash!.ok ? "tk-hit" : "tk-miss");
             if (!scoped) classes.push("tk-out");
 

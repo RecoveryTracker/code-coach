@@ -80,6 +80,12 @@ EVERYTHING_CHARS = ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS
 # and it may as well leave something behind.
 DEFAULT_LINES: tuple[Passage, ...] = TYPING_LINES + AFFIRMATIONS
 
+# Every annotated code line there is. The Code section reads as continuous
+# code rather than punctuation in isolation, and each line's note says what it
+# does — reading code at a glance is its own skill, and the one that makes
+# reviewing someone else's work fast.
+CODE_LINES: tuple[Passage, ...] = SCHOOL + TRICKS + USEFUL + VISUALS + FRACTALS
+
 
 @dataclass(frozen=True)
 class Section:
@@ -143,9 +149,17 @@ SECTIONS: tuple[Section, ...] = (
         SHIFTED_SYMBOLS + PLAIN_SYMBOLS,
     ),
     Section(
-        "coding", "Coding Punctuation",
-        "Brackets, operators and quotes — the keys code is actually made of.",
+        "coding", "Code Symbols",
+        "Brackets, operators and quotes on their own — the reach, drilled.",
         CODING_SYMBOLS,
+    ),
+    Section(
+        "code", "Code",
+        "Whole lines of real code, each with a note saying what it does.",
+        EVERYTHING_CHARS,
+        # Its own material rather than the generic text: a code section that
+        # served pangrams would be a letters section with a different name.
+        passages=CODE_LINES,
     ),
     Section(
         "everything", "Everything",

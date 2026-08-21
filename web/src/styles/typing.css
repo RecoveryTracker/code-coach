@@ -774,6 +774,9 @@
   margin: 0;
   font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
   font-size: clamp(1.05rem, 2.4vw, 1.7rem);
+  /* Runs of punctuation like `});` or `=>` read as one shape at monospace
+     defaults. A little air separates them without losing the grid. */
+  letter-spacing: 0.045em;
   line-height: 1.65;
   max-width: 52rem;
   white-space: pre-wrap;
@@ -802,11 +805,15 @@
   border-radius: 2px;
 }
 
+/* The line's note: a verse reference, or what a line of code does. On the
+   code drills this is half the point, so it reads as a caption rather than a
+   footnote. */
 .typing-note {
   margin: 0;
-  color: #8b97a5;
-  font-size: 0.85rem;
-  font-style: italic;
+  color: #9fb4ff;
+  font-size: 0.88rem;
+  max-width: 44rem;
+  line-height: 1.5;
 }
 
 .typing-upnext {
@@ -907,7 +914,7 @@
 .tk-board {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
   align-items: stretch;
   user-select: none;
   margin-top: 0.5rem;
@@ -915,18 +922,23 @@
 
 .tk-row {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
+/* Roomier than it needs to be for the letters, because it doesn't need to be
+   for the letters — a key showing both `4` and `$` has two things to read in
+   the space one usually takes. */
 .tk-key {
   flex: 1;
   position: relative;
   min-width: 0;
-  height: 2.8rem;
+  height: 3.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.18rem;
+  padding: 0.2rem 0;
   border-radius: 6px;
   background: #171c24;
   border: 1px solid #262f3b;
@@ -939,11 +951,34 @@
 
 .tk-shifted {
   font-size: 0.62rem;
-  color: #5b6675;
+  color: #7d8898;
   line-height: 1;
 }
 .tk-char {
   line-height: 1.1;
+}
+
+/* The shifted label sets its own colour, which beat the lit key's white and
+   left the symbol you were being asked for as dim grey on blue — invisible,
+   and on exactly the key that mattered. */
+.tk-target .tk-shifted,
+.tk-hit .tk-shifted,
+.tk-miss .tk-shifted {
+  color: inherit;
+}
+/* Whichever label is the one being asked for leads; the other steps back. */
+.tk-want-shifted .tk-shifted {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.tk-want-shifted .tk-char {
+  opacity: 0.55;
+}
+.tk-want-plain .tk-shifted {
+  opacity: 0.55;
+}
+.tk-want-plain .tk-char {
+  font-weight: 600;
 }
 
 .tk-blank {
@@ -1042,7 +1077,7 @@
 
 @media (max-width: 720px) {
   .tk-key {
-    height: 2.1rem;
+    height: 2.4rem;
     font-size: 0.72rem;
   }
   .tk-row-space {

@@ -12,6 +12,7 @@ import unittest
 from code_coach.typing import english
 from code_coach.typing.snippets import ALL_SNIPPETS
 from code_coach.typing.drills import (
+    CODE_LINES,
     MODES_BY_ID,
     SECTIONS,
     SECTIONS_BY_ID,
@@ -319,6 +320,25 @@ class DrillTests(unittest.TestCase):
         targets = build_drill("everything", "random", seed="t").targets
         filler = [t for t in targets if t.note == "from these keys"]
         self.assertEqual(filler, [])
+
+    def test_the_code_section_serves_whole_lines_of_code(self) -> None:
+        """A code section that served pangrams would be a letters section with
+        a different name."""
+        for mode_id in ("random", "speed", "perfect"):
+            targets = build_drill("code", mode_id, seed="t").targets
+            self.assertTrue(targets, mode_id)
+            for target in targets:
+                self.assertIn(target.text, {p.text for p in CODE_LINES}, mode_id)
+
+    def test_every_code_line_explains_itself(self) -> None:
+        """Reading code at a glance is its own skill — the note teaches it."""
+        for target in build_drill("code", "speed", seed="t").targets:
+            self.assertTrue(target.note.strip(), target.text)
+
+    def test_code_symbols_stays_punctuation_only(self) -> None:
+        """The two code sections do different jobs and mustn't merge."""
+        allowed = set(SECTIONS_BY_ID["coding"].chars)
+        self.assertFalse(any(c.isalnum() for c in allowed))
 
     def test_the_default_drill_is_about_typing(self) -> None:
         """Twenty minutes of practice may as well say something useful."""

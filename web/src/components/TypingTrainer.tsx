@@ -437,7 +437,25 @@ export default function TypingTrainer() {
   // ── Render ────────────────────────────────────────────────
 
   if (error) {
-    return <div className="typing-error">Couldn't load the trainer: {error}</div>;
+    // With the picker gone there was no way back from a failed load — the
+    // trainer just sat there showing the error until the page was reloaded.
+    return (
+      <div className="typing-trainer">
+        <div className="typing-error">Couldn't load that drill: {error}</div>
+        <button
+          type="button"
+          className="typing-again"
+          onClick={() => {
+            setSectionId("everything");
+            setModeId("random");
+            setThemeId("mixed");
+            void loadDrill("everything", "random", "mixed");
+          }}
+        >
+          Start over
+        </button>
+      </div>
+    );
   }
   if (!catalog || !drill || !section) {
     return <div className="typing-loading">Loading the keyboard…</div>;
