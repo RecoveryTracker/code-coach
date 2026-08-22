@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import unittest
 
-from code_coach.typing import english
+from code_coach.typing import english, thesaurus
 from code_coach.typing.snippets import ALL_SNIPPETS
 from code_coach.typing.drills import (
     CODE_LINES,
@@ -340,6 +340,69 @@ class DrillTests(unittest.TestCase):
         """The two code sections do different jobs and mustn't merge."""
         allowed = set(SECTIONS_BY_ID["coding"].chars)
         self.assertFalse(any(c.isalnum() for c in allowed))
+
+    def test_no_target_contains_a_character_off_the_keyboard(self) -> None:
+        """Prose is written with em dashes and curly quotes without anyone
+        thinking about it, and a target containing one cannot be finished."""
+        for entry in catalog():
+            for mode in entry["modes"]:
+                for theme in theme_catalog():
+                    drill = build_drill(
+                        entry["id"], mode["id"], theme_id=theme["id"], seed="t"
+                    )
+                    for target in drill.targets:
+                        for char in target.text:
+                            self.assertIn(
+                                char,
+                                BY_CHAR,
+                                f"{entry['id']}/{mode['id']}/{theme['id']}: "
+                                f"{char!r} in {target.text!r}",
+                            )
+
+    def test_the_word_chain_walks_from_one_word_to_a_related_one(self) -> None:
+        targets = build_drill("letters", "chain", seed="t").targets
+        self.assertGreater(len(targets), 4)
+        self.assertEqual(targets[0].note, "starting here")
+        for before, after in zip(targets, targets[1:]):
+            word = before.text.split(" - ")[0]
+            self.assertEqual(after.note, f"from {word}")
+
+    def test_the_word_chain_never_doubles_back(self) -> None:
+        """Returning to a word you just left is not a journey."""
+        words = [
+            t.text.split(" - ")[0] for t in build_drill("letters", "chain", seed="t").targets
+        ]
+        self.assertEqual(len(words), len(set(words)))
+
+    def test_every_thesaurus_link_leads_somewhere(self) -> None:
+        """A walk must never reach a dead end."""
+        dangling = {
+            name
+            for entry in thesaurus.ENTRIES
+            for name in entry.near
+            if name not in thesaurus.BY_WORD
+        }
+        self.assertEqual(dangling, set())
+
+    def test_no_word_is_defined_twice(self) -> None:
+        words = [entry.word for entry in thesaurus.ENTRIES]
+        self.assertEqual(len(words), len(set(words)))
+
+    def test_the_language_themes_carry_their_own_lore(self) -> None:
+        for theme_id, needle in (
+            ("python", "Python"),
+            ("javascript", "JavaScript"),
+            ("dart", "Dart"),
+        ):
+            sources = {p.source for p in THEMES_BY_ID[theme_id].passages}
+            self.assertTrue(
+                any(needle in s for s in sources), f"{theme_id}: {sources}"
+            )
+
+    def test_python_ships_its_own_zen(self) -> None:
+        texts = {p.text for p in THEMES_BY_ID["python"].passages}
+        self.assertIn("Explicit is better than implicit.", texts)
+        self.assertIn("Readability counts.", texts)
 
     def test_the_default_material_is_worth_reading(self) -> None:
         """Twenty minutes of practice may as well say something. Every line

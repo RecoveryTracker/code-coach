@@ -14,7 +14,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from code_coach.typing import english
+from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -224,6 +224,52 @@ THEMES: tuple[Theme, ...] = (
         meanings=dict(CONSCIOUS_WORDS),
     ),
     Theme(
+        "facts", "Facts",
+        "Short pieces about how things work, from bees to bridges.",
+        passages=PROSE,
+    ),
+    Theme(
+        "typinglore", "About Typing",
+        "Technique, practice and what actually makes anyone faster.",
+        passages=TYPING_LINES,
+    ),
+    Theme(
+        "wordlore", "Word Origins",
+        "Where words came from, and why English has so many of them.",
+        passages=langlore.WORDS,
+    ),
+    # Per-language material: syntax, design decisions, and the traps.
+    Theme(
+        "python", "Python Lore",
+        "How Python is put together — including the Zen, which it ships with.",
+        passages=langlore.PYTHON,
+    ),
+    Theme(
+        "javascript", "JavaScript Lore",
+        "Ten days in 1995, and everything that followed from it.",
+        passages=langlore.JAVASCRIPT,
+    ),
+    Theme(
+        "dart", "Dart Lore",
+        "Null safety, isolates, and a language built for interfaces.",
+        passages=langlore.DART,
+    ),
+    Theme(
+        "sql", "SQL Lore",
+        "Describing what you want and letting the database plan the how.",
+        passages=langlore.SQL,
+    ),
+    Theme(
+        "clang", "C Lore",
+        "A portable assembler with types, and the habits it demands.",
+        passages=langlore.C_LORE,
+    ),
+    Theme(
+        "rust", "Rust Lore",
+        "Ownership, borrowing, and errors you cannot forget to handle.",
+        passages=langlore.RUST,
+    ),
+    Theme(
         "school", "First Code",
         "The lines everyone writes first — loops, conditions, a function.",
         passages=SCHOOL,
@@ -379,6 +425,10 @@ MODES: tuple[Mode, ...] = (
         "A full passage. Accuracy first — the speed follows.",
     ),
     Mode(
+        "chain", "Word Chain",
+        "A word and its meaning, then one close to it, and on down the trail.",
+    ),
+    Mode(
         "define", "Guess the Word",
         "A definition and a row of blanks: work out the word, then type it.",
         hidden=True,
@@ -387,6 +437,30 @@ MODES: tuple[Mode, ...] = (
 )
 
 MODES_BY_ID = {m.id: m for m in MODES}
+
+
+# Characters that turn up in written English but are on no keyboard, and what
+# to type instead. Prose is written with em dashes and curly quotes without
+# anyone thinking about it, and a target containing one cannot be completed.
+UNTYPEABLE = {
+    "—": "-",  # em dash
+    "–": "-",  # en dash
+    "‘": "'",  # left single quote
+    "’": "'",  # right single quote / apostrophe
+    "“": '"',  # left double quote
+    "”": '"',  # right double quote
+    "…": "...",  # ellipsis
+    " ": " ",  # non-breaking space
+    "­": "",  # soft hyphen
+}
+
+
+def typeable(text: str) -> str:
+    """Swap characters that aren't on the keyboard for ones that are."""
+    for wrong, right in UNTYPEABLE.items():
+        if wrong in text:
+            text = text.replace(wrong, right)
+    return text
 
 
 @dataclass(frozen=True)
@@ -400,6 +474,13 @@ class Target:
     # Shown beside the target — a definition, so the repetition teaches
     # something besides finger placement.
     note: str = ""
+
+    def __post_init__(self) -> None:
+        # Normalised here rather than at each of the dozen places a Target is
+        # made, because the one that gets forgotten is the one that ships an
+        # em dash to somebody trying to find it on their keyboard.
+        object.__setattr__(self, "text", typeable(self.text))
+        object.__setattr__(self, "prompt", typeable(self.prompt))
 
 
 @dataclass
@@ -548,6 +629,19 @@ def build_drill(
             targets.append(
                 Target(text=word, prompt=word, note=_meaning(theme, word))
             )
+        scoring = "wpm"
+
+    elif mode.id == "chain":
+        # The rabbit hole you fall into with a thesaurus open on the desk:
+        # each word links to the last by meaning, and the note says which.
+        previous = ""
+        for entry in thesaurus.walk(rng, max(8, count // 2)):
+            # A hyphen, not an em dash: there is no em dash key, and a target
+            # must never contain a character you cannot type.
+            line = f"{entry.word} - {entry.meaning}"
+            note = f"from {previous}" if previous else "starting here"
+            targets.append(Target(text=line, prompt=line, note=note))
+            previous = entry.word
         scoring = "wpm"
 
     elif mode.id == "define":
@@ -820,7 +914,17 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     # A sweep has to be worth sweeping.
     if mode.id == "sweep" and len(section.chars) < 6:
         return False
+    # The word chain is definitions in English, so it needs the alphabet and
+    # the punctuation those definitions are written with.
+    if mode.id == "chain" and not _can_type_chain(section):
+        return False
     return True
+
+
+def _can_type_chain(section: Section) -> bool:
+    allowed = set(section.chars) | {" "}
+    needed = set("abcdefghijklmnopqrstuvwxyz-,'")
+    return needed <= allowed
 
 
 def catalog() -> list[dict]:

@@ -325,6 +325,150 @@ TYPING_LINES: tuple[Passage, ...] = (
         "and it is far easier to keep accurate.",
         "on technique",
     ),
+    _p(
+        "Read ahead of your fingers. Good typists are looking at the next few "
+        "words while typing the current one, which is why they rarely stall "
+        "at the end of a line.",
+        "on technique",
+    ),
+    _p(
+        "The space bar is the most frequently pressed key by a wide margin, "
+        "and it is the one nobody practises. Use one thumb consistently rather "
+        "than whichever is closer.",
+        "on technique",
+    ),
+    _p(
+        "Backspace is a key too. If you reach for it with the wrong finger, or "
+        "look down to find it, every mistake costs more than the mistake "
+        "itself did.",
+        "on technique",
+    ),
+    _p(
+        "Typing is not one skill. Prose, code and numbers each have their own "
+        "rhythm, and being quick at one says surprisingly little about the "
+        "other two.",
+        "on getting better",
+    ),
+    _p(
+        "The number row is worse than it looks. It is the longest reach on the "
+        "board and the one people most often glance down for, which is why "
+        "numeric work is where accuracy quietly collapses.",
+        "on technique",
+    ),
+    _p(
+        "Warm up before you measure. The first minute of any session is slower "
+        "than the rest, and treating it as your score will tell you that you "
+        "are getting worse when you are not.",
+        "on practice",
+    ),
+    _p(
+        "Speed tests reward common words. Real writing has names, jargon and "
+        "punctuation in it, so the number you get on a test is usually higher "
+        "than the speed you actually work at.",
+        "on getting better",
+    ),
+    _p(
+        "Shift is held, not tapped. Press it with the opposite hand, hold it "
+        "through the letter and release afterwards; tapping it separately is a "
+        "habit that costs a whole extra beat on every capital.",
+        "on technique",
+    ),
+    _p(
+        "Look at the screen, not the keyboard, and not your hands. The point "
+        "is not discipline — it is that reading what you produced is how you "
+        "notice a mistake in the second it happens.",
+        "on technique",
+    ),
+    _p(
+        "A plateau usually means you stopped making mistakes. If a drill feels "
+        "comfortable, it is measuring what you already had; push the pace "
+        "until accuracy just starts to slip, and practise there.",
+        "on getting better",
+    ),
+    _p(
+        "Punctuation is where most programmers lose time, not letters. The "
+        "brace, the pipe, the underscore and the angle bracket are reached for "
+        "constantly and drilled almost never.",
+        "on practice",
+    ),
+    _p(
+        "Your keyboard matters less than you think and your posture matters "
+        "more. A better switch will not fix a wrist resting on the desk or "
+        "elbows held at the wrong height.",
+        "on technique",
+    ),
+    _p(
+        "Learn the shortcuts for moving, not just for typing. Jumping a word "
+        "at a time, or to the start of a line, saves more time over a day than "
+        "raising your speed by ten words a minute.",
+        "on getting better",
+    ),
+    _p(
+        "Accuracy below about ninety-five per cent is not a speed problem. "
+        "Below that, corrections dominate everything, and typing faster makes "
+        "the total time worse rather than better.",
+        "on practice",
+    ),
+    _p(
+        "Same-finger sequences are the slowest thing you type. Any pair that "
+        "asks one finger to move twice in a row costs roughly double, which is "
+        "why layouts are judged mostly on how often that happens.",
+        "on technique",
+    ),
+    _p(
+        "Alternating hands is fast because the next finger is already "
+        "travelling while the current one presses. Rolls within one hand are "
+        "the next best thing, and both beat any sequence that stalls.",
+        "on technique",
+    ),
+    _p(
+        "Practise the transition, not the word. When a word keeps breaking it "
+        "is almost never the whole word — it is one pair of letters inside it, "
+        "and drilling that pair fixes every word containing it.",
+        "on getting better",
+    ),
+    _p(
+        "Nobody types at their test speed all day. Sustained working pace is "
+        "usually about half of a best score, because real writing includes "
+        "thinking, and thinking includes stopping.",
+        "on getting better",
+    ),
+    _p(
+        "The keys you hit hardest are usually the ones you are least sure of. "
+        "Pressure is a tell: where you are confident, you barely touch the "
+        "key at all.",
+        "on technique",
+    ),
+    _p(
+        "Two weeks is the usual figure for retraining a habit at the keyboard, "
+        "and the first of those two weeks is genuinely unpleasant. Knowing the "
+        "shape of it in advance is most of what gets people through.",
+        "on getting better",
+    ),
+    _p(
+        "Copy typing and composing are different activities. You can read "
+        "ahead when copying; when writing your own words, the bottleneck is "
+        "upstream of your hands entirely.",
+        "on getting better",
+    ),
+    _p(
+        "Stop between lines, not mid-word. Pausing to think in the middle of a "
+        "word breaks the motion your hand had already planned, and picking it "
+        "up again costs more than the pause saved.",
+        "on technique",
+    ),
+    _p(
+        "Most keyboards ignore the third key you press at once, in certain "
+        "combinations. It rarely matters when typing prose and matters a great "
+        "deal in games, which is why gaming keyboards advertise it.",
+        "on keyboards",
+    ),
+    _p(
+        "Key travel is how far a key moves before it registers. Laptop "
+        "keyboards use very little, mechanical ones a lot, and which you "
+        "prefer is mostly which you learned on.",
+        "on keyboards",
+    ),
 )
 
 
@@ -336,7 +480,7 @@ TYPING_LINES: tuple[Passage, ...] = (
 # These are short pieces about how things work: enough of them that a session
 # rarely repeats one, and each worth the twenty seconds it takes to type.
 
-PROSE: tuple[Passage, ...] = (
+_PROSE_ONE: tuple[Passage, ...] = (
     _p(
         "A honeybee dances to say where the flowers are. The angle of the "
         "dance gives the direction relative to the sun, and its length gives "
@@ -704,6 +848,440 @@ PROSE: tuple[Passage, ...] = (
         "cooking",
     ),
 )
+
+_PROSE_TWO: tuple[Passage, ...] = (
+    _p(
+        "Giraffes have the same number of neck bones as you do. Seven, each "
+        "one enormous — the count is fixed across almost every mammal, from "
+        "the whale to the mouse.",
+        "animals",
+    ),
+    _p(
+        "The shipping container did more for global trade than any treaty. "
+        "Standardising the box meant a crane could move cargo without anyone "
+        "opening it, and the cost of sending things fell through the floor.",
+        "trade",
+    ),
+    _p(
+        "Ice floats, which is unusual. Most substances are denser as solids, "
+        "and if water behaved normally, lakes would freeze from the bottom up "
+        "and very little would survive a winter.",
+        "chemistry",
+    ),
+    _p(
+        "The word muscle comes from the Latin for little mouse, because "
+        "someone thought a flexing bicep looked like one moving under the "
+        "skin. Anatomy is full of people describing what things reminded them "
+        "of.",
+        "language",
+    ),
+    _p(
+        "A grand piano's strings pull with a total force of about twenty "
+        "tonnes. The iron frame exists entirely to argue with them, and the "
+        "wooden case would fold in an instant without it.",
+        "music",
+    ),
+    _p(
+        "Nothing in the sky moves as slowly as it looks. A cloud drifting "
+        "lazily overhead is usually doing thirty miles an hour; it just "
+        "happens to be a mile away and the size of a village.",
+        "weather",
+    ),
+    _p(
+        "The pencil is a composite material. Graphite alone is too soft to "
+        "hold a point, so it is mixed with clay — more clay makes a harder "
+        "pencil, and the number on the side is that ratio.",
+        "everyday things",
+    ),
+    _p(
+        "Bacteria outnumber your own cells, though not by as much as the "
+        "popular figure suggests. The honest estimate is roughly one to one, "
+        "which is still a strange thing to be.",
+        "the body",
+    ),
+    _p(
+        "Rubber was a curiosity until someone worked out vulcanisation. Raw "
+        "latex goes sticky in heat and brittle in cold; adding sulphur and "
+        "cooking it produces something that behaves in both.",
+        "materials",
+    ),
+    _p(
+        "The Sahara was green within human memory. Cave paintings there show "
+        "swimmers, and the desert has cycled between grassland and sand "
+        "roughly every twenty thousand years.",
+        "climate",
+    ),
+    _p(
+        "Sound travels about four times faster in water than in air, which is "
+        "why whales can call across an ocean basin and why it is so hard to "
+        "tell where an underwater noise came from.",
+        "the sea",
+    ),
+    _p(
+        "A tuning fork is deliberately useless at everything except one note. "
+        "Its shape suppresses the overtones that make other objects ring "
+        "complicatedly, leaving something almost purely one frequency.",
+        "music",
+    ),
+    _p(
+        "Aluminium was once more precious than gold. It is the most abundant "
+        "metal in the crust but bonds so tightly to oxygen that nobody could "
+        "get it out until electricity arrived.",
+        "materials",
+    ),
+    _p(
+        "You cannot tickle yourself, because the part of the brain that plans "
+        "the movement warns the part that feels it. The surprise is the whole "
+        "sensation.",
+        "the body",
+    ),
+    _p(
+        "The Pacific is big enough to hold every continent with room left "
+        "over. On a globe it is the hemisphere that is almost entirely water, "
+        "and no flat map has ever made that look right.",
+        "geography",
+    ),
+    _p(
+        "Fireflies flash in code. Each species has its own rhythm, and in some "
+        "the females mimic another species' pattern to lure in males and eat "
+        "them.",
+        "animals",
+    ),
+    _p(
+        "Standardised time was invented by railways. Before them every town "
+        "kept its own noon, and it stopped being charming the moment a "
+        "timetable had to be right in two places at once.",
+        "history",
+    ),
+    _p(
+        "Diamonds are not rare, particularly. They are well marketed and "
+        "tightly supplied, and the idea that an engagement ring should cost "
+        "two months' salary came from an advertising campaign.",
+        "economics",
+    ),
+    _p(
+        "Cats land on their feet by conservation of angular momentum, not by "
+        "pushing off anything. They twist the front half one way and the back "
+        "half the other, then swap.",
+        "physics",
+    ),
+    _p(
+        "The chilli's heat is a defence against mammals, which chew seeds and "
+        "destroy them. Birds swallow them whole and cannot taste capsaicin at "
+        "all, which is exactly the arrangement the plant wants.",
+        "plants",
+    ),
+    _p(
+        "A ship's hull speed is set by the wave it makes. Past a certain "
+        "point the boat is climbing its own bow wave, and more power mostly "
+        "buys a bigger wave.",
+        "sailing",
+    ),
+    _p(
+        "Penicillin was found because a plate was left out. What made it "
+        "matter was noticing that the mould had cleared a ring around itself "
+        "rather than simply throwing the plate away.",
+        "medicine",
+    ),
+    _p(
+        "There are more possible shuffles of a deck of cards than seconds "
+        "since the universe began. Any well-shuffled deck has almost certainly "
+        "never existed in that order before.",
+        "mathematics",
+    ),
+    _p(
+        "The reason old films flicker is that they were shot at sixteen frames "
+        "a second and are usually played at twenty-four. Everyone in them was "
+        "moving at a perfectly ordinary speed.",
+        "film",
+    ),
+    _p(
+        "Owls fly silently because of the edges of their feathers. A comb-like "
+        "fringe on the leading edge breaks up the air that would otherwise "
+        "make the rush of a wingbeat.",
+        "birds",
+    ),
+    _p(
+        "Mount Everest is not the furthest point from the centre of the Earth. "
+        "The planet bulges at the equator, so a peak in Ecuador wins on that "
+        "measure by over two kilometres.",
+        "geography",
+    ),
+    _p(
+        "Bubble wrap was invented as wallpaper. It failed, was sold as "
+        "greenhouse insulation, failed again, and only found its purpose when "
+        "a computer company needed to ship something fragile.",
+        "invention",
+    ),
+    _p(
+        "Your stomach lining replaces itself every few days. It has to: the "
+        "acid inside is strong enough to dissolve the tissue holding it, and "
+        "the only defence is building faster than it destroys.",
+        "the body",
+    ),
+    _p(
+        "The dot over a lowercase i is called a tittle. It exists because "
+        "medieval scribes kept losing the letter among the strokes of m and "
+        "n, and added a mark to keep it visible.",
+        "language",
+    ),
+    _p(
+        "A pearl is a defence. The oyster coats an irritant in the same "
+        "material it lines its shell with, layer after layer, and the shine "
+        "is light bouncing between those layers.",
+        "the sea",
+    ),
+    _p(
+        "Windmills were the first factories. Before steam, anywhere with "
+        "reliable wind could grind grain, saw wood or pump water without a "
+        "single animal or person doing the turning.",
+        "engineering",
+    ),
+    _p(
+        "Snow is not white. Ice is clear, and a snowbank looks white for the "
+        "same reason crushed glass does — countless surfaces scattering every "
+        "colour equally.",
+        "weather",
+    ),
+    _p(
+        "Ants find the shortest route by accident. Each one lays a trail and "
+        "prefers strong trails, and the shortest path gets walked more often "
+        "per unit time, so its scent builds fastest.",
+        "animals",
+    ),
+    _p(
+        "The keyboard shortcut for undo is next to the ones for cut, copy and "
+        "paste because they were chosen together, on an early Apple keyboard, "
+        "to sit under the left hand while the right held the mouse.",
+        "computing",
+    ),
+    _p(
+        "Sugar was a luxury spice before it was a staple. It appears in "
+        "medieval recipes in the quantities we now use saffron, and the "
+        "collapse in price rewrote European cooking entirely.",
+        "food",
+    ),
+    _p(
+        "A rainbow has no fixed position. It is an angle, not an object, so "
+        "everyone standing near you sees a different one made of different "
+        "raindrops.",
+        "weather",
+    ),
+    _p(
+        "Solder does not glue metal together. It melts and flows into the "
+        "surface of both parts, forming a thin alloy at each boundary, which "
+        "is why a clean surface matters more than a hot iron.",
+        "craft",
+    ),
+    _p(
+        "Bananas are clones. Almost every one sold is genetically identical, "
+        "which makes the whole crop equally vulnerable to anything that learns "
+        "to attack it — and one disease already wiped out the previous "
+        "variety.",
+        "plants",
+    ),
+    _p(
+        "Latitude was easy and longitude was murder. You can read latitude "
+        "off the noon sun in an afternoon; longitude needed a clock that would "
+        "keep time on a rolling ship, and that took decades.",
+        "navigation",
+    ),
+    _p(
+        "Hummingbirds cannot walk. Their feet are for perching only, and "
+        "everything else in the body has been given over to a shoulder joint "
+        "that lets the wing swivel and generate lift in both directions.",
+        "birds",
+    ),
+    _p(
+        "A microwave heats unevenly because it makes standing waves. There are "
+        "fixed hot and cold spots inside the box, which is the entire reason "
+        "for the turntable.",
+        "everyday things",
+    ),
+    _p(
+        "The Dead Sea is not dead so much as extremely salty. Nothing much "
+        "lives in it, you float without effort, and it is dropping by about a "
+        "metre a year as the rivers feeding it are diverted.",
+        "geography",
+    ),
+    _p(
+        "Cement production accounts for a startling share of global carbon "
+        "emissions, most of it from the chemistry rather than the heat: making "
+        "lime from limestone releases carbon dioxide whatever you burn.",
+        "climate",
+    ),
+    _p(
+        "Frogs drink through their skin. They also breathe through it, which "
+        "is why a frog is such a good early warning about what is in the "
+        "water.",
+        "animals",
+    ),
+    _p(
+        "Every colour on a screen is three. Red, green and blue dots too small "
+        "to separate, and a yellow pixel is simply red and green at once with "
+        "nothing yellow anywhere in the device.",
+        "computing",
+    ),
+    _p(
+        "The oldest living things are trees that grow almost imperceptibly. A "
+        "bristlecone pine adds a fraction of a millimetre a year, and the wood "
+        "is so dense and resinous that almost nothing can rot it.",
+        "plants",
+    ),
+    _p(
+        "A key is a code you can hold. The bumps set each pin to exactly the "
+        "height where the cylinder can turn, and picking a lock is finding "
+        "those heights one at a time by feel.",
+        "everyday things",
+    ),
+    _p(
+        "Sea level is not level. Gravity varies with what is under the crust, "
+        "so the ocean stands tens of metres higher over some places than "
+        "others, and the shape of that surface is what we mean by sea level.",
+        "geography",
+    ),
+    _p(
+        "Whales evolved from land mammals that went back to the water. Their "
+        "closest living relative is the hippopotamus, and a whale's flipper "
+        "still contains the bones of a hand.",
+        "animals",
+    ),
+    _p(
+        "Fahrenheit set zero at the coldest temperature he could reliably "
+        "reproduce, using a mixture of ice and salt. Celsius picked water "
+        "instead, which is why one scale looks arbitrary and the other does "
+        "not.",
+        "measurement",
+    ),
+    _p(
+        "Bread, beer and yoghurt are all the same idea: let a microbe you like "
+        "eat the food first, so that nothing you dislike gets the chance. "
+        "Preservation came before flavour, and flavour came along anyway.",
+        "food",
+    ),
+    _p(
+        "The width of a railway is a decision nobody ever finished making. "
+        "Different countries chose differently, and where two gauges meet "
+        "everything has to be unloaded and loaded again.",
+        "trade",
+    ),
+    _p(
+        "Static electricity is not really static. Rubbing two materials moves "
+        "electrons from one to the other, and the shock is them all going back "
+        "at once through whatever you touched next.",
+        "physics",
+    ),
+    _p(
+        "Coral reefs are built by animals and fed by algae living inside them. "
+        "Bleaching is the coral expelling those algae under stress, which is "
+        "why a bleached reef is starving rather than dead.",
+        "the sea",
+    ),
+    _p(
+        "Hand-washing was rejected before it was accepted. The doctor who "
+        "showed it saved lives could not explain why it worked, and germ "
+        "theory arrived too late for anyone to take his word for it.",
+        "medicine",
+    ),
+    _p(
+        "A compass points to magnetic north, which wanders. It has moved "
+        "hundreds of miles in the last century, and every serious chart has to "
+        "note the difference and the year it was measured.",
+        "navigation",
+    ),
+    _p(
+        "Popcorn works because the kernel is a pressure vessel. Moisture "
+        "inside turns to steam, the hull holds until it cannot, and the starch "
+        "expands into foam in the instant it lets go.",
+        "cooking",
+    ),
+    _p(
+        "Most of a tree is made from air. The carbon in the wood came out of "
+        "the atmosphere, not the soil, which is a genuinely odd thing to think "
+        "about while standing under one.",
+        "plants",
+    ),
+    _p(
+        "Fingerprints may not be for grip. The current thinking is that they "
+        "improve touch, by amplifying the vibrations that let you feel fine "
+        "texture with your fingertips.",
+        "the body",
+    ),
+    _p(
+        "The reason a phone screen ignores a gloved hand is that it is "
+        "measuring capacitance, not pressure. It is not feeling you push; it "
+        "is noticing that something conductive came close.",
+        "computing",
+    ),
+    _p(
+        "Mountains have roots. A range floats on the mantle like an iceberg, "
+        "and the taller it stands the deeper the crust reaches beneath it to "
+        "hold it up.",
+        "geology",
+    ),
+    _p(
+        "The mantis shrimp punches fast enough to boil water. The claw moves "
+        "so quickly that the water behind it cavitates, and the collapsing "
+        "bubble delivers a second blow after the first.",
+        "the sea",
+    ),
+    _p(
+        "Dough is kneaded to organise it. The proteins in flour link into "
+        "sheets that trap gas, and the difference between bread and a biscuit "
+        "is largely how much you encouraged that.",
+        "cooking",
+    ),
+    _p(
+        "Airline seats face forward even though rear-facing is safer. Nobody "
+        "much likes flying backwards, and that preference has outweighed the "
+        "engineering for the whole history of the industry.",
+        "engineering",
+    ),
+    _p(
+        "There is no such thing as cold, only less heat. Cold does not come "
+        "into a house; heat leaves it, and every insulating material is an "
+        "attempt to slow that departure.",
+        "physics",
+    ),
+    _p(
+        "Wolves were domesticated by scavenging, most likely. The animals bold "
+        "enough to approach a camp and calm enough to stay ate better, and "
+        "that is a selection pressure whether or not anyone intended it.",
+        "animals",
+    ),
+    _p(
+        "A magnifying glass makes fire by turning a wide beam of sunlight into "
+        "a narrow one. It adds nothing; it only insists that everything "
+        "arriving over a hand's width leaves through a pinpoint.",
+        "physics",
+    ),
+    _p(
+        "Silk was a state secret for centuries. Exporting a silkworm carried a "
+        "death sentence, and the technique escaped anyway — as techniques "
+        "generally do, eventually.",
+        "history",
+    ),
+    _p(
+        "Your sense of balance lives in your ears. Three fluid-filled loops at "
+        "right angles to one another report rotation in every direction, which "
+        "is why an ear infection can make the floor tilt.",
+        "the body",
+    ),
+    _p(
+        "Rust is iron returning to the state it was mined in. Ore is iron "
+        "already combined with oxygen, and smelting is the act of separating "
+        "them; corrosion is simply that work coming undone.",
+        "materials",
+    ),
+    _p(
+        "Nobody has ever seen the far side of the moon from Earth. It turns "
+        "exactly once per orbit, so the same face is always toward us, and the "
+        "other one was a mystery until 1959.",
+        "space",
+    ),
+)
+
+PROSE: tuple[Passage, ...] = _PROSE_ONE + _PROSE_TWO
 
 
 # ── Affirmations ────────────────────────────────────────────
