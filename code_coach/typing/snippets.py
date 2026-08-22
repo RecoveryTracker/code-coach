@@ -140,4 +140,112 @@ USEFUL: tuple[Passage, ...] = (
     _s("docker compose up -d --build", "bring the stack up"),
 )
 
-ALL_SNIPPETS = SCHOOL + TRICKS + VISUALS + FRACTALS + USEFUL
+# ── The same ideas, one language at a time ──────────────────
+# The sets above are deliberately mixed, which is right for "some code". When
+# you're learning one language you want that language's punctuation in your
+# hands — its brackets, its terminators, the shapes it repeats.
+
+PYTHON_CODE: tuple[Passage, ...] = (
+    _s("if __name__ == '__main__':", "the entry point"),
+    _s("def solve(nums: list[int]) -> int:", "a typed signature"),
+    _s("for i, item in enumerate(items):", "index and value at once"),
+    _s("for key, value in counts.items():", "walking a dictionary"),
+    _s("squares = [n * n for n in range(10)]", "a list comprehension"),
+    _s("pairs = {k: v for k, v in rows}", "a dict comprehension"),
+    _s("total = sum(x for x in values if x > 0)", "a generator expression"),
+    _s("with open(path, encoding='utf-8') as f:", "read a file safely"),
+    _s("data = json.loads(path.read_text(encoding='utf-8'))", "load some JSON"),
+    _s("counts = Counter(words).most_common(3)", "the top three"),
+    _s("left, right = 0, len(nums) - 1", "two pointers, opening move"),
+    _s("seen: dict[int, int] = {}", "an annotated dictionary"),
+    _s("return sorted(items, key=lambda p: (-p.score, p.name))", "sort, then break ties"),
+    _s("raise ValueError(f'unexpected {value!r}')", "an error worth reading"),
+    _s("except (OSError, ValueError) as exc:", "catch two things at once"),
+    _s("assert result == expected, f'got {result}'", "a test that says what broke"),
+    _s("@dataclass(frozen=True)", "an immutable record"),
+    _s("print(f'{name}: {count:>4}')", "formatted output"),
+    _s("nums.sort(reverse=True)", "sort in place, descending"),
+    _s("return [x for row in grid for x in row]", "flatten a grid"),
+    _s("while left < right:", "the shrinking window"),
+    _s("value = config.get('retries', 3)", "a default that can't fail"),
+    _s("yield from children", "delegate to another generator"),
+    _s("text = ' '.join(str(n) for n in nums)", "numbers into a line"),
+)
+
+JAVASCRIPT_CODE: tuple[Passage, ...] = (
+    _s("const { a, b, ...rest } = props;", "pull fields out, keep the rest"),
+    _s("const unique = [...new Set(list)];", "de-duplicate an array"),
+    _s("for (let i = 0; i < nums.length; i++) {", "the counting loop"),
+    _s("for (const [key, value] of map.entries()) {", "walk a Map"),
+    _s("const seen = new Map();", "a lookup table"),
+    _s("arr.map((n) => n * 2);", "transform every item"),
+    _s("arr.filter((n) => n % 2 === 0);", "keep the even ones"),
+    _s("arr.reduce((sum, n) => sum + n, 0);", "add them all up"),
+    _s("const sorted = [...arr].sort((a, b) => a - b);", "sort a copy, numerically"),
+    _s("if (seen.has(need)) return [seen.get(need), i];", "the Two Sum line"),
+    _s("export default function App() {", "a React component"),
+    _s("const [value, setValue] = useState('');", "React state"),
+    _s("useEffect(() => { load(); }, []);", "run once on mount"),
+    _s("await Promise.all(items.map(fetchOne));", "run them all at once"),
+    _s("const data = await res.json();", "read a response"),
+    _s("res.status(404).json({ error: 'not found' });", "an API error"),
+    _s("try { run(); } catch (err) { console.error(err); }", "catch and report"),
+    _s("return a?.b ?? c;", "optional chaining and a default"),
+    _s("const debounced = () => clearTimeout(t);", "cancel a pending timer"),
+    _s("document.querySelectorAll('.item').forEach(hide);", "act on every match"),
+    _s("class ListNode { constructor(val) { this.val = val; } }", "a node type"),
+    _s("module.exports = { parse, format };", "what this file offers"),
+)
+
+DART_CODE: tuple[Passage, ...] = (
+    _s("void main() { runApp(const MyApp()); }", "where a Flutter app starts"),
+    _s("final seen = <int, int>{};", "a typed empty map"),
+    _s("for (var i = 0; i < nums.length; i++) {", "the counting loop"),
+    _s("for (final item in items) {", "walk a collection"),
+    _s("List<int> twoSum(List<int> nums, int target) {", "a typed signature"),
+    _s("if (seen.containsKey(need)) return [seen[need]!, i];", "and the line inside it"),
+    _s("class ListNode { int val; ListNode? next; }", "a nullable field"),
+    _s("ListNode(this.val, [this.next]);", "a constructor that assigns for you"),
+    _s("final name = person?.name ?? 'unknown';", "a default when null"),
+    _s("Future<String> load() async { ... }", "something that finishes later"),
+    _s("final data = await http.get(uri);", "wait for a response"),
+    _s("setState(() { count += 1; });", "tell Flutter to rebuild"),
+    _s("return Column(children: [Text(label)]);", "a widget with children"),
+    _s("const EdgeInsets.symmetric(horizontal: 12)", "named parameters everywhere"),
+    _s("items.where((n) => n.isEven).toList()", "filter, then materialise"),
+    _s("items.map((n) => n * 2).toList()", "transform, then materialise"),
+    _s("throw ArgumentError('value must be positive');", "reject bad input"),
+    _s("late final Database db;", "set before first use"),
+    _s("assert(index >= 0, 'index must not be negative');", "a development check"),
+    _s("Widget build(BuildContext context) {", "the method every widget has"),
+)
+
+SQL_CODE: tuple[Passage, ...] = (
+    _s("SELECT name, email FROM users WHERE active = 1;", "the shape of a query"),
+    _s("SELECT COUNT(*) FROM orders WHERE total > 100;", "counting rows"),
+    _s("SELECT user_id, SUM(total) FROM orders GROUP BY user_id;", "a total per user"),
+    _s("HAVING SUM(total) > 500", "filtering after the grouping"),
+    _s("ORDER BY created_at DESC LIMIT 10;", "the ten most recent"),
+    _s("INNER JOIN orders ON orders.user_id = users.id", "matching rows in both"),
+    _s("LEFT JOIN payments ON payments.order_id = orders.id", "keep rows with no match"),
+    _s("INSERT INTO users (name, email) VALUES (?, ?);", "a parameterised insert"),
+    _s("UPDATE users SET active = 0 WHERE last_seen < '2024-01-01';", "an update with a limit on it"),
+    _s("DELETE FROM sessions WHERE expires_at < NOW();", "clearing out the stale"),
+    _s("CREATE INDEX idx_orders_user ON orders (user_id);", "make the join fast"),
+    _s("SELECT * FROM users WHERE email IS NULL;", "why you cannot write = NULL"),
+    _s("WITH recent AS (SELECT * FROM orders LIMIT 100)", "a named subquery"),
+    _s("COALESCE(nickname, name, 'anonymous')", "the first thing that isn't null"),
+    _s("BEGIN; UPDATE accounts SET balance = balance - 10; COMMIT;", "all or nothing"),
+)
+
+ALL_SNIPPETS = (
+    SCHOOL
+    + TRICKS
+    + VISUALS
+    + FRACTALS
+    + USEFUL
+    + PYTHON_CODE
+    + JAVASCRIPT_CODE
+    + DART_CODE
+    + SQL_CODE
+)

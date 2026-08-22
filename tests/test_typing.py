@@ -360,7 +360,7 @@ class DrillTests(unittest.TestCase):
                             )
 
     def test_the_word_chain_walks_from_one_word_to_a_related_one(self) -> None:
-        targets = build_drill("letters", "chain", seed="t").targets
+        targets = build_drill("everything", "chain", seed="t").targets
         self.assertGreater(len(targets), 4)
         self.assertEqual(targets[0].note, "starting here")
         for before, after in zip(targets, targets[1:]):
@@ -370,9 +370,32 @@ class DrillTests(unittest.TestCase):
     def test_the_word_chain_never_doubles_back(self) -> None:
         """Returning to a word you just left is not a journey."""
         words = [
-            t.text.split(" - ")[0] for t in build_drill("letters", "chain", seed="t").targets
+            t.text.split(" - ")[0]
+            for t in build_drill("everything", "chain", seed="t").targets
         ]
         self.assertEqual(len(words), len(set(words)))
+
+    def test_the_word_chain_is_offered_on_the_letter_sections(self) -> None:
+        """Requiring the punctuation as well hid it on seven sections of
+        nine, which is not where a headline mode should live."""
+        offered = {
+            entry["id"]
+            for entry in catalog()
+            if any(m["id"] == "chain" for m in entry["modes"])
+        }
+        for section_id in ("letters", "everything", "code", "vocab"):
+            if section_id in SECTIONS_BY_ID:
+                self.assertIn(section_id, offered, section_id)
+        self.assertNotIn("numbers", offered)
+        self.assertNotIn("symbols", offered)
+
+    def test_the_chain_only_uses_keys_its_section_teaches(self) -> None:
+        for section_id in ("letters", "everything", "code"):
+            allowed = set(SECTIONS_BY_ID[section_id].chars) | {" "}
+            for target in build_drill(section_id, "chain", seed="t").targets:
+                self.assertFalse(
+                    set(target.text) - allowed, f"{section_id}: {target.text!r}"
+                )
 
     def test_every_thesaurus_link_leads_somewhere(self) -> None:
         """A walk must never reach a dead end."""
@@ -441,6 +464,32 @@ class DrillTests(unittest.TestCase):
     def test_random_reads_as_lines_not_single_words(self) -> None:
         targets = build_drill("letters", "random", seed="t").targets
         self.assertTrue(all(" " in t.text for t in targets))
+
+    def test_the_whole_keyboard_comes_first_and_is_the_default(self) -> None:
+        """Everything else is a narrower slice of it, so it leads."""
+        self.assertEqual(SECTIONS[0].id, "everything")
+        self.assertEqual(SECTIONS[0].name, "All")
+        self.assertEqual(catalog()[0]["id"], "everything")
+
+    def test_each_language_has_its_own_code_to_type(self) -> None:
+        """Learning one language means wanting that language's punctuation in
+        your hands, not an average of several."""
+        for theme_id, needle in (
+            ("pycode", "def "),
+            ("jscode", "const "),
+            ("dartcode", "final "),
+            ("sqlcode", "SELECT "),
+        ):
+            texts = " ".join(p.text for p in THEMES_BY_ID[theme_id].passages)
+            self.assertIn(needle, texts, theme_id)
+
+    def test_language_code_themes_are_real_code_with_notes(self) -> None:
+        for theme_id in ("pycode", "jscode", "dartcode", "sqlcode"):
+            theme = THEMES_BY_ID[theme_id]
+            self.assertGreaterEqual(len(theme.passages), 15, theme_id)
+            for passage in theme.passages:
+                self.assertTrue(passage.source.strip(), passage.text)
+                self.assertNotIn("\n", passage.text)
 
     def test_sections_are_a_curriculum_not_a_content_list(self) -> None:
         """Scripture isn't a step in learning the keyboard the way Top Row is."""

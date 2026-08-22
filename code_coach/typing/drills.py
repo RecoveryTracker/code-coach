@@ -12,6 +12,7 @@ and hand-written where the point is that the text reads like English.
 from __future__ import annotations
 
 import random
+import re
 from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
@@ -35,8 +36,12 @@ from code_coach.typing.texts import (
     Passage,
 )
 from code_coach.typing.snippets import (
+    DART_CODE,
     FRACTALS,
+    JAVASCRIPT_CODE,
+    PYTHON_CODE,
     SCHOOL,
+    SQL_CODE,
     TRICKS,
     USEFUL,
     VISUALS,
@@ -104,6 +109,14 @@ class Section:
 
 
 SECTIONS: tuple[Section, ...] = (
+    # First and default: the whole keyboard is what typing actually is, and
+    # everything below it is a narrower slice for when you want one.
+    Section(
+        "everything", "All",
+        "The whole keyboard — letters, numbers and symbols, which is what "
+        "real typing is.",
+        ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS,
+    ),
     Section(
         "home", "Home Row",
         "Where your fingers rest. Everything else is measured from here.",
@@ -161,11 +174,6 @@ SECTIONS: tuple[Section, ...] = (
         # Its own material rather than the generic text: a code section that
         # served pangrams would be a letters section with a different name.
         passages=CODE_LINES,
-    ),
-    Section(
-        "everything", "Everything",
-        "Letters, numbers and symbols together, which is what real typing is.",
-        ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS,
     ),
 )
 
@@ -268,6 +276,29 @@ THEMES: tuple[Theme, ...] = (
         "rust", "Rust Lore",
         "Ownership, borrowing, and errors you cannot forget to handle.",
         passages=langlore.RUST,
+    ),
+    # Which language's code you're typing. Picking Code for the keys and then
+    # one of these is how you drill the punctuation of the language you're
+    # actually learning, rather than an average of several.
+    Theme(
+        "pycode", "Python Code",
+        "Real Python lines: comprehensions, with-blocks, typed signatures.",
+        passages=PYTHON_CODE,
+    ),
+    Theme(
+        "jscode", "JavaScript Code",
+        "Destructuring, arrow functions, promises and the React shapes.",
+        passages=JAVASCRIPT_CODE,
+    ),
+    Theme(
+        "dartcode", "Dart Code",
+        "Null-safe declarations, futures, and the widget build method.",
+        passages=DART_CODE,
+    ),
+    Theme(
+        "sqlcode", "SQL Code",
+        "Selects, joins, grouping and the odd transaction.",
+        passages=SQL_CODE,
     ),
     Theme(
         "school", "First Code",
@@ -636,9 +667,7 @@ def build_drill(
         # each word links to the last by meaning, and the note says which.
         previous = ""
         for entry in thesaurus.walk(rng, max(8, count // 2)):
-            # A hyphen, not an em dash: there is no em dash key, and a target
-            # must never contain a character you cannot type.
-            line = f"{entry.word} - {entry.meaning}"
+            line = _chain_line(entry, section)
             note = f"from {previous}" if previous else "starting here"
             targets.append(Target(text=line, prompt=line, note=note))
             previous = entry.word
@@ -922,9 +951,24 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
 
 
 def _can_type_chain(section: Section) -> bool:
+    """A chain is English definitions, so it needs the alphabet — and only
+    the alphabet, because the punctuation is dropped where a section hasn't
+    taught it."""
+    return set("abcdefghijklmnopqrstuvwxyz") <= set(section.chars)
+
+
+def _chain_line(entry: thesaurus.Entry, section: Section) -> str:
+    """One rung of the chain, in characters this section actually teaches.
+
+    All Letters can't type a hyphen or a comma, and refusing to offer the mode
+    there would hide it on seven sections out of nine. So the punctuation goes
+    where it can and the line reads as a sentence where it can't.
+    """
     allowed = set(section.chars) | {" "}
-    needed = set("abcdefghijklmnopqrstuvwxyz-,'")
-    return needed <= allowed
+    meaning = "".join(c for c in entry.meaning if c in allowed)
+    meaning = re.sub(r"\s+", " ", meaning).strip()
+    joiner = " - " if "-" in allowed else " is "
+    return f"{entry.word}{joiner}{meaning}"
 
 
 def catalog() -> list[dict]:
