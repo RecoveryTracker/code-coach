@@ -696,10 +696,15 @@
 
 .typing-hud {
   display: flex;
+  align-items: center;
   gap: 1.5rem;
   padding: 0.5rem 0;
   border-top: 1px solid #1c232d;
   border-bottom: 1px solid #1c232d;
+}
+/* Back / Skip live at the far end of this row, which never changes height. */
+.typing-hud .typing-steps {
+  margin-left: auto;
 }
 
 .typing-stat {
@@ -734,7 +739,9 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  min-height: 11rem;
+  /* Roomy enough that most lines don't change the height of this block, so
+     the keyboard below it holds still between targets. */
+  min-height: 15rem;
   text-align: center;
 }
 
@@ -799,6 +806,16 @@
   color: #ffb454;
   font-size: 0.85rem;
   letter-spacing: 0.05em;
+}
+
+/* What the mode is asking you to do, for the ones where the screen alone
+   doesn't say. */
+.typing-task {
+  margin: 0;
+  color: #6e7b8b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
 }
 
 .typing-cue {
@@ -933,13 +950,15 @@
 }
 
 /* Move between targets by hand: back to see what you just did, skip to pass
-   on one. */
+   on one. Kept in the stats row so it holds still — the stage above it
+   changes height with every line. */
 .typing-steps {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   font-size: 0.78rem;
   color: #6e7b8b;
+  flex: 0 0 auto;
 }
 /* Same shape as the New set button above them — they're the same kind of
    control and looked like two different apps. */

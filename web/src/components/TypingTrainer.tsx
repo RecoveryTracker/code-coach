@@ -529,6 +529,16 @@ export default function TypingTrainer() {
     modeId,
   );
 
+  /** The instruction for modes whose task isn't obvious from the screen. */
+  const taskLabel = useMemo(() => {
+    if (reviewing) return "";
+    if (modeId === "define") {
+      return "Type the word that means this — one blank per letter";
+    }
+    if (modeId === "recall") return "Find this key — no help until you miss";
+    return "";
+  }, [modeId, reviewing]);
+
   /** What the single big character is, said in words. */
   const bigKeyName = useMemo(() => {
     const char = target?.text ?? "";
@@ -753,6 +763,42 @@ export default function TypingTrainer() {
               />
             )}
             {isPerfect && <Stat label="restarts" value={String(restarts)} />}
+
+            {/* Pinned to the stats row on purpose. Sitting under the target,
+                these moved every time a line was a different height, so the
+                button was somewhere else by the time you reached it. */}
+            {(phase !== "done" || reviewing) && (
+              <div className="typing-steps">
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  disabled={index === 0}
+                  title="Look at the one you just did (left arrow)"
+                >
+                  ‹ Back
+                </button>
+                <span className="typing-steps-count">
+                  {index + 1} of {drill.targets.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  disabled={index >= drill.targets.length - 1}
+                  title="Move on without typing this one (right arrow)"
+                >
+                  {reviewing ? "Next ›" : "Skip ›"}
+                </button>
+                {reviewing && (
+                  <button
+                    type="button"
+                    className="typing-steps-done"
+                    onClick={() => setReviewing(false)}
+                  >
+                    Back to results
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {phase === "done" && !reviewing ? (
@@ -850,6 +896,7 @@ export default function TypingTrainer() {
 
               {isReaction ? (
                 <div className="typing-single">
+                  {taskLabel && <p className="typing-task">{taskLabel}</p>}
                   <div
                     className={`typing-bigkey ${
                       flash?.ok === false ? "wrong" : ""
@@ -879,6 +926,11 @@ export default function TypingTrainer() {
                 <div className="typing-line">
                   {target && (
                     <>
+                      {/* What the mode is actually asking for. Meaning to
+                          Word shows a definition and a row of blanks, and
+                          without a sentence saying so that is a puzzle about
+                          the app rather than about the word. */}
+                      {taskLabel && <p className="typing-task">{taskLabel}</p>}
                       {drill.hidden && target.prompt !== target.text ? (
                         <p className="typing-cue">{target.prompt}</p>
                       ) : null}
@@ -944,36 +996,6 @@ export default function TypingTrainer() {
                 />
               </div>
 
-              <div className="typing-steps">
-                <button
-                  type="button"
-                  onClick={() => step(-1)}
-                  disabled={index === 0}
-                  title="Look at the one you just did (left arrow)"
-                >
-                  ‹ Back
-                </button>
-                <span className="typing-steps-count">
-                  {index + 1} of {drill.targets.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => step(1)}
-                  disabled={index >= drill.targets.length - 1}
-                  title="Move on without typing this one (right arrow)"
-                >
-                  {reviewing ? "Next ›" : "Skip ›"}
-                </button>
-                {reviewing && (
-                  <button
-                    type="button"
-                    className="typing-steps-done"
-                    onClick={() => setReviewing(false)}
-                  >
-                    Back to results
-                  </button>
-                )}
-              </div>
             </div>
           )}
 

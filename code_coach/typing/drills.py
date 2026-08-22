@@ -378,8 +378,8 @@ MODES: tuple[Mode, ...] = (
         "A full passage. Accuracy first — the speed follows.",
     ),
     Mode(
-        "define", "Meaning to Word",
-        "You get the definition and type the word — recall, not copying.",
+        "define", "Guess the Word",
+        "A definition and a row of blanks: work out the word, then type it.",
         hidden=True,
         by_name=True,
     ),
