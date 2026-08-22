@@ -51,30 +51,60 @@ function pct(n: number, d: number): number {
   return d === 0 ? 100 : Math.round((n / d) * 100);
 }
 
-function loadSettings(): { mistakes: MistakeMode } {
+type Settings = {
+  mistakes: MistakeMode;
+  section: string;
+  mode: string;
+  theme: string;
+};
+
+/**
+ * What the trainer opens on next time.
+ *
+ * The drill you chose is a setting, not a fresh decision to make on every
+ * reload — coming back to Everything/Random after picking Symbols/Key Pairs
+ * throws away the choice you just made.
+ */
+const DEFAULTS: Settings = {
+  mistakes: "block",
+  section: "everything",
+  mode: "random",
+  theme: "mixed",
+};
+
+function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as { mistakes?: string };
-      if (parsed.mistakes === "delete" || parsed.mistakes === "block") {
-        return { mistakes: parsed.mistakes };
-      }
+      const parsed = JSON.parse(raw) as Partial<Settings>;
+      return {
+        mistakes:
+          parsed.mistakes === "delete" || parsed.mistakes === "block"
+            ? parsed.mistakes
+            : DEFAULTS.mistakes,
+        // Validated against the catalog once it loads, so a section that no
+        // longer exists can't strand you on an empty picker.
+        section: parsed.section || DEFAULTS.section,
+        mode: parsed.mode || DEFAULTS.mode,
+        theme: parsed.theme || DEFAULTS.theme,
+      };
     }
   } catch {
     /* a bad settings blob shouldn't stop you typing */
   }
-  return { mistakes: "block" };
+  return DEFAULTS;
 }
 
 export default function TypingTrainer() {
   const [catalog, setCatalog] = useState<TypingCatalog | null>(null);
-  // Opens on the whole keyboard with an ordinary mixed drill. Landing on a
-  // menu, or on a reflex game, makes you choose something before you can type
-  // — and the point of opening this is to type.
-  const [sectionId, setSectionId] = useState("everything");
-  const [modeId, setModeId] = useState("random");
+  // Opens on whatever you were last doing — the whole keyboard with an
+  // ordinary mixed drill, until you choose otherwise. Landing on a menu, or
+  // on a reflex game, makes you choose something before you can type, and the
+  // point of opening this is to type.
+  const [sectionId, setSectionId] = useState(() => loadSettings().section);
+  const [modeId, setModeId] = useState(() => loadSettings().mode);
   // What the words say, which is a separate choice from which keys they use.
-  const [themeId, setThemeId] = useState("mixed");
+  const [themeId, setThemeId] = useState(() => loadSettings().theme);
   const [drill, setDrill] = useState<TypingDrill | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Practice is the front door — a drill is already loaded and waiting. The
@@ -97,6 +127,9 @@ export default function TypingTrainer() {
   const [startedAt, setStartedAt] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [outcome, setOutcome] = useState<TypingRunResult | null>(null);
+  // Looking back through a finished run. The score is already recorded, so
+  // this is read-only.
+  const [reviewing, setReviewing] = useState(false);
   const [recordRevision, setRecordRevision] = useState(0);
 
   // When the last keystroke landed, so a reaction time means something.
@@ -119,11 +152,19 @@ export default function TypingTrainer() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ mistakes }));
+      localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({
+          mistakes,
+          section: sectionId,
+          mode: modeId,
+          theme: themeId,
+        }),
+      );
     } catch {
       /* nothing to do if storage is full or blocked */
     }
-  }, [mistakes]);
+  }, [mistakes, sectionId, modeId, themeId]);
 
   // ── Loading ───────────────────────────────────────────────
 
@@ -157,6 +198,7 @@ export default function TypingTrainer() {
         setRestarts(0);
         setElapsed(0);
         setOutcome(null);
+        setReviewing(false);
       } catch (e) {
         setError((e as Error).message);
       }
@@ -206,7 +248,22 @@ export default function TypingTrainer() {
   );
 
   useEffect(() => {
-    if (catalog && !drill) void loadDrill(sectionId, modeId, themeId);
+    if (!catalog || drill) return;
+    // A remembered choice can go stale — a section can be renamed or dropped
+    // between versions, and a mode a section no longer offers would 404 into
+    // the error screen. Fall back rather than strand someone there.
+    const found =
+      catalog.sections.find((s) => s.id === sectionId) ?? catalog.sections[0];
+    const mode = found.modes.some((m) => m.id === modeId)
+      ? modeId
+      : found.modes[0].id;
+    const theme = catalog.themes.some((t) => t.id === themeId)
+      ? themeId
+      : DEFAULTS.theme;
+    if (found.id !== sectionId) setSectionId(found.id);
+    if (mode !== modeId) setModeId(mode);
+    if (theme !== themeId) setThemeId(theme);
+    void loadDrill(found.id, mode, theme);
   }, [catalog, drill, loadDrill, modeId, sectionId, themeId]);
 
   // ── The clock ─────────────────────────────────────────────
@@ -255,6 +312,29 @@ export default function TypingTrainer() {
     }
   }, []);
 
+  /**
+   * Move by hand rather than by finishing something.
+   *
+   * Back is for looking at what you just typed — in the hidden modes that's
+   * the only way to see it at all, since the whole point was that you
+   * couldn't. Skip is for a line you don't want. Neither touches the score:
+   * skipping a target you never typed shouldn't count against your accuracy,
+   * and going back to look at one shouldn't count twice.
+   */
+  const step = useCallback(
+    (delta: number) => {
+      if (!drill) return;
+      setIndex((i) => {
+        const last = drill.targets.length - 1;
+        return Math.min(Math.max(0, i + delta), last);
+      });
+      setTyped("");
+      setFlash(null);
+      shownAt.current = Date.now();
+    },
+    [drill],
+  );
+
   const advance = useCallback(() => {
     setTyped("");
     shownAt.current = Date.now();
@@ -277,8 +357,21 @@ export default function TypingTrainer() {
 
   const onKey = useCallback(
     (event: KeyboardEvent) => {
-      if (!drill || phase === "done" || tab !== "practice") return;
+      if (!drill || tab !== "practice") return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      // Arrows move between targets. They never produce a character, so they
+      // can't collide with typing.
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        step(event.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+      if (phase === "done" && !reviewing) return;
+      // While reviewing a finished run, only navigation does anything — the
+      // score is already recorded and retyping into it would rewrite numbers
+      // you've been given.
+      if (reviewing) return;
       if (event.key === "Escape") {
         setPhase("idle");
         return;
@@ -349,6 +442,8 @@ export default function TypingTrainer() {
       mistakes,
       phase,
       record,
+      reviewing,
+      step,
       tab,
       typed,
       wrongPrefix,
@@ -426,13 +521,25 @@ export default function TypingTrainer() {
   // lighting it up would answer the question. It stays dark until you get it
   // wrong — then showing you is the point.
   const byName = mode?.by_name ?? false;
-  const revealKey = !byName || flash?.ok === false;
+  const revealKey = !byName || flash?.ok === false || reviewing;
 
   // Which drills actually read from a text source, and so have something for
   // the theme to change.
   const usesText = ["random", "words", "define", "speed", "perfect"].includes(
     modeId,
   );
+
+  /** What the single big character is, said in words. */
+  const bigKeyName = useMemo(() => {
+    const char = target?.text ?? "";
+    if (!catalog || char.length !== 1) return "";
+    if (char === " ") return "";
+    const named = catalog.names[char];
+    if (named) return named;
+    if (/[a-z]/i.test(char)) return `letter ${char}`;
+    if (/[0-9]/.test(char)) return `number ${char}`;
+    return "";
+  }, [catalog, target]);
 
   /**
    * A short punctuation target, named key by key.
@@ -648,7 +755,7 @@ export default function TypingTrainer() {
             {isPerfect && <Stat label="restarts" value={String(restarts)} />}
           </div>
 
-          {phase === "done" ? (
+          {phase === "done" && !reviewing ? (
             <div className="typing-results">
               <h3>Run complete</h3>
               {outcome && (
@@ -706,23 +813,40 @@ export default function TypingTrainer() {
                   </div>
                 </>
               )}
-              <button
-                type="button"
-                className="typing-again"
-                onClick={() => void loadDrill(sectionId, modeId, themeId)}
-              >
-                Go again
-              </button>
+              <div className="typing-result-actions">
+                <button
+                  type="button"
+                  className="typing-again"
+                  onClick={() => void loadDrill(sectionId, modeId, themeId)}
+                >
+                  Go again
+                </button>
+                <button
+                  type="button"
+                  className="typing-review"
+                  onClick={() => {
+                    setReviewing(true);
+                    setIndex(0);
+                    setTyped("");
+                  }}
+                >
+                  Look back through it
+                </button>
+              </div>
             </div>
           ) : (
             <div className={`typing-stage ${isReaction ? "reaction" : "text"}`}>
-              {phase === "idle" && (
+              {reviewing ? (
+                <p className="typing-reviewing">
+                  Looking back — arrows to move
+                </p>
+              ) : phase === "idle" ? (
                 <p className="typing-start">
                   {isTimed
                     ? `Press any key to start the ${TIMED_SECONDS} seconds.`
                     : "Press any key to start."}
                 </p>
-              )}
+              ) : null}
 
               {isReaction ? (
                 <div className="typing-single">
@@ -734,6 +858,19 @@ export default function TypingTrainer() {
                   >
                     {target?.prompt === " " ? "space" : target?.prompt}
                   </div>
+                  {/* One character on its own is genuinely ambiguous — a `c`
+                      at this size reads as a bracket. Naming it removes the
+                      guess. Left off the by-name modes, where the name is the
+                      question. */}
+                  {!byName && bigKeyName && (
+                    <div className="typing-bigkey-name">{bigKeyName}</div>
+                  )}
+                  {/* Name to Key asked you to remember where a symbol lives.
+                      Reviewing it without showing the answer would repeat the
+                      question rather than answer it. */}
+                  {reviewing && target && target.prompt !== target.text && (
+                    <div className="typing-answer">{target.text}</div>
+                  )}
                   {target?.shift && revealKey && (
                     <div className="typing-shift">with Shift</div>
                   )}
@@ -746,7 +883,9 @@ export default function TypingTrainer() {
                         <p className="typing-cue">{target.prompt}</p>
                       ) : null}
                       <p className={`typing-text ${wrongPrefix ? "bad" : ""}`}>
-                        {(drill.hidden && target.prompt !== target.text
+                        {(drill.hidden &&
+                        target.prompt !== target.text &&
+                        !reviewing
                           ? "_".repeat(target.text.length)
                           : target.text
                         )
@@ -804,6 +943,37 @@ export default function TypingTrainer() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
+
+              <div className="typing-steps">
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  disabled={index === 0}
+                  title="Look at the one you just did (left arrow)"
+                >
+                  ‹ Back
+                </button>
+                <span className="typing-steps-count">
+                  {index + 1} of {drill.targets.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  disabled={index >= drill.targets.length - 1}
+                  title="Move on without typing this one (right arrow)"
+                >
+                  {reviewing ? "Next ›" : "Skip ›"}
+                </button>
+                {reviewing && (
+                  <button
+                    type="button"
+                    className="typing-steps-done"
+                    onClick={() => setReviewing(false)}
+                  >
+                    Back to results
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -811,7 +981,7 @@ export default function TypingTrainer() {
             layout={catalog.keyboard}
             fingers={catalog.fingers}
             target={
-              phase === "done" || !revealKey
+              (phase === "done" && !reviewing) || !revealKey
                 ? null
                 : (target?.text[typed.length] ?? null)
             }

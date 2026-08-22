@@ -13,6 +13,12 @@
   color: #e6edf3;
   overflow: auto;
 
+  /* One monospace stack for the whole trainer. Chosen for open, wide
+     apertures — the coding fonts close `c` up until it reads as a bracket —
+     while staying monospace, which is what keeps `l`, `1` and `I` apart. */
+  --tk-mono: Consolas, "DejaVu Sans Mono", "Liberation Mono", Menlo,
+    ui-monospace, monospace;
+
   /* No programming ligatures anywhere in here. Cascadia Code and Fira Code
      draw `!=` as ≠, `=>` as ⇒ and `>=` as ≥ — a single glyph that is on no
      key, shown to someone whose whole task is to find the keys. Everything
@@ -300,11 +306,11 @@
   box-shadow: 0 0 0 2px #2f6feb;
 }
 .tg-finger-home {
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: 0.95rem;
 }
 .tg-finger-keys {
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: 0.55rem;
   color: #5b6675;
   writing-mode: vertical-rl;
@@ -357,7 +363,7 @@
   line-height: 1.55;
 }
 .tg-detail-keys {
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: 0.78rem;
   color: #7ee2a8 !important;
 }
@@ -382,7 +388,7 @@
   border: 1px solid #262f3b;
   border-bottom-width: 2px;
   border-radius: 6px;
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   color: #cdd9e5;
 }
 .tg-homekey.anchor {
@@ -740,13 +746,25 @@
 
 /* Whack-a-key: one big character, and a pop each time it changes so a repeat
    of the same key still reads as a new prompt. */
+/* One character at six rem has to be unmistakable. Consolas and DejaVu Sans
+   Mono draw open, wide-apertured shapes — a `c` that can't be read as a
+   bracket — where the coding fonts close them up. Still monospace, because
+   that's what keeps `l`, `1` and `I` apart. */
 .typing-bigkey {
   font-size: clamp(3rem, 12vw, 6rem);
   font-weight: 700;
   line-height: 1;
   color: #7ee2a8;
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: Consolas, "DejaVu Sans Mono", "Liberation Mono", "Menlo",
+    ui-monospace, monospace;
   animation: typing-pop 0.16s ease-out;
+}
+
+/* And named underneath, because no font makes a lone character certain. */
+.typing-bigkey-name {
+  color: #8b97a5;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
 }
 .typing-bigkey.wrong {
   color: #ff7b72;
@@ -791,7 +809,7 @@
 
 .typing-text {
   margin: 0;
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: clamp(1.05rem, 2.4vw, 1.7rem);
   /* Runs of punctuation like `});` or `=>` read as one shape at monospace
      defaults. A little air separates them without losing the grid. */
@@ -840,7 +858,7 @@
   gap: 1rem;
   color: #4d5866;
   font-size: 0.95rem;
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
 }
 
 .typing-progress {
@@ -901,7 +919,7 @@
   border-radius: 6px;
 }
 .typing-weak-char {
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: 1.1rem;
   color: #ffb454;
 }
@@ -912,6 +930,80 @@
 .typing-weak-ms {
   font-size: 0.68rem;
   color: #6e7b8b;
+}
+
+/* Move between targets by hand: back to see what you just did, skip to pass
+   on one. */
+.typing-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: #6e7b8b;
+}
+/* Same shape as the New set button above them — they're the same kind of
+   control and looked like two different apps. */
+.typing-steps button {
+  background: #171c24;
+  border: 1px solid #2a333f;
+  color: #b9c4d0;
+  border-radius: 6px;
+  padding: 0.34rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.typing-steps button:hover:not(:disabled) {
+  background: #1e2530;
+  color: #e6edf3;
+}
+.typing-steps button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.typing-steps-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 5rem;
+  text-align: center;
+}
+.typing-steps-done {
+  margin-left: 0.5rem;
+}
+
+.typing-reviewing {
+  margin: 0;
+  color: #ffb454;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+/* The answer a hidden mode was keeping from you, shown once it's over. */
+.typing-answer {
+  font-family: var(--tk-mono);
+  font-size: 2.4rem;
+  color: #7ee2a8;
+}
+
+.typing-result-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.typing-review {
+  margin-top: 0.5rem;
+  background: #171c24;
+  color: #b9c4d0;
+  border: 1px solid #2a333f;
+  border-radius: 6px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.typing-review:hover {
+  background: #1e2530;
+  color: #e6edf3;
 }
 
 .typing-again {
@@ -962,7 +1054,7 @@
   background: #171c24;
   border: 1px solid #262f3b;
   border-bottom-width: 2px;
-  font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  font-family: var(--tk-mono);
   font-size: 0.9rem;
   color: #b9c4d0;
   transition: transform 0.08s, background 0.08s, box-shadow 0.08s;
