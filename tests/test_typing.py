@@ -13,6 +13,7 @@ from code_coach.typing import english
 from code_coach.typing.snippets import ALL_SNIPPETS
 from code_coach.typing.drills import (
     CODE_LINES,
+    DEFAULT_LINES,
     MODES_BY_ID,
     SECTIONS,
     SECTIONS_BY_ID,
@@ -340,12 +341,28 @@ class DrillTests(unittest.TestCase):
         allowed = set(SECTIONS_BY_ID["coding"].chars)
         self.assertFalse(any(c.isalnum() for c in allowed))
 
-    def test_the_default_drill_is_about_typing(self) -> None:
-        """Twenty minutes of practice may as well say something useful."""
-        notes = {t.note for t in build_drill("everything", "random", seed="t").targets}
-        self.assertTrue(
-            any(n.startswith("on ") for n in notes), notes
-        )
+    def test_the_default_material_is_worth_reading(self) -> None:
+        """Twenty minutes of practice may as well say something. Every line
+        is real prose and carries a note saying where it came from."""
+        for target in build_drill("everything", "random", seed="t").targets:
+            self.assertTrue(target.note.strip(), target.text)
+            self.assertIn(" ", target.text)
+            self.assertGreater(len(target.text), 25, target.text)
+
+    def test_the_default_pool_is_big_enough_not_to_repeat(self) -> None:
+        """A drill that keeps handing you the same sentence stops being
+        practice and becomes recitation."""
+        self.assertGreaterEqual(len(DEFAULT_LINES), 90)
+        seen: set[str] = set()
+        for i in range(8):
+            for target in build_drill("everything", "random", seed=str(i)).targets:
+                seen.add(target.text)
+        self.assertGreaterEqual(len(seen), 40)
+
+    def test_no_line_is_repeated_inside_one_run(self) -> None:
+        for section_id in ("everything", "letters", "code"):
+            texts = [t.text for t in build_drill(section_id, "random", seed="t").targets]
+            self.assertEqual(len(texts), len(set(texts)), section_id)
 
     def test_random_keeps_one_format_throughout(self) -> None:
         """Random means the text is unpredictable, not the format. Cycling

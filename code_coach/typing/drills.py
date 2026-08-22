@@ -29,6 +29,7 @@ from code_coach.typing.texts import (
     THEMED,
     CONSCIOUS_LINES,
     CONSCIOUS_WORDS,
+    PROSE,
     TYPING_LINES,
     VERSES,
     Passage,
@@ -78,7 +79,7 @@ EVERYTHING_CHARS = ALL_LETTERS + DIGITS + SHIFTED_SYMBOLS + PLAIN_SYMBOLS
 # What an unthemed drill types. Passages about typing and about improving at
 # something, plus the affirmations, because the repetition happens either way
 # and it may as well leave something behind.
-DEFAULT_LINES: tuple[Passage, ...] = TYPING_LINES + AFFIRMATIONS
+DEFAULT_LINES: tuple[Passage, ...] = TYPING_LINES + PROSE + AFFIRMATIONS
 
 # Every annotated code line there is. The Code section reads as continuous
 # code rather than punctuation in isolation, and each line's note says what it
@@ -602,13 +603,15 @@ def _random_mix(
     # Draw several times: each call samples a handful, and a long run wants
     # more variety than one sample gives. Duplicates are dropped afterwards,
     # since independent samples overlap.
+    # Ask for the whole run in one draw. Six small samples from a hundred-line
+    # pool overlapped constantly, so the same handful came round again and
+    # again while most of the material was never seen.
     lines: list[Passage] = []
     seen: set[str] = set()
-    for _ in range(6):
-        for passage in _speed_passages(section, theme, rng):
-            if passage.text not in seen:
-                seen.add(passage.text)
-                lines.append(passage)
+    for passage in _speed_passages(section, theme, rng, wanted=wanted * 3):
+        if passage.text not in seen:
+            seen.add(passage.text)
+            lines.append(passage)
 
     # Only if the real material ran out. A line of shuffled words reads as
     # filler next to actual prose, so it's a last resort rather than variety.
@@ -702,14 +705,16 @@ def _fallback_theme(mode: Mode) -> Theme:
 
 
 def _speed_passages(
-    section: Section, theme: Theme, rng: random.Random
+    section: Section, theme: Theme, rng: random.Random, wanted: int = 6
 ) -> list[Passage]:
     # A theme that brought its own text uses it — that text is the point of
     # having chosen it.
     if theme.passages:
-        return list(rng.sample(theme.passages, k=min(6, len(theme.passages))))
+        return list(rng.sample(theme.passages, k=min(wanted, len(theme.passages))))
     if section.passages:
-        return list(rng.sample(section.passages, k=min(6, len(section.passages))))
+        return list(
+            rng.sample(section.passages, k=min(wanted, len(section.passages)))
+        )
     if section.id in ("symbols", "coding"):
         # Tokens rather than whole code lines: these sections are punctuation
         # only, and `print(f"{name}")` would be asking for letters they don't
@@ -744,7 +749,7 @@ def _speed_passages(
     allowed = set(section.chars) | {" "}
     worthwhile = [p for p in DEFAULT_LINES if set(p.text.lower()) <= allowed]
     if len(worthwhile) >= 4:
-        return list(rng.sample(worthwhile, k=min(6, len(worthwhile))))
+        return list(rng.sample(worthwhile, k=min(wanted, len(worthwhile))))
 
     # Pangrams need the whole alphabet by definition, so a row section can't
     # type one — Home Row was being handed "crazy Fredrick bought many very

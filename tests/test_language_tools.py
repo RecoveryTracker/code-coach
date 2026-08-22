@@ -232,9 +232,113 @@ class CapabilityTests(unittest.TestCase):
         self.assertIn("tracer", ready)
         self.assertIn("explainer", ready)
 
+    def test_dart_advertises_a_tracer(self) -> None:
+        self.assertIn("tracer", get_language("dart").ready)
+
     def test_languages_without_a_tracer_still_say_so(self) -> None:
         for lang_id in ("sql", "c", "rust"):
             self.assertNotIn("tracer", get_language(lang_id).ready, lang_id)
+
+
+HAS_DART = shutil.which("dart") is not None
+
+
+class DartCallTests(unittest.TestCase):
+    DART = (
+        "List<int> twoSum(List<int> nums, int target) {\n"
+        "  final seen = <int, int>{};\n"
+        "  return [];\n"
+        "}\n"
+    )
+
+    def test_it_wraps_the_call_in_an_entry_point(self) -> None:
+        """Dart won't run a bare expression the way Python will."""
+        call = suggest_call(
+            self.DART, ["nums = [2,7,11,15], target = 9  ->  [0,1]"], "dart"
+        )
+        self.assertIn("void main()", call)
+        self.assertIn("twoSum([2, 7, 11, 15], 9)", call)
+
+    def test_it_leaves_an_existing_main_alone(self) -> None:
+        code = self.DART + "\nvoid main() { print(twoSum([1], 1)); }\n"
+        self.assertEqual(suggest_call(code, [], "dart"), "")
+
+    def test_python_literals_become_dart_ones(self) -> None:
+        call = suggest_call(
+            "bool check(bool flag, Object? thing) { return flag; }\n",
+            ["flag = True, thing = None  ->  1"],
+            "dart",
+        )
+        self.assertIn("true", call)
+        self.assertIn("null", call)
+        self.assertNotIn("None", call)
+
+
+@unittest.skipUnless(HAS_DART, "needs the Dart SDK on PATH")
+class DartTraceTests(unittest.TestCase):
+    DART = (
+        "List<int> twoSum(List<int> nums, int target) {\n"
+        "  final seen = <int, int>{};\n"
+        "  for (var i = 0; i < nums.length; i++) {\n"
+        "    final need = target - nums[i];\n"
+        "    if (seen.containsKey(need)) return [seen[need]!, i];\n"
+        "    seen[nums[i]] = i;\n"
+        "  }\n"
+        "  return [];\n"
+        "}\n"
+    )
+
+    def test_it_traces_a_real_solution(self) -> None:
+        result = trace_code(
+            self.DART,
+            call="void main() { print(twoSum([2, 7, 11, 15], 9)); }",
+            language="dart",
+        )
+        self.assertTrue(result["ok"], result.get("error"))
+        self.assertTrue(result["steps"])
+        self.assertIn("0", result["stdout"])
+
+    def test_steps_carry_the_variables_in_scope(self) -> None:
+        result = trace_code(
+            self.DART,
+            call="void main() { print(twoSum([2, 7, 11, 15], 9)); }",
+            language="dart",
+        )
+        names: set[str] = set()
+        for step in result["steps"]:
+            names.update(step["vars"])
+        self.assertIn("seen", names)
+        self.assertIn("i", names)
+        self.assertIn("need", names)
+
+    def test_containers_encode_the_way_python_ones_do(self) -> None:
+        result = trace_code(
+            self.DART,
+            call="void main() { print(twoSum([2, 7, 11, 15], 9)); }",
+            language="dart",
+        )
+        kinds = {
+            entry.get("k")
+            for step in result["steps"]
+            for entry in step["heap"].values()
+        }
+        self.assertIn("list", kinds)
+        self.assertIn("dict", kinds)
+
+    def test_a_program_that_will_not_compile_says_why(self) -> None:
+        """Dart's own message beats anything we would write, and it must not
+        cost a full timeout to get it."""
+        result = trace_code("void main() { print(", call="", language="dart")
+        error = result.get("error")
+        self.assertTrue(error)
+        self.assertNotIn("TimeoutException", str(error))
+
+    def test_the_service_banner_stays_out_of_the_output(self) -> None:
+        result = trace_code(
+            "void main() { print('hello'); }\n", call="", language="dart"
+        )
+        self.assertNotIn("VM service", result["stdout"])
+        self.assertIn("hello", result["stdout"])
 
 
 if __name__ == "__main__":

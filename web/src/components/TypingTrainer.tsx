@@ -536,6 +536,12 @@ export default function TypingTrainer() {
       return "Type the word that means this — one blank per letter";
     }
     if (modeId === "recall") return "Find this key — no help until you miss";
+    if (modeId === "drill") {
+      // Nonsense on purpose, and worth saying so: a run of random keys trains
+      // the reach between them, which is the one thing real words can't.
+      return "Random key runs — not words, just the reaches between keys";
+    }
+    if (modeId === "pairs") return "The pairs your hands should know as one move";
     return "";
   }, [modeId, reviewing]);
 
@@ -748,6 +754,7 @@ export default function TypingTrainer() {
           </div>
 
           <div className="typing-hud">
+            <div className="typing-hud-stats">
             <Stat label="wpm" value={phase === "idle" ? "—" : String(wpm)} />
             <Stat label="accuracy" value={total === 0 ? "—" : `${accuracy}%`} />
             <Stat
@@ -763,6 +770,7 @@ export default function TypingTrainer() {
               />
             )}
             {isPerfect && <Stat label="restarts" value={String(restarts)} />}
+            </div>
 
             {/* Pinned to the stats row on purpose. Sitting under the target,
                 these moved every time a line was a different height, so the
@@ -980,14 +988,6 @@ export default function TypingTrainer() {
                 <p className="typing-fix">Backspace to fix</p>
               )}
               {target?.note && <p className="typing-note">{target.note}</p>}
-
-              {!drill.hidden && (
-                <div className="typing-upnext">
-                  {drill.targets.slice(index + 1, index + 4).map((t, i) => (
-                    <span key={i}>{t.prompt}</span>
-                  ))}
-                </div>
-              )}
 
               <div className="typing-progress">
                 <div

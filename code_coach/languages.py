@@ -54,10 +54,10 @@ LANGUAGES: tuple[Language, ...] = (
         extension="dart",
         available=True,
         note=(
-            "Run needs the Dart SDK on your PATH. Watch it run is Python-only "
-            "for now — everything else works."
+            "Run and code tracing both need the Dart SDK on your PATH. "
+            "Tracing starts two Dart VMs, so it takes a couple of seconds."
         ),
-        ready=("fundamentals", "runner", "checks", "bank"),
+        ready=("fundamentals", "runner", "checks", "bank", "tracer"),
     ),
     Language(
         id="javascript",

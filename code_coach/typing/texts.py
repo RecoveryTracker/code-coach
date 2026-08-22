@@ -328,6 +328,384 @@ TYPING_LINES: tuple[Passage, ...] = (
 )
 
 
+# ── Things worth reading while you type ─────────────────────
+#
+# The other half of the default material. Passages about typing run out fast —
+# there are only so many true things to say about it — and a drill that keeps
+# handing you the same sentence stops being practice and becomes recitation.
+# These are short pieces about how things work: enough of them that a session
+# rarely repeats one, and each worth the twenty seconds it takes to type.
+
+PROSE: tuple[Passage, ...] = (
+    _p(
+        "A honeybee dances to say where the flowers are. The angle of the "
+        "dance gives the direction relative to the sun, and its length gives "
+        "the distance — a map, performed in the dark, to an audience that "
+        "reads it by touch.",
+        "bees",
+    ),
+    _p(
+        "The deepest part of the ocean is further down than Everest is up. "
+        "Sunlight gives out after about a thousand feet, so almost all of that "
+        "space has never been lit by anything but the animals living in it.",
+        "the sea",
+    ),
+    _p(
+        "Bridges are built to move. A span that could not flex would tear "
+        "itself apart in the first cold snap, so engineers leave gaps and let "
+        "the whole thing breathe with the weather.",
+        "engineering",
+    ),
+    _p(
+        "Sourdough is a bargain between two organisms: yeast makes the bread "
+        "rise and bacteria make it sour, and each produces conditions the "
+        "other prefers. Left alone in flour and water, they find each other.",
+        "bread",
+    ),
+    _p(
+        "The Great Wall is not one wall. It is centuries of separate walls, "
+        "built by different dynasties for different reasons, joined up later "
+        "by mapmakers and by the way we like our stories.",
+        "history",
+    ),
+    _p(
+        "A photograph is a measurement of light over time. Everything a camera "
+        "does — aperture, shutter, film speed — is three ways of arguing about "
+        "how much of it to let in.",
+        "photography",
+    ),
+    _p(
+        "Trees talk through fungus. Threads finer than root hairs link one "
+        "tree to another underground, and sugar moves along them from trees "
+        "with plenty to trees in shade.",
+        "forests",
+    ),
+    _p(
+        "The metre began as one ten-millionth of the distance from the equator "
+        "to the North Pole. We have since defined it by the speed of light, "
+        "which is more precise and much less romantic.",
+        "measurement",
+    ),
+    _p(
+        "Volcanic soil is the most fertile there is, which is why people keep "
+        "farming the slopes of volcanoes. The thing that will eventually "
+        "destroy the farm is the reason the farm is there.",
+        "geology",
+    ),
+    _p(
+        "Every language has a word order it treats as normal and every one "
+        "breaks it for emphasis. What counts as poetic in one is merely "
+        "grammatical in another.",
+        "language",
+    ),
+    _p(
+        "Concrete keeps getting stronger for decades after it is poured. Roman "
+        "harbour concrete is stronger now than the day it set, because "
+        "seawater has been quietly growing crystals in it for two thousand "
+        "years.",
+        "materials",
+    ),
+    _p(
+        "Birds navigate partly by magnetism, and the current guess is that "
+        "they see it. A protein in the eye responds to the field, which would "
+        "mean north is something a robin looks at rather than senses.",
+        "birds",
+    ),
+    _p(
+        "A violin is mostly air. The wood shapes and drives the cavity inside, "
+        "and it is the shape of that space, more than the wood, that makes one "
+        "instrument sound like itself.",
+        "music",
+    ),
+    _p(
+        "Salt was once valuable enough to pay soldiers with, which is where "
+        "the word salary comes from. It preserved food, and preserved food "
+        "meant surviving winter.",
+        "history",
+    ),
+    _p(
+        "Glass is a liquid that has forgotten how to flow. The old story about "
+        "cathedral windows being thicker at the bottom is wrong, though — that "
+        "is just how the glass was made.",
+        "materials",
+    ),
+    _p(
+        "Octopus arms are largely independent. Most of the neurons are in the "
+        "arms rather than the head, so an arm can solve a small problem while "
+        "the animal attends to something else.",
+        "the sea",
+    ),
+    _p(
+        "Compound interest is the same mathematics as an epidemic and as a "
+        "nuclear chain reaction: a quantity that grows in proportion to itself "
+        "does nothing for a long time and then does everything at once.",
+        "mathematics",
+    ),
+    _p(
+        "A map has to lie. The Earth is curved and paper is not, so every "
+        "projection distorts area or angle or distance, and the mapmaker's "
+        "only real choice is which lie is least trouble.",
+        "maps",
+    ),
+    _p(
+        "Coffee is a fruit seed, roasted. The plant makes caffeine to poison "
+        "insects, and we drink it on purpose — one of many cases where a "
+        "plant's chemical warfare turned out to be a selling point.",
+        "plants",
+    ),
+    _p(
+        "The first computer bug was a moth. It was found in a relay of the "
+        "Harvard Mark II in 1947, taped into the logbook, and the entry reads "
+        "\"first actual case of bug being found\".",
+        "computing",
+    ),
+    _p(
+        "Wind turbines turn slowly on purpose. The tips are already moving at "
+        "well over a hundred miles an hour, and past that the blades start "
+        "losing more to drag than they gain from speed.",
+        "engineering",
+    ),
+    _p(
+        "The colour of a flame tells you what is burning. Sodium gives orange, "
+        "copper gives green, potassium a pale violet — the same trick "
+        "astronomers use to read the composition of a star.",
+        "chemistry",
+    ),
+    _p(
+        "Paper folds in half about seven times before it stops. Each fold "
+        "doubles the thickness and halves the width, so the shape runs out of "
+        "room long before the material runs out of strength.",
+        "mathematics",
+    ),
+    _p(
+        "Antarctica is a desert. It holds most of the world's fresh water and "
+        "almost none of it falls as new snow, which is the definition — a "
+        "desert is about rainfall, not heat.",
+        "geography",
+    ),
+    _p(
+        "Sharpening does not add anything. It removes metal until two surfaces "
+        "meet at a line, and a dull edge is simply one where that line has "
+        "become a small flat surface.",
+        "craft",
+    ),
+    _p(
+        "The word robot comes from a 1920 play, from a Czech word for forced "
+        "labour. The robots in it rebel — the idea arrived in the language "
+        "already worried about itself.",
+        "language",
+    ),
+    _p(
+        "A cast-iron pan is seasoned with polymerised oil, not grease. Heat "
+        "turns a thin film of oil into a hard plastic layer bonded to the "
+        "metal, which is why washing it with soap does no harm.",
+        "cooking",
+    ),
+    _p(
+        "Lightning heats the air around it to several times the surface "
+        "temperature of the sun. Thunder is that air exploding outward and "
+        "then collapsing back into the space it left.",
+        "weather",
+    ),
+    _p(
+        "Sailing upwind works the way a wing does. The sail is a vertical "
+        "aerofoil, and the boat goes forward because the keel refuses to let "
+        "it go sideways.",
+        "sailing",
+    ),
+    _p(
+        "The QWERTY layout was not designed to slow you down. It separated "
+        "common letter pairs so the typebars of a mechanical typewriter would "
+        "not collide, which is a different problem with a similar answer.",
+        "typing",
+    ),
+    _p(
+        "Bamboo can grow a metre in a day. It is a grass, and it spends years "
+        "building a root system before any of that happens, which is the part "
+        "nobody photographs.",
+        "plants",
+    ),
+    _p(
+        "Rivers meander because they must. Any slight bend makes the outer "
+        "bank faster and the inner bank slower, so the bend deepens itself "
+        "until the river doubles back and cuts it off.",
+        "rivers",
+    ),
+    _p(
+        "A day on Venus is longer than its year. It turns so slowly, and "
+        "backwards, that the sun rises in the west roughly twice per orbit.",
+        "space",
+    ),
+    _p(
+        "Most of the mass of an atom is in a nucleus that occupies almost none "
+        "of its volume. Solid matter is mostly the electrical objection of "
+        "electrons to being in the same place.",
+        "physics",
+    ),
+    _p(
+        "The oldest known musical instrument is a flute carved from bone, "
+        "about forty thousand years old. Whoever made it had already worked "
+        "out where to put the holes.",
+        "music",
+    ),
+    _p(
+        "Spider silk is stronger than steel by weight and far tougher, because "
+        "toughness is about how much energy something absorbs before breaking, "
+        "not how much force it resists.",
+        "materials",
+    ),
+    _p(
+        "Nautical charts still mark depths in fathoms in places, a fathom "
+        "being the span of a man's outstretched arms. Plenty of measurement "
+        "started as a body and stayed after the body was replaced.",
+        "measurement",
+    ),
+    _p(
+        "Sleep is when the brain washes itself. Channels between cells widen "
+        "at night and fluid flushes through, clearing waste that accumulates "
+        "during the day.",
+        "the body",
+    ),
+    _p(
+        "The Rosetta Stone was useful because it was boring. It is a routine "
+        "decree, repeated in three scripts, and the repetition was worth more "
+        "than anything the text actually said.",
+        "history",
+    ),
+    _p(
+        "Aeroplane windows are round because square ones failed. Stress "
+        "concentrates at a corner, and early jets tore open along the corners "
+        "of their windows.",
+        "engineering",
+    ),
+    _p(
+        "Honey does not spoil. It is too acidic and too dry for bacteria, and "
+        "jars of it found in ancient tombs were still edible thousands of "
+        "years later.",
+        "food",
+    ),
+    _p(
+        "The eye has a blind spot where the optic nerve leaves the retina. You "
+        "never notice it because the brain fills the gap with whatever is "
+        "around it, confidently and without asking.",
+        "the body",
+    ),
+    _p(
+        "Chess has more possible games than there are atoms in the observable "
+        "universe, which is why no computer plays it by looking at all of "
+        "them. They look at a few and guess well about the rest.",
+        "games",
+    ),
+    _p(
+        "Tuning a piano perfectly is impossible. The mathematics of pure "
+        "intervals does not close into an octave, so every piano is a "
+        "compromise spread thinly across all twelve keys.",
+        "music",
+    ),
+    _p(
+        "Icebergs are fresh water. Sea ice pushes salt out as it freezes, so "
+        "even ice formed from the ocean melts into something you could drink.",
+        "the sea",
+    ),
+    _p(
+        "Roman roads were built in layers, with the top cambered so water ran "
+        "off the sides. Most road failure is water, and it was water they were "
+        "really building against.",
+        "engineering",
+    ),
+    _p(
+        "Cats cannot taste sweetness. The gene for the sweet receptor is "
+        "broken in every cat we have looked at, which fits an animal that has "
+        "eaten nothing but meat for a very long time.",
+        "animals",
+    ),
+    _p(
+        "The printing press did not simply spread ideas, it standardised them. "
+        "Once a text could be copied identically, disagreements about what it "
+        "said became disagreements about what it meant.",
+        "history",
+    ),
+    _p(
+        "Bicycles stay upright mostly by steering. Lean left and the front "
+        "wheel turns left, which brings the wheels back under the falling "
+        "rider — the bike catches you before you know you fell.",
+        "physics",
+    ),
+    _p(
+        "A rainbow is a circle. You only see an arc because the ground is in "
+        "the way, and from an aeroplane at the right moment you can see the "
+        "whole ring.",
+        "weather",
+    ),
+    _p(
+        "Ravens can hold a grudge. They recognise individual human faces and "
+        "treat people differently for years afterwards, and other ravens "
+        "appear to take their word for it.",
+        "birds",
+    ),
+    _p(
+        "Steel is iron with a little carbon in it. That small amount changes "
+        "everything, and most of metallurgy is arguing about how much and "
+        "what else to add.",
+        "materials",
+    ),
+    _p(
+        "The library at Alexandria was not destroyed in a single fire. It "
+        "declined over centuries through funding cuts and neglect, which is "
+        "how most libraries are actually lost.",
+        "history",
+    ),
+    _p(
+        "A calorie is the energy needed to warm a gram of water by one degree. "
+        "The one on food labels is a thousand of those, which is why the "
+        "number looks so large.",
+        "measurement",
+    ),
+    _p(
+        "Migrating birds sleep on the wing, one half of the brain at a time. "
+        "The open eye is on the side of the wakeful half, watching where the "
+        "flock is going.",
+        "birds",
+    ),
+    _p(
+        "Zero arrived late. Counting works without it, and it only becomes "
+        "necessary once you write numbers by position and need a way to say "
+        "that a column is empty.",
+        "mathematics",
+    ),
+    _p(
+        "Sand from different beaches looks entirely different under a lens: "
+        "ground shell, volcanic glass, worn quartz, the skeletons of small "
+        "animals. It is a summary of everything upstream.",
+        "geology",
+    ),
+    _p(
+        "Fire needs three things and you only have to remove one. Fuel, heat "
+        "and oxygen — every method of putting a fire out is an argument about "
+        "which is easiest to take away.",
+        "safety",
+    ),
+    _p(
+        "Wood is strong along the grain and weak across it, which is why a "
+        "joiner thinks about direction before thickness. Working with the "
+        "grain is not a metaphor first.",
+        "craft",
+    ),
+    _p(
+        "The moon is moving away from us at about the rate fingernails grow. "
+        "Eventually total solar eclipses will stop happening, and we are alive "
+        "during the window when they fit exactly.",
+        "space",
+    ),
+    _p(
+        "Bread staling is not drying out. The starch reorganises into a firmer "
+        "structure, which is why warming a stale loaf briefly makes it soft "
+        "again.",
+        "cooking",
+    ),
+)
+
+
 # ── Affirmations ────────────────────────────────────────────
 # Written in the second person rather than the first: you are typing them to
 # yourself, and "you" reads as encouragement where "I" reads as a script.

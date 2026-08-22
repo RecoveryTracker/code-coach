@@ -13,6 +13,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,7 +24,32 @@ from code_coach.engine import RUN_TIMEOUT_SECONDS
 
 _RUNNER = Path(__file__).with_name("_trace_runner.py")
 _JS_RUNNER = Path(__file__).with_name("_js_trace_runner.js")
+_DART_RUNNER = Path(__file__).with_name("_dart_trace_runner.dart")
 _SENTINEL = "<<<CODE_COACH_TRACE>>>"
+
+# Dart pays for two VM starts — the tracer and the traced program — plus the
+# debugger handshake between them, none of which a Python trace has to do.
+_DART_TIMEOUT = 25.0
+
+
+def _tool(name: str) -> str:
+    """Resolve a command to a real path.
+
+    Windows ships `dart` as `dart.bat`, and subprocess does not apply PATHEXT
+    to the program name — so a bare "dart" raised FileNotFoundError on a
+    machine where Dart was installed and working.
+    """
+    return shutil.which(name) or name
+
+
+def _dart_argv(target: Path) -> list[str]:
+    """Dart is traced through its own VM service.
+
+    Same shape as the JavaScript runner: the debugger is driven from the
+    language's own runtime, because that's the only thing that can read a
+    scope from outside it.
+    """
+    return [_tool("dart"), "run", str(_DART_RUNNER), str(target)]
 
 
 def _node_argv(target: Path) -> list[str]:
@@ -34,7 +60,7 @@ def _node_argv(target: Path) -> list[str]:
     pauses on each statement and reads the scope chain, and emits exactly the
     payload the Python tracer does.
     """
-    return ["node", str(_JS_RUNNER), str(target)]
+    return [_tool("node"), str(_JS_RUNNER), str(target)]
 
 # "nums = [2, 7, 11, 15], target = 9  ->  [0, 1]" — split the inputs from the
 # expected result, which we don't need in order to make the call.
@@ -166,11 +192,11 @@ def _js_functions(code: str) -> list[tuple[str, list[str]]]:
 def _literal(value: Any, language: str) -> str:
     """A source literal for this value in the target language.
 
-    JSON happens to be valid JavaScript for everything an example contains,
-    and it's what turns Python's True/None into true/null rather than leaving
-    a ReferenceError in the generated call.
+    JSON happens to be valid source in both JavaScript and Dart for everything
+    an example contains, and it's what turns Python's True/None into true/null
+    rather than leaving an undefined name in the generated call.
     """
-    if language in ("javascript", "typescript"):
+    if language in ("javascript", "typescript", "dart"):
         try:
             return json.dumps(value)
         except (TypeError, ValueError):
@@ -187,6 +213,8 @@ def suggest_call(code: str, examples: list[str], language: str = "python") -> st
     """
     if language in ("javascript", "typescript"):
         return _suggest_js_call(code, examples, language)
+    if language == "dart":
+        return _suggest_dart_call(code, examples)
 
     funcs = _top_level_functions(code)
     if not funcs:
@@ -214,6 +242,56 @@ def suggest_call(code: str, examples: list[str], language: str = "python") -> st
             return f"{fn.name}({', '.join(repr(v) for v in positional)})"
 
     return f"{fn.name}()" if not params else ""
+
+
+# `List<int> twoSum(List<int> nums, int target) {` — a return type, a name,
+# then parameters. Generic arguments mean the parameter list can contain
+# commas inside angle brackets, which the split below has to survive.
+_DART_FUNCTION = re.compile(
+    r"^[A-Za-z_$][\w<>,\s\[\]?]*\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*(?:async\s*)?\{",
+    re.MULTILINE,
+)
+
+
+def _suggest_dart_call(code: str, examples: list[str]) -> str:
+    """A `main` that exercises the student's function.
+
+    Dart won't run a bare expression, so unlike Python the call has to be
+    wrapped in an entry point — and if their file already has one, theirs
+    stands and we add nothing.
+    """
+    if re.search(r"^\s*(?:void\s+)?main\s*\(", code, re.MULTILINE):
+        return ""
+
+    found = [
+        (m.group(1), m.group(2))
+        for m in _DART_FUNCTION.finditer(code)
+        if m.group(1) not in ("if", "for", "while", "switch", "catch", "main")
+    ]
+    if not found:
+        return ""
+    name, raw = found[-1]
+    params = [p.strip().split()[-1] for p in raw.split(",") if p.strip()]
+
+    for example in examples:
+        values = _parse_example_args(example)
+        if not values:
+            continue
+        if all(p in values for p in params):
+            args = [_literal(values[p], "dart") for p in params]
+        elif len(values) == len(params):
+            args = [_literal(v, "dart") for v in values.values()]
+        else:
+            continue
+        return f"void main() {{ print({name}({', '.join(args)})); }}"
+
+    for example in examples:
+        positional = _parse_example_values(example)
+        if len(positional) == len(params) and params:
+            args = [_literal(v, "dart") for v in positional]
+            return f"void main() {{ print({name}({', '.join(args)})); }}"
+
+    return f"void main() {{ print({name}()); }}" if not params else ""
 
 
 def _suggest_js_call(code: str, examples: list[str], language: str) -> str:
@@ -261,6 +339,9 @@ def trace_code(
 
     if language in ("javascript", "typescript"):
         suffix, argv = ".js", _node_argv
+    elif language == "dart":
+        suffix, argv = ".dart", _dart_argv
+        timeout = max(timeout, _DART_TIMEOUT)
     else:
         suffix, argv = ".py", None
 
@@ -285,9 +366,14 @@ def trace_code(
             stdin=subprocess.DEVNULL,
         )
     except FileNotFoundError:
+        tool, where = (
+            ("the Dart SDK", "dart.dev")
+            if language == "dart"
+            else ("Node", "nodejs.org")
+        )
         return _empty(
-            "Watching JavaScript run needs Node on your PATH — install it from "
-            "nodejs.org and restart the app."
+            f"Code tracing for this language needs {tool} on your PATH — "
+            f"install it from {where} and restart the app."
         )
     except subprocess.TimeoutExpired:
         return _empty(
