@@ -322,6 +322,49 @@ class TestTreeBFS(unittest.TestCase):
             ns["zigzag_level_order"](root), [[3], [20, 9], [15, 7]]
         )
 
+    def test_min_depth(self):
+        ns = load("lc-tree-bfs", 111)
+        root = make_tree([3, 9, 20, None, None, 15, 7], ns["TreeNode"])
+        self.assertEqual(ns["min_depth"](root), 2)
+        # A single left-leaning spine: the shallowest leaf is at the bottom.
+        spine = make_tree([2, None, 3, None, 4, None, 5], ns["TreeNode"])
+        self.assertEqual(ns["min_depth"](spine), 4)
+        self.assertEqual(ns["min_depth"](None), 0)
+
+    def test_average_of_levels(self):
+        ns = load("lc-tree-bfs", 637)
+        root = make_tree([3, 9, 20, None, None, 15, 7], ns["TreeNode"])
+        self.assertEqual(ns["average_of_levels"](root), [3.0, 14.5, 11.0])
+        self.assertEqual(ns["average_of_levels"](None), [])
+
+    def test_largest_values(self):
+        ns = load("lc-tree-bfs", 515)
+        root = make_tree([1, 3, 2, 5, 3, None, 9], ns["TreeNode"])
+        self.assertEqual(ns["largest_values"](root), [1, 3, 9])
+        # Negatives, because a running max seeded with 0 would report 0 here.
+        negative = make_tree([-1, -2, -3], ns["TreeNode"])
+        self.assertEqual(ns["largest_values"](negative), [-1, -2])
+        self.assertEqual(ns["largest_values"](None), [])
+
+    def test_max_level_sum(self):
+        ns = load("lc-tree-bfs", 1161)
+        root = make_tree([1, 7, 0, 7, -8, None, None], ns["TreeNode"])
+        self.assertEqual(ns["max_level_sum"](root), 2)
+        # Every level negative: -100, then -500, then -85. The shallowest
+        # level only wins if a best-sum seeded at 0 rejected all three.
+        negative = make_tree([-100, -200, -300, -20, -5, -10, -50], ns["TreeNode"])
+        self.assertEqual(ns["max_level_sum"](negative), 3)
+        self.assertEqual(ns["max_level_sum"](None), 0)
+
+    def test_width_of_binary_tree(self):
+        ns = load("lc-tree-bfs", 662)
+        root = make_tree([1, 3, 2, 5, 3, None, 9], ns["TreeNode"])
+        self.assertEqual(ns["width_of_binary_tree"](root), 4)
+        # The gap counts: two grandchildren at the outer edges are width 4.
+        sparse = make_tree([1, 3, 2, 5, None, None, 9], ns["TreeNode"])
+        self.assertEqual(ns["width_of_binary_tree"](sparse), 4)
+        self.assertEqual(ns["width_of_binary_tree"](None), 0)
+
 
 class TestGraph(unittest.TestCase):
     def test_flood_fill(self):
@@ -419,6 +462,47 @@ class TestHeap(unittest.TestCase):
         got = sorted(f([[3, 3], [5, -1], [-2, 4]], 2))
         self.assertEqual(got, [[-2, 4], [3, 3]])
 
+    def test_last_stone_weight(self):
+        f = load("lc-heap", 1046)["last_stone_weight"]
+        self.assertEqual(f([2, 7, 4, 1, 8, 1]), 1)
+        self.assertEqual(f([2, 2]), 0)
+        self.assertEqual(f([3]), 3)
+        self.assertEqual(f([]), 0)
+
+    def test_top_k_frequent_words(self):
+        f = load("lc-heap", 692)["top_k_frequent_words"]
+        self.assertEqual(f(["i", "love", "leetcode", "i", "love", "coding"], 2),
+                         ["i", "love"])
+        # Equal counts must come back alphabetically, not in insertion order.
+        self.assertEqual(f(["b", "a", "c"], 3), ["a", "b", "c"])
+
+    def test_frequency_sort(self):
+        f = load("lc-heap", 451)["frequency_sort"]
+        # Ties are free to fall either way; the heap orders them by character.
+        self.assertEqual(f("tree"), "eert")
+        self.assertEqual(f("cccaaa"), "aaaccc")
+        self.assertEqual(f(""), "")
+        # Whatever the tie order, every character survives with its count.
+        out = f("Aabb")
+        self.assertEqual(sorted(out), sorted("Aabb"))
+        self.assertEqual(out[:2], "bb")
+
+    def test_kth_smallest(self):
+        f = load("lc-heap", 378)["kth_smallest"]
+        matrix = [[1, 5, 9], [10, 11, 13], [12, 13, 15]]
+        self.assertEqual(f(matrix, 8), 13)
+        self.assertEqual(f(matrix, 1), 1)
+        self.assertEqual(f(matrix, 9), 15)
+        self.assertEqual(f([[-5]], 1), -5)
+
+    def test_reorganize_string(self):
+        f = load("lc-heap", 767)["reorganize_string"]
+        out = f("aab")
+        self.assertEqual(sorted(out), sorted("aab"))
+        self.assertTrue(all(a != b for a, b in zip(out, out[1:])))
+        self.assertEqual(f("aaab"), "")
+        self.assertEqual(f("a"), "a")
+
 
 class TestTopological(unittest.TestCase):
     def test_can_finish(self):
@@ -442,6 +526,50 @@ class TestTopological(unittest.TestCase):
             sorted(f(6, [[3, 0], [3, 1], [3, 2], [3, 4], [5, 4]])), [3, 4]
         )
         self.assertEqual(f(1, []), [0])
+
+    def test_eventual_safe_nodes(self):
+        f = load("lc-topological", 802)["eventual_safe_nodes"]
+        self.assertEqual(
+            f([[1, 2], [2, 3], [5], [0], [5], [], []]), [2, 4, 5, 6]
+        )
+        self.assertEqual(f([[1, 2, 3, 4], [1, 2], [3, 4], [0, 4], []]), [4])
+        self.assertEqual(f([[]]), [0])
+
+    def test_check_if_prerequisite(self):
+        f = load("lc-topological", 1462)["check_if_prerequisite"]
+        self.assertEqual(f(2, [[1, 0]], [[0, 1], [1, 0]]), [False, True])
+        self.assertEqual(f(2, [], [[1, 0], [0, 1]]), [False, False])
+        # Transitive: 0 → 1 → 2 means 0 is a prerequisite of 2.
+        self.assertEqual(f(3, [[0, 1], [1, 2]], [[0, 2]]), [True])
+
+    def test_find_all_recipes(self):
+        f = load("lc-topological", 2115)["find_all_recipes"]
+        self.assertEqual(
+            f(["bread"], [["yeast", "flour"]], ["yeast", "flour", "corn"]),
+            ["bread"],
+        )
+        # A recipe used as an ingredient of another.
+        made = f(
+            ["bread", "sandwich"],
+            [["yeast", "flour"], ["bread", "meat"]],
+            ["yeast", "flour", "meat"],
+        )
+        self.assertEqual(sorted(made), ["bread", "sandwich"])
+        self.assertEqual(f(["bread"], [["yeast", "flour"]], ["yeast"]), [])
+
+    def test_minimum_semesters(self):
+        f = load("lc-topological", 1136)["minimum_semesters"]
+        self.assertEqual(f(3, [[1, 3], [2, 3]]), 2)
+        self.assertEqual(f(3, [[1, 2], [2, 3], [3, 1]]), -1)
+        self.assertEqual(f(1, []), 1)
+
+    def test_alien_order(self):
+        f = load("lc-topological", 269)["alien_order"]
+        self.assertEqual(f(["wrt", "wrf", "er", "ett", "rftt"]), "wertf")
+        self.assertEqual(f(["z", "x", "z"]), "")
+        # A prefix that follows its own longer form is impossible.
+        self.assertEqual(f(["abc", "ab"]), "")
+        self.assertEqual(f(["z", "x"]), "zx")
 
 
 class TestDP(unittest.TestCase):

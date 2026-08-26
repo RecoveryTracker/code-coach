@@ -866,6 +866,142 @@ _TREE_BFS = Pattern(
                 return levels
             """,
         ),
+        _p(
+            111,
+            "Minimum Depth of Binary Tree",
+            "Easy",
+            "BFS stops at the first leaf it meets — DFS would walk the whole tree first.",
+            "O(n) time, O(n) space",
+            """
+            def min_depth(root):
+                if not root:
+                    return 0
+                queue = deque([root])
+                depth = 1
+                while queue:
+                    for _ in range(len(queue)):
+                        node = queue.popleft()
+                        if not node.left and not node.right:
+                            return depth
+                        if node.left:
+                            queue.append(node.left)
+                        if node.right:
+                            queue.append(node.right)
+                    depth += 1
+                return depth
+            """,
+        ),
+        _p(
+            637,
+            "Average of Levels in Binary Tree",
+            "Easy",
+            "One row at a time, so the divisor is just that row's length.",
+            "O(n) time, O(n) space",
+            """
+            def average_of_levels(root):
+                if not root:
+                    return []
+                averages = []
+                queue = deque([root])
+                while queue:
+                    size = len(queue)
+                    total = 0
+                    for _ in range(size):
+                        node = queue.popleft()
+                        total += node.val
+                        if node.left:
+                            queue.append(node.left)
+                        if node.right:
+                            queue.append(node.right)
+                    averages.append(total / size)
+                return averages
+            """,
+        ),
+        _p(
+            515,
+            "Find Largest Value in Each Tree Row",
+            "Medium",
+            "Same row walk as the average — swap the running total for a running max.",
+            "O(n) time, O(n) space",
+            """
+            def largest_values(root):
+                if not root:
+                    return []
+                largest = []
+                queue = deque([root])
+                while queue:
+                    best = None
+                    for _ in range(len(queue)):
+                        node = queue.popleft()
+                        if best is None or node.val > best:
+                            best = node.val
+                        if node.left:
+                            queue.append(node.left)
+                        if node.right:
+                            queue.append(node.right)
+                    largest.append(best)
+                return largest
+            """,
+        ),
+        _p(
+            1161,
+            "Maximum Level Sum of a Binary Tree",
+            "Medium",
+            "Number the levels as you go and keep the best — ties go to the shallower one.",
+            "O(n) time, O(n) space",
+            """
+            def max_level_sum(root):
+                if not root:
+                    return 0
+                queue = deque([root])
+                level = 0
+                best_level = 1
+                best_sum = None
+                while queue:
+                    level += 1
+                    total = 0
+                    for _ in range(len(queue)):
+                        node = queue.popleft()
+                        total += node.val
+                        if node.left:
+                            queue.append(node.left)
+                        if node.right:
+                            queue.append(node.right)
+                    if best_sum is None or total > best_sum:
+                        best_sum = total
+                        best_level = level
+                return best_level
+            """,
+        ),
+        _p(
+            662,
+            "Maximum Width of Binary Tree",
+            "Medium",
+            "Queue the heap index with each node; a row's width is last minus first plus one.",
+            "O(n) time, O(n) space",
+            """
+            def width_of_binary_tree(root):
+                if not root:
+                    return 0
+                widest = 0
+                queue = deque([(root, 0)])
+                while queue:
+                    size = len(queue)
+                    _, first = queue[0]
+                    last = first
+                    for _ in range(size):
+                        node, index = queue.popleft()
+                        last = index
+                        if node.left:
+                            queue.append((node.left, index * 2))
+                        if node.right:
+                            queue.append((node.right, index * 2 + 1))
+                    width = last - first + 1
+                    if width > widest:
+                        widest = width
+                return widest
+            """,
+        ),
     ),
 )
 
@@ -1210,6 +1346,104 @@ _HEAP = Pattern(
                 return [[x, y] for dist, x, y in heap]
             """,
         ),
+        _p(
+            1046,
+            "Last Stone Weight",
+            "Easy",
+            "Python's heap is a min-heap — push negatives to pop the biggest first.",
+            "O(n log n) time, O(n) space",
+            """
+            def last_stone_weight(stones):
+                heap = [-s for s in stones]
+                heapq.heapify(heap)
+                while len(heap) > 1:
+                    first = -heapq.heappop(heap)
+                    second = -heapq.heappop(heap)
+                    if first != second:
+                        heapq.heappush(heap, -(first - second))
+                return -heap[0] if heap else 0
+            """,
+        ),
+        _p(
+            692,
+            "Top K Frequent Words",
+            "Medium",
+            "Key on (-count, word): the heap then breaks ties alphabetically for free.",
+            "O(n + k log n) time, O(n) space",
+            """
+            def top_k_frequent_words(words, k):
+                counts = {}
+                for word in words:
+                    counts[word] = counts.get(word, 0) + 1
+                heap = [(-count, word) for word, count in counts.items()]
+                heapq.heapify(heap)
+                return [heapq.heappop(heap)[1] for _ in range(k)]
+            """,
+        ),
+        _p(
+            451,
+            "Sort Characters By Frequency",
+            "Medium",
+            "Count, then pop the heap most-frequent-first and repeat each character.",
+            "O(n log n) time, O(n) space",
+            """
+            def frequency_sort(s):
+                counts = {}
+                for ch in s:
+                    counts[ch] = counts.get(ch, 0) + 1
+                heap = [(-count, ch) for ch, count in counts.items()]
+                heapq.heapify(heap)
+                out = []
+                while heap:
+                    count, ch = heapq.heappop(heap)
+                    out.append(ch * -count)
+                return "".join(out)
+            """,
+        ),
+        _p(
+            378,
+            "Kth Smallest Element in a Sorted Matrix",
+            "Medium",
+            "Seed the heap with each row's head, then keep pulling the smallest and refilling from its row.",
+            "O(k log n) time, O(n) space",
+            """
+            def kth_smallest(matrix, k):
+                heap = []
+                for row in range(min(len(matrix), k)):
+                    heapq.heappush(heap, (matrix[row][0], row, 0))
+                value = 0
+                for _ in range(k):
+                    value, row, col = heapq.heappop(heap)
+                    if col + 1 < len(matrix[row]):
+                        heapq.heappush(heap, (matrix[row][col + 1], row, col + 1))
+                return value
+            """,
+        ),
+        _p(
+            767,
+            "Reorganize String",
+            "Medium",
+            "Always place the most common letter left, holding the one you just used aside for a turn.",
+            "O(n log n) time, O(n) space",
+            """
+            def reorganize_string(s):
+                counts = {}
+                for ch in s:
+                    counts[ch] = counts.get(ch, 0) + 1
+                heap = [(-count, ch) for ch, count in counts.items()]
+                heapq.heapify(heap)
+                out = []
+                held = None
+                while heap:
+                    count, ch = heapq.heappop(heap)
+                    out.append(ch)
+                    if held:
+                        heapq.heappush(heap, held)
+                    count += 1
+                    held = (count, ch) if count else None
+                return "".join(out) if len(out) == len(s) else ""
+            """,
+        ),
     ),
 )
 
@@ -1300,6 +1534,146 @@ _TOPOLOGICAL = Pattern(
                             next_leaves.append(neighbor)
                     leaves = next_leaves
                 return leaves
+            """,
+        ),
+        _p(
+            802,
+            "Find Eventual Safe States",
+            "Medium",
+            "Reverse every edge, then peel from the terminal nodes — whatever drains is safe.",
+            "O(v + e) time, O(v + e) space",
+            """
+            def eventual_safe_nodes(graph):
+                n = len(graph)
+                reverse = {i: [] for i in range(n)}
+                outdegree = [0] * n
+                for node, edges in enumerate(graph):
+                    outdegree[node] = len(edges)
+                    for nxt in edges:
+                        reverse[nxt].append(node)
+                queue = deque([i for i in range(n) if outdegree[i] == 0])
+                safe = []
+                while queue:
+                    node = queue.popleft()
+                    safe.append(node)
+                    for prev in reverse[node]:
+                        outdegree[prev] -= 1
+                        if outdegree[prev] == 0:
+                            queue.append(prev)
+                safe.sort()
+                return safe
+            """,
+        ),
+        _p(
+            1462,
+            "Course Schedule IV",
+            "Medium",
+            "Peel in order, and let each course inherit the prerequisite set of everything before it.",
+            "O(v * e) time, O(v * v) space",
+            """
+            def check_if_prerequisite(num_courses, prerequisites, queries):
+                graph = {i: [] for i in range(num_courses)}
+                indegree = [0] * num_courses
+                for prereq, course in prerequisites:
+                    graph[prereq].append(course)
+                    indegree[course] += 1
+                needs = [set() for _ in range(num_courses)]
+                queue = deque([i for i in range(num_courses) if indegree[i] == 0])
+                while queue:
+                    node = queue.popleft()
+                    for nxt in graph[node]:
+                        needs[nxt].add(node)
+                        needs[nxt] |= needs[node]
+                        indegree[nxt] -= 1
+                        if indegree[nxt] == 0:
+                            queue.append(nxt)
+                return [prereq in needs[course] for prereq, course in queries]
+            """,
+        ),
+        _p(
+            2115,
+            "Find All Possible Recipes from Given Supplies",
+            "Medium",
+            "Ingredients are prerequisites: a recipe unlocks once its indegree of missing items hits zero.",
+            "O(v + e) time, O(v + e) space",
+            """
+            def find_all_recipes(recipes, ingredients, supplies):
+                graph = {}
+                indegree = {recipe: 0 for recipe in recipes}
+                for recipe, needed in zip(recipes, ingredients):
+                    for item in needed:
+                        graph.setdefault(item, []).append(recipe)
+                        indegree[recipe] += 1
+                queue = deque(supplies)
+                made = []
+                while queue:
+                    item = queue.popleft()
+                    for recipe in graph.get(item, []):
+                        indegree[recipe] -= 1
+                        if indegree[recipe] == 0:
+                            made.append(recipe)
+                            queue.append(recipe)
+                return made
+            """,
+        ),
+        _p(
+            1136,
+            "Parallel Courses",
+            "Medium",
+            "Every drained layer of the queue is one semester — count the layers, not the courses.",
+            "O(v + e) time, O(v + e) space",
+            """
+            def minimum_semesters(n, relations):
+                graph = {i: [] for i in range(1, n + 1)}
+                indegree = {i: 0 for i in range(1, n + 1)}
+                for prereq, course in relations:
+                    graph[prereq].append(course)
+                    indegree[course] += 1
+                queue = deque([i for i in range(1, n + 1) if indegree[i] == 0])
+                studied = 0
+                semesters = 0
+                while queue:
+                    semesters += 1
+                    for _ in range(len(queue)):
+                        node = queue.popleft()
+                        studied += 1
+                        for nxt in graph[node]:
+                            indegree[nxt] -= 1
+                            if indegree[nxt] == 0:
+                                queue.append(nxt)
+                return semesters if studied == n else -1
+            """,
+        ),
+        _p(
+            269,
+            "Alien Dictionary",
+            "Hard",
+            "Adjacent words give one letter order each; the first difference is the only edge they prove.",
+            "O(c) time, O(1) space",
+            """
+            def alien_order(words):
+                graph = {ch: set() for word in words for ch in word}
+                indegree = {ch: 0 for ch in graph}
+                for first, second in zip(words, words[1:]):
+                    for a, b in zip(first, second):
+                        if a != b:
+                            if b not in graph[a]:
+                                graph[a].add(b)
+                                indegree[b] += 1
+                            break
+                    else:
+                        if len(first) > len(second):
+                            return ""
+                queue = deque([ch for ch in indegree if indegree[ch] == 0])
+                order = []
+                while queue:
+                    ch = queue.popleft()
+                    order.append(ch)
+                    for nxt in graph[ch]:
+                        indegree[nxt] -= 1
+                        if indegree[nxt] == 0:
+                            queue.append(nxt)
+                return "".join(order) if len(order) == len(indegree) else ""
             """,
         ),
     ),

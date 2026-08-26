@@ -947,13 +947,34 @@ DEMO_CALLS: dict[int, str] = {
     102: f"level_order({_TREE_7})",
     199: f"right_side_view({_TREE_7})",
     103: f"zigzag_level_order({_TREE_7})",
+    111: f"min_depth({_TREE_7})",
+    637: f"average_of_levels({_TREE_7})",
+    515: f"largest_values({_TREE_7})",
+    1161: f"max_level_sum({_TREE_7})",
+    662: f"width_of_binary_tree({_TREE_7})",
     # Grids and graphs.
     733: "flood_fill([[1, 1, 1], [1, 1, 0], [1, 0, 1]], 1, 1, 2)",
     133: "clone_graph(Node(1, [Node(2)]))",
     973: "k_closest([[1, 3], [-2, 2], [5, 8], [0, 1]], 2)",
+    # Heaps — a bare list literal reads fine, but the k has to come from
+    # somewhere, and the example prose isn't parseable into one.
+    1046: "last_stone_weight([2, 7, 4, 1, 8, 1])",
+    692: 'top_k_frequent_words(["i", "love", "leetcode", "i", "love", "coding"], 2)',
+    451: 'frequency_sort("tree")',
+    378: "kth_smallest([[1, 5, 9], [10, 11, 13], [12, 13, 15]], 8)",
+    767: 'reorganize_string("aab")',
     # Counts plus edge lists — prose in the example, not a literal.
     207: "can_finish(2, [[1, 0]])",
     210: "find_order(4, [[1, 0], [2, 0], [3, 1], [3, 2]])",
+    802: "eventual_safe_nodes([[1, 2], [2, 3], [5], [0], [5], [], []])",
+    1462: "check_if_prerequisite(3, [[0, 1], [1, 2]], [[0, 2], [2, 0]])",
+    2115: (
+        'find_all_recipes(["bread", "sandwich"], '
+        '[["yeast", "flour"], ["bread", "meat"]], '
+        '["yeast", "flour", "meat"])'
+    ),
+    1136: "minimum_semesters(3, [[1, 3], [2, 3]])",
+    269: 'alien_order(["wrt", "wrf", "er", "ett", "rftt"])',
     # A class, so exercise it rather than calling one function.
     155: (
         "s = MinStack()\n"

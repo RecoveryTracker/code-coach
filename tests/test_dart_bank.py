@@ -26,14 +26,30 @@ class ParityTests(unittest.TestCase):
                     [p.id for p in patterns], [p.id for p in PY_PATTERNS]
                 )
 
-    def test_same_problems_in_the_same_order(self):
+    def test_translations_are_a_prefix_of_the_python_bank(self):
+        """Python is the reference; the other banks may lag behind it.
+
+        Switching language has to keep your place, so a translated pattern
+        must hold the *same problems in the same order* as Python's — it may
+        simply stop early, at whatever has been ported so far. What it must
+        never do is reorder them or carry a problem Python doesn't have, which
+        would put the same exercise number on two different problems.
+        """
         for language, patterns in TRANSLATED.items():
             for translated, py in zip(patterns, PY_PATTERNS):
                 with self.subTest(language=language, pattern=py.id):
-                    self.assertEqual(
-                        [p.number for p in translated.problems],
-                        [p.number for p in py.problems],
-                    )
+                    ported = [p.number for p in translated.problems]
+                    reference = [p.number for p in py.problems]
+                    self.assertLessEqual(len(ported), len(reference))
+                    self.assertEqual(ported, reference[: len(ported)])
+
+    def test_every_pattern_has_something_to_type(self):
+        """Lagging is fine; an empty pattern is not — it would hand out a
+        class with no exercises in it."""
+        for language, patterns in TRANSLATED.items():
+            for pattern in patterns:
+                with self.subTest(language=language, pattern=pattern.id):
+                    self.assertGreater(len(pattern.problems), 0)
 
     def test_solutions_are_not_python(self):
         for language, patterns in TRANSLATED.items():
