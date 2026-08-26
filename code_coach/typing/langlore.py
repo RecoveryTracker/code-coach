@@ -293,6 +293,164 @@ JAVASCRIPT: tuple[Passage, ...] = (
         "rather than by a version of the language.",
         "JavaScript history",
     ),
+    _p(
+        "this depends on how a function is called, not where it is written. "
+        "The same method pulled off its object and passed as a callback loses "
+        "the object it came from.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "sort compares as strings by default. [10, 9, 1].sort() gives "
+        "[1, 10, 9], and the fix is to pass (a, b) => a - b every time you "
+        "sort numbers.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Array methods split into two families: the ones that return "
+        "something new, like map and filter, and the ones that change the "
+        "array in place, like sort, reverse and splice.",
+        "JavaScript conventions",
+    ),
+    _p(
+        "slice copies and splice cuts. One letter apart, and one of them "
+        "leaves the original alone while the other does not.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "reduce is the general case that map and filter are special cases of. "
+        "Anything you can build by walking a list once, reduce can build.",
+        "JavaScript design",
+    ),
+    _p(
+        "forEach cannot be stopped early and ignores what you return. If you "
+        "want to break out, or want a value back, it is the wrong loop.",
+        "JavaScript conventions",
+    ),
+    _p(
+        "for...in walks keys and for...of walks values. Using for...in on an "
+        "array gives you index strings, and inherited properties along with "
+        "them.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Every object key is a string or a symbol. obj[1] and obj['1'] are "
+        "the same slot, which is one of several reasons Map exists.",
+        "JavaScript internals",
+    ),
+    _p(
+        "Falsy is a short list: false, 0, -0, 0n, empty string, null, "
+        "undefined and NaN. Everything else is truthy, including empty arrays "
+        "and empty objects.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "NaN is the only value not equal to itself. That is why Number.isNaN "
+        "exists, and why x !== x is a real test rather than a typo.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "typeof is unreliable for anything but primitives. Array.isArray "
+        "exists because typeof [] is object, and so is typeof null.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Default parameters are evaluated at call time, not once. A default "
+        "of [] gives every call its own array, unlike the equivalent trap in "
+        "some other languages.",
+        "JavaScript design",
+    ),
+    _p(
+        "Rest gathers and spread scatters, and both are three dots. In a "
+        "parameter list it collects the remaining arguments; in a call it "
+        "spreads a list into them.",
+        "JavaScript syntax",
+    ),
+    _p(
+        "Optional chaining short-circuits the whole chain. a?.b.c does not "
+        "throw when a is null, because the rest of the chain is skipped "
+        "rather than evaluated.",
+        "JavaScript syntax",
+    ),
+    _p(
+        "Labels on object literals and blocks look identical to the parser. "
+        "That is why an arrow function returning an object needs the "
+        "parentheses in () => ({ a: 1 }).",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Template literals can span lines and embed expressions. They also "
+        "keep the indentation you typed, which is usually the reason a "
+        "multi-line string looks wrong.",
+        "JavaScript syntax",
+    ),
+    _p(
+        "JSON.stringify drops undefined, functions and symbols. Round-tripping "
+        "an object through JSON is a deep copy that quietly loses anything "
+        "JSON has no word for.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "await inside a loop runs the requests one after another. "
+        "Promise.all is how you start them together and wait once.",
+        "JavaScript performance",
+    ),
+    _p(
+        "Promise.all rejects as soon as any one does. Promise.allSettled "
+        "waits for all of them and tells you how each went, which is usually "
+        "what a batch of independent jobs wants.",
+        "JavaScript syntax",
+    ),
+    _p(
+        "An async function never throws to its caller directly. It returns a "
+        "rejected Promise, which is why a try around a call without await "
+        "catches nothing.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Microtasks run before the next timer. A resolved Promise's callback "
+        "is queued ahead of a setTimeout of zero, every time.",
+        "JavaScript internals",
+    ),
+    _p(
+        "Prototypes are the inheritance. class is syntax over the same "
+        "mechanism, and a method lives on the prototype rather than on each "
+        "instance.",
+        "JavaScript internals",
+    ),
+    _p(
+        "Modules are strict mode by default and have their own scope. A "
+        "top-level const in a module is not global, which is the main "
+        "difference from a plain script tag.",
+        "JavaScript design",
+    ),
+    _p(
+        "const does not make a value immutable, only the binding. You cannot "
+        "reassign a const array, and you can push to it all day.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Object.freeze is one level deep as well. Anything nested inside a "
+        "frozen object is still perfectly writable.",
+        "JavaScript gotchas",
+    ),
+    _p(
+        "Getters look like properties and run like functions. Reading one can "
+        "do arbitrary work, which is worth remembering when a simple-looking "
+        "line is unexpectedly slow.",
+        "JavaScript design",
+    ),
+    _p(
+        "Generators pause. function* and yield hand a value back and resume "
+        "where they left off, which is what makes lazy sequences possible "
+        "without a callback.",
+        "JavaScript syntax",
+    ),
+    _p(
+        "Symbols are unique keys that cannot collide. That is how the "
+        "language adds behaviour to objects, like Symbol.iterator, without "
+        "risking a name you already used.",
+        "JavaScript internals",
+    ),
 )
 
 
@@ -386,6 +544,142 @@ DART: tuple[Passage, ...] = (
         "conditional element directly in a list, which reads far better than "
         "building the list in pieces.",
         "Dart syntax",
+    ),
+    _p(
+        "The ? in a type is part of the type. String and String? are two "
+        "different things, and the compiler tracks which one you have at "
+        "every line.",
+        "Dart syntax",
+    ),
+    _p(
+        "The ?? operator supplies a fallback and ??= assigns one only if the "
+        "target is null. Both exist so a default does not need three lines of "
+        "if.",
+        "Dart syntax",
+    ),
+    _p(
+        "?. stops the chain rather than throwing. user?.address?.city is null "
+        "if anything along the way was, and nothing in between has to be "
+        "checked by hand.",
+        "Dart syntax",
+    ),
+    _p(
+        "int and double are both num, and neither converts silently. Dividing "
+        "two ints with / gives a double; ~/ is the one that gives you an int "
+        "back.",
+        "Dart gotchas",
+    ),
+    _p(
+        "Dart compiles to JavaScript for the web, where there is only one "
+        "number type. That is why integers behave slightly differently in a "
+        "browser than on a phone.",
+        "Dart internals",
+    ),
+    _p(
+        "A List literal is growable and List.filled is not, unless you ask. "
+        "Calling add on a fixed-length list is a runtime error rather than a "
+        "compile one.",
+        "Dart gotchas",
+    ),
+    _p(
+        "const in Dart means built at compile time, so two identical const "
+        "values are the same object. That is why const widgets are worth "
+        "reaching for in a rebuild.",
+        "Dart performance",
+    ),
+    _p(
+        "A factory constructor does not have to return a new instance. It can "
+        "hand back a cached one, which is how a class implements its own "
+        "singleton without a separate function.",
+        "Dart syntax",
+    ),
+    _p(
+        "Named constructors give a class more than one way to be built. "
+        "DateTime.now and DateTime.utc are the same class, entered by "
+        "different doors.",
+        "Dart conventions",
+    ),
+    _p(
+        "required is a keyword, not a convention. A named parameter without a "
+        "default and without required will not compile under null safety.",
+        "Dart syntax",
+    ),
+    _p(
+        "Positional optional parameters use square brackets and named ones "
+        "use braces. A function cannot have both kinds of optional parameter "
+        "at once.",
+        "Dart syntax",
+    ),
+    _p(
+        "Every class implicitly defines an interface. implements takes the "
+        "shape without the code; extends takes both, and you can only extend "
+        "one thing.",
+        "Dart design",
+    ),
+    _p(
+        "A mixin is code without a place in the hierarchy. with is how a "
+        "class picks up behaviour from several places while still extending "
+        "only one.",
+        "Dart design",
+    ),
+    _p(
+        "async does not mean parallel. An async function runs on the same "
+        "isolate and simply gives up the turn at each await.",
+        "Dart internals",
+    ),
+    _p(
+        "await only works inside async, and an async function always returns "
+        "a Future. Marking a function async changes its signature whether you "
+        "meant it to or not.",
+        "Dart syntax",
+    ),
+    _p(
+        "An unawaited Future still runs. Forgetting the await does not cancel "
+        "the work, it just means nothing is waiting to hear how it went, "
+        "including the errors.",
+        "Dart gotchas",
+    ),
+    _p(
+        "Streams come in single-subscription and broadcast. Listening twice "
+        "to the first kind throws, which is the usual cause of a stream that "
+        "worked until it was reused.",
+        "Dart internals",
+    ),
+    _p(
+        "async* and yield build a Stream the way a generator builds a list. "
+        "sync* and yield do the same for an Iterable, one value at a time and "
+        "only when asked.",
+        "Dart syntax",
+    ),
+    _p(
+        "The spread operator works inside collection literals, and ...? skips "
+        "a null instead of throwing. Both exist so building a list "
+        "conditionally stays a single expression.",
+        "Dart syntax",
+    ),
+    _p(
+        "Records and patterns arrived in Dart 3. A function can return "
+        "(int, String) without inventing a class, and destructuring pulls it "
+        "apart at the call site.",
+        "Dart syntax",
+    ),
+    _p(
+        "switch is an expression as well as a statement now. Assigning the "
+        "result of a switch is often clearer than four assignments to the "
+        "same variable.",
+        "Dart syntax",
+    ),
+    _p(
+        "sealed classes make a switch exhaustive. Adding a subtype turns "
+        "every switch over the family into a compile error, which is the "
+        "point rather than the inconvenience.",
+        "Dart design",
+    ),
+    _p(
+        "Operator == and hashCode travel together. Overriding one without the "
+        "other gives you objects that are equal but land in different buckets "
+        "of a Set.",
+        "Dart gotchas",
     ),
 )
 

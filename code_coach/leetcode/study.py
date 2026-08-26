@@ -482,6 +482,495 @@ def _b(
 
 
 BRIEFS: dict[int, ProblemBrief] = {
+    # Heaps, continued
+    1046: _b(
+        "last-stone-weight",
+        "Repeatedly smash the two heaviest stones together. Equal weights "
+        "destroy both; otherwise the difference is put back. Return the "
+        "weight of the last stone, or 0 if none is left.",
+        "stones = [2, 7, 4, 1, 8, 1]  ->  1",
+        "stones = [2, 2]  ->  0",
+        note="The two heaviest change after every smash, so the order has to "
+        "be maintained rather than computed once.",
+    ),
+    692: _b(
+        "top-k-frequent-words",
+        "Return the k most frequent words, most frequent first. Words used "
+        "the same number of times are ordered alphabetically.",
+        "words = ['i', 'love', 'leetcode', 'i', 'love', 'coding'], k = 2  ->  "
+        "['i', 'love']",
+        "words = ['b', 'a', 'c'], k = 3  ->  ['a', 'b', 'c']",
+        note="Two orderings at once: count descending, then word ascending.",
+    ),
+    451: _b(
+        "sort-characters-by-frequency",
+        "Rebuild the string with the most frequent characters first, keeping "
+        "each character's copies together.",
+        "s = 'tree'  ->  'eert' or 'eetr'",
+        "s = 'cccaaa'  ->  'aaaccc' or 'cccaaa'",
+        note="Characters with equal counts may come in any order, so several "
+        "answers are correct.",
+    ),
+    378: _b(
+        "kth-smallest-element-in-a-sorted-matrix",
+        "Every row and every column of the matrix is sorted ascending. Return "
+        "the kth smallest value in the whole matrix, counting duplicates.",
+        "matrix = [[1, 5, 9], [10, 11, 13], [12, 13, 15]], k = 8  ->  13",
+        "the same matrix, k = 1  ->  1",
+        note="Kth smallest by position in the sorted order, so repeated "
+        "values are counted more than once.",
+    ),
+    767: _b(
+        "reorganize-string",
+        "Rearrange the string so no two neighbouring characters are the same. "
+        "Return any arrangement that works, or an empty string if none does.",
+        "s = 'aab'  ->  'aba'",
+        "s = 'aaab'  ->  ''",
+        note="It is impossible exactly when one character appears more than "
+        "half the time, rounded up.",
+    ),
+    # Topological sort, continued
+    802: _b(
+        "find-eventual-safe-states",
+        "A node is safe if every path leaving it ends at a node with no "
+        "outgoing edges, rather than getting caught in a cycle. Return the "
+        "safe nodes in ascending order.",
+        "graph = [[1, 2], [2, 3], [5], [0], [5], [], []]  ->  [2, 4, 5, 6]",
+        "graph = [[]]  ->  [0]",
+        note="Reverse the edges and peel from the terminal nodes; whatever "
+        "drains is safe.",
+    ),
+    1462: _b(
+        "course-schedule-iv",
+        "Given prerequisite pairs, answer each query asking whether one "
+        "course must be taken before another. Prerequisites are transitive.",
+        "2 courses, prereqs [[1, 0]], queries [[0, 1], [1, 0]]  ->  "
+        "[False, True]",
+        "3 courses, prereqs [[0, 1], [1, 2]], query [[0, 2]]  ->  [True]",
+        note="Transitive: 0 before 1 and 1 before 2 means 0 before 2.",
+    ),
+    2115: _b(
+        "find-all-possible-recipes-from-given-supplies",
+        "You start with some supplies. Each recipe needs a list of "
+        "ingredients, which may themselves be recipes. Return every recipe "
+        "you can end up making.",
+        "recipes ['bread'], ingredients [['yeast', 'flour']], supplies "
+        "['yeast', 'flour', 'corn']  ->  ['bread']",
+        "the same recipe with supplies ['yeast'] only  ->  []",
+        note="A recipe can be an ingredient of another, so making one can "
+        "unlock the next.",
+    ),
+    1136: _b(
+        "parallel-courses",
+        "Courses are numbered 1 to n with prerequisite pairs. Each semester "
+        "you may take every course whose prerequisites are done. Return the "
+        "fewest semesters, or -1 if a cycle makes it impossible.",
+        "n = 3, relations [[1, 3], [2, 3]]  ->  2",
+        "n = 3, relations [[1, 2], [2, 3], [3, 1]]  ->  -1",
+        note="Count layers, not courses: everything available at once is one "
+        "semester.",
+    ),
+    269: _b(
+        "alien-dictionary",
+        "The words are sorted according to an unknown alphabet. Work out an "
+        "order of the letters consistent with that sorting, or return an "
+        "empty string if none exists.",
+        "words = ['wrt', 'wrf', 'er', 'ett', 'rftt']  ->  'wertf'",
+        "words = ['z', 'x', 'z']  ->  ''",
+        note="Two adjacent words prove one thing only: their first differing "
+        "letters are in that order. A word followed by its own prefix is "
+        "impossible.",
+    ),
+    # Dynamic programming, continued
+    746: _b(
+        "min-cost-climbing-stairs",
+        "Each step has a cost you pay on arriving. You may climb one or two "
+        "steps at a time, starting from step 0 or step 1, and you must reach "
+        "past the last step. Return the cheapest total.",
+        "cost = [10, 15, 20]  ->  15",
+        "cost = [1, 100, 1, 1, 1, 100, 1, 1, 100, 1]  ->  6",
+        note="The finish is past the end of the list, not the last step "
+        "itself.",
+    ),
+    1143: _b(
+        "longest-common-subsequence",
+        "Return the length of the longest sequence of characters appearing in "
+        "both strings in the same order. The characters do not have to be "
+        "next to each other.",
+        "'abcde' and 'ace'  ->  3   ('ace')",
+        "'abc' and 'def'  ->  0",
+        note="A subsequence keeps order but allows gaps; a substring does "
+        "not.",
+    ),
+    139: _b(
+        "word-break",
+        "Say whether the string can be cut into a sequence of words from the "
+        "given list. Words may be reused, and every character must be used.",
+        "text = 'leetcode', words = ['leet', 'code']  ->  True",
+        "text = 'catsandog', words = ['cats', 'dog', 'sand', 'and', 'cat']  "
+        "->  False",
+        note="Greedily taking the longest word first can fail; a position is "
+        "reachable only if some word ends there from a reachable start.",
+    ),
+    152: _b(
+        "maximum-product-subarray",
+        "Return the largest product of any contiguous run of the list. The "
+        "run must hold at least one number.",
+        "nums = [2, 3, -2, 4]  ->  6",
+        "nums = [-2, 3, -4]  ->  24",
+        note="Track the smallest product too. A negative turns the worst "
+        "running total into the best one.",
+    ),
+    # Binary search, continued
+    278: _b(
+        "first-bad-version",
+        "Versions 1 to n were released in order, and every version after the "
+        "first bad one is also bad. Given a checker that says whether a "
+        "version is bad, find the first bad one with as few checks as "
+        "possible.",
+        "n = 5, versions 4 and 5 are bad  ->  4",
+        "n = 1, version 1 is bad  ->  1",
+        note="You are searching for a boundary, not for a value.",
+    ),
+    34: _b(
+        "find-first-and-last-position-of-element-in-sorted-array",
+        "The list is sorted. Return the first and last index where the target "
+        "appears, or [-1, -1] if it does not.",
+        "nums = [5, 7, 7, 8, 8, 10], target = 8  ->  [3, 4]",
+        "nums = [5, 7, 7, 8, 8, 10], target = 6  ->  [-1, -1]",
+        note="Two searches, not one: finding any match is the easy half.",
+    ),
+    74: _b(
+        "search-a-2d-matrix",
+        "Each row is sorted, and the first value of a row is greater than the "
+        "last value of the row above. Say whether the target is in the "
+        "matrix.",
+        "matrix = [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], "
+        "target = 3  ->  True",
+        "the same matrix, target = 13  ->  False",
+        note="Those two rules together mean it is one sorted list folded up.",
+    ),
+    # Tree DFS, continued
+    100: _b(
+        "same-tree",
+        "Given two binary trees, return True if they have the same shape and "
+        "the same values in the same places.",
+        "[1, 2, 3] and [1, 2, 3]  ->  True",
+        "[1, 2] and [1, null, 2]  ->  False",
+        note="Same values in a different shape is not the same tree.",
+    ),
+    101: _b(
+        "symmetric-tree",
+        "Return True if the tree is a mirror image of itself around its "
+        "centre.",
+        "[1, 2, 2, 3, 4, 4, 3]  ->  True",
+        "[1, 2, 2, null, 3, null, 3]  ->  False",
+        note="Comparing a node's own children is not enough; the comparison "
+        "has to cross over.",
+    ),
+    236: _b(
+        "lowest-common-ancestor-of-a-binary-tree",
+        "Given two nodes in the tree, return the deepest node that has both "
+        "of them somewhere below it. A node counts as being below itself.",
+        "tree [3, 5, 1, 6, 2, 0, 8], nodes 5 and 1  ->  3",
+        "the same tree, nodes 5 and 4  ->  5",
+        note="This is a plain binary tree, not a search tree, so you cannot "
+        "compare values to pick a direction.",
+    ),
+    # Tree BFS, continued
+    111: _b(
+        "minimum-depth-of-binary-tree",
+        "Return the number of nodes on the shortest path from the root down "
+        "to a leaf. A leaf is a node with no children at all.",
+        "[3, 9, 20, null, null, 15, 7]  ->  2",
+        "[2, null, 3, null, 4, null, 5]  ->  4",
+        note="A node with one child is not a leaf, which is the usual wrong "
+        "answer here.",
+    ),
+    637: _b(
+        "average-of-levels-in-binary-tree",
+        "Return the average value of the nodes on each level, from the root "
+        "down.",
+        "[3, 9, 20, null, null, 15, 7]  ->  [3.0, 14.5, 11.0]",
+        "[]  ->  []",
+        note="One number per level, in order.",
+    ),
+    515: _b(
+        "find-largest-value-in-each-tree-row",
+        "Return the largest value found on each level of the tree, from the "
+        "root down.",
+        "[1, 3, 2, 5, 3, null, 9]  ->  [1, 3, 9]",
+        "[-1, -2, -3]  ->  [-1, -2]",
+        note="Values can be negative, so a running maximum cannot start at "
+        "zero.",
+    ),
+    1161: _b(
+        "maximum-level-sum-of-a-binary-tree",
+        "Levels are numbered from 1 at the root. Return the number of the "
+        "level whose values add up to the most.",
+        "[1, 7, 0, 7, -8, null, null]  ->  2",
+        "[-100, -200, -300, -20, -5, -10, -50]  ->  3",
+        note="If two levels tie, the shallower one wins. Sums can be "
+        "negative.",
+    ),
+    662: _b(
+        "maximum-width-of-binary-tree",
+        "The width of a level is the distance between its leftmost and "
+        "rightmost non-null nodes, counting the missing positions between "
+        "them. Return the largest width.",
+        "[1, 3, 2, 5, 3, null, 9]  ->  4",
+        "[1, 3, 2, 5, null, null, 9]  ->  4",
+        note="The gaps count, which is why you track each node's position "
+        "rather than just counting nodes.",
+    ),
+    # Graphs and grids, continued
+    695: _b(
+        "max-area-of-island",
+        "In a grid of 0s and 1s, an island is a group of 1s joined "
+        "horizontally or vertically. Return the number of cells in the "
+        "largest one, or 0 if there are none.",
+        "[[0, 0, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]]  ->  3",
+        "[[0, 0], [0, 0]]  ->  0",
+        note="Diagonals do not connect.",
+    ),
+    547: _b(
+        "number-of-provinces",
+        "A matrix says which cities are directly connected. A province is a "
+        "group of cities reachable from each other, directly or not. Count "
+        "the provinces.",
+        "[[1, 1, 0], [1, 1, 0], [0, 0, 1]]  ->  2",
+        "[[1, 0, 0], [0, 1, 0], [0, 0, 1]]  ->  3",
+        note="Connection is indirect too: a linked to b and b to c puts all "
+        "three together.",
+    ),
+    542: _b(
+        "01-matrix",
+        "For every cell in a grid of 0s and 1s, return its distance to the "
+        "nearest 0, counting steps up, down, left and right.",
+        "[[0, 0, 0], [0, 1, 0], [0, 0, 0]]  ->  [[0, 0, 0], [0, 1, 0], "
+        "[0, 0, 0]]",
+        "[[0, 0, 0], [0, 1, 0], [1, 1, 1]]  ->  [[0, 0, 0], [0, 1, 0], "
+        "[1, 2, 1]]",
+        note="Starting a search from every 1 is too slow; start from all the "
+        "0s at once instead.",
+    ),
+    417: _b(
+        "pacific-atlantic-water-flow",
+        "The Pacific touches the top and left edges, the Atlantic the bottom "
+        "and right. Water flows to a neighbour of equal or lower height. "
+        "Return every cell that can reach both oceans.",
+        "a 5 by 5 grid of heights  ->  the cells draining both ways",
+        "[[1]]  ->  [[0, 0]]",
+        note="Walk uphill from each ocean rather than downhill from each "
+        "cell, and take the overlap.",
+    ),
+    # Backtracking, continued
+    77: _b(
+        "combinations",
+        "Return every way of choosing k different numbers from 1 to n. Order "
+        "within a choice does not matter.",
+        "n = 4, k = 2  ->  [1,2], [1,3], [1,4], [2,3], [2,4], [3,4]",
+        "n = 1, k = 1  ->  [[1]]",
+        note="Only ever pick numbers above the last one taken, or you build "
+        "the same set twice.",
+    ),
+    17: _b(
+        "letter-combinations-of-a-phone-number",
+        "On a phone keypad, 2 is abc, 3 is def and so on. Given a string of "
+        "digits, return every string of letters they could spell.",
+        "digits = '23'  ->  ad, ae, af, bd, be, bf, cd, ce, cf",
+        "digits = ''  ->  []",
+        note="An empty input gives an empty list, not a list holding an empty "
+        "string.",
+    ),
+    131: _b(
+        "palindrome-partitioning",
+        "Cut the string into pieces so that every piece reads the same both "
+        "ways. Return every possible way of doing it.",
+        "text = 'aab'  ->  [['a', 'a', 'b'], ['aa', 'b']]",
+        "text = 'a'  ->  [['a']]",
+        note="A single character is a palindrome, so there is always at least "
+        "one answer.",
+    ),
+    # Hash maps, continued
+    454: _b(
+        "4sum-ii",
+        "Given four lists of the same length, count the tuples (i, j, k, l) "
+        "where a[i] + b[j] + c[k] + d[l] is zero. Every combination counts "
+        "separately, even when the values repeat.",
+        "a = [1, 2], b = [-2, -1], c = [-1, 2], d = [0, 2]  ->  2",
+        "a = [0], b = [0], c = [0], d = [0]  ->  1",
+        note="Count the tuples, not the distinct values.",
+    ),
+    560: _b(
+        "subarray-sum-equals-k",
+        "Count how many contiguous runs of the list add up to exactly k. "
+        "Runs may overlap, and the numbers can be negative.",
+        "nums = [1, 1, 1], k = 2  ->  2",
+        "nums = [1, 2, 3], k = 3  ->  2",
+        note="Negatives are why a sliding window does not work here.",
+    ),
+    128: _b(
+        "longest-consecutive-sequence",
+        "Find the length of the longest run of consecutive integers that the "
+        "list contains, in any order. The list is not sorted and you are "
+        "meant to avoid sorting it.",
+        "nums = [100, 4, 200, 1, 3, 2]  ->  4   (1, 2, 3, 4)",
+        "nums = []  ->  0",
+        note="Consecutive by value, not by position in the list.",
+    ),
+    36: _b(
+        "valid-sudoku",
+        "Given a 9 by 9 board where '.' is an empty cell, say whether the "
+        "digits already placed break any rule: no repeat in a row, a column, "
+        "or a 3 by 3 box.",
+        "a board with two 5s in row 0  ->  False",
+        "a board of all '.'  ->  True",
+        note="Only the filled cells matter. The board does not have to be "
+        "solvable, just legal so far.",
+    ),
+    # Two pointers, continued
+    26: _b(
+        "remove-duplicates-from-sorted-array",
+        "The list is sorted. Move the distinct values to the front, in order, "
+        "and return how many there are. Whatever is past that count is "
+        "ignored.",
+        "nums = [1, 1, 2]  ->  2, with nums starting [1, 2]",
+        "nums = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]  ->  5",
+        note="You return a count and edit the list in place; no new list.",
+    ),
+    283: _b(
+        "move-zeroes",
+        "Move every zero to the end of the list while keeping the other "
+        "numbers in their original order. Do it in place.",
+        "nums = [0, 1, 0, 3, 12]  ->  [1, 3, 12, 0, 0]",
+        "nums = [0]  ->  [0]",
+        note="The non-zero values have to keep their relative order.",
+    ),
+    42: _b(
+        "trapping-rain-water",
+        "Each number is the height of a bar one unit wide. After rain, how "
+        "much water sits in the dips between them?",
+        "height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]  ->  6",
+        "height = [4, 2, 0, 3, 2, 5]  ->  9",
+        note="Water above one column is limited by the shorter of the tallest "
+        "wall to its left and the tallest to its right.",
+    ),
+    977: _b(
+        "squares-of-a-sorted-array",
+        "The list is sorted and may contain negatives. Return the squares of "
+        "every number, sorted ascending.",
+        "nums = [-4, -1, 0, 3, 10]  ->  [0, 1, 9, 16, 100]",
+        "nums = [-7, -3, 2, 3, 11]  ->  [4, 9, 9, 49, 121]",
+        note="Squaring breaks the sort, because the most negative number can "
+        "become the largest square.",
+    ),
+    # Sliding window, continued
+    643: _b(
+        "maximum-average-subarray-i",
+        "Find the contiguous run of exactly k numbers with the highest "
+        "average, and return that average.",
+        "nums = [1, 12, -5, -6, 50, 3], k = 4  ->  12.75",
+        "nums = [5], k = 1  ->  5.0",
+        note="The window is a fixed size, so the highest average is just the "
+        "highest sum.",
+    ),
+    567: _b(
+        "permutation-in-string",
+        "Return True if any rearrangement of the first string appears as a "
+        "contiguous substring of the second.",
+        "pattern = 'ab', text = 'eidbaooo'  ->  True   ('ba')",
+        "pattern = 'ab', text = 'eidboaoo'  ->  False",
+        note="A window whose letter counts match is a permutation; nothing "
+        "needs sorting.",
+    ),
+    1004: _b(
+        "max-consecutive-ones-iii",
+        "The list holds only 0s and 1s. You may flip at most k zeros to ones. "
+        "Return the longest run of ones you can end up with.",
+        "nums = [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], k = 2  ->  6",
+        "nums = [0, 0, 0], k = 0  ->  0",
+        note="Read it as the longest window containing at most k zeros.",
+    ),
+    76: _b(
+        "minimum-window-substring",
+        "Find the shortest substring of the first string that contains every "
+        "character of the second, counting duplicates. Return an empty string "
+        "if there is none.",
+        "text = 'ADOBECODEBANC', pattern = 'ABC'  ->  'BANC'",
+        "text = 'a', pattern = 'aa'  ->  ''",
+        note="Duplicates count: needing two 'a's means the window must hold "
+        "two.",
+    ),
+    # Stacks, continued
+    682: _b(
+        "baseball-game",
+        "Work through a list of operations and return the final total. A "
+        "number is a score; 'C' cancels the last one, 'D' records double the "
+        "last one, and '+' records the sum of the last two.",
+        "ops = ['5', '2', 'C', 'D', '+']  ->  30",
+        "ops = ['1']  ->  1",
+        note="Every operation only ever looks at the most recent scores.",
+    ),
+    71: _b(
+        "simplify-path",
+        "Given a Unix-style absolute path, return its canonical form: one "
+        "slash between names, no trailing slash, '.' removed and '..' moving "
+        "up one directory.",
+        "path = '/home//foo/'  ->  '/home/foo'",
+        "path = '/a/./b/../../c/'  ->  '/c'",
+        note="'..' at the root stays at the root rather than failing.",
+    ),
+    84: _b(
+        "largest-rectangle-in-histogram",
+        "Each number is the height of a bar one unit wide, side by side. Find "
+        "the largest rectangle that fits entirely inside the histogram.",
+        "heights = [2, 1, 5, 6, 2, 3]  ->  10   (5 and 6, two wide)",
+        "heights = [2, 4]  ->  4",
+        note="A rectangle's height is the shortest bar it spans.",
+    ),
+    394: _b(
+        "decode-string",
+        "Expand a string where k[...] means repeat the bracketed part k "
+        "times. Brackets can nest.",
+        "encoded = '3[a]2[bc]'  ->  'aaabcbc'",
+        "encoded = '3[a2[c]]'  ->  'accaccacc'",
+        note="The repeat count can be more than one digit.",
+    ),
+    # Linked lists, continued
+    876: _b(
+        "middle-of-the-linked-list",
+        "Return the middle node of the list. With an even number of nodes, "
+        "return the second of the two middle ones.",
+        "1 -> 2 -> 3 -> 4 -> 5  ->  the node holding 3",
+        "1 -> 2 -> 3 -> 4  ->  the node holding 3",
+        note="You return the node itself, not its value or index.",
+    ),
+    83: _b(
+        "remove-duplicates-from-sorted-list",
+        "The list is sorted. Remove nodes so that each value appears once, "
+        "and return the head.",
+        "1 -> 1 -> 2  ->  1 -> 2",
+        "1 -> 1 -> 2 -> 3 -> 3  ->  1 -> 2 -> 3",
+        note="Sorted means duplicates are always neighbours.",
+    ),
+    234: _b(
+        "palindrome-linked-list",
+        "Return True if the values read the same forwards and backwards.",
+        "1 -> 2 -> 2 -> 1  ->  True",
+        "1 -> 2  ->  False",
+        note="The interesting version does it without copying to a list, in "
+        "constant extra space.",
+    ),
+    2: _b(
+        "add-two-numbers",
+        "Two numbers are stored as linked lists, one digit per node, least "
+        "significant digit first. Return their sum in the same form.",
+        "(2 -> 4 -> 3) + (5 -> 6 -> 4)  ->  7 -> 0 -> 8   (342 + 465 = 807)",
+        "(9 -> 9) + (1)  ->  0 -> 0 -> 1   (99 + 1 = 100)",
+        note="The digits are reversed, which is what makes long addition line "
+        "up from the head.",
+    ),
     # Hash maps
     1: _b(
         "two-sum",

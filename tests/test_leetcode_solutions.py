@@ -963,5 +963,74 @@ class TestBankIntegrity(unittest.TestCase):
             self.assertIn(problem.difficulty, ("Easy", "Medium", "Hard"))
 
 
+class TestStudyMaterial(unittest.TestCase):
+    """The reading that goes with a problem, not the solution to it.
+
+    Typing a solution you don't understand is calligraphy. The brief is what
+    the question actually asks, and it is the half of this that teaches you to
+    solve one rather than to reproduce one.
+    """
+
+    def test_every_problem_has_a_brief(self):
+        """52 problems were added without one before this test existed."""
+        from code_coach.leetcode.study import BRIEFS
+
+        missing = [
+            f"#{p.number} {p.title}"
+            for p in all_problems()
+            if p.number not in BRIEFS
+        ]
+        self.assertEqual(
+            missing, [], "add a ProblemBrief in leetcode/study.py for these"
+        )
+
+    def test_every_brief_belongs_to_a_problem(self):
+        """A brief for a problem that isn't in the bank is unreachable."""
+        from code_coach.leetcode.study import BRIEFS
+
+        numbers = {p.number for p in all_problems()}
+        orphans = sorted(n for n in BRIEFS if n not in numbers)
+        self.assertEqual(orphans, [])
+
+    def test_a_brief_says_what_the_question_asks(self):
+        from code_coach.leetcode.study import BRIEFS
+
+        for number, brief in BRIEFS.items():
+            with self.subTest(problem=number):
+                self.assertTrue(brief.slug.strip())
+                # Long enough to be a statement rather than a restated title.
+                self.assertGreater(len(brief.statement), 40)
+                # A brief may end in a question mark: "how much water sits in
+                # the dips?" is a statement of the problem too.
+                self.assertIn(brief.statement.strip()[-1], ".?")
+
+    def test_every_brief_shows_worked_examples(self):
+        """An example is what turns a statement into something checkable."""
+        from code_coach.leetcode.study import BRIEFS
+
+        for number, brief in BRIEFS.items():
+            with self.subTest(problem=number):
+                self.assertGreaterEqual(len(brief.examples), 1)
+                for example in brief.examples:
+                    self.assertIn("->", example)
+
+    def test_the_slug_is_url_shaped(self):
+        """It becomes a leetcode.com link, so a space or a capital breaks it."""
+        from code_coach.leetcode.study import BRIEFS
+
+        for number, brief in BRIEFS.items():
+            with self.subTest(problem=number):
+                self.assertRegex(brief.slug, r"^[a-z0-9]+(-[a-z0-9]+)*$")
+                self.assertTrue(brief.url.startswith("https://leetcode.com/"))
+
+    def test_every_pattern_has_a_lesson(self):
+        """The pattern lesson is the reading that makes its problems make
+        sense as a group rather than eight separate puzzles."""
+        from code_coach.leetcode.study import LESSONS
+
+        missing = [p.id for p in PATTERNS if p.id not in LESSONS]
+        self.assertEqual(missing, [])
+
+
 if __name__ == "__main__":
     unittest.main()
