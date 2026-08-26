@@ -44,8 +44,11 @@
 .typing-trainer {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem clamp(0.5rem, 3vw, 2.5rem) 2rem;
+  /* Tight on purpose. The whole screen — controls, stats, target, keyboard —
+     has to fit without scrolling, because a page that scrolls while you type
+     moves the keyboard out from under your eyes. */
+  gap: 0.75rem;
+  padding: 0.75rem clamp(0.5rem, 3vw, 2.5rem) 1.25rem;
   max-width: 78rem;
   width: 100%;
   margin: 0 auto;
@@ -133,6 +136,13 @@
   font-size: 0.8rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+/* Holds its place in the layout while there's nothing to fix. `visibility`
+   rather than `display` for exactly that reason — and it keeps the text out
+   of the accessibility tree too, so nothing announces a mistake you haven't
+   made. */
+.typing-fix.quiet {
+  visibility: hidden;
 }
 
 /* ── Personal bests ─────────────────────────────────────── */
@@ -739,6 +749,18 @@
   letter-spacing: 0.08em;
   color: #6e7b8b;
 }
+/* "paused" sits beside the label rather than replacing the number, so the
+   speed you had is still readable while the clock is stopped. */
+.typing-stat-note {
+  margin-left: 0.4em;
+  color: #7d8aa0;
+  background: #232c38;
+  border-radius: 3px;
+  padding: 0 0.35em;
+}
+.typing-stat.noted .typing-stat-value {
+  color: #8b98a8;
+}
 
 /* ── The target ─────────────────────────────────────────── */
 
@@ -749,8 +771,9 @@
   justify-content: center;
   gap: 0.6rem;
   /* Roomy enough that most lines don't change the height of this block, so
-     the keyboard below it holds still between targets. */
-  min-height: 15rem;
+     the keyboard below it holds still between targets — but no roomier, since
+     everything here competes with the keyboard for the fold. */
+  min-height: 13.5rem;
   text-align: center;
 }
 
@@ -840,7 +863,10 @@
   /* Runs of punctuation like `});` or `=>` read as one shape at monospace
      defaults. A little air separates them without losing the grid. */
   letter-spacing: 0.045em;
-  line-height: 1.65;
+  /* Was 1.65. A long passage wraps to five lines, and the leading on each of
+     them is height the keyboard has to give up — 1.5 still reads cleanly at
+     this size and buys back most of a line. */
+  line-height: 1.5;
   max-width: 52rem;
   white-space: pre-wrap;
   word-break: break-word;

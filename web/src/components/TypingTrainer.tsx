@@ -40,6 +40,14 @@ type Flash = { char: string; ok: boolean; at: number };
 
 const TIMED_SECONDS = 60;
 const SETTINGS_KEY = "code-coach:typing:settings";
+/**
+ * How long the keyboard can sit still before the clock stops.
+ *
+ * Words a minute measured against wall-clock time punishes you for pausing to
+ * read the next line, or to think about where a key is — which is most of what
+ * learning a keyboard is. The clock counts the time you're actually typing.
+ */
+const IDLE_PAUSE_MS = 2000;
 
 /** Words a minute, using the standard five-characters-is-a-word convention. */
 function wpmOf(chars: number, ms: number): number {
@@ -56,6 +64,10 @@ type Settings = {
   section: string;
   mode: string;
   theme: string;
+  /** Stop the clock after IDLE_PAUSE_MS of no typing. */
+  idlePause: boolean;
+  /** Show the speed at all. Some days the number is the thing in the way. */
+  showWpm: boolean;
 };
 
 /**
@@ -70,6 +82,8 @@ const DEFAULTS: Settings = {
   section: "everything",
   mode: "random",
   theme: "mixed",
+  idlePause: true,
+  showWpm: true,
 };
 
 function loadSettings(): Settings {
@@ -87,6 +101,10 @@ function loadSettings(): Settings {
         section: parsed.section || DEFAULTS.section,
         mode: parsed.mode || DEFAULTS.mode,
         theme: parsed.theme || DEFAULTS.theme,
+        // Both default to on, so an older settings blob without them reads
+        // the way the trainer has always behaved plus the idle pause.
+        idlePause: parsed.idlePause !== false,
+        showWpm: parsed.showWpm !== false,
       };
     }
   } catch {
@@ -113,6 +131,8 @@ export default function TypingTrainer() {
   const [mistakes, setMistakes] = useState<MistakeMode>(
     () => loadSettings().mistakes,
   );
+  const [idlePause, setIdlePause] = useState(() => loadSettings().idlePause);
+  const [showWpm, setShowWpm] = useState(() => loadSettings().showWpm);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [index, setIndex] = useState(0);
@@ -124,8 +144,9 @@ export default function TypingTrainer() {
   const [hits, setHits] = useState(0);
   const [misses, setMisses] = useState(0);
   const [restarts, setRestarts] = useState(0);
-  const [startedAt, setStartedAt] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  /** The clock has stopped itself because nothing has been typed lately. */
+  const [paused, setPaused] = useState(false);
   const [outcome, setOutcome] = useState<TypingRunResult | null>(null);
   // Looking back through a finished run. The score is already recorded, so
   // this is read-only.
@@ -134,6 +155,15 @@ export default function TypingTrainer() {
 
   // When the last keystroke landed, so a reaction time means something.
   const shownAt = useRef(0);
+  // The clock, kept in refs so a keystroke can settle it exactly rather than
+  // waiting for the next 100ms tick.
+  //   activeMs  — time banked so far, idle gaps already taken out
+  //   spanFrom  — when the stretch currently being banked started
+  //   lastTyped — any key at all, including a Backspace or a bounced mistake,
+  //               because all of those mean you are still at the keyboard
+  const activeMs = useRef(0);
+  const spanFrom = useRef(0);
+  const lastTyped = useRef(0);
   // Guards against submitting the same finished run twice.
   const submitted = useRef(false);
 
@@ -159,12 +189,14 @@ export default function TypingTrainer() {
           section: sectionId,
           mode: modeId,
           theme: themeId,
+          idlePause,
+          showWpm,
         }),
       );
     } catch {
       /* nothing to do if storage is full or blocked */
     }
-  }, [mistakes, sectionId, modeId, themeId]);
+  }, [mistakes, sectionId, modeId, themeId, idlePause, showWpm]);
 
   // ── Loading ───────────────────────────────────────────────
 
@@ -197,6 +229,8 @@ export default function TypingTrainer() {
         setMisses(0);
         setRestarts(0);
         setElapsed(0);
+        setPaused(false);
+        activeMs.current = 0;
         setOutcome(null);
         setReviewing(false);
       } catch (e) {
@@ -271,13 +305,23 @@ export default function TypingTrainer() {
   useEffect(() => {
     if (phase !== "running") return;
     const id = window.setInterval(() => {
-      const ms = Date.now() - startedAt;
-      setElapsed(ms);
+      const now = Date.now();
+      // Bank the stretch up to now, or up to the moment the pause began —
+      // whichever came first. Everything after that is thinking time.
+      const until = idlePause
+        ? Math.min(now, lastTyped.current + IDLE_PAUSE_MS)
+        : now;
+      if (until > spanFrom.current) {
+        activeMs.current += until - spanFrom.current;
+        spanFrom.current = until;
+        setElapsed(activeMs.current);
+      }
+      setPaused(idlePause && now - lastTyped.current >= IDLE_PAUSE_MS);
       // The timed drill ends on the clock, not on running out of words.
-      if (isTimed && ms >= TIMED_SECONDS * 1000) setPhase("done");
+      if (isTimed && activeMs.current >= TIMED_SECONDS * 1000) setPhase("done");
     }, 100);
     return () => window.clearInterval(id);
-  }, [isTimed, phase, startedAt]);
+  }, [idlePause, isTimed, phase]);
 
   useEffect(() => {
     if (!flash) return;
@@ -355,6 +399,25 @@ export default function TypingTrainer() {
     return typed !== target.text.slice(0, typed.length);
   }, [target, typed]);
 
+  /**
+   * Note that a key was pressed, and close off any idle gap before it.
+   *
+   * Settling it here rather than in the tick means the gap taken out is
+   * exactly the one you sat through, not one rounded to the nearest 100ms.
+   */
+  const touchClock = useCallback(() => {
+    const now = Date.now();
+    const resumeAt = lastTyped.current + IDLE_PAUSE_MS;
+    if (idlePause && now > resumeAt) {
+      if (resumeAt > spanFrom.current) {
+        activeMs.current += resumeAt - spanFrom.current;
+      }
+      spanFrom.current = now;
+      setPaused(false);
+    }
+    lastTyped.current = now;
+  }, [idlePause]);
+
   const onKey = useCallback(
     (event: KeyboardEvent) => {
       if (!drill || tab !== "practice") return;
@@ -379,6 +442,7 @@ export default function TypingTrainer() {
 
       if (event.key === "Backspace") {
         event.preventDefault();
+        touchClock();
         setTyped((t) => t.slice(0, -1));
         return;
       }
@@ -389,9 +453,14 @@ export default function TypingTrainer() {
         // The first keypress starts the clock rather than a countdown, so
         // there's nothing to sit through before you type.
         const now = Date.now();
-        setStartedAt(now);
         shownAt.current = now;
+        activeMs.current = 0;
+        spanFrom.current = now;
+        lastTyped.current = now;
+        setPaused(false);
         setPhase("running");
+      } else {
+        touchClock();
       }
 
       const current = drill.targets[index];
@@ -445,6 +514,7 @@ export default function TypingTrainer() {
       reviewing,
       step,
       tab,
+      touchClock,
       typed,
       wrongPrefix,
     ],
@@ -714,6 +784,56 @@ export default function TypingTrainer() {
                 </button>
               </div>
 
+              <div
+                className="typing-toggle"
+                title={
+                  showWpm
+                    ? "Speed is on screen while you type."
+                    : "Speed is hidden. Runs are still recorded — the Records tab has them when you want them."
+                }
+              >
+                <span>wpm</span>
+                <button
+                  type="button"
+                  className={showWpm ? "on" : ""}
+                  onClick={() => setShowWpm(true)}
+                >
+                  Show
+                </button>
+                <button
+                  type="button"
+                  className={!showWpm ? "on" : ""}
+                  onClick={() => setShowWpm(false)}
+                >
+                  Hide
+                </button>
+              </div>
+
+              <div
+                className="typing-toggle"
+                title={
+                  idlePause
+                    ? "The clock stops after two seconds of nothing, so reading ahead or hunting for a key doesn't cost you speed."
+                    : "The clock runs from your first keypress to your last, pauses included."
+                }
+              >
+                <span>Clock</span>
+                <button
+                  type="button"
+                  className={idlePause ? "on" : ""}
+                  onClick={() => setIdlePause(true)}
+                >
+                  Pause
+                </button>
+                <button
+                  type="button"
+                  className={!idlePause ? "on" : ""}
+                  onClick={() => setIdlePause(false)}
+                >
+                  Always
+                </button>
+              </div>
+
               {/* Only the text-based drills have text to theme. Offering it
                   on Whack-a-Key would be a control that does nothing. */}
               {usesText && (
@@ -755,7 +875,13 @@ export default function TypingTrainer() {
 
           <div className="typing-hud">
             <div className="typing-hud-stats">
-            <Stat label="wpm" value={phase === "idle" ? "—" : String(wpm)} />
+            {showWpm && (
+              <Stat
+                label="wpm"
+                value={phase === "idle" ? "—" : String(wpm)}
+                note={paused ? "paused" : undefined}
+              />
+            )}
             <Stat label="accuracy" value={total === 0 ? "—" : `${accuracy}%`} />
             <Stat
               label="reaction"
@@ -814,7 +940,9 @@ export default function TypingTrainer() {
               <h3>Run complete</h3>
               {outcome && (
                 <div className="typing-bests">
-                  {outcome.beat_wpm && <span className="tr-best">new best wpm</span>}
+                  {showWpm && outcome.beat_wpm && (
+                    <span className="tr-best">new best wpm</span>
+                  )}
                   {outcome.beat_accuracy && (
                     <span className="tr-best">new best accuracy</span>
                   )}
@@ -824,15 +952,17 @@ export default function TypingTrainer() {
                   {outcome.beat_streak && (
                     <span className="tr-best">longest streak</span>
                   )}
-                  {!outcome.beat_wpm &&
+                  {!(showWpm && outcome.beat_wpm) &&
                     !outcome.beat_accuracy &&
                     !outcome.beat_reaction &&
                     !outcome.beat_streak &&
                     (outcome.record.best_wpm > 0 ? (
                       <span className="tr-prev">
-                        Your best here: {outcome.record.best_wpm} wpm ·{" "}
-                        {outcome.record.best_accuracy}% · run{" "}
-                        {outcome.record.runs}
+                        {showWpm
+                          ? `Your best here: ${outcome.record.best_wpm} wpm · ` +
+                            `${outcome.record.best_accuracy}% · run ${outcome.record.runs}`
+                          : `Your best accuracy here: ` +
+                            `${outcome.record.best_accuracy}% · run ${outcome.record.runs}`}
                       </span>
                     ) : (
                       <span className="tr-prev">
@@ -842,7 +972,7 @@ export default function TypingTrainer() {
                 </div>
               )}
               <div className="typing-result-grid">
-                <Stat label="wpm" value={String(wpm)} big />
+                {showWpm && <Stat label="wpm" value={String(wpm)} big />}
                 <Stat label="accuracy" value={`${accuracy}%`} big />
                 <Stat
                   label="avg reaction"
@@ -984,9 +1114,13 @@ export default function TypingTrainer() {
                   two characters themselves. */}
               {spelled && <p className="typing-spelled">{spelled}</p>}
 
-              {wrongPrefix && (
-                <p className="typing-fix">Backspace to fix</p>
-              )}
+              {/* Always in the layout, only sometimes visible. Appearing on a
+                  mistake pushed everything below it down, which on a screen
+                  that just fits meant a scrollbar arriving exactly when you
+                  least want the page to move. */}
+              <p className={`typing-fix${wrongPrefix ? "" : " quiet"}`}>
+                Backspace to fix
+              </p>
               {target?.note && <p className="typing-note">{target.note}</p>}
 
               <div className="typing-progress">
@@ -1023,16 +1157,26 @@ function Stat({
   value,
   big,
   highlight,
+  note,
 }: {
   label: string;
   value: string;
   big?: boolean;
   highlight?: boolean;
+  /** A word about the number's state — "paused" while the clock is stopped. */
+  note?: string;
 }) {
   return (
-    <div className={`typing-stat ${big ? "big" : ""} ${highlight ? "hot" : ""}`}>
+    <div
+      className={`typing-stat ${big ? "big" : ""} ${highlight ? "hot" : ""} ${
+        note ? "noted" : ""
+      }`}
+    >
       <span className="typing-stat-value">{value}</span>
-      <span className="typing-stat-label">{label}</span>
+      <span className="typing-stat-label">
+        {label}
+        {note ? <span className="typing-stat-note">{note}</span> : null}
+      </span>
     </div>
   );
 }
