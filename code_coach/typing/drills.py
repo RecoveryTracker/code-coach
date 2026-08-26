@@ -24,6 +24,7 @@ from code_coach.typing.keys import (
     name_for,
     needs_shift,
 )
+from code_coach.typing.curriculum import code_lines_for
 from code_coach.typing.texts import (
     AFFIRMATIONS,
     CHAPTERS,
@@ -280,25 +281,51 @@ THEMES: tuple[Theme, ...] = (
     # Which language's code you're typing. Picking Code for the keys and then
     # one of these is how you drill the punctuation of the language you're
     # actually learning, rather than an average of several.
+    #
+    # Each pool is the hand-picked lines followed by everything the curriculum
+    # teaches in that language — the solution bank and the fundamentals
+    # snippets, line by line. They were twenty-odd curated lines each, which
+    # two drills used up, and adding a language meant writing a second list
+    # here as well as in the curriculum.
     Theme(
         "pycode", "Python Code",
-        "Real Python lines: comprehensions, with-blocks, typed signatures.",
-        passages=PYTHON_CODE,
+        "Real Python lines, plus every solution the curriculum teaches.",
+        passages=code_lines_for("python", curated=PYTHON_CODE),
     ),
     Theme(
         "jscode", "JavaScript Code",
-        "Destructuring, arrow functions, promises and the React shapes.",
-        passages=JAVASCRIPT_CODE,
+        "Destructuring, arrows and promises, plus the JavaScript solutions.",
+        passages=code_lines_for("javascript", curated=JAVASCRIPT_CODE),
+    ),
+    Theme(
+        "tscode", "TypeScript Code",
+        "Typed signatures, generics and the solutions written out in them.",
+        passages=code_lines_for("typescript"),
     ),
     Theme(
         "dartcode", "Dart Code",
-        "Null-safe declarations, futures, and the widget build method.",
-        passages=DART_CODE,
+        "Null-safe declarations and futures, plus the Dart solutions.",
+        passages=code_lines_for("dart", curated=DART_CODE),
     ),
     Theme(
         "sqlcode", "SQL Code",
         "Selects, joins, grouping and the odd transaction.",
-        passages=SQL_CODE,
+        passages=code_lines_for("sql", curated=SQL_CODE),
+    ),
+    Theme(
+        "ccode", "C Code",
+        "Pointers, structs and the loops they hang off.",
+        passages=code_lines_for("c"),
+    ),
+    Theme(
+        "cppcode", "C++ Code",
+        "The standard library shapes, and the punctuation that comes with them.",
+        passages=code_lines_for("cpp"),
+    ),
+    Theme(
+        "rustcode", "Rust Code",
+        "Ownership, matches and the question mark.",
+        passages=code_lines_for("rust"),
     ),
     Theme(
         "school", "First Code",
@@ -723,15 +750,12 @@ def _random_mix(
     """
     wanted = max(6, count // 3)
 
-    # Draw several times: each call samples a handful, and a long run wants
-    # more variety than one sample gives. Duplicates are dropped afterwards,
-    # since independent samples overlap.
-    # Ask for the whole run in one draw. Six small samples from a hundred-line
-    # pool overlapped constantly, so the same handful came round again and
-    # again while most of the material was never seen.
+    # Exactly what the run needs, in one draw. Over-drawing and trimming used
+    # to mark three times as much material as served, which burned through the
+    # pool and brought the reshuffle round three times too soon.
     lines: list[Passage] = []
     seen: set[str] = set()
-    for passage in _speed_passages(section, theme, rng, wanted=wanted * 3):
+    for passage in _speed_passages(section, theme, rng, wanted=wanted):
         if passage.text not in seen:
             seen.add(passage.text)
             lines.append(passage)
@@ -827,17 +851,49 @@ def _fallback_theme(mode: Mode) -> Theme:
     return DEFAULT_THEME
 
 
+# What each pool has already handed out this deal, keyed by section + theme.
+#
+# Every request seeds a fresh RNG and samples the pool from scratch, so a line
+# could come round three times in a dozen drills while most of the material
+# was never served at all. Remembering the deal turns that into what it should
+# be: the pool is worked through, and only reshuffled once it runs out.
+_dealt: dict[str, set[str]] = {}
+
+
+def _deal(
+    key: str, pool: tuple[Passage, ...], rng: random.Random, wanted: int
+) -> list[Passage]:
+    """`wanted` passages, preferring ones this deal hasn't served yet."""
+    served = _dealt.setdefault(key, set())
+    fresh = [p for p in pool if p.text not in served]
+    if len(fresh) < wanted:
+        # Worked through the pool — start a new deal rather than repeat inside
+        # this one. Whatever is left over goes out first so the last few lines
+        # of a pool aren't skipped by the reshuffle.
+        rest = fresh
+        served.clear()
+        seen = {p.text for p in rest}
+        fresh = rest + [p for p in pool if p.text not in seen]
+    picks = list(rng.sample(fresh, k=min(wanted, len(fresh))))
+    served.update(p.text for p in picks)
+    return picks
+
+
+def reset_deals() -> None:
+    """Forget what's been served. Tests need a clean pool to measure against."""
+    _dealt.clear()
+
+
 def _speed_passages(
     section: Section, theme: Theme, rng: random.Random, wanted: int = 6
 ) -> list[Passage]:
+    key = f"{section.id}:{theme.id}"
     # A theme that brought its own text uses it — that text is the point of
     # having chosen it.
     if theme.passages:
-        return list(rng.sample(theme.passages, k=min(wanted, len(theme.passages))))
+        return _deal(key, theme.passages, rng, wanted)
     if section.passages:
-        return list(
-            rng.sample(section.passages, k=min(wanted, len(section.passages)))
-        )
+        return _deal(key, section.passages, rng, wanted)
     if section.id in ("symbols", "coding"):
         # Tokens rather than whole code lines: these sections are punctuation
         # only, and `print(f"{name}")` would be asking for letters they don't
@@ -870,9 +926,9 @@ def _speed_passages(
     # things. Twenty minutes of this is twenty minutes of reading something
     # worth reading, where a pangram is twenty minutes of "quick brown fox".
     allowed = set(section.chars) | {" "}
-    worthwhile = [p for p in DEFAULT_LINES if set(p.text.lower()) <= allowed]
+    worthwhile = tuple(p for p in DEFAULT_LINES if set(p.text.lower()) <= allowed)
     if len(worthwhile) >= 4:
-        return list(rng.sample(worthwhile, k=min(wanted, len(worthwhile))))
+        return _deal(key, worthwhile, rng, wanted)
 
     # Pangrams need the whole alphabet by definition, so a row section can't
     # type one — Home Row was being handed "crazy Fredrick bought many very

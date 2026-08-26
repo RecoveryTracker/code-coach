@@ -316,6 +316,56 @@ class DrillTests(unittest.TestCase):
             texts = [t.text for t in build_drill(section_id, "random", seed="t").targets]
             self.assertEqual(len(texts), len(set(texts)), section_id)
 
+    def test_consecutive_drills_work_through_the_pool(self) -> None:
+        """The complaint this fixes: the same sentences coming round again
+        while most of the material had never been served.
+
+        Each request seeds its own RNG, so independent samples overlapped —
+        twelve drills served 120 lines but only 88 different ones. Dealing
+        from a remembered pool means nothing repeats until it's exhausted.
+        """
+        from code_coach.typing.drills import reset_deals
+
+        reset_deals()
+        served: list[str] = []
+        for i in range(10):
+            drill = build_drill(
+                "everything", "random", seed=str(i), theme_id="mixed"
+            )
+            served.extend(t.text for t in drill.targets)
+        self.assertEqual(len(served), len(set(served)))
+
+    def test_the_pool_reshuffles_instead_of_running_dry(self) -> None:
+        """Past the end of the material it deals again rather than returning
+        short — an endless trainer can't stop handing out lines."""
+        from code_coach.typing.drills import reset_deals
+
+        reset_deals()
+        counts = []
+        for i in range(40):
+            drill = build_drill(
+                "everything", "random", seed=str(i), theme_id="mixed"
+            )
+            counts.append(len(drill.targets))
+        self.assertTrue(all(c == counts[0] for c in counts), counts)
+
+    def test_a_small_theme_still_deals_without_repeating_inside_a_drill(
+        self,
+    ) -> None:
+        """Affirmations is 20 lines — small enough to lap quickly, but a
+        single drill must still be 10 different ones."""
+        from code_coach.typing.drills import reset_deals
+
+        reset_deals()
+        for i in range(6):
+            texts = [
+                t.text
+                for t in build_drill(
+                    "everything", "random", seed=str(i), theme_id="affirmations"
+                ).targets
+            ]
+            self.assertEqual(len(texts), len(set(texts)))
+
     def test_random_serves_real_prose_before_shuffled_words(self) -> None:
         """A line of shuffled words reads as filler next to actual writing."""
         targets = build_drill("everything", "random", seed="t").targets
@@ -502,6 +552,106 @@ class DrillTests(unittest.TestCase):
         self.assertEqual(name_for("|"), "pipe")
         self.assertEqual(name_for(" "), "space")
         self.assertEqual(name_for("A"), "capital A")
+
+
+class CurriculumCodeThemeTests(unittest.TestCase):
+    """The code themes are the curriculum's own lines, per language.
+
+    They used to be a separate hand-written list of twenty-odd lines each,
+    which meant adding a language twice and a trainer that never showed you
+    the solutions you were being taught.
+    """
+
+    def test_every_available_language_has_a_code_theme(self) -> None:
+        from code_coach.languages import LANGUAGES
+        from code_coach.typing.drills import THEMES
+
+        themed = {t.id for t in THEMES}
+        for language in LANGUAGES:
+            expected = {
+                "python": "pycode",
+                "javascript": "jscode",
+                "typescript": "tscode",
+                "dart": "dartcode",
+                "sql": "sqlcode",
+                "c": "ccode",
+                "cpp": "cppcode",
+                "rust": "rustcode",
+            }[language.id]
+            with self.subTest(language=language.id):
+                self.assertIn(expected, themed)
+
+    def test_a_code_theme_never_serves_another_language(self) -> None:
+        """`patterns_for_language` falls back to Python's bank rather than
+        failing, so without a guard the Rust theme handed out Python."""
+        from code_coach.typing.curriculum import leetcode_lines
+
+        for language in ("c", "cpp", "rust", "sql"):
+            with self.subTest(language=language):
+                # No bank of its own — so no solution lines at all, rather
+                # than Python's.
+                self.assertEqual(leetcode_lines(language), [])
+
+        for language in ("javascript", "typescript", "dart"):
+            with self.subTest(language=language):
+                lines = [p.text for p in leetcode_lines(language)]
+                self.assertTrue(lines)
+                self.assertFalse(
+                    [ln for ln in lines if ln.startswith("def ")],
+                    f"{language} is serving Python",
+                )
+
+    def test_no_theme_is_empty(self) -> None:
+        from code_coach.typing.drills import THEMES
+
+        for theme in THEMES:
+            if theme.id.endswith("code"):
+                with self.subTest(theme=theme.id):
+                    self.assertTrue(theme.passages, theme.id)
+
+    def test_trivial_and_comment_lines_are_left_out(self) -> None:
+        """A bare closing brace drills nothing, and a comment is prose."""
+        from code_coach.typing.curriculum import MIN_LENGTH, code_lines_for
+
+        for language in ("python", "javascript", "rust"):
+            for passage in code_lines_for(language):
+                with self.subTest(language=language, line=passage.text[:30]):
+                    self.assertGreaterEqual(len(passage.text), MIN_LENGTH)
+                    self.assertNotEqual(passage.text.strip(), "}")
+                    self.assertFalse(passage.text.startswith("#"))
+                    self.assertFalse(passage.text.startswith("//"))
+
+    def test_every_line_says_where_it_came_from(self) -> None:
+        """The note is what makes a stray line readable — it names the
+        problem the line is part of."""
+        from code_coach.typing.curriculum import code_lines_for
+
+        for passage in code_lines_for("python"):
+            with self.subTest(line=passage.text[:30]):
+                self.assertTrue(passage.source.strip())
+
+    def test_the_pool_is_far_bigger_than_the_hand_written_list(self) -> None:
+        """The reason for doing this: two drills used to exhaust a theme."""
+        from code_coach.typing.curriculum import code_lines_for
+
+        for language in ("python", "javascript", "typescript", "dart"):
+            with self.subTest(language=language):
+                self.assertGreater(len(code_lines_for(language)), 200)
+
+    def test_curated_lines_come_first(self) -> None:
+        from code_coach.typing.curriculum import code_lines_for
+        from code_coach.typing.snippets import PYTHON_CODE
+
+        pool = code_lines_for("python", curated=PYTHON_CODE)
+        self.assertEqual(pool[0].text, PYTHON_CODE[0].text)
+
+    def test_no_line_is_served_twice_within_a_pool(self) -> None:
+        from code_coach.typing.curriculum import code_lines_for
+
+        for language in ("python", "javascript", "typescript", "dart"):
+            texts = [p.text for p in code_lines_for(language)]
+            with self.subTest(language=language):
+                self.assertEqual(len(texts), len(set(texts)))
 
 
 if __name__ == "__main__":
