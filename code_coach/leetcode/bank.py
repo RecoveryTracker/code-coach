@@ -507,6 +507,7 @@ def study_payload(
     eight times to build one session.
     """
     from code_coach.leetcode.study import brief_for, lesson_for
+    from code_coach.leetcode.worked import worked_for
 
     if not pattern_id:
         return None
@@ -529,6 +530,21 @@ def study_payload(
             "steps": list(lesson.steps),
             "pitfalls": list(lesson.pitfalls),
         }
+        # The lesson proper: one problem taken from the question to a
+        # finished solution. Everything above says what the pattern is; this
+        # is the part that shows how anyone gets there.
+        worked = worked_for(pattern_id)
+        if worked:
+            out["lesson"]["worked"] = {
+                "problem": worked.problem,
+                "naive": worked.naive,
+                "why_not": worked.why_not,
+                "insight": worked.insight,
+                "stages": [
+                    {"explain": st.explain, "code": st.code}
+                    for st in worked.stages
+                ],
+            }
 
     if problem_number is not None and pattern:
         problem = next(

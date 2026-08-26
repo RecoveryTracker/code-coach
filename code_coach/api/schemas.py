@@ -38,6 +38,23 @@ class ProblemBriefInfo(BaseModel):
     solution: str = ""
 
 
+class WorkedStageInfo(BaseModel):
+    """One move in a lesson, and the code as it stands after it."""
+
+    explain: str
+    code: str = ""
+
+
+class WorkedInfo(BaseModel):
+    """One problem taken from the question to a finished solution."""
+
+    problem: int
+    naive: str
+    why_not: str
+    insight: str
+    stages: list[WorkedStageInfo] = []
+
+
 class PatternLessonInfo(BaseModel):
     """The reading that makes a pattern's problems make sense."""
 
@@ -48,6 +65,9 @@ class PatternLessonInfo(BaseModel):
     template: str
     steps: list[str] = []
     pitfalls: list[str] = []
+    # The lesson proper. It has to be declared here or pydantic drops it on
+    # the way out, which is exactly what it did the first time.
+    worked: WorkedInfo | None = None
 
 
 class StudyInfo(BaseModel):

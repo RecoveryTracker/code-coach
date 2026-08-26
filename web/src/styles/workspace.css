@@ -2564,6 +2564,79 @@ body.is-resizing .coach-explain-grip {
   margin-bottom: 4px;
 }
 
+/* ── The worked lesson ───────────────────────────────────
+   Three framed notes and then a numbered build-up. The notes are framed
+   because they are the reasoning, and the reasoning is the part people skip
+   straight past on the way to copying the code. */
+.study-worked {
+  margin: 4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #7ee2a8;
+  border-radius: 6px;
+  background: #0c1015;
+}
+
+.study-worked-tag {
+  display: inline-block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6e7b8b;
+}
+
+.study-worked-try,
+.study-worked-why,
+.study-worked-insight {
+  margin-bottom: 9px;
+}
+
+.study-worked-try p,
+.study-worked-why p,
+.study-worked-insight p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #cdd9e5;
+}
+
+/* The one that pays for the other two. */
+.study-worked-insight p {
+  color: #9ff0c0;
+}
+
+.study-worked-stages {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.study-worked-stages li {
+  margin-bottom: 10px;
+}
+
+.study-worked-explain {
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #cdd9e5;
+}
+
+.study-worked-code {
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #0a0c10;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #8bbbff;
+  /* Long lines scroll here rather than widening the whole panel. */
+  overflow-x: auto;
+  white-space: pre;
+}
+
 .study-template-wrap,
 .study-steps-wrap,
 .study-pitfalls-wrap {

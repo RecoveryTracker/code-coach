@@ -169,6 +169,21 @@ export type CheckAnswerResult = {
   title: string;
 };
 
+/** One move in a worked lesson, and the code as it stands after it. */
+export type WorkedStageInfo = {
+  explain: string;
+  code: string;
+};
+
+/** One problem taken from the question to a finished solution. */
+export type WorkedInfo = {
+  problem: number;
+  naive: string;
+  why_not: string;
+  insight: string;
+  stages: WorkedStageInfo[];
+};
+
 export type PatternLessonInfo = {
   id: string;
   name: string;
@@ -177,6 +192,8 @@ export type PatternLessonInfo = {
   template: string;
   steps: string[];
   pitfalls: string[];
+  /** The lesson proper: how anyone arrives at the solution. */
+  worked?: WorkedInfo | null;
 };
 
 export type StudyInfo = {

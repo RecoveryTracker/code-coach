@@ -180,6 +180,43 @@ export function StudyPanel({ study, getCode }: Props) {
 
           <p className="study-summary">{lesson.summary}</p>
 
+          {/* The lesson proper. Everything else on this panel says what the
+              pattern IS; this is the only part that shows how a person gets
+              from the question to the code, so it leads rather than trails. */}
+          {lesson.worked ? (
+            <div className="study-worked">
+              <div className="study-section-label">
+                Lesson — solving #{lesson.worked.problem} step by step
+              </div>
+
+              <div className="study-worked-try">
+                <span className="study-worked-tag">First thought</span>
+                <p>{lesson.worked.naive}</p>
+              </div>
+
+              <div className="study-worked-why">
+                <span className="study-worked-tag">Why that hurts</span>
+                <p>{lesson.worked.why_not}</p>
+              </div>
+
+              <div className="study-worked-insight">
+                <span className="study-worked-tag">The move</span>
+                <p>{lesson.worked.insight}</p>
+              </div>
+
+              <ol className="study-worked-stages">
+                {lesson.worked.stages.map((stage, i) => (
+                  <li key={i}>
+                    <p className="study-worked-explain">{stage.explain}</p>
+                    {stage.code ? (
+                      <pre className="study-worked-code">{stage.code}</pre>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
           {lesson.when ? (
             <div className="study-when">
               <span className="study-when-label">When to use</span>
