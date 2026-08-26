@@ -938,12 +938,26 @@ DEMO_CALLS: dict[int, str] = {
         "ListNode(1, ListNode(3, ListNode(4))))",
     141: "has_cycle(ListNode(3, ListNode(2, ListNode(0))))",
     19: f"remove_nth_from_end({_LIST_3}, 2)",
+    876: f"middle_node({_LIST_3})",
+    83: "delete_duplicates(ListNode(1, ListNode(1, ListNode(2))))",
+    234: "is_palindrome_list(ListNode(1, ListNode(2, ListNode(1))))",
+    2: (
+        "add_two_numbers(ListNode(2, ListNode(4, ListNode(3))), "
+        "ListNode(5, ListNode(6, ListNode(4))))"
+    ),
     # Trees — the example is level-order with nulls, not constructor calls.
     104: f"max_depth({_TREE_7})",
     226: f"invert_tree({_TREE_7})",
     112: "has_path_sum(TreeNode(5, TreeNode(4, TreeNode(11)), TreeNode(8)), 20)",
     543: f"diameter_of_binary_tree({_TREE_7})",
     98: f"is_valid_bst({_TREE_7})",
+    100: f"is_same_tree({_TREE_7}, {_TREE_7})",
+    101: "is_symmetric(TreeNode(1, TreeNode(2, TreeNode(3)), "
+        "TreeNode(2, None, TreeNode(3))))",
+    236: (
+        "root = " + _TREE_7 + "\n"
+        "meeting = lowest_common_ancestor(root, root.left, root.right)"
+    ),
     102: f"level_order({_TREE_7})",
     199: f"right_side_view({_TREE_7})",
     103: f"zigzag_level_order({_TREE_7})",
@@ -955,7 +969,42 @@ DEMO_CALLS: dict[int, str] = {
     # Grids and graphs.
     733: "flood_fill([[1, 1, 1], [1, 1, 0], [1, 0, 1]], 1, 1, 2)",
     133: "clone_graph(Node(1, [Node(2)]))",
+    695: "max_area_of_island([[0, 0, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]])",
+    547: "find_circle_num([[1, 1, 0], [1, 1, 0], [0, 0, 1]])",
+    542: "update_matrix([[0, 0, 0], [0, 1, 0], [1, 1, 1]])",
+    417: (
+        "pacific_atlantic([[1, 2, 2, 3, 5], [3, 2, 3, 4, 4], "
+        "[2, 4, 5, 3, 1], [6, 7, 1, 4, 5], [5, 1, 1, 2, 4]])"
+    ),
+    77: "combine(4, 2)",
+    17: 'letter_combinations("23")',
+    131: 'partition("aab")',
+    746: "min_cost_climbing_stairs([1, 100, 1, 1, 1, 100, 1, 1, 100, 1])",
+    1143: 'longest_common_subsequence("abcde", "ace")',
+    139: 'word_break("leetcode", ["leet", "code"])',
+    152: "max_product([2, 3, -2, 4])",
     973: "k_closest([[1, 3], [-2, 2], [5, 8], [0, 1]], 2)",
+    # Arrays plus a second argument the example prose can't be parsed into.
+    560: "subarray_sum([1, 2, 3], 3)",
+    128: "longest_consecutive([100, 4, 200, 1, 3, 2])",
+    36: 'is_valid_sudoku([["." for _ in range(9)] for _ in range(9)])',
+    26: "remove_duplicates([0, 0, 1, 1, 1, 2, 2, 3, 3, 4])",
+    682: 'cal_points(["5", "2", "C", "D", "+"])',
+    71: 'simplify_path("/a/./b/../../c/")',
+    84: "largest_rectangle_area([2, 1, 5, 6, 2, 3])",
+    394: 'decode_string("3[a2[c]]")',
+    34: "search_range([5, 7, 7, 8, 8, 10], 8)",
+    # Takes a predicate, which no example prose can be parsed into.
+    278: "first_bad_version(5, lambda v: v >= 4)",
+    74: "search_matrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 3)",
+    454: "four_sum_count([1, 2], [-2, -1], [-1, 2], [0, 2])",
+    283: "move_zeroes([0, 1, 0, 3, 12])",
+    42: "trap([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1])",
+    977: "sorted_squares([-4, -1, 0, 3, 10])",
+    643: "find_max_average([1, 12, -5, -6, 50, 3], 4)",
+    567: 'check_inclusion("ab", "eidbaooo")',
+    1004: "longest_ones([1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], 2)",
+    76: 'min_window("ADOBECODEBANC", "ABC")',
     # Heaps — a bare list literal reads fine, but the k has to come from
     # somewhere, and the example prose isn't parseable into one.
     1046: "last_stone_weight([2, 7, 4, 1, 8, 1])",

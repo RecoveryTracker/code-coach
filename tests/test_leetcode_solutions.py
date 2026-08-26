@@ -98,6 +98,41 @@ class TestHashMap(unittest.TestCase):
         norm = sorted(sorted(g) for g in got)
         self.assertEqual(norm, [["ate", "eat", "tea"], ["bat"], ["nat", "tan"]])
 
+    def test_four_sum_count(self):
+        f = load("lc-hashmap", 454)["four_sum_count"]
+        self.assertEqual(f([1, 2], [-2, -1], [-1, 2], [0, 2]), 2)
+        self.assertEqual(f([0], [0], [0], [0]), 1)
+        self.assertEqual(f([1], [1], [1], [1]), 0)
+
+    def test_subarray_sum(self):
+        f = load("lc-hashmap", 560)["subarray_sum"]
+        self.assertEqual(f([1, 1, 1], 2), 2)
+        self.assertEqual(f([1, 2, 3], 3), 2)
+        # Negatives and a zero-sum run, which a sliding window would miss.
+        self.assertEqual(f([1, -1, 0], 0), 3)
+        self.assertEqual(f([1, 2, 3], 99), 0)
+
+    def test_longest_consecutive(self):
+        f = load("lc-hashmap", 128)["longest_consecutive"]
+        self.assertEqual(f([100, 4, 200, 1, 3, 2]), 4)
+        self.assertEqual(f([0, 3, 7, 2, 5, 8, 4, 6, 0, 1]), 9)
+        self.assertEqual(f([]), 0)
+
+    def test_is_valid_sudoku(self):
+        f = load("lc-hashmap", 36)["is_valid_sudoku"]
+        board = [["." for _ in range(9)] for _ in range(9)]
+        self.assertTrue(f(board))
+        board[0][0] = "5"
+        board[0][8] = "5"
+        self.assertFalse(f(board))
+        board[0][8] = "."
+        board[8][0] = "5"
+        self.assertFalse(f(board))
+        board[8][0] = "."
+        # Same 3x3 box, different row and column.
+        board[1][1] = "5"
+        self.assertFalse(f(board))
+
 
 class TestTwoPointers(unittest.TestCase):
     def test_is_palindrome(self):
@@ -125,6 +160,35 @@ class TestTwoPointers(unittest.TestCase):
         self.assertEqual(f([0, 1, 1]), [])
         self.assertEqual(f([0, 0, 0]), [[0, 0, 0]])
 
+    def test_remove_duplicates(self):
+        f = load("lc-two-pointers", 26)["remove_duplicates"]
+        nums = [1, 1, 2]
+        self.assertEqual(f(nums), 2)
+        self.assertEqual(nums[:2], [1, 2])
+        nums = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4]
+        self.assertEqual(f(nums), 5)
+        self.assertEqual(nums[:5], [0, 1, 2, 3, 4])
+        self.assertEqual(f([]), 0)
+
+    def test_move_zeroes(self):
+        f = load("lc-two-pointers", 283)["move_zeroes"]
+        self.assertEqual(f([0, 1, 0, 3, 12]), [1, 3, 12, 0, 0])
+        self.assertEqual(f([0]), [0])
+        self.assertEqual(f([1, 2, 3]), [1, 2, 3])
+
+    def test_trap(self):
+        f = load("lc-two-pointers", 42)["trap"]
+        self.assertEqual(f([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]), 6)
+        self.assertEqual(f([4, 2, 0, 3, 2, 5]), 9)
+        self.assertEqual(f([]), 0)
+        self.assertEqual(f([1, 2, 3]), 0)
+
+    def test_sorted_squares(self):
+        f = load("lc-two-pointers", 977)["sorted_squares"]
+        self.assertEqual(f([-4, -1, 0, 3, 10]), [0, 1, 9, 16, 100])
+        self.assertEqual(f([-7, -3, 2, 3, 11]), [4, 9, 9, 49, 121])
+        self.assertEqual(f([-2]), [4])
+
 
 class TestSlidingWindow(unittest.TestCase):
     def test_max_profit(self):
@@ -150,6 +214,35 @@ class TestSlidingWindow(unittest.TestCase):
         f = load("lc-sliding-window", 424)["character_replacement"]
         self.assertEqual(f("ABAB", 2), 4)
         self.assertEqual(f("AABABBA", 1), 4)
+
+    def test_find_max_average(self):
+        f = load("lc-sliding-window", 643)["find_max_average"]
+        self.assertAlmostEqual(f([1, 12, -5, -6, 50, 3], 4), 12.75)
+        self.assertAlmostEqual(f([5], 1), 5.0)
+        # All negative: a best seeded at zero would answer 0 here.
+        self.assertAlmostEqual(f([-1, -2, -3], 2), -1.5)
+
+    def test_check_inclusion(self):
+        f = load("lc-sliding-window", 567)["check_inclusion"]
+        self.assertTrue(f("ab", "eidbaooo"))
+        self.assertFalse(f("ab", "eidboaoo"))
+        self.assertFalse(f("abc", "ab"))
+        self.assertTrue(f("a", "a"))
+
+    def test_longest_ones(self):
+        f = load("lc-sliding-window", 1004)["longest_ones"]
+        self.assertEqual(f([1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], 2), 6)
+        self.assertEqual(f([0, 0, 0], 0), 0)
+        self.assertEqual(f([1, 1, 1], 0), 3)
+
+    def test_min_window(self):
+        f = load("lc-sliding-window", 76)["min_window"]
+        self.assertEqual(f("ADOBECODEBANC", "ABC"), "BANC")
+        self.assertEqual(f("a", "a"), "a")
+        self.assertEqual(f("a", "aa"), "")
+        self.assertEqual(f("", "ABC"), "")
+        # Duplicate requirements have to be counted, not just present.
+        self.assertEqual(f("aa", "aa"), "aa")
 
 
 class TestStack(unittest.TestCase):
@@ -186,6 +279,34 @@ class TestStack(unittest.TestCase):
             f([73, 74, 75, 71, 69, 72, 76, 73]), [1, 1, 4, 2, 1, 1, 0, 0]
         )
         self.assertEqual(f([30, 40, 50, 60]), [1, 1, 1, 0])
+
+    def test_cal_points(self):
+        f = load("lc-stack", 682)["cal_points"]
+        self.assertEqual(f(["5", "2", "C", "D", "+"]), 30)
+        self.assertEqual(f(["5", "-2", "4", "C", "D", "9", "+", "+"]), 27)
+        self.assertEqual(f(["1"]), 1)
+
+    def test_simplify_path(self):
+        f = load("lc-stack", 71)["simplify_path"]
+        self.assertEqual(f("/home/"), "/home")
+        self.assertEqual(f("/../"), "/")
+        self.assertEqual(f("/home//foo/"), "/home/foo")
+        self.assertEqual(f("/a/./b/../../c/"), "/c")
+
+    def test_largest_rectangle_area(self):
+        f = load("lc-stack", 84)["largest_rectangle_area"]
+        self.assertEqual(f([2, 1, 5, 6, 2, 3]), 10)
+        self.assertEqual(f([2, 4]), 4)
+        self.assertEqual(f([]), 0)
+        self.assertEqual(f([5]), 5)
+
+    def test_decode_string(self):
+        f = load("lc-stack", 394)["decode_string"]
+        self.assertEqual(f("3[a]2[bc]"), "aaabcbc")
+        self.assertEqual(f("3[a2[c]]"), "accaccacc")
+        self.assertEqual(f("2[abc]3[cd]ef"), "abcabccdcdcdef")
+        # A count above nine has to accumulate digit by digit.
+        self.assertEqual(f("12[a]"), "a" * 12)
 
 
 class TestLinkedList(unittest.TestCase):
@@ -226,6 +347,43 @@ class TestLinkedList(unittest.TestCase):
         out = ns["remove_nth_from_end"](make_list([1, 2], node), 2)
         self.assertEqual(read_list(out), [2])
 
+    def test_middle_node(self):
+        ns = load("lc-linked-list", 876)
+        head = make_list([1, 2, 3, 4, 5], ns["ListNode"])
+        self.assertEqual(ns["middle_node"](head).val, 3)
+        # Even length takes the second of the two middles.
+        head = make_list([1, 2, 3, 4], ns["ListNode"])
+        self.assertEqual(ns["middle_node"](head).val, 3)
+
+    def test_delete_duplicates(self):
+        ns = load("lc-linked-list", 83)
+        head = make_list([1, 1, 2], ns["ListNode"])
+        self.assertEqual(read_list(ns["delete_duplicates"](head)), [1, 2])
+        head = make_list([1, 1, 2, 3, 3], ns["ListNode"])
+        self.assertEqual(read_list(ns["delete_duplicates"](head)), [1, 2, 3])
+        self.assertIsNone(ns["delete_duplicates"](None))
+
+    def test_is_palindrome_list(self):
+        ns = load("lc-linked-list", 234)
+        head = make_list([1, 2, 2, 1], ns["ListNode"])
+        self.assertTrue(ns["is_palindrome_list"](head))
+        head = make_list([1, 2], ns["ListNode"])
+        self.assertFalse(ns["is_palindrome_list"](head))
+        head = make_list([1, 2, 3, 2, 1], ns["ListNode"])
+        self.assertTrue(ns["is_palindrome_list"](head))
+        head = make_list([7], ns["ListNode"])
+        self.assertTrue(ns["is_palindrome_list"](head))
+
+    def test_add_two_numbers(self):
+        ns = load("lc-linked-list", 2)
+        a = make_list([2, 4, 3], ns["ListNode"])
+        b = make_list([5, 6, 4], ns["ListNode"])
+        self.assertEqual(read_list(ns["add_two_numbers"](a, b)), [7, 0, 8])
+        # A carry off the end has to grow the answer.
+        a = make_list([9, 9], ns["ListNode"])
+        b = make_list([1], ns["ListNode"])
+        self.assertEqual(read_list(ns["add_two_numbers"](a, b)), [0, 0, 1])
+
 
 class TestBinarySearch(unittest.TestCase):
     def test_search(self):
@@ -259,6 +417,32 @@ class TestBinarySearch(unittest.TestCase):
         self.assertEqual(f([3, 6, 7, 11], 8), 4)
         self.assertEqual(f([30, 11, 23, 4, 20], 5), 30)
         self.assertEqual(f([30, 11, 23, 4, 20], 6), 23)
+        self.assertEqual(f([1], 1), 1)
+
+    def test_first_bad_version(self):
+        f = load("lc-binary-search", 278)["first_bad_version"]
+        self.assertEqual(f(5, lambda v: v >= 4), 4)
+        self.assertEqual(f(1, lambda v: True), 1)
+        self.assertEqual(f(100, lambda v: v >= 100), 100)
+
+    def test_search_range(self):
+        f = load("lc-binary-search", 34)["search_range"]
+        self.assertEqual(f([5, 7, 7, 8, 8, 10], 8), [3, 4])
+        self.assertEqual(f([5, 7, 7, 8, 8, 10], 6), [-1, -1])
+        self.assertEqual(f([], 0), [-1, -1])
+        self.assertEqual(f([1], 1), [0, 0])
+        # A run that fills the whole array, so neither edge is bounded by a
+        # different value.
+        self.assertEqual(f([2, 2, 2], 2), [0, 2])
+
+    def test_search_matrix(self):
+        f = load("lc-binary-search", 74)["search_matrix"]
+        matrix = [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]]
+        self.assertTrue(f(matrix, 3))
+        self.assertTrue(f(matrix, 60))
+        self.assertFalse(f(matrix, 13))
+        self.assertFalse(f([], 1))
+        self.assertFalse(f([[]], 1))
 
 
 class TestTreeDFS(unittest.TestCase):
@@ -300,6 +484,36 @@ class TestTreeDFS(unittest.TestCase):
         # A deep violator that a naive parent-only check would miss.
         sneaky = make_tree([5, 4, 6, None, None, 3, 7], ns["TreeNode"])
         self.assertFalse(ns["is_valid_bst"](sneaky))
+
+    def test_is_same_tree(self):
+        ns = load("lc-tree-dfs", 100)
+        a = make_tree([1, 2, 3], ns["TreeNode"])
+        b = make_tree([1, 2, 3], ns["TreeNode"])
+        self.assertTrue(ns["is_same_tree"](a, b))
+        c = make_tree([1, 3, 2], ns["TreeNode"])
+        self.assertFalse(ns["is_same_tree"](a, c))
+        # Same values, different shape.
+        d = make_tree([1, 2, None], ns["TreeNode"])
+        e = make_tree([1, None, 2], ns["TreeNode"])
+        self.assertFalse(ns["is_same_tree"](d, e))
+        self.assertTrue(ns["is_same_tree"](None, None))
+
+    def test_is_symmetric(self):
+        ns = load("lc-tree-dfs", 101)
+        good = make_tree([1, 2, 2, 3, 4, 4, 3], ns["TreeNode"])
+        self.assertTrue(ns["is_symmetric"](good))
+        bad = make_tree([1, 2, 2, None, 3, None, 3], ns["TreeNode"])
+        self.assertFalse(ns["is_symmetric"](bad))
+        self.assertTrue(ns["is_symmetric"](None))
+
+    def test_lowest_common_ancestor(self):
+        ns = load("lc-tree-dfs", 236)
+        root = make_tree([3, 5, 1, 6, 2, 0, 8], ns["TreeNode"])
+        left, right = root.left, root.right
+        self.assertIs(ns["lowest_common_ancestor"](root, left, right), root)
+        # A node is its own ancestor.
+        deep = left.right
+        self.assertIs(ns["lowest_common_ancestor"](root, left, deep), left)
 
 
 class TestTreeBFS(unittest.TestCase):
@@ -406,6 +620,52 @@ class TestGraph(unittest.TestCase):
         self.assertIs(clone.neighbors[0].neighbors[0], clone)
         self.assertIsNone(ns["clone_graph"](None))
 
+    def test_max_area_of_island(self):
+        f = load("lc-graph", 695)["max_area_of_island"]
+        grid = [
+            [0, 0, 1, 0],
+            [0, 1, 1, 0],
+            [0, 0, 0, 0],
+            [1, 1, 0, 0],
+        ]
+        self.assertEqual(f(grid), 3)
+        self.assertEqual(f([[0, 0], [0, 0]]), 0)
+        self.assertEqual(f([]), 0)
+
+    def test_find_circle_num(self):
+        f = load("lc-graph", 547)["find_circle_num"]
+        self.assertEqual(f([[1, 1, 0], [1, 1, 0], [0, 0, 1]]), 2)
+        self.assertEqual(f([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), 3)
+        self.assertEqual(f([[1]]), 1)
+
+    def test_update_matrix(self):
+        f = load("lc-graph", 542)["update_matrix"]
+        self.assertEqual(
+            f([[0, 0, 0], [0, 1, 0], [0, 0, 0]]),
+            [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+        )
+        self.assertEqual(
+            f([[0, 0, 0], [0, 1, 0], [1, 1, 1]]),
+            [[0, 0, 0], [0, 1, 0], [1, 2, 1]],
+        )
+
+    def test_pacific_atlantic(self):
+        f = load("lc-graph", 417)["pacific_atlantic"]
+        heights = [
+            [1, 2, 2, 3, 5],
+            [3, 2, 3, 4, 4],
+            [2, 4, 5, 3, 1],
+            [6, 7, 1, 4, 5],
+            [5, 1, 1, 2, 4],
+        ]
+        expected = [
+            [0, 4], [1, 3], [1, 4], [2, 2], [3, 0], [3, 1], [4, 0]
+        ]
+        self.assertEqual(sorted(f(heights)), sorted(expected))
+        # A single cell touches both oceans.
+        self.assertEqual(f([[1]]), [[0, 0]])
+        self.assertEqual(f([]), [])
+
 
 class TestBacktracking(unittest.TestCase):
     def test_subsets(self):
@@ -443,6 +703,32 @@ class TestBacktracking(unittest.TestCase):
         self.assertTrue(f([row[:] for row in board], "ABCCED"))
         self.assertTrue(f([row[:] for row in board], "SEE"))
         self.assertFalse(f([row[:] for row in board], "ABCB"))
+
+    def test_combine(self):
+        f = load("lc-backtracking", 77)["combine"]
+        self.assertEqual(
+            sorted(f(4, 2)),
+            [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]],
+        )
+        self.assertEqual(f(1, 1), [[1]])
+        self.assertEqual(len(f(5, 3)), 10)
+
+    def test_letter_combinations(self):
+        f = load("lc-backtracking", 17)["letter_combinations"]
+        self.assertEqual(
+            sorted(f("23")),
+            ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"],
+        )
+        self.assertEqual(f(""), [])
+        self.assertEqual(sorted(f("7")), ["p", "q", "r", "s"])
+
+    def test_partition(self):
+        f = load("lc-backtracking", 131)["partition"]
+        self.assertEqual(
+            sorted(f("aab")), sorted([["a", "a", "b"], ["aa", "b"]])
+        )
+        self.assertEqual(f("a"), [["a"]])
+        self.assertEqual(len(f("aaa")), 4)
 
 
 class TestHeap(unittest.TestCase):
@@ -598,6 +884,34 @@ class TestDP(unittest.TestCase):
         self.assertEqual(f([0, 1, 0, 3, 2, 3]), 4)
         self.assertEqual(f([7, 7, 7, 7]), 1)
 
+    def test_min_cost_climbing_stairs(self):
+        f = load("lc-dp", 746)["min_cost_climbing_stairs"]
+        self.assertEqual(f([10, 15, 20]), 15)
+        self.assertEqual(f([1, 100, 1, 1, 1, 100, 1, 1, 100, 1]), 6)
+        self.assertEqual(f([1, 2]), 1)
+
+    def test_longest_common_subsequence(self):
+        f = load("lc-dp", 1143)["longest_common_subsequence"]
+        self.assertEqual(f("abcde", "ace"), 3)
+        self.assertEqual(f("abc", "abc"), 3)
+        self.assertEqual(f("abc", "def"), 0)
+        self.assertEqual(f("", "abc"), 0)
+
+    def test_word_break(self):
+        f = load("lc-dp", 139)["word_break"]
+        self.assertTrue(f("leetcode", ["leet", "code"]))
+        self.assertTrue(f("applepenapple", ["apple", "pen"]))
+        self.assertFalse(f("catsandog", ["cats", "dog", "sand", "and", "cat"]))
+        self.assertTrue(f("", ["a"]))
+
+    def test_max_product(self):
+        f = load("lc-dp", 152)["max_product"]
+        self.assertEqual(f([2, 3, -2, 4]), 6)
+        self.assertEqual(f([-2, 0, -1]), 0)
+        # Two negatives make the best answer the whole array.
+        self.assertEqual(f([-2, 3, -4]), 24)
+        self.assertEqual(f([-3]), -3)
+
 
 class TestBankIntegrity(unittest.TestCase):
     def test_every_solution_parses(self):
@@ -618,6 +932,24 @@ class TestBankIntegrity(unittest.TestCase):
                         source,
                         f"{problem.label} has no test — add one before shipping it.",
                     )
+
+    def test_problem_numbers_unique_across_the_whole_bank(self):
+        """A DEMO_CALLS entry is looked up by number alone.
+
+        So the same number in two patterns means one of them is handed the
+        other's demo call, which names a function it doesn't define — the
+        visualiser then fails on a problem whose own entry was fine.
+        """
+        from collections import Counter
+
+        counts = Counter(p.number for p in all_problems())
+        repeated = sorted(n for n, k in counts.items() if k > 1)
+        self.assertEqual(
+            repeated,
+            [],
+            "these numbers appear in more than one pattern; give one of them "
+            "a different problem",
+        )
 
     def test_problem_numbers_unique_within_pattern(self):
         for pattern in PATTERNS:

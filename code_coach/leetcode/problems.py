@@ -172,6 +172,93 @@ _HASHMAP = Pattern(
                 return list(groups.values())
             """,
         ),
+        _p(
+            454,
+            "4Sum II",
+            "Medium",
+            "Count every sum from the first two lists, then look up its negation from the other two.",
+            "O(n^2) time, O(n^2) space",
+            """
+            def four_sum_count(a, b, c, d):
+                pairs = {}
+                for x in a:
+                    for y in b:
+                        pairs[x + y] = pairs.get(x + y, 0) + 1
+                found = 0
+                for z in c:
+                    for w in d:
+                        found += pairs.get(-(z + w), 0)
+                return found
+            """,
+        ),
+        _p(
+            560,
+            "Subarray Sum Equals K",
+            "Medium",
+            "Remember every running total you've seen; the gap between two of them is a subarray.",
+            "O(n) time, O(n) space",
+            """
+            def subarray_sum(nums, k):
+                seen = {0: 1}
+                running = 0
+                found = 0
+                for n in nums:
+                    running += n
+                    found += seen.get(running - k, 0)
+                    seen[running] = seen.get(running, 0) + 1
+                return found
+            """,
+        ),
+        _p(
+            128,
+            "Longest Consecutive Sequence",
+            "Medium",
+            "Only start counting from a number with no left neighbour — each run is walked once.",
+            "O(n) time, O(n) space",
+            """
+            def longest_consecutive(nums):
+                pool = set(nums)
+                best = 0
+                for n in pool:
+                    if n - 1 in pool:
+                        continue
+                    length = 1
+                    while n + length in pool:
+                        length += 1
+                    if length > best:
+                        best = length
+                return best
+            """,
+        ),
+        _p(
+            36,
+            "Valid Sudoku",
+            "Medium",
+            "Three sets per cell: its row, its column, and its box at (r // 3, c // 3).",
+            "O(1) time, O(1) space",
+            """
+            def is_valid_sudoku(board):
+                rows = {}
+                cols = {}
+                boxes = {}
+                for r in range(9):
+                    for c in range(9):
+                        value = board[r][c]
+                        if value == ".":
+                            continue
+                        box = (r // 3, c // 3)
+                        if value in rows.setdefault(r, set()):
+                            return False
+                        if value in cols.setdefault(c, set()):
+                            return False
+                        if value in boxes.setdefault(box, set()):
+                            return False
+                        rows[r].add(value)
+                        cols[c].add(value)
+                        boxes[box].add(value)
+                return True
+            """,
+        ),
     ),
 )
 
@@ -274,6 +361,87 @@ _TWO_POINTERS = Pattern(
                 return result
             """,
         ),
+        _p(
+            26,
+            "Remove Duplicates from Sorted Array",
+            "Easy",
+            "One pointer writes, the other reads — the writer only moves on a new value.",
+            "O(n) time, O(1) space",
+            """
+            def remove_duplicates(nums):
+                if not nums:
+                    return 0
+                write = 1
+                for read in range(1, len(nums)):
+                    if nums[read] != nums[write - 1]:
+                        nums[write] = nums[read]
+                        write += 1
+                return write
+            """,
+        ),
+        _p(
+            283,
+            "Move Zeroes",
+            "Easy",
+            "Same read/write pair: write every non-zero forward, then fill the tail.",
+            "O(n) time, O(1) space",
+            """
+            def move_zeroes(nums):
+                write = 0
+                for read in range(len(nums)):
+                    if nums[read] != 0:
+                        nums[write] = nums[read]
+                        write += 1
+                for i in range(write, len(nums)):
+                    nums[i] = 0
+                return nums
+            """,
+        ),
+        _p(
+            42,
+            "Trapping Rain Water",
+            "Hard",
+            "Water over a column is the smaller of the two tallest walls beside it, minus the column.",
+            "O(n) time, O(1) space",
+            """
+            def trap(height):
+                if not height:
+                    return 0
+                left, right = 0, len(height) - 1
+                left_max, right_max = height[left], height[right]
+                water = 0
+                while left < right:
+                    if left_max < right_max:
+                        left += 1
+                        left_max = max(left_max, height[left])
+                        water += left_max - height[left]
+                    else:
+                        right -= 1
+                        right_max = max(right_max, height[right])
+                        water += right_max - height[right]
+                return water
+            """,
+        ),
+        _p(
+            977,
+            "Squares of a Sorted Array",
+            "Easy",
+            "The biggest square is at one end or the other, so fill the answer backwards.",
+            "O(n) time, O(n) space",
+            """
+            def sorted_squares(nums):
+                out = [0] * len(nums)
+                left, right = 0, len(nums) - 1
+                for slot in range(len(nums) - 1, -1, -1):
+                    if abs(nums[left]) > abs(nums[right]):
+                        out[slot] = nums[left] * nums[left]
+                        left += 1
+                    else:
+                        out[slot] = nums[right] * nums[right]
+                        right -= 1
+                return out
+            """,
+        ),
     ),
 )
 
@@ -361,6 +529,104 @@ _SLIDING_WINDOW = Pattern(
                         counts[s[left]] -= 1
                         left += 1
                     best = max(best, right - left + 1)
+                return best
+            """,
+        ),
+        _p(
+            643,
+            "Maximum Average Subarray I",
+            "Easy",
+            "The window never changes size, so each step adds one number and drops one.",
+            "O(n) time, O(1) space",
+            """
+            def find_max_average(nums, k):
+                window = sum(nums[:k])
+                best = window
+                for i in range(k, len(nums)):
+                    window += nums[i] - nums[i - k]
+                    if window > best:
+                        best = window
+                return best / k
+            """,
+        ),
+        _p(
+            567,
+            "Permutation in String",
+            "Medium",
+            "A fixed window whose letter counts match is a permutation — no sorting needed.",
+            "O(n) time, O(1) space",
+            """
+            def check_inclusion(pattern, text):
+                if len(pattern) > len(text):
+                    return False
+                need = {}
+                for ch in pattern:
+                    need[ch] = need.get(ch, 0) + 1
+                window = {}
+                for i, ch in enumerate(text):
+                    window[ch] = window.get(ch, 0) + 1
+                    if i >= len(pattern):
+                        out = text[i - len(pattern)]
+                        window[out] -= 1
+                        if window[out] == 0:
+                            del window[out]
+                    if window == need:
+                        return True
+                return False
+            """,
+        ),
+        _p(
+            1004,
+            "Max Consecutive Ones III",
+            "Medium",
+            "Grow while at most k zeros are inside; shrink from the left when a k+1th appears.",
+            "O(n) time, O(1) space",
+            """
+            def longest_ones(nums, k):
+                left = 0
+                zeros = 0
+                best = 0
+                for right in range(len(nums)):
+                    if nums[right] == 0:
+                        zeros += 1
+                    while zeros > k:
+                        if nums[left] == 0:
+                            zeros -= 1
+                        left += 1
+                    if right - left + 1 > best:
+                        best = right - left + 1
+                return best
+            """,
+        ),
+        _p(
+            76,
+            "Minimum Window Substring",
+            "Hard",
+            "Count how many required letters are satisfied; shrink only while all of them are.",
+            "O(n) time, O(1) space",
+            """
+            def min_window(text, pattern):
+                if not pattern or not text:
+                    return ""
+                need = {}
+                for ch in pattern:
+                    need[ch] = need.get(ch, 0) + 1
+                missing = len(need)
+                window = {}
+                best = ""
+                left = 0
+                for right, ch in enumerate(text):
+                    window[ch] = window.get(ch, 0) + 1
+                    if ch in need and window[ch] == need[ch]:
+                        missing -= 1
+                    while missing == 0:
+                        if not best or right - left + 1 < len(best):
+                            best = text[left:right + 1]
+                        out = text[left]
+                        window[out] -= 1
+                        if out in need and window[out] < need[out]:
+                            missing += 1
+                        left += 1
                 return best
             """,
         ),
@@ -468,6 +734,94 @@ _STACK = Pattern(
                 return answer
             """,
         ),
+        _p(
+            682,
+            "Baseball Game",
+            "Easy",
+            "Every operation only ever looks at the top of the stack, which is the whole idea.",
+            "O(n) time, O(n) space",
+            """
+            def cal_points(operations):
+                stack = []
+                for op in operations:
+                    if op == "C":
+                        stack.pop()
+                    elif op == "D":
+                        stack.append(stack[-1] * 2)
+                    elif op == "+":
+                        stack.append(stack[-1] + stack[-2])
+                    else:
+                        stack.append(int(op))
+                return sum(stack)
+            """,
+        ),
+        _p(
+            71,
+            "Simplify Path",
+            "Medium",
+            "A '..' pops the directory before it, which is exactly what a stack is for.",
+            "O(n) time, O(n) space",
+            """
+            def simplify_path(path):
+                stack = []
+                for part in path.split("/"):
+                    if part == "" or part == ".":
+                        continue
+                    if part == "..":
+                        if stack:
+                            stack.pop()
+                    else:
+                        stack.append(part)
+                return "/" + "/".join(stack)
+            """,
+        ),
+        _p(
+            84,
+            "Largest Rectangle in Histogram",
+            "Hard",
+            "Keep bars increasing; a shorter one closes off every taller bar behind it.",
+            "O(n) time, O(n) space",
+            """
+            def largest_rectangle_area(heights):
+                stack = []
+                best = 0
+                for i, height in enumerate(heights + [0]):
+                    start = i
+                    while stack and stack[-1][1] > height:
+                        left, tall = stack.pop()
+                        if tall * (i - left) > best:
+                            best = tall * (i - left)
+                        start = left
+                    stack.append((start, height))
+                return best
+            """,
+        ),
+        _p(
+            394,
+            "Decode String",
+            "Medium",
+            "Push the work in progress when a bracket opens, finish it when one closes.",
+            "O(n) time, O(n) space",
+            """
+            def decode_string(encoded):
+                stack = []
+                current = ""
+                count = 0
+                for ch in encoded:
+                    if ch.isdigit():
+                        count = count * 10 + int(ch)
+                    elif ch == "[":
+                        stack.append((current, count))
+                        current = ""
+                        count = 0
+                    elif ch == "]":
+                        before, times = stack.pop()
+                        current = before + current * times
+                    else:
+                        current += ch
+                return current
+            """,
+        ),
     ),
 )
 
@@ -557,6 +911,92 @@ _LINKED_LIST = Pattern(
                     fast = fast.next
                 slow.next = slow.next.next
                 return dummy.next
+            """,
+        ),
+        _p(
+            876,
+            "Middle of the Linked List",
+            "Easy",
+            "One pointer takes two steps per the other's one, so it ends at twice the distance.",
+            "O(n) time, O(1) space",
+            """
+            def middle_node(head):
+                slow = head
+                fast = head
+                while fast and fast.next:
+                    slow = slow.next
+                    fast = fast.next.next
+                return slow
+            """,
+        ),
+        _p(
+            83,
+            "Remove Duplicates from Sorted List",
+            "Easy",
+            "Sorted means duplicates are neighbours, so one pass and a skipped link does it.",
+            "O(n) time, O(1) space",
+            """
+            def delete_duplicates(head):
+                node = head
+                while node and node.next:
+                    if node.val == node.next.val:
+                        node.next = node.next.next
+                    else:
+                        node = node.next
+                return head
+            """,
+        ),
+        _p(
+            234,
+            "Palindrome Linked List",
+            "Easy",
+            "Find the middle, reverse the second half, then walk the two halves together.",
+            "O(n) time, O(1) space",
+            """
+            def is_palindrome_list(head):
+                slow = head
+                fast = head
+                while fast and fast.next:
+                    slow = slow.next
+                    fast = fast.next.next
+                second = None
+                while slow:
+                    nxt = slow.next
+                    slow.next = second
+                    second = slow
+                    slow = nxt
+                first = head
+                while second:
+                    if first.val != second.val:
+                        return False
+                    first = first.next
+                    second = second.next
+                return True
+            """,
+        ),
+        _p(
+            2,
+            "Add Two Numbers",
+            "Medium",
+            "Long addition, digit by digit. The carry is the only thing you have to remember.",
+            "O(n) time, O(n) space",
+            """
+            def add_two_numbers(first, second):
+                head = ListNode()
+                node = head
+                carry = 0
+                while first or second or carry:
+                    total = carry
+                    if first:
+                        total += first.val
+                        first = first.next
+                    if second:
+                        total += second.val
+                        second = second.next
+                    carry = total // 10
+                    node.next = ListNode(total % 10)
+                    node = node.next
+                return head.next
             """,
         ),
     ),
@@ -675,6 +1115,76 @@ _BINARY_SEARCH = Pattern(
                 return low
             """,
         ),
+        _p(
+            278,
+            "First Bad Version",
+            "Easy",
+            "Search for a boundary: keep the mid when it's bad, discard it when it isn't.",
+            "O(log n) time, O(1) space",
+            """
+            def first_bad_version(n, is_bad):
+                low, high = 1, n
+                while low < high:
+                    mid = (low + high) // 2
+                    if is_bad(mid):
+                        high = mid
+                    else:
+                        low = mid + 1
+                return low
+            """,
+        ),
+        _p(
+            34,
+            "Find First and Last Position of Element in Sorted Array",
+            "Medium",
+            "Two searches, not one: the same loop finds the left edge and then the right.",
+            "O(log n) time, O(1) space",
+            """
+            def search_range(nums, target):
+                def edge(first):
+                    low, high = 0, len(nums) - 1
+                    found = -1
+                    while low <= high:
+                        mid = (low + high) // 2
+                        if nums[mid] == target:
+                            found = mid
+                            if first:
+                                high = mid - 1
+                            else:
+                                low = mid + 1
+                        elif nums[mid] < target:
+                            low = mid + 1
+                        else:
+                            high = mid - 1
+                    return found
+
+                return [edge(True), edge(False)]
+            """,
+        ),
+        _p(
+            74,
+            "Search a 2D Matrix",
+            "Medium",
+            "A sorted matrix is one sorted list folded up, so divide the index to unfold it.",
+            "O(log(m * n)) time, O(1) space",
+            """
+            def search_matrix(matrix, target):
+                if not matrix or not matrix[0]:
+                    return False
+                rows, cols = len(matrix), len(matrix[0])
+                low, high = 0, rows * cols - 1
+                while low <= high:
+                    mid = (low + high) // 2
+                    value = matrix[mid // cols][mid % cols]
+                    if value == target:
+                        return True
+                    if value < target:
+                        low = mid + 1
+                    else:
+                        high = mid - 1
+                return False
+            """,
+        ),
     ),
 )
 
@@ -771,6 +1281,64 @@ _TREE_DFS = Pattern(
                     return check(node.left, low, node.val) and check(node.right, node.val, high)
 
                 return check(root, float("-inf"), float("inf"))
+            """,
+        ),
+        _p(
+            100,
+            "Same Tree",
+            "Easy",
+            "Two trees match when their roots match and both pairs of children do.",
+            "O(n) time, O(h) space",
+            """
+            def is_same_tree(first, second):
+                if not first and not second:
+                    return True
+                if not first or not second:
+                    return False
+                if first.val != second.val:
+                    return False
+                return is_same_tree(first.left, second.left) and is_same_tree(
+                    first.right, second.right
+                )
+            """,
+        ),
+        _p(
+            101,
+            "Symmetric Tree",
+            "Easy",
+            "A mirror compares left against right — the recursion crosses over.",
+            "O(n) time, O(h) space",
+            """
+            def is_symmetric(root):
+                def mirror(left, right):
+                    if not left and not right:
+                        return True
+                    if not left or not right:
+                        return False
+                    if left.val != right.val:
+                        return False
+                    return mirror(left.left, right.right) and mirror(
+                        left.right, right.left
+                    )
+
+                return mirror(root, root)
+            """,
+        ),
+        _p(
+            236,
+            "Lowest Common Ancestor of a Binary Tree",
+            "Medium",
+            "A node whose two sides each found something is the meeting point.",
+            "O(n) time, O(h) space",
+            """
+            def lowest_common_ancestor(root, p, q):
+                if not root or root is p or root is q:
+                    return root
+                left = lowest_common_ancestor(root.left, p, q)
+                right = lowest_common_ancestor(root.right, p, q)
+                if left and right:
+                    return root
+                return left or right
             """,
         ),
     ),
@@ -1131,6 +1699,119 @@ _GRAPH = Pattern(
                 return copy(node)
             """,
         ),
+        _p(
+            695,
+            "Max Area of Island",
+            "Medium",
+            "Same flood fill, but the walk returns a size instead of just marking cells.",
+            "O(m * n) time, O(m * n) space",
+            """
+            def max_area_of_island(grid):
+                if not grid:
+                    return 0
+                rows, cols = len(grid), len(grid[0])
+
+                def fill(r, c):
+                    if r < 0 or c < 0 or r >= rows or c >= cols:
+                        return 0
+                    if grid[r][c] != 1:
+                        return 0
+                    grid[r][c] = 0
+                    return 1 + fill(r + 1, c) + fill(r - 1, c) + fill(
+                        r, c + 1
+                    ) + fill(r, c - 1)
+
+                best = 0
+                for r in range(rows):
+                    for c in range(cols):
+                        area = fill(r, c)
+                        if area > best:
+                            best = area
+                return best
+            """,
+        ),
+        _p(
+            547,
+            "Number of Provinces",
+            "Medium",
+            "Every walk that starts somewhere unvisited is one more connected group.",
+            "O(n * n) time, O(n) space",
+            """
+            def find_circle_num(is_connected):
+                n = len(is_connected)
+                seen = set()
+
+                def visit(city):
+                    seen.add(city)
+                    for other in range(n):
+                        if is_connected[city][other] and other not in seen:
+                            visit(other)
+
+                groups = 0
+                for city in range(n):
+                    if city not in seen:
+                        visit(city)
+                        groups += 1
+                return groups
+            """,
+        ),
+        _p(
+            542,
+            "01 Matrix",
+            "Medium",
+            "Start the queue from every zero at once, and the first visit is the nearest one.",
+            "O(m * n) time, O(m * n) space",
+            """
+            def update_matrix(mat):
+                rows, cols = len(mat), len(mat[0])
+                out = [[-1] * cols for _ in range(rows)]
+                queue = deque()
+                for r in range(rows):
+                    for c in range(cols):
+                        if mat[r][c] == 0:
+                            out[r][c] = 0
+                            queue.append((r, c))
+                while queue:
+                    r, c = queue.popleft()
+                    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < rows and 0 <= nc < cols and out[nr][nc] == -1:
+                            out[nr][nc] = out[r][c] + 1
+                            queue.append((nr, nc))
+                return out
+            """,
+        ),
+        _p(
+            417,
+            "Pacific Atlantic Water Flow",
+            "Medium",
+            "Walk uphill from each ocean instead of downhill from each cell; the answer is the overlap.",
+            "O(m * n) time, O(m * n) space",
+            """
+            def pacific_atlantic(heights):
+                if not heights:
+                    return []
+                rows, cols = len(heights), len(heights[0])
+                pacific = set()
+                atlantic = set()
+
+                def climb(r, c, seen):
+                    seen.add((r, c))
+                    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < rows and 0 <= nc < cols:
+                            if (nr, nc) not in seen and heights[nr][nc] >= heights[r][c]:
+                                climb(nr, nc, seen)
+
+                for c in range(cols):
+                    climb(0, c, pacific)
+                    climb(rows - 1, c, atlantic)
+                for r in range(rows):
+                    climb(r, 0, pacific)
+                    climb(r, cols - 1, atlantic)
+                return [list(cell) for cell in sorted(pacific & atlantic)]
+            """,
+        ),
     ),
 )
 
@@ -1278,6 +1959,89 @@ _BACKTRACKING = Pattern(
                         if search(r, c, 0):
                             return True
                 return False
+            """,
+        ),
+        _p(
+            77,
+            "Combinations",
+            "Medium",
+            "Only ever pick numbers after the last one taken, so no pair is built twice.",
+            "O(k * C(n, k)) time, O(k) space",
+            """
+            def combine(n, k):
+                out = []
+                picked = []
+
+                def walk(start):
+                    if len(picked) == k:
+                        out.append(list(picked))
+                        return
+                    for value in range(start, n + 1):
+                        picked.append(value)
+                        walk(value + 1)
+                        picked.pop()
+
+                walk(1)
+                return out
+            """,
+        ),
+        _p(
+            17,
+            "Letter Combinations of a Phone Number",
+            "Medium",
+            "One digit is one level of the tree, and its letters are that level's branches.",
+            "O(4 ** n) time, O(n) space",
+            """
+            def letter_combinations(digits):
+                if not digits:
+                    return []
+                keys = {
+                    "2": "abc",
+                    "3": "def",
+                    "4": "ghi",
+                    "5": "jkl",
+                    "6": "mno",
+                    "7": "pqrs",
+                    "8": "tuv",
+                    "9": "wxyz",
+                }
+                out = []
+
+                def walk(index, built):
+                    if index == len(digits):
+                        out.append(built)
+                        return
+                    for letter in keys[digits[index]]:
+                        walk(index + 1, built + letter)
+
+                walk(0, "")
+                return out
+            """,
+        ),
+        _p(
+            131,
+            "Palindrome Partitioning",
+            "Medium",
+            "Cut after every position whose prefix reads the same both ways, then solve the rest.",
+            "O(n * 2 ** n) time, O(n) space",
+            """
+            def partition(text):
+                out = []
+                built = []
+
+                def walk(start):
+                    if start == len(text):
+                        out.append(list(built))
+                        return
+                    for end in range(start + 1, len(text) + 1):
+                        piece = text[start:end]
+                        if piece == piece[::-1]:
+                            built.append(piece)
+                            walk(end)
+                            built.pop()
+
+                walk(0)
+                return out
             """,
         ),
     ),
@@ -1756,6 +2520,76 @@ _DP = Pattern(
                     else:
                         tails[low] = n
                 return len(tails)
+            """,
+        ),
+        _p(
+            746,
+            "Min Cost Climbing Stairs",
+            "Easy",
+            "The cost of a step is its own plus the cheaper of the two ways off it.",
+            "O(n) time, O(1) space",
+            """
+            def min_cost_climbing_stairs(cost):
+                one, two = 0, 0
+                for i in range(2, len(cost) + 1):
+                    one, two = min(one + cost[i - 1], two + cost[i - 2]), one
+                return one
+            """,
+        ),
+        _p(
+            1143,
+            "Longest Common Subsequence",
+            "Medium",
+            "Matching letters extend the diagonal; otherwise take the better of dropping one.",
+            "O(m * n) time, O(m * n) space",
+            """
+            def longest_common_subsequence(first, second):
+                grid = [[0] * (len(second) + 1) for _ in range(len(first) + 1)]
+                for i in range(len(first) - 1, -1, -1):
+                    for j in range(len(second) - 1, -1, -1):
+                        if first[i] == second[j]:
+                            grid[i][j] = 1 + grid[i + 1][j + 1]
+                        else:
+                            grid[i][j] = max(grid[i + 1][j], grid[i][j + 1])
+                return grid[0][0]
+            """,
+        ),
+        _p(
+            139,
+            "Word Break",
+            "Medium",
+            "A position is reachable when some word ends there and its start was reachable too.",
+            "O(n * n * w) time, O(n) space",
+            """
+            def word_break(text, words):
+                reachable = [False] * (len(text) + 1)
+                reachable[0] = True
+                for end in range(1, len(text) + 1):
+                    for word in words:
+                        start = end - len(word)
+                        if start >= 0 and reachable[start]:
+                            if text[start:end] == word:
+                                reachable[end] = True
+                                break
+                return reachable[len(text)]
+            """,
+        ),
+        _p(
+            152,
+            "Maximum Product Subarray",
+            "Medium",
+            "Track the smallest product too — a negative turns the worst into the best.",
+            "O(n) time, O(1) space",
+            """
+            def max_product(nums):
+                best = nums[0]
+                high, low = nums[0], nums[0]
+                for n in nums[1:]:
+                    options = (n, high * n, low * n)
+                    high, low = max(options), min(options)
+                    if high > best:
+                        best = high
+                return best
             """,
         ),
     ),
