@@ -315,6 +315,7 @@ class TypingThemeInfo(BaseModel):
     # Which modes it can drive, so the picker can grey out the rest.
     has_words: bool
     has_passages: bool
+    has_blocks: bool = False
 
 
 class TypingCatalogResponse(BaseModel):

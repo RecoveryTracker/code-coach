@@ -274,9 +274,23 @@ export default function TypingTrainer() {
   const chooseMode = useCallback(
     (next: string) => {
       setModeId(next);
-      void loadDrill(sectionId, next, themeId);
+      // The server falls back when a theme can't drive a mode, so without
+      // this the picker kept saying "Facts" while Python was on screen.
+      let theme = themeId;
+      const usable = (catalog?.themes ?? []).filter((t) =>
+        next === "blocks"
+          ? t.has_blocks
+          : next === "words" || next === "define"
+            ? t.has_words
+            : true,
+      );
+      if (usable.length && !usable.some((t) => t.id === theme)) {
+        theme = usable[0].id;
+        setThemeId(theme);
+      }
+      void loadDrill(sectionId, next, theme);
     },
-    [loadDrill, sectionId, themeId],
+    [catalog, loadDrill, sectionId, themeId],
   );
 
   const chooseTheme = useCallback(
@@ -638,10 +652,29 @@ export default function TypingTrainer() {
   const revealKey = !byName || flash?.ok === false || reviewing;
 
   // Which drills actually read from a text source, and so have something for
-  // the theme to change.
-  const usesText = ["random", "words", "define", "speed", "perfect"].includes(
-    modeId,
-  );
+  // the theme to change. Whole Functions belongs here above all: it is how you
+  // choose the language, and hiding it left you typing code with nothing on
+  // screen saying which language it was.
+  const usesText = [
+    "random",
+    "words",
+    "define",
+    "speed",
+    "perfect",
+    "blocks",
+  ].includes(modeId);
+
+  /** The themes this mode can actually be driven by. */
+  const themeChoices = useMemo(() => {
+    const all = catalog?.themes ?? [];
+    if (modeId === "words" || modeId === "define") {
+      return all.filter((t) => t.has_words);
+    }
+    // Whole functions come from the code themes alone. Listing Scripture here
+    // and quietly serving Python instead is worse than not listing it.
+    if (modeId === "blocks") return all.filter((t) => t.has_blocks);
+    return all;
+  }, [catalog, modeId]);
 
   /** The instruction for modes whose task isn't obvious from the screen. */
   const taskLabel = useMemo(() => {
@@ -887,18 +920,11 @@ export default function TypingTrainer() {
                     value={themeId}
                     onChange={(e) => chooseTheme(e.target.value)}
                   >
-                    {catalog.themes
-                      .filter(
-                        (t) =>
-                          modeId !== "words" && modeId !== "define"
-                            ? true
-                            : t.has_words,
-                      )
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
+                    {themeChoices.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
                   </select>
                 </label>
               )}

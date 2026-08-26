@@ -31,6 +31,8 @@ export type TypingTheme = {
   description: string;
   has_words: boolean;
   has_passages: boolean;
+  /** Whole functions, not just single lines — the code themes. */
+  has_blocks?: boolean;
 };
 
 export type TypingCatalog = {

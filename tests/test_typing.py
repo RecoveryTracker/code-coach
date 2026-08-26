@@ -753,6 +753,35 @@ class WholeFunctionModeTests(unittest.TestCase):
             with self.subTest(language=language):
                 self.assertEqual(leetcode_blocks(language), [])
 
+    def test_every_block_note_names_its_language(self) -> None:
+        """Ten lines of Python and ten of Dart can look alike enough that you
+        have to work it out, and that isn't the exercise."""
+        from code_coach.typing.curriculum import code_blocks_for, language_name
+
+        for language in ("python", "javascript", "typescript", "dart", "rust"):
+            name = language_name(language)
+            for passage in code_blocks_for(language):
+                with self.subTest(language=language, block=passage.text[:24]):
+                    self.assertTrue(passage.source.startswith(name))
+
+    def test_the_catalog_says_which_themes_have_blocks(self) -> None:
+        """The picker needs it to offer the code themes and only those —
+        listing Scripture and quietly serving Python is worse than not
+        listing it."""
+        from code_coach.typing.drills import theme_catalog
+
+        entries = {t["id"]: t for t in theme_catalog()}
+        self.assertTrue(entries["pycode"]["has_blocks"])
+        self.assertTrue(entries["rustcode"]["has_blocks"])
+        self.assertFalse(entries["facts"]["has_blocks"])
+        self.assertFalse(entries["mixed"]["has_blocks"])
+
+    def test_at_least_one_theme_can_drive_it(self) -> None:
+        """Otherwise the picker would come up empty and the mode dead."""
+        from code_coach.typing.drills import theme_catalog
+
+        self.assertTrue([t for t in theme_catalog() if t["has_blocks"]])
+
 
 if __name__ == "__main__":
     unittest.main()

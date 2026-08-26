@@ -1107,6 +1107,9 @@ def theme_catalog() -> list[dict]:
             # reader didn't ask for.
             "has_words": bool(t.words),
             "has_passages": bool(t.passages),
+            # Only the code themes have whole functions, so the picker can
+            # offer exactly those rather than silently falling back.
+            "has_blocks": bool(t.blocks),
         }
         for t in THEMES
     ]

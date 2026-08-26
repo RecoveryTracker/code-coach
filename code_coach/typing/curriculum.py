@@ -173,13 +173,26 @@ def leetcode_blocks(language: str) -> list[Passage]:
     return out
 
 
+def language_name(language: str) -> str:
+    from code_coach.languages import get_language
+
+    return get_language(language).name
+
+
 def code_blocks_for(language: str) -> tuple[Passage, ...]:
-    """This language's whole-block pool, simplest material first."""
+    """This language's whole-block pool, simplest material first.
+
+    Every note names the language. A single line of Python and a single line
+    of Dart can be told apart at a glance; ten lines of either can look alike
+    enough that you have to work it out, and working out what you are looking
+    at is not the exercise.
+    """
+    name = language_name(language)
     seen: set[str] = set()
     out: list[Passage] = []
     for passage in (*fundamentals_blocks(language), *leetcode_blocks(language)):
         if passage.text in seen:
             continue
         seen.add(passage.text)
-        out.append(passage)
+        out.append(Passage(passage.text, f"{name} · {passage.source}"))
     return tuple(out)
