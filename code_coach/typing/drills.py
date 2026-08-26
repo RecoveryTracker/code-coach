@@ -24,7 +24,7 @@ from code_coach.typing.keys import (
     name_for,
     needs_shift,
 )
-from code_coach.typing.curriculum import code_lines_for
+from code_coach.typing.curriculum import code_blocks_for, code_lines_for
 from code_coach.typing.texts import (
     AFFIRMATIONS,
     CHAPTERS,
@@ -198,6 +198,10 @@ class Theme:
     words: tuple[str, ...] = field(default_factory=tuple)
     passages: tuple[Passage, ...] = field(default_factory=tuple)
     meanings: dict[str, str] = field(default_factory=dict)
+    # Whole functions and solutions, newlines and indentation included. A line
+    # at a time drills the punctuation; a block drills the shape — what sits
+    # under what, and Enter as part of writing code.
+    blocks: tuple[Passage, ...] = field(default_factory=tuple)
 
 
 THEMES: tuple[Theme, ...] = (
@@ -291,41 +295,49 @@ THEMES: tuple[Theme, ...] = (
         "pycode", "Python Code",
         "Real Python lines, plus every solution the curriculum teaches.",
         passages=code_lines_for("python", curated=PYTHON_CODE),
+        blocks=code_blocks_for("python"),
     ),
     Theme(
         "jscode", "JavaScript Code",
         "Destructuring, arrows and promises, plus the JavaScript solutions.",
         passages=code_lines_for("javascript", curated=JAVASCRIPT_CODE),
+        blocks=code_blocks_for("javascript"),
     ),
     Theme(
         "tscode", "TypeScript Code",
         "Typed signatures, generics and the solutions written out in them.",
         passages=code_lines_for("typescript"),
+        blocks=code_blocks_for("typescript"),
     ),
     Theme(
         "dartcode", "Dart Code",
         "Null-safe declarations and futures, plus the Dart solutions.",
         passages=code_lines_for("dart", curated=DART_CODE),
+        blocks=code_blocks_for("dart"),
     ),
     Theme(
         "sqlcode", "SQL Code",
         "Selects, joins, grouping and the odd transaction.",
         passages=code_lines_for("sql", curated=SQL_CODE),
+        blocks=code_blocks_for("sql"),
     ),
     Theme(
         "ccode", "C Code",
         "Pointers, structs and the loops they hang off.",
         passages=code_lines_for("c"),
+        blocks=code_blocks_for("c"),
     ),
     Theme(
         "cppcode", "C++ Code",
         "The standard library shapes, and the punctuation that comes with them.",
         passages=code_lines_for("cpp"),
+        blocks=code_blocks_for("cpp"),
     ),
     Theme(
         "rustcode", "Rust Code",
         "Ownership, matches and the question mark.",
         passages=code_lines_for("rust"),
+        blocks=code_blocks_for("rust"),
     ),
     Theme(
         "school", "First Code",
@@ -481,6 +493,10 @@ MODES: tuple[Mode, ...] = (
     Mode(
         "speed", "Speed Run",
         "A full passage. Accuracy first — the speed follows.",
+    ),
+    Mode(
+        "blocks", "Whole Functions",
+        "A whole solution at a time — Enter for the next line, indentation and all.",
     ),
     Mode(
         "chain", "Word Chain",
@@ -712,6 +728,17 @@ def build_drill(
             )
         scoring = "wpm"
 
+    elif mode.id == "blocks":
+        # Few, because each one is a whole function. Four ten-line solutions
+        # is already a longer run than any other mode here.
+        key = f"{section.id}:{theme.id}:blocks"
+        pool = theme.blocks or _fallback_theme(mode).blocks
+        for passage in _deal(key, pool, rng, 3):
+            targets.append(
+                Target(text=passage.text, prompt=passage.text, note=passage.source)
+            )
+        scoring = "wpm"
+
     else:  # speed
         for passage in _speed_passages(section, theme, rng):
             targets.append(
@@ -841,6 +868,10 @@ def _theme_fits(theme: Theme, mode: Mode) -> bool:
         return any(_meaning(theme, word) for word in theme.words)
     if mode.id == "words":
         return bool(theme.words)
+    if mode.id == "blocks":
+        # Only the code themes have whole functions to give. Prose has
+        # paragraphs, which is a different idea and not this one.
+        return bool(theme.blocks)
     return True
 
 
@@ -848,6 +879,8 @@ def _fallback_theme(mode: Mode) -> Theme:
     """What to use when the chosen theme can't drive the chosen mode."""
     if mode.id == "define":
         return THEMES_BY_ID["vocab"]
+    if mode.id == "blocks":
+        return THEMES_BY_ID["pycode"]
     return DEFAULT_THEME
 
 
@@ -1003,7 +1036,18 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     # the punctuation those definitions are written with.
     if mode.id == "chain" and not _can_type_chain(section):
         return False
+    # Whole solutions are real source: letters, digits and the punctuation the
+    # language is written with. A row section has none of that, and offering
+    # the mode there would serve a function it cannot type a line of.
+    if mode.id == "blocks" and not _can_type_code(section):
+        return False
     return True
+
+
+def _can_type_code(section: Section) -> bool:
+    """Enough of a keyboard for real source to be typed at all."""
+    needed = set("abcdefghijklmnopqrstuvwxyz0123456789()[]{}=<>+-*/.,:;_\"'")
+    return needed <= set(section.chars)
 
 
 def _can_type_chain(section: Section) -> bool:

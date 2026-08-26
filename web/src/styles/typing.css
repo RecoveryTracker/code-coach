@@ -871,6 +871,33 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+/* A whole function is source, not a sentence.
+   Centred code hides its own indentation — the one thing a block is meant to
+   teach — so blocks set left. They also set small: at prose size a ten-line
+   solution is 400px, which is the room the keyboard needs to stay on screen. */
+.typing-text.block {
+  font-size: clamp(0.85rem, 1.15vw, 1.05rem);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: pre;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* The return arrow marks a key you have to press. Dimmer than the code, so a
+   ten-line block doesn't read as having a symbol at the end of every line —
+   until the cursor lands on one, which is exactly when it matters. */
+.typing-text .nl {
+  color: #4a5566;
+}
+.typing-text .nl.at {
+  color: #0d1117;
+}
+.typing-text .nl.done {
+  color: #39424e;
+}
+
 .typing-text .done {
   color: #6e7b8b;
 }

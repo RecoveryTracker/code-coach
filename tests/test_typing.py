@@ -55,6 +55,11 @@ class KeyboardTests(unittest.TestCase):
         self.assertEqual(len(flat), len(ALL_KEYS))
 
 
+# Enter is a real key, it just isn't a printable one, so it has no entry in
+# the character map. Whole-function targets are the only place it turns up.
+TYPEABLE_EXTRAS = {"\n"}
+
+
 class DrillTests(unittest.TestCase):
     def test_every_offered_mode_builds_a_drill(self) -> None:
         for entry in catalog():
@@ -69,6 +74,8 @@ class DrillTests(unittest.TestCase):
                 drill = build_drill(entry["id"], mode["id"], seed="t")
                 for target in drill.targets:
                     for char in target.text:
+                        if char in TYPEABLE_EXTRAS:
+                            continue
                         self.assertIn(
                             char, BY_CHAR, f"{entry['id']}/{mode['id']}: {char!r}"
                         )
@@ -402,6 +409,8 @@ class DrillTests(unittest.TestCase):
                     )
                     for target in drill.targets:
                         for char in target.text:
+                            if char in TYPEABLE_EXTRAS:
+                                continue
                             self.assertIn(
                                 char,
                                 BY_CHAR,
@@ -652,6 +661,97 @@ class CurriculumCodeThemeTests(unittest.TestCase):
             texts = [p.text for p in code_lines_for(language)]
             with self.subTest(language=language):
                 self.assertEqual(len(texts), len(set(texts)))
+
+
+class WholeFunctionModeTests(unittest.TestCase):
+    """A line at a time drills punctuation; a block drills shape.
+
+    Both are wanted, so they are two modes over the same material rather than
+    one replacing the other.
+    """
+
+    def test_it_serves_multi_line_targets(self) -> None:
+        from code_coach.typing.drills import reset_deals
+
+        reset_deals()
+        targets = build_drill(
+            "code", "blocks", seed="t", theme_id="pycode"
+        ).targets
+        self.assertTrue(targets)
+        for target in targets:
+            with self.subTest(target=target.text[:30]):
+                self.assertIn("\n", target.text)
+
+    def test_the_single_line_mode_is_still_single_lines(self) -> None:
+        """The point is having both, so blocks must not leak into Random."""
+        from code_coach.typing.drills import reset_deals
+
+        reset_deals()
+        for target in build_drill(
+            "code", "random", seed="t", theme_id="pycode"
+        ).targets:
+            with self.subTest(target=target.text[:30]):
+                self.assertNotIn("\n", target.text)
+
+    def test_a_block_is_a_length_a_person_will_finish(self) -> None:
+        from code_coach.typing.curriculum import (
+            MAX_BLOCK_LINES,
+            MIN_BLOCK_LINES,
+            code_blocks_for,
+        )
+
+        for language in ("python", "javascript", "typescript", "dart"):
+            for passage in code_blocks_for(language):
+                lines = [ln for ln in passage.text.splitlines() if ln.strip()]
+                with self.subTest(language=language, block=passage.text[:30]):
+                    self.assertGreaterEqual(len(lines), MIN_BLOCK_LINES)
+                    self.assertLessEqual(len(lines), MAX_BLOCK_LINES)
+
+    def test_blocks_keep_their_indentation(self) -> None:
+        """Which is the whole reason to type a block rather than its lines."""
+        from code_coach.typing.curriculum import code_blocks_for
+
+        indented = [
+            b
+            for b in code_blocks_for("python")
+            if any(ln.startswith("    ") for ln in b.text.splitlines())
+        ]
+        self.assertTrue(indented)
+
+    def test_no_block_has_trailing_whitespace(self) -> None:
+        """It cannot be seen, so it cannot be typed on purpose."""
+        from code_coach.typing.curriculum import code_blocks_for
+
+        for language in ("python", "javascript", "dart"):
+            for passage in code_blocks_for(language):
+                for line in passage.text.splitlines():
+                    with self.subTest(language=language, line=line[:30]):
+                        self.assertEqual(line, line.rstrip())
+
+    def test_a_prose_theme_cannot_drive_it(self) -> None:
+        """Prose has paragraphs, which is a different idea to a function."""
+        from code_coach.typing.drills import (
+            MODES_BY_ID,
+            THEMES_BY_ID,
+            _theme_fits,
+        )
+
+        mode = MODES_BY_ID["blocks"]
+        self.assertFalse(_theme_fits(THEMES_BY_ID["facts"], mode))
+        self.assertTrue(_theme_fits(THEMES_BY_ID["pycode"], mode))
+
+    def test_only_sections_that_can_type_code_offer_it(self) -> None:
+        for entry in catalog():
+            offers = "blocks" in {m["id"] for m in entry["modes"]}
+            with self.subTest(section=entry["id"]):
+                self.assertEqual(offers, entry["id"] in ("everything", "code"))
+
+    def test_a_language_serves_its_own_blocks(self) -> None:
+        from code_coach.typing.curriculum import leetcode_blocks
+
+        for language in ("c", "cpp", "rust", "sql"):
+            with self.subTest(language=language):
+                self.assertEqual(leetcode_blocks(language), [])
 
 
 if __name__ == "__main__":

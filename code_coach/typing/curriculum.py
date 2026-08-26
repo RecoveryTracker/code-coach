@@ -115,3 +115,71 @@ def code_lines_for(
         seen.add(passage.text)
         out.append(passage)
     return tuple(out)
+
+
+# ── Whole blocks ────────────────────────────────────────────
+#
+# The same material, not split. A line at a time drills the punctuation; a
+# whole function drills the shape — where the body sits under the signature,
+# which branch belongs to which test, and pressing Enter as part of writing
+# code rather than as the end of a sentence.
+
+# Under this it isn't a block, it's a line with a friend.
+MIN_BLOCK_LINES = 2
+# Over this it's an endurance test. The longest solutions in the bank run past
+# twenty lines, and a mistake on line nineteen is a bad trade for a drill.
+MAX_BLOCK_LINES = 14
+
+
+def _block_ok(code: str) -> bool:
+    lines = [ln for ln in code.splitlines() if ln.strip()]
+    return MIN_BLOCK_LINES <= len(lines) <= MAX_BLOCK_LINES
+
+
+def _tidy(code: str) -> str:
+    """Trailing whitespace can't be seen, so it can't be typed on purpose."""
+    return "\n".join(ln.rstrip() for ln in code.strip("\n").splitlines())
+
+
+def fundamentals_blocks(language: str) -> list[Passage]:
+    """Whole declared snippets — level 5 is the whole-function chunk size."""
+    from code_coach.fundamentals.base import CLASS_IDS, snippets_for
+
+    out: list[Passage] = []
+    for class_id in CLASS_IDS:
+        for snippet in snippets_for(language, class_id, 5):
+            code = _tidy(snippet.code)
+            if _block_ok(code):
+                out.append(Passage(code, snippet.tip))
+    return out
+
+
+def leetcode_blocks(language: str) -> list[Passage]:
+    """Whole solutions, plus the node classes the patterns are built on."""
+    from code_coach.leetcode.bank import patterns_for_language
+
+    if not _has_own_leetcode(language):
+        return []
+    out: list[Passage] = []
+    for pattern in patterns_for_language(language):
+        for block in pattern.preamble:
+            code = _tidy(block)
+            if _block_ok(code):
+                out.append(Passage(code, f"{pattern.name} setup"))
+        for problem in pattern.problems:
+            code = _tidy(problem.code)
+            if _block_ok(code):
+                out.append(Passage(code, f"#{problem.number} {problem.title}"))
+    return out
+
+
+def code_blocks_for(language: str) -> tuple[Passage, ...]:
+    """This language's whole-block pool, simplest material first."""
+    seen: set[str] = set()
+    out: list[Passage] = []
+    for passage in (*fundamentals_blocks(language), *leetcode_blocks(language)):
+        if passage.text in seen:
+            continue
+        seen.add(passage.text)
+        out.append(passage)
+    return tuple(out)

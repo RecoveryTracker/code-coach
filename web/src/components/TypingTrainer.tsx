@@ -59,6 +59,23 @@ function pct(n: number, d: number): number {
   return d === 0 ? 100 : Math.round((n / d) * 100);
 }
 
+const NEWLINE = '\n';
+/** Shown where Enter belongs, so the newline is a visible key. */
+const RETURN_GLYPH = "\u21B5";
+
+/**
+ * The run of spaces starting at `from`, which Enter should skip past.
+ *
+ * Indentation is real syntax in Python and real habit everywhere else, but
+ * counting four spaces by hand is not what anyone practises — every editor
+ * puts them there for you. So does this.
+ */
+function leadingSpaceAt(text: string, from: number): string {
+  let i = from;
+  while (i < text.length && (text[i] === " " || text[i] === "\t")) i += 1;
+  return text.slice(from, i);
+}
+
 type Settings = {
   mistakes: MistakeMode;
   section: string;
@@ -446,7 +463,10 @@ export default function TypingTrainer() {
         setTyped((t) => t.slice(0, -1));
         return;
       }
-      if (event.key.length !== 1) return;
+      // Enter is the newline in a whole-function target. Everywhere else it
+      // has no meaning, so it stays ignored rather than counting as a miss.
+      const isNewline = event.key === "Enter";
+      if (!isNewline && event.key.length !== 1) return;
       event.preventDefault();
 
       if (phase === "idle") {
@@ -466,17 +486,31 @@ export default function TypingTrainer() {
       const current = drill.targets[index];
       if (!current) return;
 
-      // While there's an uncorrected mistake sitting there, the only thing
-      // that helps is Backspace. Typing on would score keys against the
-      // wrong positions.
+      // An uncorrected mistake is already sitting there.
+      //
+      // In "Must delete" every key still lands, because that is what an editor
+      // does: three wrong keys leave three characters and cost three
+      // Backspaces. Bouncing them off meant a burst of typing past a mistake
+      // was one character to undo, which taught the wrong reflex.
+      //
+      // Nothing is scored against an expected key here. Past the point where
+      // what you typed and the target diverged there is no honest expectation
+      // to measure against, so this counts as a miss and no more — the reason
+      // the keys used to bounce in the first place.
       if (wrongPrefix) {
-        setFlash({ char: event.key, ok: false, at: Date.now() });
+        const stray = isNewline ? NEWLINE : event.key;
+        setFlash({ char: stray, ok: false, at: Date.now() });
+        if (mistakes === "delete" && !isPerfect) {
+          setMisses((n) => n + 1);
+          setCombo(0);
+          setTyped(typed + stray);
+        }
         return;
       }
 
       const want = current.text[typed.length];
       if (want === undefined) return;
-      const got = event.key;
+      const got = isNewline ? NEWLINE : event.key;
       const ok = got === want;
 
       // Time since the last keystroke, not since the line appeared. On a
@@ -488,7 +522,13 @@ export default function TypingTrainer() {
       setFlash({ char: got, ok, at: now });
 
       if (ok) {
-        const nextTyped = typed + got;
+        let nextTyped = typed + got;
+        // An editor indents the new line for you, and counting spaces is not
+        // the skill this is teaching. Pressing Enter carries you to the first
+        // real character of the next line.
+        if (isNewline) {
+          nextTyped += leadingSpaceAt(current.text, nextTyped.length);
+        }
         if (nextTyped.length >= current.text.length) advance();
         else setTyped(nextTyped);
         return;
@@ -590,6 +630,10 @@ export default function TypingTrainer() {
   // A "name to key" drill is asking you to remember where the key lives, so
   // lighting it up would answer the question. It stays dark until you get it
   // wrong — then showing you is the point.
+  // Whole-function targets are source, so they set left and small — centred
+  // code hides its own indentation, and prose-sized code costs the keyboard
+  // the room it needs to stay on screen.
+  const isBlock = modeId === "blocks";
   const byName = mode?.by_name ?? false;
   const revealKey = !byName || flash?.ok === false || reviewing;
 
@@ -1072,7 +1116,11 @@ export default function TypingTrainer() {
                       {drill.hidden && target.prompt !== target.text ? (
                         <p className="typing-cue">{target.prompt}</p>
                       ) : null}
-                      <p className={`typing-text ${wrongPrefix ? "bad" : ""}`}>
+                      <p
+                        className={`typing-text ${wrongPrefix ? "bad" : ""}${
+                          isBlock ? " block" : ""
+                        }`}
+                      >
                         {(drill.hidden &&
                         target.prompt !== target.text &&
                         !reviewing
@@ -1080,22 +1128,32 @@ export default function TypingTrainer() {
                           : target.text
                         )
                           .split("")
-                          .map((ch, i) => (
-                            <span
-                              key={i}
-                              className={
-                                i < typed.length
-                                  ? typed[i] === ch
-                                    ? "done"
-                                    : "bad"
-                                  : i === typed.length
-                                    ? "at"
-                                    : "todo"
-                              }
-                            >
-                              {ch}
-                            </span>
-                          ))}
+                          .map((ch, i) => {
+                            const state =
+                              i < typed.length
+                                ? typed[i] === ch
+                                  ? "done"
+                                  : "bad"
+                                : i === typed.length
+                                  ? "at"
+                                  : "todo";
+                            // A newline is a key you have to press, so it has
+                            // to be a thing you can see and put a cursor on.
+                            // Without the arrow, Enter is an invisible target.
+                            if (ch === NEWLINE) {
+                              return (
+                                <span key={i} className={`${state} nl`}>
+                                  {RETURN_GLYPH}
+                                  {NEWLINE}
+                                </span>
+                              );
+                            }
+                            return (
+                              <span key={i} className={state}>
+                                {ch}
+                              </span>
+                            );
+                          })}
                         {/* Anything typed past the end of the line is wrong by
                             definition, and has to be visible to be deleted. */}
                         {typed.length > target.text.length && (
