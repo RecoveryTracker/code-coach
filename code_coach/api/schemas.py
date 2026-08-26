@@ -222,6 +222,11 @@ class PracticeSession(BaseModel):
     class_total: int = 0
     # How far into that total the current window starts.
     class_position: int = 0
+    # Which window of the endless type-along this is. The client keys its
+    # saved editor buffers on it: the drill id is the same for every window of
+    # a class, so without it a new window lands on the previous one's drafts
+    # and overwrites the first of them.
+    window: int = 0
     # Endless Foundations type-along
     endless: bool = False
     dictation_level: int = 1

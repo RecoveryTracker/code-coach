@@ -77,6 +77,21 @@ class WindowTests(unittest.TestCase):
         specs = specs_for("dart", "loops", batch=99, count=8, level=3)
         self.assertEqual(len(specs), 8)
 
+    def test_a_window_stops_at_the_end_of_the_material(self):
+        # Padding the last window back out to eight refills it with snippets
+        # you have just typed, which reads as being sent back to the start.
+        total = material_count("javascript", "foundations", 1)
+        seen = 0
+        batch = 0
+        while seen < total:
+            specs = specs_for(
+                "javascript", "foundations", batch=batch, count=8, level=1
+            )
+            self.assertEqual(specs[0].id.split("-")[2], str(seen))
+            seen += len(specs)
+            batch += 1
+        self.assertEqual(seen, total)
+
     def test_ids_are_stable_across_calls(self):
         first = [s.id for s in specs_for("dart", "decisions", batch=1, count=5, level=2)]
         again = [s.id for s in specs_for("dart", "decisions", batch=1, count=5, level=2)]

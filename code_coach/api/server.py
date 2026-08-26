@@ -217,20 +217,22 @@ def _session_from_progress() -> PracticeSession:
     # as going back to the start when you've actually moved forward.
     class_total, class_position = 0, 0
     if endless:
+        from code_coach.dictation.bank import WINDOW_SIZE
+        from code_coach.fundamentals.base import window_start
+
         class_id_now = progress.curriculum_class or "foundations"
         d_level_now = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
-        if class_id_now.startswith("lc-"):
-            from code_coach.leetcode.bank import unit_count
-
-            class_total = unit_count(class_id_now, d_level_now)
+        class_total = _class_material_total(class_id_now, lang.id, d_level_now)
         if class_total:
-            # Windows wrap at the end of the class, so the position does too.
-            # `len(steps)` is what was actually served, which is smaller than
-            # the nominal window whenever the class has fewer answers than
-            # that.
-            class_position = (
-                progress.batch_for(class_id_now) * len(steps)
-            ) % class_total
+            # Where this window actually starts in the class, worked out the
+            # same way the window itself is cut. Deriving it from `len(steps)`
+            # instead was wrong for the short final window of a class, which
+            # then reported itself as line 1.
+            class_position = window_start(
+                class_total,
+                batch=progress.batch_for(class_id_now),
+                count=WINDOW_SIZE,
+            )
     d_level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
     from code_coach.dictation.bank import DICTATION_LEVEL_LABELS
 
@@ -260,6 +262,11 @@ def _session_from_progress() -> PracticeSession:
         exercise_count=len(steps),
         class_total=class_total,
         class_position=class_position,
+        window=(
+            progress.batch_for(progress.curriculum_class or "foundations")
+            if endless
+            else 0
+        ),
         endless=endless,
         dictation_level=d_level,
         dictation_level_label=DICTATION_LEVEL_LABELS.get(d_level, f"Level {d_level}"),
@@ -499,23 +506,41 @@ def practice_current() -> PracticeSession:
     return _session_from_progress()
 
 
+def _class_material_total(class_id: str, language: str, level: int) -> int:
+    """How many type-along units this class holds, or 0 when it has no end.
+
+    Python's fundamentals are generated from combinatorial pools with a seeded
+    RNG, so there is genuinely no last line to reach. Every other class draws
+    from a declared bank — the LeetCode solutions, and the per-language
+    fundamentals in code_coach/fundamentals — and those run out.
+    """
+    if class_id.startswith("lc-"):
+        from code_coach.leetcode.bank import unit_count
+
+        return unit_count(class_id, level)
+
+    from code_coach.fundamentals.base import CLASS_IDS, material_count
+
+    if language == "python" or class_id not in CLASS_IDS:
+        return 0
+    return material_count(language, class_id, level)
+
+
 def _next_class_after(
     class_id: str, progress: StudentProgress, batch: int, level: int
 ) -> str | None:
     """The class to move on to, once this one's material is used up.
 
     Returns None while there's more of this class left, for classes with no
-    fixed end (Foundations generates its lines), and at the last class — where
-    there is nowhere further to go and wrapping is the right behaviour.
+    fixed end (Python's Foundations generates its lines), and at the last
+    class — where there is nowhere further to go and wrapping is the right
+    behaviour.
     """
-    if not class_id.startswith("lc-"):
-        return None
-
     from code_coach.curriculum.catalog import classes_for_language
     from code_coach.dictation.bank import WINDOW_SIZE
-    from code_coach.leetcode.bank import unit_count
 
-    total = unit_count(class_id, level)
+    language = getattr(progress, "language", "python") or "python"
+    total = _class_material_total(class_id, language, level)
     # The window is trimmed to fit a small class, so the stride is whichever
     # is smaller. Using the nominal eight here meant a four-answer class was
     # counted as finished after half a pass.
@@ -523,7 +548,6 @@ def _next_class_after(
     if not total or batch * stride < total:
         return None
 
-    language = getattr(progress, "language", "python") or "python"
     ids = [c.id for c in classes_for_language(language)]
     if class_id not in ids:
         return None
@@ -535,20 +559,32 @@ def _next_class_after(
 def practice_more_lines() -> PracticeSession:
     """Next window of the current class's Lesson-1 type-along (endless)."""
     from code_coach.dictation.bank import WINDOW_SIZE
+    from code_coach.fundamentals.base import window_start
 
     progress = _store.load()
     class_id = progress.curriculum_class or "foundations"
+    language = getattr(progress, "language", "python") or "python"
     progress.curriculum_lesson = 1
     progress.review_skill = None
-    # Count finished window toward this class's lifetime lines
-    progress.add_lines(class_id, WINDOW_SIZE)
-    batch = progress.bump_batch(class_id)
     level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
 
-    # A pattern class holds a fixed set of answers. Once you've been through
-    # them, looping back to the top is busywork — the next pattern is the
-    # point. Foundations is genuinely endless (its lines are generated), so
-    # only the LeetCode classes graduate.
+    # Count the finished window toward this class's lifetime lines — what it
+    # actually held, since the last window of a class stops at the end of the
+    # material rather than being padded back out to eight.
+    total = _class_material_total(class_id, language, level)
+    served = WINDOW_SIZE
+    if total:
+        start = window_start(
+            total, batch=progress.batch_for(class_id), count=WINDOW_SIZE
+        )
+        served = min(WINDOW_SIZE, total - start)
+    progress.add_lines(class_id, served)
+    batch = progress.bump_batch(class_id)
+
+    # A class with a declared bank holds a fixed set of answers. Once you've
+    # been through them, looping back to the top is busywork — the next class
+    # is the point. Python's fundamentals are generated rather than declared,
+    # so those are the ones with no end to reach.
     graduated = _next_class_after(class_id, progress, batch, level)
     if graduated:
         goto_position(progress, class_id=graduated, lesson_number=1)

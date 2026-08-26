@@ -99,18 +99,27 @@ def snippets_for(language: str, class_id: str, level: int) -> list[Snippet]:
 
 
 def specs_for(language: str, class_id: str, *, batch: int, count: int, level: int):
-    """The `batch`-th window of this class's material, wrapping at the end."""
+    """The `batch`-th window of this class's material.
+
+    Windows walk the material in order and stop at its end rather than pulling
+    the first snippets back in to pad the last one out — seeing seven lines you
+    just typed reads as the app looping you back to the start. A window past
+    the end wraps to the top, which is what the final class does when there is
+    nowhere further to graduate to.
+    """
     from code_coach.dictation.bank import KEYBOARD_TIPS, LineSpec, make_block_check
 
     snippets = snippets_for(language, class_id, level)
     if not snippets:
         return []
 
-    start = (batch * count) % len(snippets)
+    total = len(snippets)
+    start = window_start(total, batch=batch, count=count)
+    take = min(count, total - start)
     out = []
-    for i in range(count):
+    for i in range(take):
         position = start + i
-        snippet = snippets[position % len(snippets)]
+        snippet = snippets[position % total]
         # Content digest, not hash() — str hashing is salted per process, and a
         # restart must not orphan the waypoint ids saved in progress.
         digest = hashlib.sha1(snippet.code.encode("utf-8")).hexdigest()[:8]
@@ -126,6 +135,17 @@ def specs_for(language: str, class_id: str, *, batch: int, count: int, level: in
             )
         )
     return out
+
+
+def window_start(total: int, *, batch: int, count: int) -> int:
+    """Where the `batch`-th window begins in a bank of `total` snippets.
+
+    Shared with the API so the "line N of M in this class" counter names the
+    same snippet the window actually starts on.
+    """
+    if total <= 0:
+        return 0
+    return (batch * min(count, total)) % total
 
 
 def material_count(language: str, class_id: str, level: int) -> int:

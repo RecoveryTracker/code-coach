@@ -309,6 +309,8 @@ export type PracticeSession = {
   class_total?: number;
   /** Where this window starts inside that total. */
   class_position?: number;
+  /** Which window of the endless type-along this is — part of the draft key. */
+  window?: number;
   /** "Watch it run" needs a tracer — Python only, for now. */
   can_visualize?: boolean;
   /** "Explain my code" reads the code with Python's ast — Python only. */

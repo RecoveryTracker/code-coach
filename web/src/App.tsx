@@ -22,7 +22,7 @@ import { LanguagePicker } from "./components/LanguagePicker";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
-import { Terminal } from "./components/Terminal";
+import { runCommandFor, Terminal } from "./components/Terminal";
 import { TypeTarget } from "./components/TypeTarget";
 import TypingTrainer from "./components/TypingTrainer";
 import type {
@@ -45,13 +45,19 @@ type DraftSlot = {
   index: number;
   level: number;
   language: string;
+  /** Which window of an endless type-along — 0 for every other lesson. */
+  window: number;
 };
 
-function draftKey({ drillId, index, level, language }: DraftSlot) {
+function draftKey({ drillId, index, level, language, window: win }: DraftSlot) {
   // Language belongs in the key: the drill id is the same in both languages,
   // so without it your Python answer shows up in the Dart editor.
   const lang = language === "python" ? "" : `:${language}`;
-  return `code-coach:drill:${drillId}${lang}:lv${level}:ex${index}`;
+  // So does the window. Every window of a class's type-along shares one drill
+  // id, so loading the next eight lines used to land on the previous eight's
+  // saved buffers — overwriting the first one with whatever was on screen.
+  const win_ = win ? `:w${win}` : "";
+  return `code-coach:drill:${drillId}${lang}:lv${level}${win_}:ex${index}`;
 }
 
 /** Pre-per-exercise key: one shared buffer for a whole lesson. */
@@ -59,10 +65,22 @@ function legacyDraftKey(drillId: string) {
   return `code-coach:drill:${drillId}`;
 }
 
+/** Pre-per-window key: every window of a type-along shared one set of slots. */
+function preWindowDraftKey(slot: DraftSlot) {
+  return draftKey({ ...slot, window: 0 });
+}
+
 function loadDraft(slot: DraftSlot): string | null {
   try {
     const found = localStorage.getItem(draftKey(slot));
     if (found != null) return found;
+    // Work saved before the window joined the key sits in the window-0 slots.
+    // Read it through rather than opening a blank editor on someone's
+    // half-finished line; the first save writes it back under the new key.
+    if (slot.window) {
+      const shared = localStorage.getItem(preWindowDraftKey(slot));
+      if (shared != null) return shared;
+    }
     // Work saved before drafts were split per exercise/difficulty lives under
     // the old lesson-wide key. Adopt it for the first exercise rather than
     // silently losing it; the original is left in place as a backstop.
@@ -87,9 +105,15 @@ function saveDraft(slot: DraftSlot, code: string) {
  * Where you were in a lesson, so coming back doesn't dump you on exercise 1
  * looking at a blank editor while your work sits in a slot you can't see.
  */
-function posKey(drillId: string, level: number, language = "python") {
+function posKey(
+  drillId: string,
+  level: number,
+  language = "python",
+  win = 0,
+) {
   const lang = language === "python" ? "" : `:${language}`;
-  return `code-coach:pos:${drillId}${lang}:lv${level}`;
+  const win_ = win ? `:w${win}` : "";
+  return `code-coach:pos:${drillId}${lang}:lv${level}${win_}`;
 }
 
 function savePos(
@@ -97,17 +121,23 @@ function savePos(
   level: number,
   index: number,
   language: string,
+  win: number,
 ) {
   try {
-    localStorage.setItem(posKey(drillId, level, language), String(index));
+    localStorage.setItem(posKey(drillId, level, language, win), String(index));
   } catch {
     /* ignore */
   }
 }
 
-function loadPos(drillId: string, level: number, language: string): number | null {
+function loadPos(
+  drillId: string,
+  level: number,
+  language: string,
+  win: number,
+): number | null {
   try {
-    const raw = localStorage.getItem(posKey(drillId, level, language));
+    const raw = localStorage.getItem(posKey(drillId, level, language, win));
     if (raw == null) return null;
     const n = Number.parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
@@ -255,6 +285,8 @@ export default function App() {
   const levelRef = useRef(1);
   /** Language the current buffers belong to — also part of the key. */
   const languageRef = useRef("python");
+  /** Endless type-along window the current buffers belong to — likewise. */
+  const windowRef = useRef(0);
 
   /** The slot the editor is currently showing. */
   const slotNow = useCallback(
@@ -263,6 +295,7 @@ export default function App() {
       index: index ?? exerciseIndexRef.current,
       level: levelRef.current,
       language: languageRef.current,
+      window: windowRef.current,
     }),
     [],
   );
@@ -357,6 +390,7 @@ export default function App() {
       drillRef.current = s.drill_id;
       levelRef.current = s.dictation_level ?? 1;
       languageRef.current = s.language ?? "python";
+      windowRef.current = s.window ?? 0;
 
       // Resume where this lesson was left off. A fresh endless window
       // (preserveCode) and Start over (forceClean) both belong at the top.
@@ -364,7 +398,12 @@ export default function App() {
       if (carryIndex != null) {
         startIndex = Math.max(0, Math.min(carryIndex, s.steps.length - 1));
       } else if (preserveCode == null && !forceClean) {
-        const saved = loadPos(s.drill_id, levelRef.current, languageRef.current);
+        const saved = loadPos(
+          s.drill_id,
+          levelRef.current,
+          languageRef.current,
+          windowRef.current,
+        );
         if (saved != null) {
           startIndex = Math.max(0, Math.min(saved, s.steps.length - 1));
         }
@@ -383,6 +422,7 @@ export default function App() {
         index: startIndex,
         level: levelRef.current,
         language: languageRef.current,
+        window: windowRef.current,
       };
 
       let initial = s.starter;
@@ -435,7 +475,7 @@ export default function App() {
 
       const id = drillRef.current;
       if (id) {
-        savePos(id, levelRef.current, next, languageRef.current);
+        savePos(id, levelRef.current, next, languageRef.current, windowRef.current);
         void score(id, text, false, next);
       }
     },
@@ -456,7 +496,11 @@ export default function App() {
           try {
             const keep = codeRef.current;
             const s = await fetchMoreLines();
-            await loadSessionRef.current(s, false, keep);
+            // Running out of a class moves on to the next one. Carrying the
+            // buffer there would open the new class with the last line of the
+            // old one already typed in.
+            const carry = s.class_id === session.class_id ? keep : null;
+            await loadSessionRef.current(s, false, carry);
           } catch {
             /* stay at end of window */
             setExerciseIndex(Math.max(0, total - 1));
@@ -644,7 +688,8 @@ export default function App() {
             try {
               const keep = codeRef.current;
               const s = await fetchMoreLines();
-              await loadSessionRef.current(s, false, keep);
+              const carry = s.class_id === session.class_id ? keep : null;
+              await loadSessionRef.current(s, false, carry);
             } catch {
               /* stay */
             }
@@ -1104,9 +1149,7 @@ export default function App() {
             onChange={onChange}
             onRun={onRun}
             language={session.editor_language ?? "python"}
-            fileName={`practice.${
-              session.language === "dart" ? "dart" : "py"
-            }`}
+            fileName={runCommandFor(session.language ?? "python").file}
           />
         </div>
         {!freeMode ? (
@@ -1163,6 +1206,7 @@ export default function App() {
           ran={hasRun}
           running={running}
           onRun={onRun}
+          language={session.language ?? "python"}
         />
       </div>
 
