@@ -78,6 +78,66 @@ _FOUNDATIONS = FundamentalsClass(
             "An interface used as a parameter type.",
             5,
         ),
+        _s(
+            "function greet(name: string): string {\n"
+            "  return `Hello, ${name}!`;\n"
+            "}\n"
+            "\n"
+            "console.log(greet('Alex'));",
+            "Annotations go after the name, and after the parentheses for the return.",
+            5,
+        ),
+        _s(
+            "function average(nums: number[]): number {\n"
+            "  const total = nums.reduce((sum, n) => sum + n, 0);\n"
+            "  return total / nums.length;\n"
+            "}\n"
+            "\n"
+            "console.log(average([2, 4, 6]));",
+            "number[] and Array<number> mean the same thing.",
+            5,
+        ),
+        _s(
+            "const area = (w: number, h: number): number => w * h;\n"
+            "\n"
+            "console.log(area(3, 4));",
+            "An arrow function annotates the same way a named one does.",
+            5,
+        ),
+        _s(
+            "interface Person {\n"
+            "  name: string;\n"
+            "  age: number;\n"
+            "}\n"
+            "\n"
+            "function describe(p: Person): string {\n"
+            "  return `${p.name} is ${p.age}`;\n"
+            "}\n"
+            "\n"
+            "console.log(describe({ name: 'Sam', age: 30 }));",
+            "An interface names a shape, and any object with that shape fits.",
+            5,
+        ),
+        _s(
+            "function first<T>(items: T[]): T | undefined {\n"
+            "  return items[0];\n"
+            "}\n"
+            "\n"
+            "console.log(first([10, 20]));",
+            "A generic keeps the caller's type instead of losing it to any.",
+            5,
+        ),
+        _s(
+            "type Point = { x: number; y: number };\n"
+            "\n"
+            "function shift(p: Point): Point {\n"
+            "  return { x: p.x + 1, y: p.y };\n"
+            "}\n"
+            "\n"
+            "console.log(shift({ x: 1, y: 2 }));",
+            "A type alias does the same job as an interface for object shapes.",
+            5,
+        ),
     ),
 )
 
@@ -112,7 +172,8 @@ _DECISIONS = FundamentalsClass(
         _s(
             "function describe(id: string | number): string {\n"
             "  if (typeof id === 'string') {\n    return id.toUpperCase();\n  }\n"
-            "  return id.toFixed(2);\n}",
+            "  return id.toFixed(2);\n}\n\n"
+            "console.log(describe('abc'));",
             "Inside the if, TypeScript knows id is a string.",
             5,
         ),
@@ -121,6 +182,67 @@ _DECISIONS = FundamentalsClass(
             "    return 'A';\n  }\n  if (score >= 80) {\n    return 'B';\n  }\n"
             "  return 'C';\n}\n\nconsole.log(grade(85));",
             "Early returns, each ending the function.",
+            5,
+        ),
+        _s(
+            "function grade(score: number): string {\n"
+            "  if (score >= 90) return 'A';\n"
+            "  if (score >= 80) return 'B';\n"
+            "  return 'C';\n"
+            "}\n"
+            "\n"
+            "console.log(grade(85));",
+            "Every path returns a string, which is what the annotation promises.",
+            5,
+        ),
+        _s(
+            "function sign(n: number): string {\n"
+            "  if (n > 0) return 'positive';\n"
+            "  if (n < 0) return 'negative';\n"
+            "  return 'zero';\n"
+            "}\n"
+            "\n"
+            "console.log(sign(-4));",
+            "Three cases, three returns, no else needed.",
+            5,
+        ),
+        _s(
+            "function canVote(age: number, citizen: boolean): boolean {\n"
+            "  return age >= 18 && citizen;\n"
+            "}\n"
+            "\n"
+            "console.log(canVote(20, true));",
+            "The comparison is already a boolean; return it directly.",
+            5,
+        ),
+        _s(
+            "type Shape = 'circle' | 'square';\n"
+            "\n"
+            "function sides(shape: Shape): number {\n"
+            "  return shape === 'circle' ? 0 : 4;\n"
+            "}\n"
+            "\n"
+            "console.log(sides('square'));",
+            "A union of literals is a type with exactly those values in it.",
+            5,
+        ),
+        _s(
+            "function lengthOf(value: string | number): number {\n"
+            "  if (typeof value === 'string') return value.length;\n"
+            "  return String(value).length;\n"
+            "}\n"
+            "\n"
+            "console.log(lengthOf('hello'));",
+            "typeof narrows the union, so .length is allowed inside the if.",
+            5,
+        ),
+        _s(
+            "function label(name?: string): string {\n"
+            "  return name === undefined ? 'unnamed' : name;\n"
+            "}\n"
+            "\n"
+            "console.log(label());",
+            "A ? on a parameter makes it optional, and possibly undefined.",
             5,
         ),
     ),
@@ -159,15 +281,90 @@ _LOOPS = FundamentalsClass(
         ),
         _s(
             "function sum(nums: number[]): number {\n  let total = 0;\n"
-            "  for (const n of nums) {\n    total += n;\n  }\n  return total;\n}",
+            "  for (const n of nums) {\n    total += n;\n  }\n  return total;\n}\n\n"
+            "console.log(sum([1, 2, 3, 4]));",
             "The accumulator pattern, typed.",
             5,
         ),
         _s(
             "function biggest(nums: number[]): number {\n  let best = nums[0];\n"
             "  for (const n of nums) {\n    if (n > best) {\n      best = n;\n"
-            "    }\n  }\n  return best;\n}",
+            "    }\n  }\n  return best;\n}\n\n"
+            "console.log(biggest([3, 9, 4]));",
             "Loop plus decision — most algorithms are this shape.",
+            5,
+        ),
+        _s(
+            "function total(nums: number[]): number {\n"
+            "  let sum = 0;\n"
+            "  for (const n of nums) {\n"
+            "    sum += n;\n"
+            "  }\n"
+            "  return sum;\n"
+            "}\n"
+            "\n"
+            "console.log(total([1, 2, 3, 4]));",
+            "The loop variable takes its type from the array.",
+            5,
+        ),
+        _s(
+            "function countdown(from: number): number[] {\n"
+            "  const out: number[] = [];\n"
+            "  for (let i = from; i > 0; i--) {\n"
+            "    out.push(i);\n"
+            "  }\n"
+            "  return out;\n"
+            "}\n"
+            "\n"
+            "console.log(countdown(3));",
+            "An empty array needs its annotation, or it is any[].",
+            5,
+        ),
+        _s(
+            "function firstNegative(nums: number[]): number | null {\n"
+            "  for (const n of nums) {\n"
+            "    if (n < 0) return n;\n"
+            "  }\n"
+            "  return null;\n"
+            "}\n"
+            "\n"
+            "console.log(firstNegative([3, 1, -2, 5]));",
+            "Saying | null in the return type is how the caller knows to check.",
+            5,
+        ),
+        _s(
+            "function doubled(nums: number[]): number[] {\n"
+            "  return nums.map((n) => n * 2);\n"
+            "}\n"
+            "\n"
+            "console.log(doubled([1, 2, 3]));",
+            "map keeps the element type unless the callback changes it.",
+            5,
+        ),
+        _s(
+            "function tally(words: string[]): number {\n"
+            "  const counts = new Map<string, number>();\n"
+            "  for (const word of words) {\n"
+            "    counts.set(word, (counts.get(word) || 0) + 1);\n"
+            "  }\n"
+            "  return counts.get('a') || 0;\n"
+            "}\n"
+            "\n"
+            "console.log(tally(['a', 'b', 'a']));",
+            "A Map takes two type arguments: key, then value.",
+            5,
+        ),
+        _s(
+            "function longest(words: string[]): string {\n"
+            "  let best = '';\n"
+            "  for (const word of words) {\n"
+            "    if (word.length > best.length) best = word;\n"
+            "  }\n"
+            "  return best;\n"
+            "}\n"
+            "\n"
+            "console.log(longest(['a', 'abc', 'ab']));",
+            "Keep-the-best-so-far, the shape behind most single-pass loops.",
             5,
         ),
     ),

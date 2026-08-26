@@ -63,6 +63,47 @@ _FOUNDATIONS = FundamentalsClass(
             "A complete query with every common clause.",
             5,
         ),
+        _s(
+            "SELECT name, email\n"
+            "FROM users\n"
+            "WHERE id = 1;",
+            "Name the columns you want rather than reaching for *.",
+            5,
+        ),
+        _s(
+            "SELECT COUNT(*) AS total\n"
+            "FROM users;",
+            "AS names the result column so the output reads properly.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "ORDER BY name\n"
+            "LIMIT 3;",
+            "ORDER BY then LIMIT: sort first, then take the top few.",
+            5,
+        ),
+        _s(
+            "SELECT DISTINCT city\n"
+            "FROM users;",
+            "DISTINCT removes duplicate rows from the result.",
+            5,
+        ),
+        _s(
+            "SELECT name, LENGTH(name) AS letters\n"
+            "FROM users\n"
+            "ORDER BY letters DESC;",
+            "You can order by a computed column by the name you gave it.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "WHERE name LIKE 'A%';",
+            "LIKE matches a pattern; % stands for any run of characters.",
+            5,
+        ),
     ),
 )
 
@@ -105,6 +146,47 @@ _DECISIONS = FundamentalsClass(
             "SELECT city, COUNT(*) AS people\nFROM users\nWHERE age >= 18\n"
             "GROUP BY city\nHAVING COUNT(*) > 1\nORDER BY people DESC;",
             "WHERE filters rows first, then HAVING filters the groups.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "WHERE age >= 18 AND city = 'Leeds';",
+            "AND narrows; both sides have to hold.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "WHERE city IN ('Leeds', 'York');",
+            "IN is a tidier way to write a run of ORs.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "WHERE email IS NULL;",
+            "IS NULL, never = NULL, because NULL is not a value.",
+            5,
+        ),
+        _s(
+            "SELECT name,\n"
+            "       CASE WHEN age >= 18 THEN 'adult' ELSE 'minor' END AS band\n"
+            "FROM users;",
+            "CASE WHEN is SQL's if, and it belongs in the SELECT list.",
+            5,
+        ),
+        _s(
+            "SELECT name, COALESCE(email, 'none') AS contact\n"
+            "FROM users;",
+            "COALESCE gives a missing value a default.",
+            5,
+        ),
+        _s(
+            "SELECT name\n"
+            "FROM users\n"
+            "WHERE age BETWEEN 18 AND 30;",
+            "BETWEEN includes both ends.",
             5,
         ),
     ),
@@ -156,6 +238,49 @@ _GROUPING = FundamentalsClass(
             "JOIN orders o ON o.user_id = u.id\nGROUP BY u.city\n"
             "HAVING SUM(o.price) > 10\nORDER BY revenue DESC;",
             "Join, group, filter the groups, sort — the full reporting shape.",
+            5,
+        ),
+        _s(
+            "SELECT city, COUNT(*) AS people\n"
+            "FROM users\n"
+            "GROUP BY city;",
+            "GROUP BY is SQL's loop: one row out per group.",
+            5,
+        ),
+        _s(
+            "SELECT city, AVG(age) AS mean_age\n"
+            "FROM users\n"
+            "GROUP BY city\n"
+            "ORDER BY mean_age DESC;",
+            "Aggregate first, then order by the aggregate.",
+            5,
+        ),
+        _s(
+            "SELECT city, COUNT(*) AS people\n"
+            "FROM users\n"
+            "GROUP BY city\n"
+            "HAVING COUNT(*) > 1;",
+            "HAVING filters groups; WHERE filters rows before grouping.",
+            5,
+        ),
+        _s(
+            "SELECT MIN(age) AS youngest, MAX(age) AS oldest\n"
+            "FROM users;",
+            "Aggregates with no GROUP BY treat the whole table as one group.",
+            5,
+        ),
+        _s(
+            "SELECT SUM(age) AS total_years\n"
+            "FROM users\n"
+            "WHERE city = 'Leeds';",
+            "WHERE runs before the aggregate, so only matching rows are summed.",
+            5,
+        ),
+        _s(
+            "SELECT city, COUNT(email) AS with_email, COUNT(*) AS everyone\n"
+            "FROM users\n"
+            "GROUP BY city;",
+            "COUNT(column) skips NULLs; COUNT(*) counts rows.",
             5,
         ),
     ),

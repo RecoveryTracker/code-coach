@@ -98,6 +98,77 @@ _FOUNDATIONS = FundamentalsClass(
             "`sort()` rearranges the list in place and returns nothing.",
             5,
         ),
+        _s(
+            "String greet(String name) {\n"
+            "  return 'Hello, $name!';\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(greet('Alex'));\n"
+            "}",
+            "A $ inserts a variable straight into a string.",
+            5,
+        ),
+        _s(
+            "double average(List<int> nums) {\n"
+            "  var total = 0;\n"
+            "  for (final n in nums) {\n"
+            "    total += n;\n"
+            "  }\n"
+            "  return total / nums.length;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(average([2, 4, 6]));\n"
+            "}",
+            "/ always gives a double, even between two ints.",
+            5,
+        ),
+        _s(
+            "int area(int w, int h) => w * h;\n"
+            "\n"
+            "void main() {\n"
+            "  print(area(3, 4));\n"
+            "}",
+            "=> is shorthand for a body that is one expression.",
+            5,
+        ),
+        _s(
+            "String describe({required String name, required int age}) {\n"
+            "  return '$name is $age';\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(describe(name: 'Sam', age: 30));\n"
+            "}",
+            "Named parameters are ordinary in Dart, and required is a keyword.",
+            5,
+        ),
+        _s(
+            "class Point {\n"
+            "  final int x;\n"
+            "  final int y;\n"
+            "  Point(this.x, this.y);\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  final p = Point(1, 2);\n"
+            "  print(p.x);\n"
+            "}",
+            "this.x in the parameter list assigns the field for you.",
+            5,
+        ),
+        _s(
+            "T? firstOrNull<T>(List<T> items) {\n"
+            "  return items.isEmpty ? null : items.first;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(firstOrNull([10, 20]));\n"
+            "}",
+            "T? says the answer may be absent, and the compiler holds you to it.",
+            5,
+        ),
     ),
 )
 
@@ -143,7 +214,8 @@ _DECISIONS = FundamentalsClass(
         ),
         _s(
             "String grade(int score) {\n  if (score >= 90) {\n    return 'A';\n"
-            "  }\n  if (score >= 80) {\n    return 'B';\n  }\n  return 'C';\n}",
+            "  }\n  if (score >= 80) {\n    return 'B';\n  }\n  return 'C';\n}\n\n"
+            "void main() {\n  print(grade(85));\n}",
             "An early return ends the function then and there.",
             5,
         ),
@@ -157,6 +229,81 @@ _DECISIONS = FundamentalsClass(
             "int biggest(int a, int b) {\n  if (a > b) {\n    return a;\n  }\n"
             "  return b;\n}\n\nvoid main() {\n  print(biggest(3, 9));\n}",
             "No else needed: returning already left the function.",
+            5,
+        ),
+        _s(
+            "String grade(int score) {\n"
+            "  if (score >= 90) return 'A';\n"
+            "  if (score >= 80) return 'B';\n"
+            "  return 'C';\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(grade(85));\n"
+            "}",
+            "Early returns keep the branches flat.",
+            5,
+        ),
+        _s(
+            "String sign(int n) {\n"
+            "  if (n > 0) return 'positive';\n"
+            "  if (n < 0) return 'negative';\n"
+            "  return 'zero';\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(sign(-4));\n"
+            "}",
+            "Dart requires every path to return, and checks that it does.",
+            5,
+        ),
+        _s(
+            "bool canVote(int age, bool citizen) {\n"
+            "  return age >= 18 && citizen;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(canVote(20, true));\n"
+            "}",
+            "Conditions must be actual booleans; there is no truthiness.",
+            5,
+        ),
+        _s(
+            "String label(int n) => n.isEven ? 'even' : 'odd';\n"
+            "\n"
+            "void main() {\n"
+            "  print(label(7));\n"
+            "}",
+            "isEven and isOdd are properties on int, not functions.",
+            5,
+        ),
+        _s(
+            "String greetOrDefault(String? name) {\n"
+            "  final who = name ?? 'stranger';\n"
+            "  return 'Hi, $who';\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(greetOrDefault(null));\n"
+            "}",
+            "?? supplies the fallback when the value is null.",
+            5,
+        ),
+        _s(
+            "String dayType(String day) {\n"
+            "  switch (day) {\n"
+            "    case 'Sat':\n"
+            "    case 'Sun':\n"
+            "      return 'weekend';\n"
+            "    default:\n"
+            "      return 'weekday';\n"
+            "  }\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(dayType('Sun'));\n"
+            "}",
+            "Empty cases stack up; a case with a body must not fall through.",
             5,
         ),
     ),
@@ -206,7 +353,8 @@ _LOOPS = FundamentalsClass(
         ),
         _s(
             "int sum(List<int> nums) {\n  var total = 0;\n  for (final n in nums) {\n"
-            "    total += n;\n  }\n  return total;\n}",
+            "    total += n;\n  }\n  return total;\n}\n\n"
+            "void main() {\n  print(sum([1, 2, 3, 4]));\n}",
             "The accumulator pattern, wrapped up as a function.",
             5,
         ),
@@ -219,8 +367,90 @@ _LOOPS = FundamentalsClass(
         _s(
             "int biggest(List<int> nums) {\n  var best = nums[0];\n"
             "  for (final n in nums) {\n    if (n > best) {\n      best = n;\n"
-            "    }\n  }\n  return best;\n}",
+            "    }\n  }\n  return best;\n}\n\n"
+            "void main() {\n  print(biggest([3, 9, 4]));\n}",
             "Loop plus decision — most algorithms are this shape.",
+            5,
+        ),
+        _s(
+            "int total(List<int> nums) {\n"
+            "  var sum = 0;\n"
+            "  for (final n in nums) {\n"
+            "    sum += n;\n"
+            "  }\n"
+            "  return sum;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(total([1, 2, 3, 4]));\n"
+            "}",
+            "final in a loop means each turn gets its own value.",
+            5,
+        ),
+        _s(
+            "List<int> countdown(int from) {\n"
+            "  final out = <int>[];\n"
+            "  for (var i = from; i > 0; i--) {\n"
+            "    out.add(i);\n"
+            "  }\n"
+            "  return out;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(countdown(3));\n"
+            "}",
+            "<int>[] is an empty list that knows what it holds.",
+            5,
+        ),
+        _s(
+            "int? firstNegative(List<int> nums) {\n"
+            "  for (final n in nums) {\n"
+            "    if (n < 0) return n;\n"
+            "  }\n"
+            "  return null;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(firstNegative([3, 1, -2, 5]));\n"
+            "}",
+            "The ? is what lets the function return null at all.",
+            5,
+        ),
+        _s(
+            "List<int> doubled(List<int> nums) {\n"
+            "  return nums.map((n) => n * 2).toList();\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(doubled([1, 2, 3]));\n"
+            "}",
+            "map is lazy in Dart, so toList is what actually runs it.",
+            5,
+        ),
+        _s(
+            "List<int> evens(List<int> nums) {\n"
+            "  return nums.where((n) => n.isEven).toList();\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(evens([1, 2, 3, 4]));\n"
+            "}",
+            "Dart calls it where, not filter.",
+            5,
+        ),
+        _s(
+            "int tally(List<String> words) {\n"
+            "  final counts = <String, int>{};\n"
+            "  for (final word in words) {\n"
+            "    counts[word] = (counts[word] ?? 0) + 1;\n"
+            "  }\n"
+            "  return counts['a'] ?? 0;\n"
+            "}\n"
+            "\n"
+            "void main() {\n"
+            "  print(tally(['a', 'b', 'a']));\n"
+            "}",
+            "A missing key gives null, so ?? 0 starts the count.",
             5,
         ),
     ),

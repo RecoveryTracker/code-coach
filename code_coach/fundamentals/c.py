@@ -67,6 +67,97 @@ _FOUNDATIONS = FundamentalsClass(
             "Define above main, or C won't know the function exists yet.",
             5,
         ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int add(int a, int b) {\n"
+            "    return a + b;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", add(7, 12));\n"
+            "    return 0;\n"
+            "}",
+            "Declare the return type first, then the name, then the parameters.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "double average(int a, int b) {\n"
+            "    return (a + b) / 2.0;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%.1f\\n\", average(3, 4));\n"
+            "    return 0;\n"
+            "}",
+            "2.0 rather than 2, or integer division truncates the answer.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "void greet(const char *name) {\n"
+            "    printf(\"Hello, %s!\\n\", name);\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    greet(\"Alex\");\n"
+            "    return 0;\n"
+            "}",
+            "const char * is a string you promise not to write through.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "#include <string.h>\n"
+            "\n"
+            "int length(const char *text) {\n"
+            "    return (int)strlen(text);\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", length(\"hello\"));\n"
+            "    return 0;\n"
+            "}",
+            "strlen counts up to the zero byte, so it walks the whole string.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "void swap(int *a, int *b) {\n"
+            "    int temp = *a;\n"
+            "    *a = *b;\n"
+            "    *b = temp;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    int x = 1, y = 2;\n"
+            "    swap(&x, &y);\n"
+            "    printf(\"%d %d\\n\", x, y);\n"
+            "    return 0;\n"
+            "}",
+            "Passing the address is the only way to change a caller's variable.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "struct Point {\n"
+            "    int x;\n"
+            "    int y;\n"
+            "};\n"
+            "\n"
+            "int main(void) {\n"
+            "    struct Point p = {1, 2};\n"
+            "    printf(\"%d,%d\\n\", p.x, p.y);\n"
+            "    return 0;\n"
+            "}",
+            "A struct groups values; the fields are laid out in order.",
+            5,
+        ),
     ),
 )
 
@@ -115,6 +206,100 @@ _DECISIONS = FundamentalsClass(
             "No else needed: returning already left the function.",
             5,
         ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "char grade(int score) {\n"
+            "    if (score >= 90) return 'A';\n"
+            "    if (score >= 80) return 'B';\n"
+            "    return 'C';\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%c\\n\", grade(85));\n"
+            "    return 0;\n"
+            "}",
+            "A char is a single quote; a string is a double quote.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int is_even(int n) {\n"
+            "    return n % 2 == 0;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", is_even(7));\n"
+            "    return 0;\n"
+            "}",
+            "C has no bool by default: 0 is false, anything else is true.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int larger(int a, int b) {\n"
+            "    return a > b ? a : b;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", larger(3, 9));\n"
+            "    return 0;\n"
+            "}",
+            "The ternary is an expression, so it can be returned directly.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int can_vote(int age, int citizen) {\n"
+            "    return age >= 18 && citizen;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", can_vote(20, 1));\n"
+            "    return 0;\n"
+            "}",
+            "&& stops as soon as the answer is known.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "const char *day_type(int day) {\n"
+            "    switch (day) {\n"
+            "        case 6:\n"
+            "        case 7:\n"
+            "            return \"weekend\";\n"
+            "        default:\n"
+            "            return \"weekday\";\n"
+            "    }\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%s\\n\", day_type(7));\n"
+            "    return 0;\n"
+            "}",
+            "Empty cases fall through to the next one on purpose.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int clamp(int n, int low, int high) {\n"
+            "    if (n < low) return low;\n"
+            "    if (n > high) return high;\n"
+            "    return n;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", clamp(15, 0, 10));\n"
+            "    return 0;\n"
+            "}",
+            "Three cases, three returns, and no nesting.",
+            5,
+        ),
     ),
 )
 
@@ -161,6 +346,114 @@ _LOOPS = FundamentalsClass(
             "    while (count > 0) {\n        printf(\"%d\\n\", count);\n"
             "        count--;\n    }\n    return 0;\n}",
             "Something inside must change, or it never ends.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int sum(const int *nums, int count) {\n"
+            "    int total = 0;\n"
+            "    for (int i = 0; i < count; i++) {\n"
+            "        total += nums[i];\n"
+            "    }\n"
+            "    return total;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    int nums[4] = {1, 2, 3, 4};\n"
+            "    printf(\"%d\\n\", sum(nums, 4));\n"
+            "    return 0;\n"
+            "}",
+            "An array loses its length when passed, so the count comes too.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int biggest(const int *nums, int count) {\n"
+            "    int best = nums[0];\n"
+            "    for (int i = 1; i < count; i++) {\n"
+            "        if (nums[i] > best) best = nums[i];\n"
+            "    }\n"
+            "    return best;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    int nums[3] = {3, 9, 4};\n"
+            "    printf(\"%d\\n\", biggest(nums, 3));\n"
+            "    return 0;\n"
+            "}",
+            "Start from the first element, not from zero, or negatives break it.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int factorial(int n) {\n"
+            "    int result = 1;\n"
+            "    while (n > 1) {\n"
+            "        result *= n;\n"
+            "        n--;\n"
+            "    }\n"
+            "    return result;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", factorial(5));\n"
+            "    return 0;\n"
+            "}",
+            "A while loop when the count is not a simple range.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int count_vowels(const char *text) {\n"
+            "    int found = 0;\n"
+            "    for (int i = 0; text[i] != '\\0'; i++) {\n"
+            "        if (text[i] == 'a' || text[i] == 'e') found++;\n"
+            "    }\n"
+            "    return found;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    printf(\"%d\\n\", count_vowels(\"beach\"));\n"
+            "    return 0;\n"
+            "}",
+            "Walking to the zero byte is how you loop over a C string.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int first_negative(const int *nums, int count) {\n"
+            "    for (int i = 0; i < count; i++) {\n"
+            "        if (nums[i] < 0) return nums[i];\n"
+            "    }\n"
+            "    return 0;\n"
+            "}\n"
+            "\n"
+            "int main(void) {\n"
+            "    int nums[4] = {3, 1, -2, 5};\n"
+            "    printf(\"%d\\n\", first_negative(nums, 4));\n"
+            "    return 0;\n"
+            "}",
+            "Returning from inside the loop is the cleanest early exit.",
+            5,
+        ),
+        _s(
+            "#include <stdio.h>\n"
+            "\n"
+            "int main(void) {\n"
+            "    for (int i = 1; i <= 3; i++) {\n"
+            "        for (int j = 1; j <= 3; j++) {\n"
+            "            printf(\"%d\", i * j);\n"
+            "        }\n"
+            "    }\n"
+            "    printf(\"\\n\");\n"
+            "    return 0;\n"
+            "}",
+            "Nested loops: the inner one runs fully for every outer turn.",
             5,
         ),
     ),

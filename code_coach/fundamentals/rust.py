@@ -66,6 +66,76 @@ _FOUNDATIONS = FundamentalsClass(
             "Order doesn't matter — Rust sees the whole file.",
             5,
         ),
+        _s(
+            "fn add(a: i32, b: i32) -> i32 {\n"
+            "    a + b\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", add(7, 12));\n"
+            "}",
+            "No semicolon on the last line: that is what makes it the return value.",
+            5,
+        ),
+        _s(
+            "fn greet(name: &str) -> String {\n"
+            "    format!(\"Hello, {}!\", name)\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", greet(\"Alex\"));\n"
+            "}",
+            "Take &str and return String: borrow the input, own the output.",
+            5,
+        ),
+        _s(
+            "fn average(nums: &[i32]) -> f64 {\n"
+            "    let total: i32 = nums.iter().sum();\n"
+            "    total as f64 / nums.len() as f64\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", average(&[2, 4, 6]));\n"
+            "}",
+            "Rust never converts numbers for you; `as` is how you ask.",
+            5,
+        ),
+        _s(
+            "struct Point {\n"
+            "    x: i32,\n"
+            "    y: i32,\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    let p = Point { x: 1, y: 2 };\n"
+            "    println!(\"{},{}\", p.x, p.y);\n"
+            "}",
+            "Struct fields are named at construction, so order does not matter.",
+            5,
+        ),
+        _s(
+            "fn first(items: &[i32]) -> Option<&i32> {\n"
+            "    items.first()\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", first(&[10, 20]));\n"
+            "}",
+            "Option is how Rust says the answer might not be there.",
+            5,
+        ),
+        _s(
+            "fn swap(pair: (i32, i32)) -> (i32, i32) {\n"
+            "    let (a, b) = pair;\n"
+            "    (b, a)\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", swap((1, 2)));\n"
+            "}",
+            "A tuple returns several values without inventing a struct.",
+            5,
+        ),
     ),
 )
 
@@ -114,6 +184,91 @@ _DECISIONS = FundamentalsClass(
             "    } else {\n        b\n    }\n}\n\nfn main() {\n"
             "    println!(\"{}\", biggest(3, 9));\n}",
             "Each branch is an expression, so each one returns.",
+            5,
+        ),
+        _s(
+            "fn grade(score: i32) -> char {\n"
+            "    if score >= 90 {\n"
+            "        'A'\n"
+            "    } else if score >= 80 {\n"
+            "        'B'\n"
+            "    } else {\n"
+            "        'C'\n"
+            "    }\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", grade(85));\n"
+            "}",
+            "if is an expression, so every branch is a value of the same type.",
+            5,
+        ),
+        _s(
+            "fn sign(n: i32) -> &'static str {\n"
+            "    match n {\n"
+            "        n if n > 0 => \"positive\",\n"
+            "        n if n < 0 => \"negative\",\n"
+            "        _ => \"zero\",\n"
+            "    }\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", sign(-4));\n"
+            "}",
+            "A guard puts a condition on a match arm; _ catches the rest.",
+            5,
+        ),
+        _s(
+            "fn is_even(n: i32) -> bool {\n"
+            "    n % 2 == 0\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", is_even(7));\n"
+            "}",
+            "Return the comparison itself rather than true or false.",
+            5,
+        ),
+        _s(
+            "fn describe(value: Option<i32>) -> String {\n"
+            "    match value {\n"
+            "        Some(n) => format!(\"got {}\", n),\n"
+            "        None => String::from(\"nothing\"),\n"
+            "    }\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", describe(None));\n"
+            "}",
+            "match on an Option must handle both arms, and the compiler checks.",
+            5,
+        ),
+        _s(
+            "fn or_default(name: Option<&str>) -> &str {\n"
+            "    name.unwrap_or(\"stranger\")\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", or_default(None));\n"
+            "}",
+            "unwrap_or supplies the fallback without a match block.",
+            5,
+        ),
+        _s(
+            "fn clamp_value(n: i32, low: i32, high: i32) -> i32 {\n"
+            "    if n < low {\n"
+            "        return low;\n"
+            "    }\n"
+            "    if n > high {\n"
+            "        return high;\n"
+            "    }\n"
+            "    n\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", clamp_value(15, 0, 10));\n"
+            "}",
+            "An early return needs the keyword; the final value does not.",
             5,
         ),
     ),
@@ -165,6 +320,91 @@ _LOOPS = FundamentalsClass(
             "        }\n    }\n    best\n}\n\nfn main() {\n"
             "    println!(\"{}\", biggest(&[3, 9, 2]));\n}",
             "`*n` reads through the borrow to the number itself.",
+            5,
+        ),
+        _s(
+            "fn sum(nums: &[i32]) -> i32 {\n"
+            "    let mut total = 0;\n"
+            "    for n in nums {\n"
+            "        total += n;\n"
+            "    }\n"
+            "    total\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", sum(&[1, 2, 3, 4]));\n"
+            "}",
+            "mut is required to change a binding, even a running total.",
+            5,
+        ),
+        _s(
+            "fn biggest(nums: &[i32]) -> i32 {\n"
+            "    let mut best = nums[0];\n"
+            "    for &n in nums {\n"
+            "        if n > best {\n"
+            "            best = n;\n"
+            "        }\n"
+            "    }\n"
+            "    best\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{}\", biggest(&[3, 9, 4]));\n"
+            "}",
+            "&n in the pattern copies the value out of the reference.",
+            5,
+        ),
+        _s(
+            "fn countdown(from: i32) -> Vec<i32> {\n"
+            "    let mut out = Vec::new();\n"
+            "    for i in (1..=from).rev() {\n"
+            "        out.push(i);\n"
+            "    }\n"
+            "    out\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", countdown(3));\n"
+            "}",
+            "..= includes the end; rev turns the range around.",
+            5,
+        ),
+        _s(
+            "fn doubled(nums: &[i32]) -> Vec<i32> {\n"
+            "    nums.iter().map(|n| n * 2).collect()\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", doubled(&[1, 2, 3]));\n"
+            "}",
+            "Iterators are lazy, so collect is what actually does the work.",
+            5,
+        ),
+        _s(
+            "fn evens(nums: &[i32]) -> Vec<i32> {\n"
+            "    nums.iter().filter(|n| *n % 2 == 0).cloned().collect()\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", evens(&[1, 2, 3, 4]));\n"
+            "}",
+            "filter hands the closure a reference, which is why it is dereferenced.",
+            5,
+        ),
+        _s(
+            "fn first_negative(nums: &[i32]) -> Option<i32> {\n"
+            "    for &n in nums {\n"
+            "        if n < 0 {\n"
+            "            return Some(n);\n"
+            "        }\n"
+            "    }\n"
+            "    None\n"
+            "}\n"
+            "\n"
+            "fn main() {\n"
+            "    println!(\"{:?}\", first_negative(&[3, 1, -2, 5]));\n"
+            "}",
+            "Option is the honest return type when there may be no answer.",
             5,
         ),
     ),

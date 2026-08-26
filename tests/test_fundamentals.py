@@ -2,7 +2,13 @@
 
 import unittest
 
-from code_coach.engine import dart_available, run_code
+import shutil
+
+from code_coach.engine import (
+    dart_available,
+    run_code,
+    typescript_available,
+)
 from code_coach.fundamentals.base import (
     CLASS_IDS,
     bank_for,
@@ -173,20 +179,79 @@ class SqlRunnerTests(unittest.TestCase):
         self.assertIn("5", out)
 
 
-@unittest.skipUnless(dart_available(), "Dart SDK not on PATH")
-class DartSnippetsCompileTests(unittest.TestCase):
-    """Whole-program snippets must actually run — a typo in one would ask the
-    student to type something that can't work."""
+# Which languages can be executed here, and what each needs to be present.
+# The compiled three are skipped rather than assumed: a snippet nobody can run
+# is a snippet nobody has checked, and saying so is better than pretending.
+RUNNABLE = {
+    "javascript": lambda: shutil.which("node") is not None,
+    "typescript": typescript_available,
+    "dart": dart_available,
+    "sql": lambda: True,  # sqlite3 ships with Python
+}
 
-    def test_level_five_snippets_run(self):
+
+class LevelFiveSnippetsRunTests(unittest.TestCase):
+    """A level-5 snippet is a whole program, so it has to be one.
+
+    These are typed verbatim and then Run, so a typo would be drilled in
+    rather than caught. Exit code alone is not enough: a JavaScript file that
+    only defines a function exits 0 and prints nothing, and a Dart string with
+    an escaped dollar runs perfectly while printing the variable's name
+    instead of its value. Both of those were real, and both are checked here.
+    """
+
+    def _check(self, language: str) -> None:
         for class_id in CLASS_IDS:
-            for snippet in snippets_for("dart", class_id, 5):
-                src = snippet.code
-                if "void main(" not in src:
-                    src += "\n\nvoid main() {}\n"
-                out, err, code = run_code(src, language="dart")
+            for snippet in snippets_for(language, class_id, 5):
                 with self.subTest(class_id=class_id, code=snippet.code[:40]):
-                    self.assertEqual(code, 0, err[:300])
+                    out, err, code = run_code(snippet.code, language=language)
+                    self.assertEqual(code, 0, (err or out)[:300])
+                    self.assertTrue(
+                        out.strip(),
+                        "printed nothing, so Run does nothing visible",
+                    )
+
+    def test_a_level_five_snippet_is_a_whole_function(self):
+        """Two lines is a level-4 block; level 5 is the function itself.
+
+        Except in SQL, which has no functions to write. There a complete
+        statement is the whole unit, and SELECT name / FROM users is two
+        lines and finished.
+        """
+        for language in RUNNABLE:
+            if language == "sql":
+                continue
+            for class_id in CLASS_IDS:
+                for snippet in snippets_for(language, class_id, 5):
+                    with self.subTest(language=language, code=snippet.code[:30]):
+                        self.assertGreaterEqual(
+                            len(snippet.code.splitlines()), 3
+                        )
+
+    def test_every_class_has_enough_whole_functions(self):
+        """Fewer than this and the class is over in one short window."""
+        for language in DECLARED:
+            for class_id in CLASS_IDS:
+                with self.subTest(language=language, class_id=class_id):
+                    self.assertGreaterEqual(
+                        material_count(language, class_id, 5),
+                        4,
+                        "add level-5 snippets for this class",
+                    )
+
+
+def _runner(language: str):
+    def test(self):
+        if not RUNNABLE[language]():
+            self.skipTest(f"no toolchain for {language}")
+        self._check(language)
+
+    test.__doc__ = f"Every level-5 {language} snippet runs and prints."
+    return test
+
+
+for _lang in RUNNABLE:
+    setattr(LevelFiveSnippetsRunTests, f"test_{_lang}_snippets_run", _runner(_lang))
 
 
 if __name__ == "__main__":
