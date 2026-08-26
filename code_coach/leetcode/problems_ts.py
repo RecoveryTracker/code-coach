@@ -88,6 +88,94 @@ _HASH_MAP = Pattern(
             }
             """,
         ),
+        _p(
+            454, '4Sum II', 'Medium',
+            'Count every sum from the first two lists, then look up its negation from the other two.',
+            'O(n^2) time, O(n^2) space',
+            """
+            function fourSumCount(a: number[], b: number[], c: number[], d: number[]): number {
+              const pairs = new Map<number, number>();
+              for (const x of a) {
+                for (const y of b) {
+                  pairs.set(x + y, (pairs.get(x + y) || 0) + 1);
+                }
+              }
+              let found = 0;
+              for (const z of c) {
+                for (const w of d) {
+                  found += pairs.get(-(z + w)) || 0;
+                }
+              }
+              return found;
+            }
+            """,
+        ),
+        _p(
+            560, 'Subarray Sum Equals K', 'Medium',
+            "Remember every running total you've seen; the gap between two of them is a subarray.",
+            'O(n) time, O(n) space',
+            """
+            function subarraySum(nums: number[], k: number): number {
+              const seen = new Map<number, number>([[0, 1]]);
+              let running = 0;
+              let found = 0;
+              for (const n of nums) {
+                running += n;
+                found += seen.get(running - k) || 0;
+                seen.set(running, (seen.get(running) || 0) + 1);
+              }
+              return found;
+            }
+            """,
+        ),
+        _p(
+            128, 'Longest Consecutive Sequence', 'Medium',
+            'Only start counting from a number with no left neighbour — each run is walked once.',
+            'O(n) time, O(n) space',
+            """
+            function longestConsecutive(nums: number[]): number {
+              const pool = new Set<number>(nums);
+              let best = 0;
+              for (const n of pool) {
+                if (pool.has(n - 1)) continue;
+                let length = 1;
+                while (pool.has(n + length)) length++;
+                if (length > best) best = length;
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            36, 'Valid Sudoku', 'Medium',
+            'Three sets per cell: its row, its column, and its box at (r // 3, c // 3).',
+            'O(1) time, O(1) space',
+            """
+            function isValidSudoku(board: string[][]): boolean {
+              const rows = new Map<number, Set<string>>();
+              const cols = new Map<number, Set<string>>();
+              const boxes = new Map<string, Set<string>>();
+              const clash = <K>(store: Map<K, Set<string>>, key: K, value: string): boolean => {
+                if (!store.has(key)) store.set(key, new Set<string>());
+                const seen = store.get(key)!;
+                if (seen.has(value)) return true;
+                seen.add(value);
+                return false;
+              };
+              for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                  const value = board[r][c];
+                  if (value === '.') continue;
+                  const box = `${Math.floor(r / 3)},${Math.floor(c / 3)}`;
+                  if (clash(rows, r, value)) return false;
+                  if (clash(cols, c, value)) return false;
+                  if (clash(boxes, box, value)) return false;
+                }
+              }
+              return true;
+            }
+            """,
+        ),
     ),
 )
 
@@ -195,6 +283,91 @@ _TWO_POINTERS = Pattern(
             }
             """,
         ),
+        _p(
+            26, 'Remove Duplicates from Sorted Array', 'Easy',
+            'One pointer writes, the other reads — the writer only moves on a new value.',
+            'O(n) time, O(1) space',
+            """
+            function removeDuplicates(nums: number[]): number {
+              if (nums.length === 0) return 0;
+              let write = 1;
+              for (let read = 1; read < nums.length; read++) {
+                if (nums[read] !== nums[write - 1]) {
+                  nums[write] = nums[read];
+                  write++;
+                }
+              }
+              return write;
+            }
+            """,
+        ),
+        _p(
+            283, 'Move Zeroes', 'Easy',
+            'Same read/write pair: write every non-zero forward, then fill the tail.',
+            'O(n) time, O(1) space',
+            """
+            function moveZeroes(nums: number[]): number[] {
+              let write = 0;
+              for (let read = 0; read < nums.length; read++) {
+                if (nums[read] !== 0) {
+                  nums[write] = nums[read];
+                  write++;
+                }
+              }
+              for (let i = write; i < nums.length; i++) nums[i] = 0;
+              return nums;
+            }
+            """,
+        ),
+        _p(
+            42, 'Trapping Rain Water', 'Hard',
+            'Water over a column is the smaller of the two tallest walls beside it, minus the column.',
+            'O(n) time, O(1) space',
+            """
+            function trap(height: number[]): number {
+              if (height.length === 0) return 0;
+              let left = 0;
+              let right = height.length - 1;
+              let leftMax = height[left];
+              let rightMax = height[right];
+              let water = 0;
+              while (left < right) {
+                if (leftMax < rightMax) {
+                  left++;
+                  leftMax = Math.max(leftMax, height[left]);
+                  water += leftMax - height[left];
+                } else {
+                  right--;
+                  rightMax = Math.max(rightMax, height[right]);
+                  water += rightMax - height[right];
+                }
+              }
+              return water;
+            }
+            """,
+        ),
+        _p(
+            977, 'Squares of a Sorted Array', 'Easy',
+            'The biggest square is at one end or the other, so fill the answer backwards.',
+            'O(n) time, O(n) space',
+            """
+            function sortedSquares(nums: number[]): number[] {
+              const out = new Array<number>(nums.length).fill(0);
+              let left = 0;
+              let right = nums.length - 1;
+              for (let slot = nums.length - 1; slot >= 0; slot--) {
+                if (Math.abs(nums[left]) > Math.abs(nums[right])) {
+                  out[slot] = nums[left] * nums[left];
+                  left++;
+                } else {
+                  out[slot] = nums[right] * nums[right];
+                  right--;
+                }
+              }
+              return out;
+            }
+            """,
+        ),
     ),
 )
 
@@ -284,6 +457,106 @@ _SLIDING_WINDOW = Pattern(
                   left++;
                 }
                 best = Math.max(best, right - left + 1);
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            643, 'Maximum Average Subarray I', 'Easy',
+            'The window never changes size, so each step adds one number and drops one.',
+            'O(n) time, O(1) space',
+            """
+            function findMaxAverage(nums: number[], k: number): number {
+              let window = 0;
+              for (let i = 0; i < k; i++) window += nums[i];
+              let best = window;
+              for (let i = k; i < nums.length; i++) {
+                window += nums[i] - nums[i - k];
+                if (window > best) best = window;
+              }
+              return best / k;
+            }
+            """,
+        ),
+        _p(
+            567, 'Permutation in String', 'Medium',
+            'A fixed window whose letter counts match is a permutation — no sorting needed.',
+            'O(n) time, O(1) space',
+            """
+            function checkInclusion(pattern: string, text: string): boolean {
+              if (pattern.length > text.length) return false;
+              const need = new Map<string, number>();
+              for (const ch of pattern) need.set(ch, (need.get(ch) || 0) + 1);
+              const window = new Map<string, number>();
+              const same = (): boolean => {
+                if (window.size !== need.size) return false;
+                for (const [ch, count] of need) {
+                  if (window.get(ch) !== count) return false;
+                }
+                return true;
+              };
+              for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                window.set(ch, (window.get(ch) || 0) + 1);
+                if (i >= pattern.length) {
+                  const out = text[i - pattern.length];
+                  window.set(out, window.get(out) - 1);
+                  if (window.get(out) === 0) window.delete(out);
+                }
+                if (same()) return true;
+              }
+              return false;
+            }
+            """,
+        ),
+        _p(
+            1004, 'Max Consecutive Ones III', 'Medium',
+            'Grow while at most k zeros are inside; shrink from the left when a k+1th appears.',
+            'O(n) time, O(1) space',
+            """
+            function longestOnes(nums: number[], k: number): number {
+              let left = 0;
+              let zeros = 0;
+              let best = 0;
+              for (let right = 0; right < nums.length; right++) {
+                if (nums[right] === 0) zeros++;
+                while (zeros > k) {
+                  if (nums[left] === 0) zeros--;
+                  left++;
+                }
+                if (right - left + 1 > best) best = right - left + 1;
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            76, 'Minimum Window Substring', 'Hard',
+            'Count how many required letters are satisfied; shrink only while all of them are.',
+            'O(n) time, O(1) space',
+            """
+            function minWindow(text: string, pattern: string): string {
+              if (pattern.length === 0 || text.length === 0) return '';
+              const need = new Map<string, number>();
+              for (const ch of pattern) need.set(ch, (need.get(ch) || 0) + 1);
+              let missing = need.size;
+              const window = new Map<string, number>();
+              let best = '';
+              let left = 0;
+              for (let right = 0; right < text.length; right++) {
+                const ch = text[right];
+                window.set(ch, (window.get(ch) || 0) + 1);
+                if (need.has(ch) && window.get(ch) === need.get(ch)) missing--;
+                while (missing === 0) {
+                  if (best === '' || right - left + 1 < best.length) {
+                    best = text.slice(left, right + 1);
+                  }
+                  const out = text[left];
+                  window.set(out, window.get(out) - 1);
+                  if (need.has(out) && window.get(out) < need.get(out)) missing++;
+                  left++;
+                }
               }
               return best;
             }
@@ -392,6 +665,88 @@ _STACK = Pattern(
                 stack.push(i);
               }
               return answer;
+            }
+            """,
+        ),
+        _p(
+            682, 'Baseball Game', 'Easy',
+            'Every operation only ever looks at the top of the stack, which is the whole idea.',
+            'O(n) time, O(n) space',
+            """
+            function calPoints(operations: string[]): number {
+              const stack: number[] = [];
+              for (const op of operations) {
+                if (op === 'C') stack.pop();
+                else if (op === 'D') stack.push(stack[stack.length - 1] * 2);
+                else if (op === '+') stack.push(stack[stack.length - 1] + stack[stack.length - 2]);
+                else stack.push(Number(op));
+              }
+              return stack.reduce((total, n) => total + n, 0);
+            }
+            """,
+        ),
+        _p(
+            71, 'Simplify Path', 'Medium',
+            "A '..' pops the directory before it, which is exactly what a stack is for.",
+            'O(n) time, O(n) space',
+            """
+            function simplifyPath(path: string): string {
+              const stack: string[] = [];
+              for (const part of path.split('/')) {
+                if (part === '' || part === '.') continue;
+                if (part === '..') stack.pop();
+                else stack.push(part);
+              }
+              return '/' + stack.join('/');
+            }
+            """,
+        ),
+        _p(
+            84, 'Largest Rectangle in Histogram', 'Hard',
+            'Keep bars increasing; a shorter one closes off every taller bar behind it.',
+            'O(n) time, O(n) space',
+            """
+            function largestRectangleArea(heights: number[]): number {
+              const stack: [number, number][] = [];
+              let best = 0;
+              const bars = [...heights, 0];
+              for (let i = 0; i < bars.length; i++) {
+                let start = i;
+                while (stack.length && stack[stack.length - 1][1] > bars[i]) {
+                  const [left, tall] = stack.pop()!;
+                  if (tall * (i - left) > best) best = tall * (i - left);
+                  start = left;
+                }
+                stack.push([start, bars[i]]);
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            394, 'Decode String', 'Medium',
+            'Push the work in progress when a bracket opens, finish it when one closes.',
+            'O(n) time, O(n) space',
+            """
+            function decodeString(encoded: string): string {
+              const stack: [string, number][] = [];
+              let current = '';
+              let count = 0;
+              for (const ch of encoded) {
+                if (ch >= '0' && ch <= '9') {
+                  count = count * 10 + Number(ch);
+                } else if (ch === '[') {
+                  stack.push([current, count]);
+                  current = '';
+                  count = 0;
+                } else if (ch === ']') {
+                  const [before, times] = stack.pop()!;
+                  current = before + current.repeat(times);
+                } else {
+                  current += ch;
+                }
+              }
+              return current;
             }
             """,
         ),

@@ -91,6 +91,87 @@ _HASH_MAP = Pattern(
             }
             """,
         ),
+        _p(
+            454, '4Sum II', 'Medium',
+            'Count every sum from the first two lists, then look up its negation from the other two.',
+            'O(n^2) time, O(n^2) space',
+            """
+            int fourSumCount(List<int> a, List<int> b, List<int> c, List<int> d) {
+              final pairs = <int, int>{};
+              for (final x in a) {
+                for (final y in b) {
+                  pairs[x + y] = (pairs[x + y] ?? 0) + 1;
+                }
+              }
+              var found = 0;
+              for (final z in c) {
+                for (final w in d) {
+                  found += pairs[-(z + w)] ?? 0;
+                }
+              }
+              return found;
+            }
+            """,
+        ),
+        _p(
+            560, 'Subarray Sum Equals K', 'Medium',
+            "Remember every running total you've seen; the gap between two of them is a subarray.",
+            'O(n) time, O(n) space',
+            """
+            int subarraySum(List<int> nums, int k) {
+              final seen = <int, int>{0: 1};
+              var running = 0;
+              var found = 0;
+              for (final n in nums) {
+                running += n;
+                found += seen[running - k] ?? 0;
+                seen[running] = (seen[running] ?? 0) + 1;
+              }
+              return found;
+            }
+            """,
+        ),
+        _p(
+            128, 'Longest Consecutive Sequence', 'Medium',
+            'Only start counting from a number with no left neighbour — each run is walked once.',
+            'O(n) time, O(n) space',
+            """
+            int longestConsecutive(List<int> nums) {
+              final pool = nums.toSet();
+              var best = 0;
+              for (final n in pool) {
+                if (pool.contains(n - 1)) continue;
+                var length = 1;
+                while (pool.contains(n + length)) length++;
+                if (length > best) best = length;
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            36, 'Valid Sudoku', 'Medium',
+            'Three sets per cell: its row, its column, and its box at (r // 3, c // 3).',
+            'O(1) time, O(1) space',
+            """
+            bool isValidSudoku(List<List<String>> board) {
+              final rows = <int, Set<String>>{};
+              final cols = <int, Set<String>>{};
+              final boxes = <String, Set<String>>{};
+              for (var r = 0; r < 9; r++) {
+                for (var c = 0; c < 9; c++) {
+                  final value = board[r][c];
+                  if (value == '.') continue;
+                  final box = '${r ~/ 3},${c ~/ 3}';
+                  if (!rows.putIfAbsent(r, () => <String>{}).add(value)) return false;
+                  if (!cols.putIfAbsent(c, () => <String>{}).add(value)) return false;
+                  if (!boxes.putIfAbsent(box, () => <String>{}).add(value)) return false;
+                }
+              }
+              return true;
+            }
+            """,
+        ),
     ),
 )
 
@@ -199,6 +280,93 @@ _TWO_POINTERS = Pattern(
             }
             """,
         ),
+        _p(
+            26, 'Remove Duplicates from Sorted Array', 'Easy',
+            'One pointer writes, the other reads — the writer only moves on a new value.',
+            'O(n) time, O(1) space',
+            """
+            int removeDuplicates(List<int> nums) {
+              if (nums.isEmpty) return 0;
+              var write = 1;
+              for (var read = 1; read < nums.length; read++) {
+                if (nums[read] != nums[write - 1]) {
+                  nums[write] = nums[read];
+                  write++;
+                }
+              }
+              return write;
+            }
+            """,
+        ),
+        _p(
+            283, 'Move Zeroes', 'Easy',
+            'Same read/write pair: write every non-zero forward, then fill the tail.',
+            'O(n) time, O(1) space',
+            """
+            List<int> moveZeroes(List<int> nums) {
+              var write = 0;
+              for (var read = 0; read < nums.length; read++) {
+                if (nums[read] != 0) {
+                  nums[write] = nums[read];
+                  write++;
+                }
+              }
+              for (var i = write; i < nums.length; i++) {
+                nums[i] = 0;
+              }
+              return nums;
+            }
+            """,
+        ),
+        _p(
+            42, 'Trapping Rain Water', 'Hard',
+            'Water over a column is the smaller of the two tallest walls beside it, minus the column.',
+            'O(n) time, O(1) space',
+            """
+            int trap(List<int> height) {
+              if (height.isEmpty) return 0;
+              var left = 0;
+              var right = height.length - 1;
+              var leftMax = height[left];
+              var rightMax = height[right];
+              var water = 0;
+              while (left < right) {
+                if (leftMax < rightMax) {
+                  left++;
+                  if (height[left] > leftMax) leftMax = height[left];
+                  water += leftMax - height[left];
+                } else {
+                  right--;
+                  if (height[right] > rightMax) rightMax = height[right];
+                  water += rightMax - height[right];
+                }
+              }
+              return water;
+            }
+            """,
+        ),
+        _p(
+            977, 'Squares of a Sorted Array', 'Easy',
+            'The biggest square is at one end or the other, so fill the answer backwards.',
+            'O(n) time, O(n) space',
+            """
+            List<int> sortedSquares(List<int> nums) {
+              final out = List<int>.filled(nums.length, 0);
+              var left = 0;
+              var right = nums.length - 1;
+              for (var slot = nums.length - 1; slot >= 0; slot--) {
+                if (nums[left].abs() > nums[right].abs()) {
+                  out[slot] = nums[left] * nums[left];
+                  left++;
+                } else {
+                  out[slot] = nums[right] * nums[right];
+                  right--;
+                }
+              }
+              return out;
+            }
+            """,
+        ),
     ),
 )
 
@@ -297,6 +465,113 @@ _SLIDING_WINDOW = Pattern(
             }
             """,
         ),
+        _p(
+            643, 'Maximum Average Subarray I', 'Easy',
+            'The window never changes size, so each step adds one number and drops one.',
+            'O(n) time, O(1) space',
+            """
+            double findMaxAverage(List<int> nums, int k) {
+              var window = 0;
+              for (var i = 0; i < k; i++) {
+                window += nums[i];
+              }
+              var best = window;
+              for (var i = k; i < nums.length; i++) {
+                window += nums[i] - nums[i - k];
+                if (window > best) best = window;
+              }
+              return best / k;
+            }
+            """,
+        ),
+        _p(
+            567, 'Permutation in String', 'Medium',
+            'A fixed window whose letter counts match is a permutation — no sorting needed.',
+            'O(n) time, O(1) space',
+            """
+            bool checkInclusion(String pattern, String text) {
+              if (pattern.length > text.length) return false;
+              final need = <String, int>{};
+              for (final ch in pattern.split('')) {
+                need[ch] = (need[ch] ?? 0) + 1;
+              }
+              final window = <String, int>{};
+              bool same() {
+                if (window.length != need.length) return false;
+                for (final entry in need.entries) {
+                  if (window[entry.key] != entry.value) return false;
+                }
+                return true;
+              }
+
+              for (var i = 0; i < text.length; i++) {
+                final ch = text[i];
+                window[ch] = (window[ch] ?? 0) + 1;
+                if (i >= pattern.length) {
+                  final out = text[i - pattern.length];
+                  window[out] = window[out]! - 1;
+                  if (window[out] == 0) window.remove(out);
+                }
+                if (same()) return true;
+              }
+              return false;
+            }
+            """,
+        ),
+        _p(
+            1004, 'Max Consecutive Ones III', 'Medium',
+            'Grow while at most k zeros are inside; shrink from the left when a k+1th appears.',
+            'O(n) time, O(1) space',
+            """
+            int longestOnes(List<int> nums, int k) {
+              var left = 0;
+              var zeros = 0;
+              var best = 0;
+              for (var right = 0; right < nums.length; right++) {
+                if (nums[right] == 0) zeros++;
+                while (zeros > k) {
+                  if (nums[left] == 0) zeros--;
+                  left++;
+                }
+                if (right - left + 1 > best) best = right - left + 1;
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            76, 'Minimum Window Substring', 'Hard',
+            'Count how many required letters are satisfied; shrink only while all of them are.',
+            'O(n) time, O(1) space',
+            """
+            String minWindow(String text, String pattern) {
+              if (pattern.isEmpty || text.isEmpty) return '';
+              final need = <String, int>{};
+              for (final ch in pattern.split('')) {
+                need[ch] = (need[ch] ?? 0) + 1;
+              }
+              var missing = need.length;
+              final window = <String, int>{};
+              var best = '';
+              var left = 0;
+              for (var right = 0; right < text.length; right++) {
+                final ch = text[right];
+                window[ch] = (window[ch] ?? 0) + 1;
+                if (need.containsKey(ch) && window[ch] == need[ch]) missing--;
+                while (missing == 0) {
+                  if (best.isEmpty || right - left + 1 < best.length) {
+                    best = text.substring(left, right + 1);
+                  }
+                  final out = text[left];
+                  window[out] = window[out]! - 1;
+                  if (need.containsKey(out) && window[out]! < need[out]!) missing++;
+                  left++;
+                }
+              }
+              return best;
+            }
+            """,
+        ),
     ),
 )
 
@@ -389,6 +664,98 @@ _STACK = Pattern(
                 stack.add(i);
               }
               return answer;
+            }
+            """,
+        ),
+        _p(
+            682, 'Baseball Game', 'Easy',
+            'Every operation only ever looks at the top of the stack, which is the whole idea.',
+            'O(n) time, O(n) space',
+            """
+            int calPoints(List<String> operations) {
+              final stack = <int>[];
+              for (final op in operations) {
+                if (op == 'C') {
+                  stack.removeLast();
+                } else if (op == 'D') {
+                  stack.add(stack.last * 2);
+                } else if (op == '+') {
+                  stack.add(stack.last + stack[stack.length - 2]);
+                } else {
+                  stack.add(int.parse(op));
+                }
+              }
+              return stack.fold(0, (total, n) => total + n);
+            }
+            """,
+        ),
+        _p(
+            71, 'Simplify Path', 'Medium',
+            "A '..' pops the directory before it, which is exactly what a stack is for.",
+            'O(n) time, O(n) space',
+            """
+            String simplifyPath(String path) {
+              final stack = <String>[];
+              for (final part in path.split('/')) {
+                if (part.isEmpty || part == '.') continue;
+                if (part == '..') {
+                  if (stack.isNotEmpty) stack.removeLast();
+                } else {
+                  stack.add(part);
+                }
+              }
+              return '/${stack.join('/')}';
+            }
+            """,
+        ),
+        _p(
+            84, 'Largest Rectangle in Histogram', 'Hard',
+            'Keep bars increasing; a shorter one closes off every taller bar behind it.',
+            'O(n) time, O(n) space',
+            """
+            int largestRectangleArea(List<int> heights) {
+              final stack = <List<int>>[];
+              var best = 0;
+              final bars = [...heights, 0];
+              for (var i = 0; i < bars.length; i++) {
+                var start = i;
+                while (stack.isNotEmpty && stack.last[1] > bars[i]) {
+                  final closed = stack.removeLast();
+                  final area = closed[1] * (i - closed[0]);
+                  if (area > best) best = area;
+                  start = closed[0];
+                }
+                stack.add([start, bars[i]]);
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            394, 'Decode String', 'Medium',
+            'Push the work in progress when a bracket opens, finish it when one closes.',
+            'O(n) time, O(n) space',
+            """
+            String decodeString(String encoded) {
+              final stack = <List<Object>>[];
+              var current = '';
+              var count = 0;
+              for (final ch in encoded.split('')) {
+                final digit = int.tryParse(ch);
+                if (digit != null) {
+                  count = count * 10 + digit;
+                } else if (ch == '[') {
+                  stack.add([current, count]);
+                  current = '';
+                  count = 0;
+                } else if (ch == ']') {
+                  final frame = stack.removeLast();
+                  current = (frame[0] as String) + current * (frame[1] as int);
+                } else {
+                  current += ch;
+                }
+              }
+              return current;
             }
             """,
         ),

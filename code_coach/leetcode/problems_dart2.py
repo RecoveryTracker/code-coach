@@ -102,6 +102,96 @@ _LINKED_LIST = Pattern(
             }
             """,
         ),
+        _p(
+            876, 'Middle of the Linked List', 'Easy',
+            "One pointer takes two steps per the other's one, so it ends at twice the distance.",
+            'O(n) time, O(1) space',
+            """
+            ListNode? middleNode(ListNode? head) {
+              var slow = head;
+              var fast = head;
+              while (fast != null && fast.next != null) {
+                slow = slow!.next;
+                fast = fast.next!.next;
+              }
+              return slow;
+            }
+            """,
+        ),
+        _p(
+            83, 'Remove Duplicates from Sorted List', 'Easy',
+            'Sorted means duplicates are neighbours, so one pass and a skipped link does it.',
+            'O(n) time, O(1) space',
+            """
+            ListNode? deleteDuplicates(ListNode? head) {
+              var node = head;
+              while (node != null && node.next != null) {
+                if (node.val == node.next!.val) {
+                  node.next = node.next!.next;
+                } else {
+                  node = node.next;
+                }
+              }
+              return head;
+            }
+            """,
+        ),
+        _p(
+            234, 'Palindrome Linked List', 'Easy',
+            'Find the middle, reverse the second half, then walk the two halves together.',
+            'O(n) time, O(1) space',
+            """
+            bool isPalindromeList(ListNode? head) {
+              var slow = head;
+              var fast = head;
+              while (fast != null && fast.next != null) {
+                slow = slow!.next;
+                fast = fast.next!.next;
+              }
+              ListNode? second;
+              while (slow != null) {
+                final next = slow.next;
+                slow.next = second;
+                second = slow;
+                slow = next;
+              }
+              var first = head;
+              while (second != null) {
+                if (first!.val != second.val) return false;
+                first = first.next;
+                second = second.next;
+              }
+              return true;
+            }
+            """,
+        ),
+        _p(
+            2, 'Add Two Numbers', 'Medium',
+            'Long addition, digit by digit. The carry is the only thing you have to remember.',
+            'O(n) time, O(n) space',
+            """
+            ListNode? addTwoNumbers(ListNode? first, ListNode? second) {
+              final head = ListNode(0);
+              var node = head;
+              var carry = 0;
+              while (first != null || second != null || carry != 0) {
+                var total = carry;
+                if (first != null) {
+                  total += first.val;
+                  first = first.next;
+                }
+                if (second != null) {
+                  total += second.val;
+                  second = second.next;
+                }
+                carry = total ~/ 10;
+                node.next = ListNode(total % 10);
+                node = node.next!;
+              }
+              return head.next;
+            }
+            """,
+        ),
     ),
 )
 
@@ -230,6 +320,83 @@ _BINARY_SEARCH = Pattern(
             }
             """,
         ),
+        _p(
+            278, 'First Bad Version', 'Easy',
+            "Search for a boundary: keep the mid when it's bad, discard it when it isn't.",
+            'O(log n) time, O(1) space',
+            """
+            int firstBadVersion(int n, bool Function(int) isBad) {
+              var low = 1;
+              var high = n;
+              while (low < high) {
+                final mid = (low + high) ~/ 2;
+                if (isBad(mid)) {
+                  high = mid;
+                } else {
+                  low = mid + 1;
+                }
+              }
+              return low;
+            }
+            """,
+        ),
+        _p(
+            34, 'Find First and Last Position of Element in Sorted Array', 'Medium',
+            'Two searches, not one: the same loop finds the left edge and then the right.',
+            'O(log n) time, O(1) space',
+            """
+            List<int> searchRange(List<int> nums, int target) {
+              int edge(bool first) {
+                var low = 0;
+                var high = nums.length - 1;
+                var found = -1;
+                while (low <= high) {
+                  final mid = (low + high) ~/ 2;
+                  if (nums[mid] == target) {
+                    found = mid;
+                    if (first) {
+                      high = mid - 1;
+                    } else {
+                      low = mid + 1;
+                    }
+                  } else if (nums[mid] < target) {
+                    low = mid + 1;
+                  } else {
+                    high = mid - 1;
+                  }
+                }
+                return found;
+              }
+
+              return [edge(true), edge(false)];
+            }
+            """,
+        ),
+        _p(
+            74, 'Search a 2D Matrix', 'Medium',
+            'A sorted matrix is one sorted list folded up, so divide the index to unfold it.',
+            'O(log(m * n)) time, O(1) space',
+            """
+            bool searchMatrix(List<List<int>> matrix, int target) {
+              if (matrix.isEmpty || matrix[0].isEmpty) return false;
+              final rows = matrix.length;
+              final cols = matrix[0].length;
+              var low = 0;
+              var high = rows * cols - 1;
+              while (low <= high) {
+                final mid = (low + high) ~/ 2;
+                final value = matrix[mid ~/ cols][mid % cols];
+                if (value == target) return true;
+                if (value < target) {
+                  low = mid + 1;
+                } else {
+                  high = mid - 1;
+                }
+              }
+              return false;
+            }
+            """,
+        ),
     ),
 )
 
@@ -321,6 +488,51 @@ _TREE_DFS = Pattern(
             }
             """,
         ),
+        _p(
+            100, 'Same Tree', 'Easy',
+            'Two trees match when their roots match and both pairs of children do.',
+            'O(n) time, O(h) space',
+            """
+            bool isSameTree(TreeNode? first, TreeNode? second) {
+              if (first == null && second == null) return true;
+              if (first == null || second == null) return false;
+              if (first.val != second.val) return false;
+              return isSameTree(first.left, second.left) &&
+                  isSameTree(first.right, second.right);
+            }
+            """,
+        ),
+        _p(
+            101, 'Symmetric Tree', 'Easy',
+            'A mirror compares left against right — the recursion crosses over.',
+            'O(n) time, O(h) space',
+            """
+            bool isSymmetric(TreeNode? root) {
+              bool mirror(TreeNode? left, TreeNode? right) {
+                if (left == null && right == null) return true;
+                if (left == null || right == null) return false;
+                if (left.val != right.val) return false;
+                return mirror(left.left, right.right) && mirror(left.right, right.left);
+              }
+
+              return mirror(root, root);
+            }
+            """,
+        ),
+        _p(
+            236, 'Lowest Common Ancestor of a Binary Tree', 'Medium',
+            'A node whose two sides each found something is the meeting point.',
+            'O(n) time, O(h) space',
+            """
+            TreeNode? lowestCommonAncestor(TreeNode? root, TreeNode? p, TreeNode? q) {
+              if (root == null || identical(root, p) || identical(root, q)) return root;
+              final left = lowestCommonAncestor(root.left, p, q);
+              final right = lowestCommonAncestor(root.right, p, q);
+              if (left != null && right != null) return root;
+              return left ?? right;
+            }
+            """,
+        ),
     ),
 )
 
@@ -405,6 +617,133 @@ _TREE_BFS = Pattern(
                 leftToRight = !leftToRight;
               }
               return out;
+            }
+            """,
+        ),
+        _p(
+            111, 'Minimum Depth of Binary Tree', 'Easy',
+            'BFS stops at the first leaf it meets — DFS would walk the whole tree first.',
+            'O(n) time, O(n) space',
+            """
+            int minDepth(TreeNode? root) {
+              if (root == null) return 0;
+              final queue = Queue<TreeNode>()..add(root);
+              var depth = 1;
+              while (queue.isNotEmpty) {
+                for (var i = queue.length; i > 0; i--) {
+                  final node = queue.removeFirst();
+                  if (node.left == null && node.right == null) return depth;
+                  if (node.left != null) queue.add(node.left!);
+                  if (node.right != null) queue.add(node.right!);
+                }
+                depth++;
+              }
+              return depth;
+            }
+            """,
+        ),
+        _p(
+            637, 'Average of Levels in Binary Tree', 'Easy',
+            "One row at a time, so the divisor is just that row's length.",
+            'O(n) time, O(n) space',
+            """
+            List<double> averageOfLevels(TreeNode? root) {
+              final averages = <double>[];
+              if (root == null) return averages;
+              final queue = Queue<TreeNode>()..add(root);
+              while (queue.isNotEmpty) {
+                final size = queue.length;
+                var total = 0;
+                for (var i = size; i > 0; i--) {
+                  final node = queue.removeFirst();
+                  total += node.val;
+                  if (node.left != null) queue.add(node.left!);
+                  if (node.right != null) queue.add(node.right!);
+                }
+                averages.add(total / size);
+              }
+              return averages;
+            }
+            """,
+        ),
+        _p(
+            515, 'Find Largest Value in Each Tree Row', 'Medium',
+            'Same row walk as the average — swap the running total for a running max.',
+            'O(n) time, O(n) space',
+            """
+            List<int> largestValues(TreeNode? root) {
+              final largest = <int>[];
+              if (root == null) return largest;
+              final queue = Queue<TreeNode>()..add(root);
+              while (queue.isNotEmpty) {
+                int? best;
+                for (var i = queue.length; i > 0; i--) {
+                  final node = queue.removeFirst();
+                  if (best == null || node.val > best) best = node.val;
+                  if (node.left != null) queue.add(node.left!);
+                  if (node.right != null) queue.add(node.right!);
+                }
+                largest.add(best!);
+              }
+              return largest;
+            }
+            """,
+        ),
+        _p(
+            1161, 'Maximum Level Sum of a Binary Tree', 'Medium',
+            'Number the levels as you go and keep the best — ties go to the shallower one.',
+            'O(n) time, O(n) space',
+            """
+            int maxLevelSum(TreeNode? root) {
+              if (root == null) return 0;
+              final queue = Queue<TreeNode>()..add(root);
+              var level = 0;
+              var bestLevel = 1;
+              int? bestSum;
+              while (queue.isNotEmpty) {
+                level++;
+                var total = 0;
+                for (var i = queue.length; i > 0; i--) {
+                  final node = queue.removeFirst();
+                  total += node.val;
+                  if (node.left != null) queue.add(node.left!);
+                  if (node.right != null) queue.add(node.right!);
+                }
+                if (bestSum == null || total > bestSum) {
+                  bestSum = total;
+                  bestLevel = level;
+                }
+              }
+              return bestLevel;
+            }
+            """,
+        ),
+        _p(
+            662, 'Maximum Width of Binary Tree', 'Medium',
+            "Queue the heap index with each node; a row's width is last minus first plus one.",
+            'O(n) time, O(n) space',
+            """
+            int widthOfBinaryTree(TreeNode? root) {
+              if (root == null) return 0;
+              var widest = 0;
+              var queue = <MapEntry<TreeNode, int>>[MapEntry(root, 0)];
+              while (queue.isNotEmpty) {
+                final first = queue.first.value;
+                var last = first;
+                final next = <MapEntry<TreeNode, int>>[];
+                for (final pair in queue) {
+                  last = pair.value;
+                  if (pair.key.left != null) {
+                    next.add(MapEntry(pair.key.left!, pair.value * 2));
+                  }
+                  if (pair.key.right != null) {
+                    next.add(MapEntry(pair.key.right!, pair.value * 2 + 1));
+                  }
+                }
+                if (last - first + 1 > widest) widest = last - first + 1;
+                queue = next;
+              }
+              return widest;
             }
             """,
         ),
@@ -535,6 +874,137 @@ _GRAPH = Pattern(
                 copy.neighbors.add(cloneGraph(neighbor, made)!);
               }
               return copy;
+            }
+            """,
+        ),
+        _p(
+            695, 'Max Area of Island', 'Medium',
+            'Same flood fill, but the walk returns a size instead of just marking cells.',
+            'O(m * n) time, O(m * n) space',
+            """
+            int maxAreaOfIsland(List<List<int>> grid) {
+              if (grid.isEmpty) return 0;
+              final rows = grid.length;
+              final cols = grid[0].length;
+              int fill(int r, int c) {
+                if (r < 0 || c < 0 || r >= rows || c >= cols) return 0;
+                if (grid[r][c] != 1) return 0;
+                grid[r][c] = 0;
+                return 1 + fill(r + 1, c) + fill(r - 1, c) + fill(r, c + 1) + fill(r, c - 1);
+              }
+
+              var best = 0;
+              for (var r = 0; r < rows; r++) {
+                for (var c = 0; c < cols; c++) {
+                  final area = fill(r, c);
+                  if (area > best) best = area;
+                }
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            547, 'Number of Provinces', 'Medium',
+            'Every walk that starts somewhere unvisited is one more connected group.',
+            'O(n * n) time, O(n) space',
+            """
+            int findCircleNum(List<List<int>> isConnected) {
+              final n = isConnected.length;
+              final seen = <int>{};
+              void visit(int city) {
+                seen.add(city);
+                for (var other = 0; other < n; other++) {
+                  if (isConnected[city][other] == 1 && !seen.contains(other)) visit(other);
+                }
+              }
+
+              var groups = 0;
+              for (var city = 0; city < n; city++) {
+                if (!seen.contains(city)) {
+                  visit(city);
+                  groups++;
+                }
+              }
+              return groups;
+            }
+            """,
+        ),
+        _p(
+            542, '01 Matrix', 'Medium',
+            'Start the queue from every zero at once, and the first visit is the nearest one.',
+            'O(m * n) time, O(m * n) space',
+            """
+            List<List<int>> updateMatrix(List<List<int>> mat) {
+              final rows = mat.length;
+              final cols = mat[0].length;
+              final out = List.generate(rows, (_) => List.filled(cols, -1));
+              final queue = Queue<List<int>>();
+              for (var r = 0; r < rows; r++) {
+                for (var c = 0; c < cols; c++) {
+                  if (mat[r][c] == 0) {
+                    out[r][c] = 0;
+                    queue.add([r, c]);
+                  }
+                }
+              }
+              const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+              while (queue.isNotEmpty) {
+                final cell = queue.removeFirst();
+                for (final step in steps) {
+                  final nr = cell[0] + step[0];
+                  final nc = cell[1] + step[1];
+                  if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && out[nr][nc] == -1) {
+                    out[nr][nc] = out[cell[0]][cell[1]] + 1;
+                    queue.add([nr, nc]);
+                  }
+                }
+              }
+              return out;
+            }
+            """,
+        ),
+        _p(
+            417, 'Pacific Atlantic Water Flow', 'Medium',
+            'Walk uphill from each ocean instead of downhill from each cell; the answer is the overlap.',
+            'O(m * n) time, O(m * n) space',
+            """
+            List<List<int>> pacificAtlantic(List<List<int>> heights) {
+              if (heights.isEmpty) return [];
+              final rows = heights.length;
+              final cols = heights[0].length;
+              final pacific = <String>{};
+              final atlantic = <String>{};
+              const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+              void climb(int r, int c, Set<String> seen) {
+                seen.add('$r,$c');
+                for (final step in steps) {
+                  final nr = r + step[0];
+                  final nc = c + step[1];
+                  if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    if (!seen.contains('$nr,$nc') && heights[nr][nc] >= heights[r][c]) {
+                      climb(nr, nc, seen);
+                    }
+                  }
+                }
+              }
+
+              for (var c = 0; c < cols; c++) {
+                climb(0, c, pacific);
+                climb(rows - 1, c, atlantic);
+              }
+              for (var r = 0; r < rows; r++) {
+                climb(r, 0, pacific);
+                climb(r, cols - 1, atlantic);
+              }
+              final both = <List<int>>[];
+              for (final cell in pacific) {
+                if (atlantic.contains(cell)) {
+                  both.add(cell.split(',').map(int.parse).toList());
+                }
+              }
+              both.sort((a, b) => a[0] != b[0] ? a[0] - b[0] : a[1] - b[1]);
+              return both;
             }
             """,
         ),
@@ -688,6 +1158,86 @@ _SUBSETS = Pattern(
             }
             """,
         ),
+        _p(
+            77, 'Combinations', 'Medium',
+            'Only ever pick numbers after the last one taken, so no pair is built twice.',
+            'O(k * C(n, k)) time, O(k) space',
+            """
+            List<List<int>> combine(int n, int k) {
+              final out = <List<int>>[];
+              final picked = <int>[];
+              void walk(int start) {
+                if (picked.length == k) {
+                  out.add(List<int>.from(picked));
+                  return;
+                }
+                for (var value = start; value <= n; value++) {
+                  picked.add(value);
+                  walk(value + 1);
+                  picked.removeLast();
+                }
+              }
+
+              walk(1);
+              return out;
+            }
+            """,
+        ),
+        _p(
+            17, 'Letter Combinations of a Phone Number', 'Medium',
+            "One digit is one level of the tree, and its letters are that level's branches.",
+            'O(4 ** n) time, O(n) space',
+            """
+            List<String> letterCombinations(String digits) {
+              if (digits.isEmpty) return [];
+              const keys = {
+                '2': 'abc', '3': 'def', '4': 'ghi', '5': 'jkl',
+                '6': 'mno', '7': 'pqrs', '8': 'tuv', '9': 'wxyz',
+              };
+              final out = <String>[];
+              void walk(int index, String built) {
+                if (index == digits.length) {
+                  out.add(built);
+                  return;
+                }
+                for (final letter in keys[digits[index]]!.split('')) {
+                  walk(index + 1, built + letter);
+                }
+              }
+
+              walk(0, '');
+              return out;
+            }
+            """,
+        ),
+        _p(
+            131, 'Palindrome Partitioning', 'Medium',
+            'Cut after every position whose prefix reads the same both ways, then solve the rest.',
+            'O(n * 2 ** n) time, O(n) space',
+            """
+            List<List<String>> partition(String text) {
+              final out = <List<String>>[];
+              final built = <String>[];
+              void walk(int start) {
+                if (start == text.length) {
+                  out.add(List<String>.from(built));
+                  return;
+                }
+                for (var end = start + 1; end <= text.length; end++) {
+                  final piece = text.substring(start, end);
+                  if (piece == piece.split('').reversed.join()) {
+                    built.add(piece);
+                    walk(end);
+                    built.removeLast();
+                  }
+                }
+              }
+
+              walk(0);
+              return out;
+            }
+            """,
+        ),
     ),
 )
 
@@ -738,6 +1288,102 @@ _HEAP = Pattern(
               final sorted = List<List<int>>.from(points)
                 ..sort((a, b) => distance(a).compareTo(distance(b)));
               return sorted.take(k).toList();
+            }
+            """,
+        ),
+        _p(
+            1046, 'Last Stone Weight', 'Easy',
+            'No heap in the language, so re-sort: the two biggest are always at the front.',
+            'O(n * n log n) time, O(n) space',
+            """
+            int lastStoneWeight(List<int> stones) {
+              final heap = List<int>.from(stones);
+              while (heap.length > 1) {
+                heap.sort((a, b) => b - a);
+                final first = heap.removeAt(0);
+                final second = heap.removeAt(0);
+                if (first != second) heap.add(first - second);
+              }
+              return heap.isEmpty ? 0 : heap[0];
+            }
+            """,
+        ),
+        _p(
+            692, 'Top K Frequent Words', 'Medium',
+            'Sort by count, then alphabetically — the comparator does both in one line.',
+            'O(n log n) time, O(n) space',
+            """
+            List<String> topKFrequentWords(List<String> words, int k) {
+              final counts = <String, int>{};
+              for (final word in words) {
+                counts[word] = (counts[word] ?? 0) + 1;
+              }
+              final ranked = counts.keys.toList()
+                ..sort((a, b) =>
+                    counts[b] != counts[a] ? counts[b]! - counts[a]! : a.compareTo(b));
+              return ranked.take(k).toList();
+            }
+            """,
+        ),
+        _p(
+            451, 'Sort Characters By Frequency', 'Medium',
+            'Count, sort the characters by how common they are, then repeat each one.',
+            'O(n log n) time, O(n) space',
+            """
+            String frequencySort(String s) {
+              final counts = <String, int>{};
+              for (final ch in s.split('')) {
+                counts[ch] = (counts[ch] ?? 0) + 1;
+              }
+              final ranked = counts.keys.toList()
+                ..sort((a, b) =>
+                    counts[b] != counts[a] ? counts[b]! - counts[a]! : a.compareTo(b));
+              return ranked.map((ch) => ch * counts[ch]!).join();
+            }
+            """,
+        ),
+        _p(
+            378, 'Kth Smallest Element in a Sorted Matrix', 'Medium',
+            'The matrix is small enough to flatten and sort — no heap in the language.',
+            'O(n log n) time, O(n) space',
+            """
+            int kthSmallest(List<List<int>> matrix, int k) {
+              final flat = <int>[];
+              for (final row in matrix) {
+                flat.addAll(row);
+              }
+              flat.sort();
+              return flat[k - 1];
+            }
+            """,
+        ),
+        _p(
+            767, 'Reorganize String', 'Medium',
+            "Take the commonest letter that isn't the one you just used, and repeat.",
+            'O(n * n log n) time, O(n) space',
+            """
+            String reorganizeString(String s) {
+              final counts = <String, int>{};
+              for (final ch in s.split('')) {
+                counts[ch] = (counts[ch] ?? 0) + 1;
+              }
+              final out = <String>[];
+              String? held;
+              while (true) {
+                final ready = counts.keys.where((ch) => ch != held).toList()
+                  ..sort((a, b) =>
+                      counts[b] != counts[a] ? counts[b]! - counts[a]! : a.compareTo(b));
+                if (ready.isEmpty) break;
+                final ch = ready.first;
+                out.add(ch);
+                if (counts[ch] == 1) {
+                  counts.remove(ch);
+                } else {
+                  counts[ch] = counts[ch]! - 1;
+                }
+                held = ch;
+              }
+              return out.length == s.length ? out.join() : '';
             }
             """,
         ),
@@ -847,6 +1493,190 @@ _TOPOLOGICAL = Pattern(
             }
             """,
         ),
+        _p(
+            802, 'Find Eventual Safe States', 'Medium',
+            'Reverse every edge, then peel from the terminal nodes — whatever drains is safe.',
+            'O(v + e) time, O(v + e) space',
+            """
+            List<int> eventualSafeNodes(List<List<int>> graph) {
+              final n = graph.length;
+              final reverse = List.generate(n, (_) => <int>[]);
+              final outdegree = List<int>.filled(n, 0);
+              for (var node = 0; node < n; node++) {
+                outdegree[node] = graph[node].length;
+                for (final next in graph[node]) {
+                  reverse[next].add(node);
+                }
+              }
+              final queue = Queue<int>();
+              for (var i = 0; i < n; i++) {
+                if (outdegree[i] == 0) queue.add(i);
+              }
+              final safe = <int>[];
+              while (queue.isNotEmpty) {
+                final node = queue.removeFirst();
+                safe.add(node);
+                for (final prev in reverse[node]) {
+                  outdegree[prev]--;
+                  if (outdegree[prev] == 0) queue.add(prev);
+                }
+              }
+              safe.sort();
+              return safe;
+            }
+            """,
+        ),
+        _p(
+            1462, 'Course Schedule IV', 'Medium',
+            'Peel in order, and let each course inherit the prerequisite set of everything before it.',
+            'O(v * e) time, O(v * v) space',
+            """
+            List<bool> checkIfPrerequisite(
+              int numCourses,
+              List<List<int>> prerequisites,
+              List<List<int>> queries,
+            ) {
+              final graph = List.generate(numCourses, (_) => <int>[]);
+              final indegree = List<int>.filled(numCourses, 0);
+              for (final pair in prerequisites) {
+                graph[pair[0]].add(pair[1]);
+                indegree[pair[1]]++;
+              }
+              final needs = List.generate(numCourses, (_) => <int>{});
+              final queue = Queue<int>();
+              for (var i = 0; i < numCourses; i++) {
+                if (indegree[i] == 0) queue.add(i);
+              }
+              while (queue.isNotEmpty) {
+                final node = queue.removeFirst();
+                for (final next in graph[node]) {
+                  needs[next].add(node);
+                  needs[next].addAll(needs[node]);
+                  indegree[next]--;
+                  if (indegree[next] == 0) queue.add(next);
+                }
+              }
+              return queries.map((q) => needs[q[1]].contains(q[0])).toList();
+            }
+            """,
+        ),
+        _p(
+            2115, 'Find All Possible Recipes from Given Supplies', 'Medium',
+            'Ingredients are prerequisites: a recipe unlocks once its indegree of missing items hits zero.',
+            'O(v + e) time, O(v + e) space',
+            """
+            List<String> findAllRecipes(
+              List<String> recipes,
+              List<List<String>> ingredients,
+              List<String> supplies,
+            ) {
+              final graph = <String, List<String>>{};
+              final indegree = <String, int>{};
+              for (final recipe in recipes) {
+                indegree[recipe] = 0;
+              }
+              for (var i = 0; i < recipes.length; i++) {
+                for (final item in ingredients[i]) {
+                  graph.putIfAbsent(item, () => <String>[]).add(recipes[i]);
+                  indegree[recipes[i]] = indegree[recipes[i]]! + 1;
+                }
+              }
+              final queue = Queue<String>()..addAll(supplies);
+              final made = <String>[];
+              while (queue.isNotEmpty) {
+                final item = queue.removeFirst();
+                for (final recipe in graph[item] ?? const <String>[]) {
+                  indegree[recipe] = indegree[recipe]! - 1;
+                  if (indegree[recipe] == 0) {
+                    made.add(recipe);
+                    queue.add(recipe);
+                  }
+                }
+              }
+              return made;
+            }
+            """,
+        ),
+        _p(
+            1136, 'Parallel Courses', 'Medium',
+            'Every drained layer of the queue is one semester — count the layers, not the courses.',
+            'O(v + e) time, O(v + e) space',
+            """
+            int minimumSemesters(int n, List<List<int>> relations) {
+              final graph = List.generate(n + 1, (_) => <int>[]);
+              final indegree = List<int>.filled(n + 1, 0);
+              for (final pair in relations) {
+                graph[pair[0]].add(pair[1]);
+                indegree[pair[1]]++;
+              }
+              final queue = Queue<int>();
+              for (var i = 1; i <= n; i++) {
+                if (indegree[i] == 0) queue.add(i);
+              }
+              var studied = 0;
+              var semesters = 0;
+              while (queue.isNotEmpty) {
+                semesters++;
+                for (var i = queue.length; i > 0; i--) {
+                  final node = queue.removeFirst();
+                  studied++;
+                  for (final course in graph[node]) {
+                    indegree[course]--;
+                    if (indegree[course] == 0) queue.add(course);
+                  }
+                }
+              }
+              return studied == n ? semesters : -1;
+            }
+            """,
+        ),
+        _p(
+            269, 'Alien Dictionary', 'Hard',
+            'Adjacent words give one letter order each; the first difference is the only edge they prove.',
+            'O(c) time, O(1) space',
+            """
+            String alienOrder(List<String> words) {
+              final graph = <String, Set<String>>{};
+              final indegree = <String, int>{};
+              for (final word in words) {
+                for (final ch in word.split('')) {
+                  graph.putIfAbsent(ch, () => <String>{});
+                  indegree.putIfAbsent(ch, () => 0);
+                }
+              }
+              for (var i = 0; i + 1 < words.length; i++) {
+                final first = words[i];
+                final second = words[i + 1];
+                var split = false;
+                final shorter = first.length < second.length ? first.length : second.length;
+                for (var j = 0; j < shorter; j++) {
+                  if (first[j] != second[j]) {
+                    if (graph[first[j]]!.add(second[j])) {
+                      indegree[second[j]] = indegree[second[j]]! + 1;
+                    }
+                    split = true;
+                    break;
+                  }
+                }
+                if (!split && first.length > second.length) return '';
+              }
+              final queue = Queue<String>();
+              indegree.forEach((ch, count) {
+                if (count == 0) queue.add(ch);
+              });
+              final order = <String>[];
+              while (queue.isNotEmpty) {
+                final ch = queue.removeFirst();
+                order.add(ch);
+                for (final next in graph[ch]!) {
+                  indegree[next] = indegree[next]! - 1;
+                  if (indegree[next] == 0) queue.add(next);
+                }
+              }
+              return order.length == indegree.length ? order.join() : '';
+            }
+            """,
+        ),
     ),
 )
 
@@ -933,6 +1763,88 @@ _DP = Pattern(
                 if (best[i] > longest) longest = best[i];
               }
               return longest;
+            }
+            """,
+        ),
+        _p(
+            746, 'Min Cost Climbing Stairs', 'Easy',
+            'The cost of a step is its own plus the cheaper of the two ways off it.',
+            'O(n) time, O(1) space',
+            """
+            int minCostClimbingStairs(List<int> cost) {
+              var one = 0;
+              var two = 0;
+              for (var i = 2; i <= cost.length; i++) {
+                final a = one + cost[i - 1];
+                final b = two + cost[i - 2];
+                final next = a < b ? a : b;
+                two = one;
+                one = next;
+              }
+              return one;
+            }
+            """,
+        ),
+        _p(
+            1143, 'Longest Common Subsequence', 'Medium',
+            'Matching letters extend the diagonal; otherwise take the better of dropping one.',
+            'O(m * n) time, O(m * n) space',
+            """
+            int longestCommonSubsequence(String first, String second) {
+              final grid = List.generate(first.length + 1, (_) => List.filled(second.length + 1, 0));
+              for (var i = first.length - 1; i >= 0; i--) {
+                for (var j = second.length - 1; j >= 0; j--) {
+                  if (first[i] == second[j]) {
+                    grid[i][j] = 1 + grid[i + 1][j + 1];
+                  } else {
+                    final down = grid[i + 1][j];
+                    final rightward = grid[i][j + 1];
+                    grid[i][j] = down > rightward ? down : rightward;
+                  }
+                }
+              }
+              return grid[0][0];
+            }
+            """,
+        ),
+        _p(
+            139, 'Word Break', 'Medium',
+            'A position is reachable when some word ends there and its start was reachable too.',
+            'O(n * n * w) time, O(n) space',
+            """
+            bool wordBreak(String text, List<String> words) {
+              final reachable = List<bool>.filled(text.length + 1, false);
+              reachable[0] = true;
+              for (var end = 1; end <= text.length; end++) {
+                for (final word in words) {
+                  final start = end - word.length;
+                  if (start >= 0 && reachable[start] && text.substring(start, end) == word) {
+                    reachable[end] = true;
+                    break;
+                  }
+                }
+              }
+              return reachable[text.length];
+            }
+            """,
+        ),
+        _p(
+            152, 'Maximum Product Subarray', 'Medium',
+            'Track the smallest product too — a negative turns the worst into the best.',
+            'O(n) time, O(1) space',
+            """
+            int maxProduct(List<int> nums) {
+              var best = nums[0];
+              var high = nums[0];
+              var low = nums[0];
+              for (var i = 1; i < nums.length; i++) {
+                final n = nums[i];
+                final options = [n, high * n, low * n];
+                high = options.reduce((a, b) => a > b ? a : b);
+                low = options.reduce((a, b) => a < b ? a : b);
+                if (high > best) best = high;
+              }
+              return best;
             }
             """,
         ),
