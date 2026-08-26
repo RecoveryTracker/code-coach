@@ -96,6 +96,93 @@ _LINKED_LIST = Pattern(
             }
             """,
         ),
+        _p(
+            876, 'Middle of the Linked List', 'Easy',
+            "One pointer takes two steps per the other's one, so it ends at twice the distance.",
+            'O(n) time, O(1) space',
+            """
+            function middleNode(head) {
+              let slow = head;
+              let fast = head;
+              while (fast && fast.next) {
+                slow = slow.next;
+                fast = fast.next.next;
+              }
+              return slow;
+            }
+            """,
+        ),
+        _p(
+            83, 'Remove Duplicates from Sorted List', 'Easy',
+            'Sorted means duplicates are neighbours, so one pass and a skipped link does it.',
+            'O(n) time, O(1) space',
+            """
+            function deleteDuplicates(head) {
+              let node = head;
+              while (node && node.next) {
+                if (node.val === node.next.val) node.next = node.next.next;
+                else node = node.next;
+              }
+              return head;
+            }
+            """,
+        ),
+        _p(
+            234, 'Palindrome Linked List', 'Easy',
+            'Find the middle, reverse the second half, then walk the two halves together.',
+            'O(n) time, O(1) space',
+            """
+            function isPalindromeList(head) {
+              let slow = head;
+              let fast = head;
+              while (fast && fast.next) {
+                slow = slow.next;
+                fast = fast.next.next;
+              }
+              let second = null;
+              while (slow) {
+                const next = slow.next;
+                slow.next = second;
+                second = slow;
+                slow = next;
+              }
+              let first = head;
+              while (second) {
+                if (first.val !== second.val) return false;
+                first = first.next;
+                second = second.next;
+              }
+              return true;
+            }
+            """,
+        ),
+        _p(
+            2, 'Add Two Numbers', 'Medium',
+            'Long addition, digit by digit. The carry is the only thing you have to remember.',
+            'O(n) time, O(n) space',
+            """
+            function addTwoNumbers(first, second) {
+              const head = new ListNode();
+              let node = head;
+              let carry = 0;
+              while (first || second || carry) {
+                let total = carry;
+                if (first) {
+                  total += first.val;
+                  first = first.next;
+                }
+                if (second) {
+                  total += second.val;
+                  second = second.next;
+                }
+                carry = Math.floor(total / 10);
+                node.next = new ListNode(total % 10);
+                node = node.next;
+              }
+              return head.next;
+            }
+            """,
+        ),
     ),
 )
 
@@ -224,6 +311,73 @@ _BINARY_SEARCH = Pattern(
             }
             """,
         ),
+        _p(
+            278, 'First Bad Version', 'Easy',
+            "Search for a boundary: keep the mid when it's bad, discard it when it isn't.",
+            'O(log n) time, O(1) space',
+            """
+            function firstBadVersion(n, isBad) {
+              let low = 1;
+              let high = n;
+              while (low < high) {
+                const mid = Math.floor((low + high) / 2);
+                if (isBad(mid)) high = mid;
+                else low = mid + 1;
+              }
+              return low;
+            }
+            """,
+        ),
+        _p(
+            34, 'Find First and Last Position of Element in Sorted Array', 'Medium',
+            'Two searches, not one: the same loop finds the left edge and then the right.',
+            'O(log n) time, O(1) space',
+            """
+            function searchRange(nums, target) {
+              const edge = (first) => {
+                let low = 0;
+                let high = nums.length - 1;
+                let found = -1;
+                while (low <= high) {
+                  const mid = Math.floor((low + high) / 2);
+                  if (nums[mid] === target) {
+                    found = mid;
+                    if (first) high = mid - 1;
+                    else low = mid + 1;
+                  } else if (nums[mid] < target) {
+                    low = mid + 1;
+                  } else {
+                    high = mid - 1;
+                  }
+                }
+                return found;
+              };
+              return [edge(true), edge(false)];
+            }
+            """,
+        ),
+        _p(
+            74, 'Search a 2D Matrix', 'Medium',
+            'A sorted matrix is one sorted list folded up, so divide the index to unfold it.',
+            'O(log(m * n)) time, O(1) space',
+            """
+            function searchMatrix(matrix, target) {
+              if (matrix.length === 0 || matrix[0].length === 0) return false;
+              const rows = matrix.length;
+              const cols = matrix[0].length;
+              let low = 0;
+              let high = rows * cols - 1;
+              while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                const value = matrix[Math.floor(mid / cols)][mid % cols];
+                if (value === target) return true;
+                if (value < target) low = mid + 1;
+                else high = mid - 1;
+              }
+              return false;
+            }
+            """,
+        ),
     ),
 )
 
@@ -315,6 +469,49 @@ _TREE_DFS = Pattern(
             }
             """,
         ),
+        _p(
+            100, 'Same Tree', 'Easy',
+            'Two trees match when their roots match and both pairs of children do.',
+            'O(n) time, O(h) space',
+            """
+            function isSameTree(first, second) {
+              if (!first && !second) return true;
+              if (!first || !second) return false;
+              if (first.val !== second.val) return false;
+              return isSameTree(first.left, second.left) && isSameTree(first.right, second.right);
+            }
+            """,
+        ),
+        _p(
+            101, 'Symmetric Tree', 'Easy',
+            'A mirror compares left against right — the recursion crosses over.',
+            'O(n) time, O(h) space',
+            """
+            function isSymmetric(root) {
+              const mirror = (left, right) => {
+                if (!left && !right) return true;
+                if (!left || !right) return false;
+                if (left.val !== right.val) return false;
+                return mirror(left.left, right.right) && mirror(left.right, right.left);
+              };
+              return mirror(root, root);
+            }
+            """,
+        ),
+        _p(
+            236, 'Lowest Common Ancestor of a Binary Tree', 'Medium',
+            'A node whose two sides each found something is the meeting point.',
+            'O(n) time, O(h) space',
+            """
+            function lowestCommonAncestor(root, p, q) {
+              if (!root || root === p || root === q) return root;
+              const left = lowestCommonAncestor(root.left, p, q);
+              const right = lowestCommonAncestor(root.right, p, q);
+              if (left && right) return root;
+              return left || right;
+            }
+            """,
+        ),
     ),
 )
 
@@ -398,6 +595,132 @@ _TREE_BFS = Pattern(
                 queue = next;
               }
               return out;
+            }
+            """,
+        ),
+        _p(
+            111, 'Minimum Depth of Binary Tree', 'Easy',
+            'BFS stops at the first leaf it meets — DFS would walk the whole tree first.',
+            'O(n) time, O(n) space',
+            """
+            function minDepth(root) {
+              if (!root) return 0;
+              let queue = [root];
+              let depth = 1;
+              while (queue.length) {
+                const next = [];
+                for (const node of queue) {
+                  if (!node.left && !node.right) return depth;
+                  if (node.left) next.push(node.left);
+                  if (node.right) next.push(node.right);
+                }
+                queue = next;
+                depth++;
+              }
+              return depth;
+            }
+            """,
+        ),
+        _p(
+            637, 'Average of Levels in Binary Tree', 'Easy',
+            "One row at a time, so the divisor is just that row's length.",
+            'O(n) time, O(n) space',
+            """
+            function averageOfLevels(root) {
+              if (!root) return [];
+              const averages = [];
+              let queue = [root];
+              while (queue.length) {
+                let total = 0;
+                const next = [];
+                for (const node of queue) {
+                  total += node.val;
+                  if (node.left) next.push(node.left);
+                  if (node.right) next.push(node.right);
+                }
+                averages.push(total / queue.length);
+                queue = next;
+              }
+              return averages;
+            }
+            """,
+        ),
+        _p(
+            515, 'Find Largest Value in Each Tree Row', 'Medium',
+            'Same row walk as the average — swap the running total for a running max.',
+            'O(n) time, O(n) space',
+            """
+            function largestValues(root) {
+              if (!root) return [];
+              const largest = [];
+              let queue = [root];
+              while (queue.length) {
+                let best = null;
+                const next = [];
+                for (const node of queue) {
+                  if (best === null || node.val > best) best = node.val;
+                  if (node.left) next.push(node.left);
+                  if (node.right) next.push(node.right);
+                }
+                largest.push(best);
+                queue = next;
+              }
+              return largest;
+            }
+            """,
+        ),
+        _p(
+            1161, 'Maximum Level Sum of a Binary Tree', 'Medium',
+            'Number the levels as you go and keep the best — ties go to the shallower one.',
+            'O(n) time, O(n) space',
+            """
+            function maxLevelSum(root) {
+              if (!root) return 0;
+              let queue = [root];
+              let level = 0;
+              let bestLevel = 1;
+              let bestSum = null;
+              while (queue.length) {
+                level++;
+                let total = 0;
+                const next = [];
+                for (const node of queue) {
+                  total += node.val;
+                  if (node.left) next.push(node.left);
+                  if (node.right) next.push(node.right);
+                }
+                if (bestSum === null || total > bestSum) {
+                  bestSum = total;
+                  bestLevel = level;
+                }
+                queue = next;
+              }
+              return bestLevel;
+            }
+            """,
+        ),
+        _p(
+            662, 'Maximum Width of Binary Tree', 'Medium',
+            "Queue the heap index with each node; a row's width is last minus first plus one.",
+            'O(n) time, O(n) space',
+            """
+            function widthOfBinaryTree(root) {
+              if (!root) return 0;
+              let widest = 0;
+              let queue = [[root, 0]];
+              while (queue.length) {
+                const first = queue[0][1];
+                let last = first;
+                const next = [];
+                for (const [node, index] of queue) {
+                  last = index;
+                  if (node.left) next.push([node.left, index * 2]);
+                  if (node.right) next.push([node.right, index * 2 + 1]);
+                }
+                if (last - first + 1 > widest) widest = last - first + 1;
+                queue = next;
+              }
+              return widest;
             }
             """,
         ),
@@ -527,6 +850,130 @@ _GRAPH = Pattern(
                 copy.neighbors.push(cloneGraph(neighbor, made));
               }
               return copy;
+            }
+            """,
+        ),
+        _p(
+            695, 'Max Area of Island', 'Medium',
+            'Same flood fill, but the walk returns a size instead of just marking cells.',
+            'O(m * n) time, O(m * n) space',
+            """
+            function maxAreaOfIsland(grid) {
+              if (grid.length === 0) return 0;
+              const rows = grid.length;
+              const cols = grid[0].length;
+              const fill = (r, c) => {
+                if (r < 0 || c < 0 || r >= rows || c >= cols) return 0;
+                if (grid[r][c] !== 1) return 0;
+                grid[r][c] = 0;
+                return 1 + fill(r + 1, c) + fill(r - 1, c) + fill(r, c + 1) + fill(r, c - 1);
+              };
+              let best = 0;
+              for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                  const area = fill(r, c);
+                  if (area > best) best = area;
+                }
+              }
+              return best;
+            }
+            """,
+        ),
+        _p(
+            547, 'Number of Provinces', 'Medium',
+            'Every walk that starts somewhere unvisited is one more connected group.',
+            'O(n * n) time, O(n) space',
+            """
+            function findCircleNum(isConnected) {
+              const n = isConnected.length;
+              const seen = new Set();
+              const visit = (city) => {
+                seen.add(city);
+                for (let other = 0; other < n; other++) {
+                  if (isConnected[city][other] && !seen.has(other)) visit(other);
+                }
+              };
+              let groups = 0;
+              for (let city = 0; city < n; city++) {
+                if (!seen.has(city)) {
+                  visit(city);
+                  groups++;
+                }
+              }
+              return groups;
+            }
+            """,
+        ),
+        _p(
+            542, '01 Matrix', 'Medium',
+            'Start the queue from every zero at once, and the first visit is the nearest one.',
+            'O(m * n) time, O(m * n) space',
+            """
+            function updateMatrix(mat) {
+              const rows = mat.length;
+              const cols = mat[0].length;
+              const out = Array.from({ length: rows }, () => new Array(cols).fill(-1));
+              const queue = [];
+              for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                  if (mat[r][c] === 0) {
+                    out[r][c] = 0;
+                    queue.push([r, c]);
+                  }
+                }
+              }
+              let head = 0;
+              while (head < queue.length) {
+                const [r, c] = queue[head++];
+                for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                  const nr = r + dr;
+                  const nc = c + dc;
+                  if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && out[nr][nc] === -1) {
+                    out[nr][nc] = out[r][c] + 1;
+                    queue.push([nr, nc]);
+                  }
+                }
+              }
+              return out;
+            }
+            """,
+        ),
+        _p(
+            417, 'Pacific Atlantic Water Flow', 'Medium',
+            'Walk uphill from each ocean instead of downhill from each cell; the answer is the overlap.',
+            'O(m * n) time, O(m * n) space',
+            """
+            function pacificAtlantic(heights) {
+              if (heights.length === 0) return [];
+              const rows = heights.length;
+              const cols = heights[0].length;
+              const pacific = new Set();
+              const atlantic = new Set();
+              const climb = (r, c, seen) => {
+                seen.add(`${r},${c}`);
+                for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                  const nr = r + dr;
+                  const nc = c + dc;
+                  if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    if (!seen.has(`${nr},${nc}`) && heights[nr][nc] >= heights[r][c]) {
+                      climb(nr, nc, seen);
+                    }
+                  }
+                }
+              };
+              for (let c = 0; c < cols; c++) {
+                climb(0, c, pacific);
+                climb(rows - 1, c, atlantic);
+              }
+              for (let r = 0; r < rows; r++) {
+                climb(r, 0, pacific);
+                climb(r, cols - 1, atlantic);
+              }
+              const both = [];
+              for (const cell of pacific) {
+                if (atlantic.has(cell)) both.push(cell.split(',').map(Number));
+              }
+              return both.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
             }
             """,
         ),
@@ -681,6 +1128,81 @@ _BACKTRACKING = Pattern(
             }
             """,
         ),
+        _p(
+            77, 'Combinations', 'Medium',
+            'Only ever pick numbers after the last one taken, so no pair is built twice.',
+            'O(k * C(n, k)) time, O(k) space',
+            """
+            function combine(n, k) {
+              const out = [];
+              const picked = [];
+              const walk = (start) => {
+                if (picked.length === k) {
+                  out.push([...picked]);
+                  return;
+                }
+                for (let value = start; value <= n; value++) {
+                  picked.push(value);
+                  walk(value + 1);
+                  picked.pop();
+                }
+              };
+              walk(1);
+              return out;
+            }
+            """,
+        ),
+        _p(
+            17, 'Letter Combinations of a Phone Number', 'Medium',
+            "One digit is one level of the tree, and its letters are that level's branches.",
+            'O(4 ** n) time, O(n) space',
+            """
+            function letterCombinations(digits) {
+              if (digits.length === 0) return [];
+              const keys = {
+                2: 'abc', 3: 'def', 4: 'ghi', 5: 'jkl',
+                6: 'mno', 7: 'pqrs', 8: 'tuv', 9: 'wxyz',
+              };
+              const out = [];
+              const walk = (index, built) => {
+                if (index === digits.length) {
+                  out.push(built);
+                  return;
+                }
+                for (const letter of keys[digits[index]]) walk(index + 1, built + letter);
+              };
+              walk(0, '');
+              return out;
+            }
+            """,
+        ),
+        _p(
+            131, 'Palindrome Partitioning', 'Medium',
+            'Cut after every position whose prefix reads the same both ways, then solve the rest.',
+            'O(n * 2 ** n) time, O(n) space',
+            """
+            function partition(text) {
+              const out = [];
+              const built = [];
+              const walk = (start) => {
+                if (start === text.length) {
+                  out.push([...built]);
+                  return;
+                }
+                for (let end = start + 1; end <= text.length; end++) {
+                  const piece = text.slice(start, end);
+                  if (piece === [...piece].reverse().join('')) {
+                    built.push(piece);
+                    walk(end);
+                    built.pop();
+                  }
+                }
+              };
+              walk(0);
+              return out;
+            }
+            """,
+        ),
     ),
 )
 
@@ -731,6 +1253,89 @@ _HEAP = Pattern(
               return [...points]
                 .sort((a, b) => distance(a) - distance(b))
                 .slice(0, k);
+            }
+            """,
+        ),
+        _p(
+            1046, 'Last Stone Weight', 'Easy',
+            'No heap in the language, so re-sort: the two biggest are always at the front.',
+            'O(n * n log n) time, O(n) space',
+            """
+            function lastStoneWeight(stones) {
+              const heap = [...stones];
+              while (heap.length > 1) {
+                heap.sort((a, b) => b - a);
+                const first = heap.shift();
+                const second = heap.shift();
+                if (first !== second) heap.push(first - second);
+              }
+              return heap.length ? heap[0] : 0;
+            }
+            """,
+        ),
+        _p(
+            692, 'Top K Frequent Words', 'Medium',
+            'Sort by count, then alphabetically — the comparator does both in one line.',
+            'O(n log n) time, O(n) space',
+            """
+            function topKFrequentWords(words, k) {
+              const counts = new Map();
+              for (const word of words) counts.set(word, (counts.get(word) || 0) + 1);
+              return [...counts.keys()]
+                .sort((a, b) => counts.get(b) - counts.get(a) || (a < b ? -1 : a > b ? 1 : 0))
+                .slice(0, k);
+            }
+            """,
+        ),
+        _p(
+            451, 'Sort Characters By Frequency', 'Medium',
+            'Count, sort the characters by how common they are, then repeat each one.',
+            'O(n log n) time, O(n) space',
+            """
+            function frequencySort(s) {
+              const counts = new Map();
+              for (const ch of s) counts.set(ch, (counts.get(ch) || 0) + 1);
+              return [...counts.keys()]
+                .sort((a, b) => counts.get(b) - counts.get(a) || (a < b ? -1 : a > b ? 1 : 0))
+                .map((ch) => ch.repeat(counts.get(ch)))
+                .join('');
+            }
+            """,
+        ),
+        _p(
+            378, 'Kth Smallest Element in a Sorted Matrix', 'Medium',
+            'The matrix is small enough to flatten and sort — no heap in the language.',
+            'O(n log n) time, O(n) space',
+            """
+            function kthSmallest(matrix, k) {
+              const flat = [];
+              for (const row of matrix) flat.push(...row);
+              flat.sort((a, b) => a - b);
+              return flat[k - 1];
+            }
+            """,
+        ),
+        _p(
+            767, 'Reorganize String', 'Medium',
+            "Take the commonest letter that isn't the one you just used, and repeat.",
+            'O(n * n log n) time, O(n) space',
+            """
+            function reorganizeString(s) {
+              const counts = new Map();
+              for (const ch of s) counts.set(ch, (counts.get(ch) || 0) + 1);
+              const out = [];
+              let held = null;
+              while (true) {
+                const ready = [...counts.entries()].filter(([ch]) => ch !== held);
+                if (ready.length === 0) break;
+                ready.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+                const [ch, count] = ready[0];
+                out.push(ch);
+                if (count === 1) counts.delete(ch);
+                else counts.set(ch, count - 1);
+                held = ch;
+              }
+              return out.length === s.length ? out.join('') : '';
             }
             """,
         ),
@@ -838,6 +1443,176 @@ _TOPOLOGICAL = Pattern(
             }
             """,
         ),
+        _p(
+            802, 'Find Eventual Safe States', 'Medium',
+            'Reverse every edge, then peel from the terminal nodes — whatever drains is safe.',
+            'O(v + e) time, O(v + e) space',
+            """
+            function eventualSafeNodes(graph) {
+              const n = graph.length;
+              const reverse = Array.from({ length: n }, () => []);
+              const outdegree = new Array(n).fill(0);
+              for (let node = 0; node < n; node++) {
+                outdegree[node] = graph[node].length;
+                for (const next of graph[node]) reverse[next].push(node);
+              }
+              const queue = [];
+              for (let i = 0; i < n; i++) if (outdegree[i] === 0) queue.push(i);
+              const safe = [];
+              let head = 0;
+              while (head < queue.length) {
+                const node = queue[head++];
+                safe.push(node);
+                for (const prev of reverse[node]) {
+                  outdegree[prev]--;
+                  if (outdegree[prev] === 0) queue.push(prev);
+                }
+              }
+              return safe.sort((a, b) => a - b);
+            }
+            """,
+        ),
+        _p(
+            1462, 'Course Schedule IV', 'Medium',
+            'Peel in order, and let each course inherit the prerequisite set of everything before it.',
+            'O(v * e) time, O(v * v) space',
+            """
+            function checkIfPrerequisite(numCourses, prerequisites, queries) {
+              const graph = Array.from({ length: numCourses }, () => []);
+              const indegree = new Array(numCourses).fill(0);
+              for (const [prereq, course] of prerequisites) {
+                graph[prereq].push(course);
+                indegree[course]++;
+              }
+              const needs = Array.from({ length: numCourses }, () => new Set());
+              const queue = [];
+              for (let i = 0; i < numCourses; i++) if (indegree[i] === 0) queue.push(i);
+              let head = 0;
+              while (head < queue.length) {
+                const node = queue[head++];
+                for (const next of graph[node]) {
+                  needs[next].add(node);
+                  for (const earlier of needs[node]) needs[next].add(earlier);
+                  indegree[next]--;
+                  if (indegree[next] === 0) queue.push(next);
+                }
+              }
+              return queries.map(([prereq, course]) => needs[course].has(prereq));
+            }
+            """,
+        ),
+        _p(
+            2115, 'Find All Possible Recipes from Given Supplies', 'Medium',
+            'Ingredients are prerequisites: a recipe unlocks once its indegree of missing items hits zero.',
+            'O(v + e) time, O(v + e) space',
+            """
+            function findAllRecipes(recipes, ingredients, supplies) {
+              const graph = new Map();
+              const indegree = new Map();
+              for (const recipe of recipes) indegree.set(recipe, 0);
+              for (let i = 0; i < recipes.length; i++) {
+                for (const item of ingredients[i]) {
+                  if (!graph.has(item)) graph.set(item, []);
+                  graph.get(item).push(recipes[i]);
+                  indegree.set(recipes[i], indegree.get(recipes[i]) + 1);
+                }
+              }
+              const queue = [...supplies];
+              const made = [];
+              let head = 0;
+              while (head < queue.length) {
+                const item = queue[head++];
+                for (const recipe of graph.get(item) || []) {
+                  indegree.set(recipe, indegree.get(recipe) - 1);
+                  if (indegree.get(recipe) === 0) {
+                    made.push(recipe);
+                    queue.push(recipe);
+                  }
+                }
+              }
+              return made;
+            }
+            """,
+        ),
+        _p(
+            1136, 'Parallel Courses', 'Medium',
+            'Every drained layer of the queue is one semester — count the layers, not the courses.',
+            'O(v + e) time, O(v + e) space',
+            """
+            function minimumSemesters(n, relations) {
+              const graph = Array.from({ length: n + 1 }, () => []);
+              const indegree = new Array(n + 1).fill(0);
+              for (const [prereq, course] of relations) {
+                graph[prereq].push(course);
+                indegree[course]++;
+              }
+              let queue = [];
+              for (let i = 1; i <= n; i++) if (indegree[i] === 0) queue.push(i);
+              let studied = 0;
+              let semesters = 0;
+              while (queue.length) {
+                semesters++;
+                const next = [];
+                for (const node of queue) {
+                  studied++;
+                  for (const course of graph[node]) {
+                    indegree[course]--;
+                    if (indegree[course] === 0) next.push(course);
+                  }
+                }
+                queue = next;
+              }
+              return studied === n ? semesters : -1;
+            }
+            """,
+        ),
+        _p(
+            269, 'Alien Dictionary', 'Hard',
+            'Adjacent words give one letter order each; the first difference is the only edge they prove.',
+            'O(c) time, O(1) space',
+            """
+            function alienOrder(words) {
+              const graph = new Map();
+              const indegree = new Map();
+              for (const word of words) {
+                for (const ch of word) {
+                  if (!graph.has(ch)) graph.set(ch, new Set());
+                  if (!indegree.has(ch)) indegree.set(ch, 0);
+                }
+              }
+              for (let i = 0; i + 1 < words.length; i++) {
+                const first = words[i];
+                const second = words[i + 1];
+                let split = false;
+                const shorter = Math.min(first.length, second.length);
+                for (let j = 0; j < shorter; j++) {
+                  if (first[j] !== second[j]) {
+                    if (!graph.get(first[j]).has(second[j])) {
+                      graph.get(first[j]).add(second[j]);
+                      indegree.set(second[j], indegree.get(second[j]) + 1);
+                    }
+                    split = true;
+                    break;
+                  }
+                }
+                if (!split && first.length > second.length) return '';
+              }
+              const queue = [];
+              for (const [ch, count] of indegree) if (count === 0) queue.push(ch);
+              const order = [];
+              let head = 0;
+              while (head < queue.length) {
+                const ch = queue[head++];
+                order.push(ch);
+                for (const next of graph.get(ch)) {
+                  indegree.set(next, indegree.get(next) - 1);
+                  if (indegree.get(next) === 0) queue.push(next);
+                }
+              }
+              return order.length === indegree.size ? order.join('') : '';
+            }
+            """,
+        ),
     ),
 )
 
@@ -924,6 +1699,83 @@ _DP = Pattern(
                 longest = Math.max(longest, best[i]);
               }
               return longest;
+            }
+            """,
+        ),
+        _p(
+            746, 'Min Cost Climbing Stairs', 'Easy',
+            'The cost of a step is its own plus the cheaper of the two ways off it.',
+            'O(n) time, O(1) space',
+            """
+            function minCostClimbingStairs(cost) {
+              let one = 0;
+              let two = 0;
+              for (let i = 2; i <= cost.length; i++) {
+                const next = Math.min(one + cost[i - 1], two + cost[i - 2]);
+                two = one;
+                one = next;
+              }
+              return one;
+            }
+            """,
+        ),
+        _p(
+            1143, 'Longest Common Subsequence', 'Medium',
+            'Matching letters extend the diagonal; otherwise take the better of dropping one.',
+            'O(m * n) time, O(m * n) space',
+            """
+            function longestCommonSubsequence(first, second) {
+              const grid = Array.from({ length: first.length + 1 }, () =>
+                new Array(second.length + 1).fill(0)
+              );
+              for (let i = first.length - 1; i >= 0; i--) {
+                for (let j = second.length - 1; j >= 0; j--) {
+                  if (first[i] === second[j]) grid[i][j] = 1 + grid[i + 1][j + 1];
+                  else grid[i][j] = Math.max(grid[i + 1][j], grid[i][j + 1]);
+                }
+              }
+              return grid[0][0];
+            }
+            """,
+        ),
+        _p(
+            139, 'Word Break', 'Medium',
+            'A position is reachable when some word ends there and its start was reachable too.',
+            'O(n * n * w) time, O(n) space',
+            """
+            function wordBreak(text, words) {
+              const reachable = new Array(text.length + 1).fill(false);
+              reachable[0] = true;
+              for (let end = 1; end <= text.length; end++) {
+                for (const word of words) {
+                  const start = end - word.length;
+                  if (start >= 0 && reachable[start] && text.slice(start, end) === word) {
+                    reachable[end] = true;
+                    break;
+                  }
+                }
+              }
+              return reachable[text.length];
+            }
+            """,
+        ),
+        _p(
+            152, 'Maximum Product Subarray', 'Medium',
+            'Track the smallest product too — a negative turns the worst into the best.',
+            'O(n) time, O(1) space',
+            """
+            function maxProduct(nums) {
+              let best = nums[0];
+              let high = nums[0];
+              let low = nums[0];
+              for (let i = 1; i < nums.length; i++) {
+                const n = nums[i];
+                const options = [n, high * n, low * n];
+                high = Math.max(...options);
+                low = Math.min(...options);
+                if (high > best) best = high;
+              }
+              return best;
             }
             """,
         ),
