@@ -439,6 +439,183 @@ SQL: tuple[Passage, ...] = (
         "database is for.",
         "SQL design",
     ),
+    _p(
+        "GROUP BY collapses rows into groups, so every column you select has "
+        "to be either grouped by or aggregated. There is no sensible single "
+        "answer for a column that varies within a group.",
+        "SQL syntax",
+    ),
+    _p(
+        "COUNT(*) counts rows and COUNT(column) counts non-NULL values in it. "
+        "The difference is invisible until a column has gaps, and then it is "
+        "the whole answer.",
+        "SQL gotchas",
+    ),
+    _p(
+        "A LEFT JOIN keeps every row on the left whether or not the right "
+        "side matched, filling the gaps with NULL. That NULL is how you find "
+        "the rows that had no match.",
+        "SQL syntax",
+    ),
+    _p(
+        "Putting a condition on the right table in the WHERE clause turns a "
+        "LEFT JOIN back into an inner one, because NULL fails the test. Move "
+        "it into the ON clause instead.",
+        "SQL gotchas",
+    ),
+    _p(
+        "DISTINCT is often a sign that a join is duplicating rows. It is "
+        "worth finding out why before reaching for it, because the duplicates "
+        "usually mean the join is wrong.",
+        "SQL conventions",
+    ),
+    _p(
+        "A primary key identifies a row and a foreign key points at one. "
+        "Together they are what stops the database from holding a reference "
+        "to something that was deleted.",
+        "SQL design",
+    ),
+    _p(
+        "An index makes reads faster and writes slower, because every write "
+        "has to keep it up to date. Indexing every column is not free "
+        "insurance, it is a tax on every insert.",
+        "SQL performance",
+    ),
+    _p(
+        "Wrapping a column in a function usually stops an index being used. "
+        "WHERE created_at >= '2024-01-01' can use one, WHERE YEAR(created_at) "
+        "= 2024 generally cannot.",
+        "SQL performance",
+    ),
+    _p(
+        "EXPLAIN shows the plan the database intends to use. It is the "
+        "difference between guessing why a query is slow and reading the "
+        "reason.",
+        "SQL performance",
+    ),
+    _p(
+        "A subquery in the SELECT list runs once per row returned. Rewriting "
+        "it as a join often turns a query that scales badly into one that "
+        "does not.",
+        "SQL performance",
+    ),
+    _p(
+        "IN with a list is fine, and IN with a subquery that returns a NULL "
+        "is a trap. NOT IN against a set containing NULL returns nothing at "
+        "all, because the comparison is unknown rather than false.",
+        "SQL gotchas",
+    ),
+    _p(
+        "COALESCE returns the first argument that is not NULL. It is how you "
+        "give a missing value a default without an outer layer of CASE.",
+        "SQL syntax",
+    ),
+    _p(
+        "CASE WHEN is SQL's if. Inside an aggregate it becomes conditional "
+        "counting: SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) counts "
+        "only the paid ones.",
+        "SQL syntax",
+    ),
+    _p(
+        "A window function computes across rows without collapsing them. "
+        "ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at) numbers "
+        "each user's rows separately and keeps every row.",
+        "SQL syntax",
+    ),
+    _p(
+        "The difference between GROUP BY and OVER is what you get back. GROUP "
+        "BY gives one row per group; OVER gives every row, with the group's "
+        "answer attached to each.",
+        "SQL design",
+    ),
+    _p(
+        "A common table expression names a subquery so the rest of the query "
+        "can read like prose. WITH recent AS (...) SELECT * FROM recent is "
+        "the same work, spelled so a person can follow it.",
+        "SQL conventions",
+    ),
+    _p(
+        "ORDER BY without LIMIT sorts the whole result. If you only want the "
+        "top few, say so, or the database sorts a million rows to hand you "
+        "ten.",
+        "SQL performance",
+    ),
+    _p(
+        "LIMIT without ORDER BY returns an arbitrary set of rows. There is no "
+        "natural order in a table, so any order you saw last time was luck.",
+        "SQL gotchas",
+    ),
+    _p(
+        "OFFSET gets slower the deeper it goes, because the database still "
+        "produces and discards every skipped row. Paging by a key you sorted "
+        "on stays fast.",
+        "SQL performance",
+    ),
+    _p(
+        "UNION removes duplicates and UNION ALL does not. UNION ALL is the "
+        "cheaper of the two, and is what you want unless you specifically "
+        "need the deduplication.",
+        "SQL syntax",
+    ),
+    _p(
+        "Never build a query by pasting user input into a string. Parameters "
+        "are not a style preference, they are the reason the input cannot "
+        "become part of the statement.",
+        "SQL conventions",
+    ),
+    _p(
+        "An UPDATE without a WHERE updates every row. Writing the SELECT "
+        "first and only then swapping the verb is a habit worth having.",
+        "SQL conventions",
+    ),
+    _p(
+        "ACID is four promises: a transaction is all or nothing, leaves the "
+        "data valid, does not see other transactions half-finished, and "
+        "survives a power cut once committed.",
+        "SQL design",
+    ),
+    _p(
+        "Isolation levels are a dial between correctness and concurrency. "
+        "Read committed is the common default, and it still allows the same "
+        "query in one transaction to return different answers.",
+        "SQL internals",
+    ),
+    _p(
+        "A deadlock is two transactions each holding what the other wants. "
+        "The database picks one and kills it, which is why write code that "
+        "can be retried.",
+        "SQL internals",
+    ),
+    _p(
+        "Normalisation is storing each fact once. Denormalisation is "
+        "deliberately storing it twice for speed, and accepting that you now "
+        "have two places to keep in step.",
+        "SQL design",
+    ),
+    _p(
+        "A view is a saved query, not saved data. It costs nothing to store "
+        "and everything it selects is computed again each time you read it.",
+        "SQL design",
+    ),
+    _p(
+        "Storing money as a floating point number will eventually be wrong by "
+        "a penny. DECIMAL exists because base ten fractions cannot be "
+        "represented exactly in base two.",
+        "SQL gotchas",
+    ),
+    _p(
+        "Store timestamps in UTC and convert when you display them. Every "
+        "other arrangement eventually meets a daylight saving change and "
+        "loses an hour of data.",
+        "SQL conventions",
+    ),
+    _p(
+        "SQL is a standard that every database implements slightly "
+        "differently. The core is portable, and the moment you use a "
+        "function for dates or strings you are usually writing for one "
+        "engine.",
+        "SQL design",
+    ),
 )
 
 C_LORE: tuple[Passage, ...] = (
@@ -478,6 +655,198 @@ C_LORE: tuple[Passage, ...] = (
         "exists elsewhere.",
         "C design",
     ),
+    _p(
+        "sizeof is measured in chars, and a char is one byte by definition. "
+        "That makes sizeof(char) always 1, whatever the machine thinks a byte "
+        "is worth.",
+        "C internals",
+    ),
+    _p(
+        "sizeof on an array gives the whole array, and sizeof on a pointer "
+        "gives the pointer. The same expression means different things either "
+        "side of a function call, because the array decayed on the way in.",
+        "C gotchas",
+    ),
+    _p(
+        "Pointer arithmetic counts elements, not bytes. Adding one to an int "
+        "pointer moves four bytes on most machines, and the compiler does "
+        "that multiplication for you.",
+        "C internals",
+    ),
+    _p(
+        "Declaring a variable does not clear it. A local you never assigned "
+        "holds whatever was on the stack a moment ago, which is why it often "
+        "works in a debug build and not in a release one.",
+        "C gotchas",
+    ),
+    _p(
+        "The stack is automatic and the heap is yours to manage. Returning a "
+        "pointer to a local is returning the address of something that has "
+        "already gone.",
+        "C gotchas",
+    ),
+    _p(
+        "free does not clear the pointer, it only releases the memory. "
+        "Setting it to NULL afterwards is what stops the second free from "
+        "being a bug you cannot see.",
+        "C conventions",
+    ),
+    _p(
+        "malloc can return NULL. Checking it is not paranoia; it is the "
+        "difference between a clean failure and a crash somewhere else "
+        "entirely.",
+        "C conventions",
+    ),
+    _p(
+        "strlen walks the string counting until it finds the zero byte. "
+        "Calling it inside a loop condition turns a linear loop into a "
+        "quadratic one.",
+        "C performance",
+    ),
+    _p(
+        "strcpy will happily write past the end of the destination. The "
+        "length it stops at belongs to the source, and the destination has no "
+        "say in the matter.",
+        "C gotchas",
+    ),
+    _p(
+        "A string literal lives in read-only memory. Taking a char pointer to "
+        "one and then writing through it compiles, and then crashes at "
+        "runtime.",
+        "C gotchas",
+    ),
+    _p(
+        "The preprocessor runs before the compiler and only knows about text. "
+        "A macro is a find and replace, which is why arguments get wrapped in "
+        "parentheses so carefully.",
+        "C internals",
+    ),
+    _p(
+        "A macro that uses its argument twice evaluates it twice. MAX(i++, "
+        "j) increments i more than once, and nothing in the call site hints "
+        "at that.",
+        "C gotchas",
+    ),
+    _p(
+        "Header guards stop a file being included twice in one translation "
+        "unit. Without them the second copy of every declaration is an error, "
+        "not a no-op.",
+        "C conventions",
+    ),
+    _p(
+        "static at file scope means private to this file. static inside a "
+        "function means the variable survives between calls. One keyword, two "
+        "unrelated jobs.",
+        "C syntax",
+    ),
+    _p(
+        "extern says the thing exists somewhere else and the linker will find "
+        "it. The compiler needs the declaration; the linker needs the "
+        "definition.",
+        "C internals",
+    ),
+    _p(
+        "const on a pointer can mean two different things. const char *p is a "
+        "pointer to constant characters, char *const p is a constant pointer. "
+        "Read the declaration right to left.",
+        "C syntax",
+    ),
+    _p(
+        "Signed overflow is undefined behaviour and unsigned overflow wraps. "
+        "The compiler is entitled to assume the signed one never happens, and "
+        "optimises accordingly.",
+        "C internals",
+    ),
+    _p(
+        "Comparing a signed and an unsigned value promotes the signed one. "
+        "That is how -1 > 1u ends up being true, which is correct by the "
+        "rules and surprising every time.",
+        "C gotchas",
+    ),
+    _p(
+        "Integer division truncates towards zero. 7 / 2 is 3, and getting 3.5 "
+        "means at least one side has to be a floating point number before the "
+        "division, not after.",
+        "C syntax",
+    ),
+    _p(
+        "Everything in C is passed by value, pointers included. Passing a "
+        "pointer copies the address, which is why changing the pointer inside "
+        "a function does not change it outside.",
+        "C design",
+    ),
+    _p(
+        "To change a caller's pointer, pass its address. That is what the "
+        "second star in char **argv is doing, and why so many C functions "
+        "take one.",
+        "C design",
+    ),
+    _p(
+        "The order arguments are evaluated in is unspecified. f(i++, i++) has "
+        "no defined meaning, and different compilers will disagree about it "
+        "quite reasonably.",
+        "C gotchas",
+    ),
+    _p(
+        "A struct is a layout, not an object. The compiler may insert padding "
+        "between members to keep them aligned, which is why sizeof is often "
+        "more than the sum of the parts.",
+        "C internals",
+    ),
+    _p(
+        "A union stores one of its members at a time, all at the same "
+        "address. It is the language's way of saying this memory means "
+        "different things depending on context.",
+        "C syntax",
+    ),
+    _p(
+        "An enum is a set of named integers, and nothing stops you assigning "
+        "a value outside the set. The names are for the reader; the type "
+        "checking is thinner than it looks.",
+        "C syntax",
+    ),
+    _p(
+        "typedef names a type rather than creating one. Hiding a pointer "
+        "inside a typedef is common and controversial, because the star "
+        "disappears from every use.",
+        "C conventions",
+    ),
+    _p(
+        "Functions return one value, so C returns errors in it and results "
+        "through pointers. That convention is why so many signatures end in "
+        "an out parameter.",
+        "C design",
+    ),
+    _p(
+        "errno is set on failure and not cleared on success. Checking it "
+        "without first knowing that the call failed reads whatever the last "
+        "failure left behind.",
+        "C conventions",
+    ),
+    _p(
+        "The compiler turns source into object files and the linker joins "
+        "them. Most confusing C errors are one or the other complaining, and "
+        "telling them apart halves the search.",
+        "C internals",
+    ),
+    _p(
+        "C has no namespaces, so every non-static name is global to the whole "
+        "program. That is why library functions carry a prefix in their name "
+        "rather than around it.",
+        "C design",
+    ),
+    _p(
+        "The standard library is deliberately small. C gives you the "
+        "machine and expects the rest to come from somewhere else, which is "
+        "both the complaint and the reason it runs everywhere.",
+        "C design",
+    ),
+    _p(
+        "main returns an int and zero means success. It is backwards from "
+        "every boolean you will write, and it is because there is one way to "
+        "succeed and many ways to fail.",
+        "C conventions",
+    ),
 )
 
 RUST: tuple[Passage, ...] = (
@@ -515,6 +884,194 @@ RUST: tuple[Passage, ...] = (
         "Fighting the borrow checker usually means the design has shared "
         "mutable state in it. The error is often pointing at a real problem "
         "rather than an inconvenience.",
+        "Rust conventions",
+    ),
+    _p(
+        "Assigning a value moves it unless the type is Copy. The original "
+        "variable is not just unused afterwards, it is unusable, and the "
+        "compiler will say so by name.",
+        "Rust design",
+    ),
+    _p(
+        "Integers and other small fixed-size types are Copy, so assigning "
+        "them duplicates rather than moves. That is why the borrow checker "
+        "seems to leave numbers alone.",
+        "Rust internals",
+    ),
+    _p(
+        "clone is explicit because copying can be expensive. Rust would "
+        "rather make you type the cost than hide it inside an assignment.",
+        "Rust design",
+    ),
+    _p(
+        "A reference borrows without taking ownership. &T is a shared borrow "
+        "and &mut T is an exclusive one, and the whole rule is that you never "
+        "have both at once.",
+        "Rust syntax",
+    ),
+    _p(
+        "String is owned and growable, &str is a borrowed view of some text. "
+        "Almost every function should take &str and let the caller decide who "
+        "owns the data.",
+        "Rust conventions",
+    ),
+    _p(
+        "Indexing a String by number is not allowed, because Rust strings are "
+        "UTF-8 and byte four may be the middle of a character. chars() is how "
+        "you ask for characters.",
+        "Rust gotchas",
+    ),
+    _p(
+        "Vec<T> owns its contents and &[T] borrows them. A slice is a pointer "
+        "and a length, which is why passing one costs nothing and cannot "
+        "outlive what it points at.",
+        "Rust design",
+    ),
+    _p(
+        "Result<T, E> is a value, not an exception. Nothing unwinds past you "
+        "silently, and the only way to ignore an error is to say so in the "
+        "code.",
+        "Rust design",
+    ),
+    _p(
+        "unwrap says you are certain and will accept a panic if you are "
+        "wrong. It is fine in a test and a decision worth justifying anywhere "
+        "else.",
+        "Rust conventions",
+    ),
+    _p(
+        "expect is unwrap with a message. When it does fire, the difference "
+        "between the two is the difference between a mystery and a "
+        "sentence.",
+        "Rust conventions",
+    ),
+    _p(
+        "match must cover every case, and the compiler checks. Adding a "
+        "variant to an enum turns every match on it into a compile error, "
+        "which is the point rather than the cost.",
+        "Rust design",
+    ),
+    _p(
+        "if let is match for when you only care about one arm. It trades "
+        "exhaustiveness for brevity, so reach for it when the other cases "
+        "genuinely do not matter.",
+        "Rust syntax",
+    ),
+    _p(
+        "Almost everything is an expression, including if and match. That is "
+        "why a function body can end in a match with no return and no "
+        "semicolon.",
+        "Rust syntax",
+    ),
+    _p(
+        "A semicolon discards the value of an expression. Leaving it off the "
+        "last line of a block is how the block evaluates to something, and "
+        "adding one by habit is a common early error.",
+        "Rust syntax",
+    ),
+    _p(
+        "let bindings are immutable by default. mut is not an optimisation "
+        "hint, it is a note to every later reader that this value changes.",
+        "Rust design",
+    ),
+    _p(
+        "Shadowing lets you reuse a name with a new type. let input = "
+        "input.trim() is idiomatic rather than sloppy, because the old "
+        "binding is genuinely finished with.",
+        "Rust conventions",
+    ),
+    _p(
+        "A trait is a set of behaviours a type can implement. It is closer to "
+        "an interface than to inheritance, and Rust has no inheritance to "
+        "confuse it with.",
+        "Rust design",
+    ),
+    _p(
+        "Generics are resolved at compile time, so a generic function costs "
+        "nothing extra at runtime. The compiler writes one copy per concrete "
+        "type it is used with.",
+        "Rust internals",
+    ),
+    _p(
+        "dyn Trait is the runtime version, dispatched through a pointer. You "
+        "reach for it when the set of types is not known until the program "
+        "runs.",
+        "Rust internals",
+    ),
+    _p(
+        "derive writes an implementation for you. #[derive(Debug, Clone, "
+        "PartialEq)] is the line that turns a struct into something you can "
+        "print, copy and compare.",
+        "Rust conventions",
+    ),
+    _p(
+        "Iterators are lazy. A chain of map and filter does nothing until "
+        "something consumes it, which is why forgetting collect leaves you "
+        "holding a description of work rather than a result.",
+        "Rust design",
+    ),
+    _p(
+        "Iterator chains compile down to roughly the loop you would have "
+        "written. The abstraction is free, which is the claim zero-cost is "
+        "making.",
+        "Rust performance",
+    ),
+    _p(
+        "A closure captures by reference until it needs not to. move forces "
+        "it to take ownership, which is what threads and anything outliving "
+        "the current scope require.",
+        "Rust syntax",
+    ),
+    _p(
+        "Send and Sync are what make data races a compile error. A type that "
+        "cannot safely cross threads simply will not be allowed to, and you "
+        "learn this before the program runs.",
+        "Rust design",
+    ),
+    _p(
+        "Rc is shared ownership for a single thread and Arc is the atomic "
+        "version for many. Arc costs a little more, and using Rc across "
+        "threads will not compile.",
+        "Rust internals",
+    ),
+    _p(
+        "RefCell moves the borrow check from compile time to runtime. The "
+        "rule is the same; breaking it panics instead of failing to build.",
+        "Rust internals",
+    ),
+    _p(
+        "Box<T> puts a value on the heap. Recursive types need it, because a "
+        "struct that directly contains itself has no finite size.",
+        "Rust syntax",
+    ),
+    _p(
+        "Lifetime annotations do not change how long anything lives. They "
+        "describe a relationship that already exists so the compiler can "
+        "check it.",
+        "Rust syntax",
+    ),
+    _p(
+        "The compiler elides most lifetimes for you. The ones you have to "
+        "write are usually where a return value borrows from more than one "
+        "argument and the compiler cannot guess which.",
+        "Rust internals",
+    ),
+    _p(
+        "Drop runs when a value goes out of scope, in reverse order of "
+        "declaration. Files close and locks release without a finally block, "
+        "because scope is the mechanism.",
+        "Rust design",
+    ),
+    _p(
+        "unsafe does not turn the checks off. It unlocks five specific "
+        "abilities and moves the responsibility for proving them sound from "
+        "the compiler to you.",
+        "Rust design",
+    ),
+    _p(
+        "Cargo is the build tool, package manager and test runner in one. "
+        "cargo test finds and runs the tests, including the examples in your "
+        "documentation comments.",
         "Rust conventions",
     ),
 )
