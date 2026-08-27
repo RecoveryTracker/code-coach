@@ -1,0 +1,206 @@
+"""The C cheat sheet."""
+
+from __future__ import annotations
+
+from code_coach.reference import Entry, Section, Sheet, register
+
+
+def _e(code: str, note: str = "") -> Entry:
+    return Entry(code=code, note=note)
+
+
+SHEET = Sheet(
+    language="c",
+    sections=(
+        Section(
+            "The first minute",
+            "What you write before you have written anything.",
+            (
+                _e("#include <stdio.h>", "printf lives here"),
+                _e("int main(void) {\n    return 0;\n}", "0 means success"),
+                _e('printf("%d\\n", n);', "no newline unless you add one"),
+                _e("int count = 0;", "type first, always"),
+                _e("const double pi = 3.14;", "cannot be reassigned"),
+                _e("int add(int a, int b) {\n    return a + b;\n}", "return type first"),
+                _e("if (a == b) {", "one = assigns, and compiles"),
+                _e("for (int i = 0; i < n; i++) {", "the workhorse loop"),
+                _e("// a note to your later self", "and /* ... */ for a block"),
+            ),
+        ),
+        Section(
+            "printf and scanf",
+            "The format specifiers, which is most of what you look up.",
+            (
+                _e("%d", "int; %u for unsigned"),
+                _e("%ld", "long; %lld for long long"),
+                _e("%f", "double; %.2f for two decimals"),
+                _e("%c", "one char"),
+                _e("%s", "a string, meaning a char pointer"),
+                _e("%p", "a pointer's value"),
+                _e("%x", "hex; %o for octal"),
+                _e("%zu", "size_t — what sizeof gives you"),
+                _e("%%", "a literal percent sign"),
+                _e('printf("%-10s|", name);', "left-aligned in ten columns"),
+                _e('printf("%5.2f", value);', "width five, two decimals"),
+                _e('scanf("%d", &n);', "the & is not optional"),
+                _e('fgets(buf, sizeof buf, stdin);', "read a line; scanf(\"%s\") overruns"),
+                _e('fprintf(stderr, "oops\\n");', "errors do not belong on stdout"),
+            ),
+        ),
+        Section(
+            "Types and sizes",
+            "Sizes are minimums, not promises. Use the fixed-width ones.",
+            (
+                _e("#include <stdint.h>", "int32_t, uint64_t and friends"),
+                _e("int32_t n = 0;", "exactly 32 bits, everywhere"),
+                _e("size_t len = 0;", "for sizes and indexes; unsigned"),
+                _e("#include <stdbool.h>", "gives you bool, true, false"),
+                _e("bool ready = true;", "without the header it is just int"),
+                _e("sizeof(int)", "bytes; sizeof(char) is 1 by definition"),
+                _e("sizeof arr / sizeof arr[0]", "length — only where arr is an array"),
+                _e("(double)a / b", "cast one side, or you get integer division"),
+                _e("INT_MAX", "from <limits.h>"),
+                _e("char c = 'a';", "single quotes; \"a\" is a two-byte array"),
+            ),
+        ),
+        Section(
+            "Pointers",
+            "An address, and a type saying what is at it.",
+            (
+                _e("int *p = &n;", "& takes the address"),
+                _e("*p = 5;", "* reads or writes through it"),
+                _e("int *p = NULL;", "always initialise; never leave it wild"),
+                _e("if (p != NULL) {", "check before dereferencing"),
+                _e("void swap(int *a, int *b) {", "how a function changes its caller's value"),
+                _e("swap(&x, &y);", "pass the address"),
+                _e("p++", "moves by sizeof(*p), not by one byte"),
+                _e("p[i]", "the same as *(p + i)"),
+                _e("const char *s", "pointer to constant chars"),
+                _e("char *const s", "constant pointer; read it right to left"),
+                _e("int **pp", "a pointer to a pointer — for out parameters"),
+            ),
+        ),
+        Section(
+            "Arrays and strings",
+            "A string is a char array ending in a zero byte. That is all it is.",
+            (
+                _e("int nums[3] = {1, 2, 3};", "size fixed at compile time"),
+                _e("int nums[3] = {0};", "zeroes the whole thing"),
+                _e("char name[] = \"Alex\";", "five bytes: four letters and a 0"),
+                _e("void f(int *nums, int count)", "an array decays; pass the length"),
+                _e("#include <string.h>", "the str* functions live here"),
+                _e("strlen(s)", "walks to the zero byte — not free"),
+                _e("strcmp(a, b) == 0", "0 means equal, which reads backwards"),
+                _e("strcpy(dst, src);", "no bounds check at all"),
+                _e("snprintf(dst, sizeof dst, \"%s\", src);", "the one that cannot overrun"),
+                _e("strchr(s, 'a')", "pointer to the first match, or NULL"),
+                _e("strstr(haystack, needle)", "substring search"),
+                _e("memset(buf, 0, sizeof buf);", "fill with a byte"),
+                _e("memcpy(dst, src, n);", "no overlap; memmove if they might"),
+            ),
+        ),
+        Section(
+            "Memory",
+            "You take it, you give it back. Nothing checks that you did.",
+            (
+                _e("#include <stdlib.h>", "malloc and free live here"),
+                _e("int *p = malloc(n * sizeof *p);", "sizeof the thing, not the type"),
+                _e("if (p == NULL) { /* failed */ }", "malloc can fail"),
+                _e("calloc(n, sizeof *p)", "the same, but zeroed"),
+                _e("realloc(p, bigger)", "may move it; keep the return value"),
+                _e("free(p);\np = NULL;", "the second line stops a double free"),
+                _e("free(NULL);", "safe, and does nothing"),
+                _e("int buf[64];", "on the stack — freed for you, and small"),
+                _e("return &local;", "never: the local is gone by then"),
+            ),
+        ),
+        Section(
+            "Deciding",
+            "Zero is false; everything else is true.",
+            (
+                _e("a == b", "== compares, = assigns"),
+                _e("if (n = 5)", "compiles, assigns, is always true — a classic"),
+                _e("a && b", "stops early if a is false"),
+                _e("a || b", "stops early if a is true"),
+                _e("!a", "flip it"),
+                _e("cond ? x : y", "the ternary"),
+                _e("if (p && p->next)", "the order matters; && guards the next test"),
+                _e("switch (n) {\ncase 1:\n    break;\n}", "without break it falls through"),
+                _e("default:", "the case that catches the rest"),
+                _e("-1 > 1u", "true: the signed side is promoted"),
+            ),
+        ),
+        Section(
+            "Loops",
+            "Three shapes, and the two ways out.",
+            (
+                _e("for (int i = 0; i < n; i++) {", "start, test, step"),
+                _e("for (int i = n - 1; i >= 0; i--) {", "backwards"),
+                _e("while (cond) {", "when the end is a condition"),
+                _e("do {\n} while (cond);", "runs at least once"),
+                _e("for (int i = 0; s[i] != '\\0'; i++) {", "walking a string"),
+                _e("break;", "leave the loop"),
+                _e("continue;", "skip to the next turn"),
+                _e("for (;;) {", "forever, and idiomatic"),
+            ),
+        ),
+        Section(
+            "Structs and typedef",
+            "Grouping values, and giving the group a shorter name.",
+            (
+                _e("struct Point {\n    int x;\n    int y;\n};", "note the semicolon"),
+                _e("struct Point p = {1, 2};", "the struct keyword is required"),
+                _e("typedef struct Point Point;", "so you can drop it"),
+                _e("typedef struct {\n    int x;\n} Point;", "declare and name at once"),
+                _e("p.x", "through a value"),
+                _e("p->x", "through a pointer; the same as (*p).x"),
+                _e("struct Point p = {.x = 1};", "designated initialiser"),
+                _e("enum Colour { RED, GREEN };", "named ints, starting at 0"),
+                _e("union Value { int i; float f; };", "one at a time, same address"),
+            ),
+        ),
+        Section(
+            "Files",
+            "Open, check, use, close.",
+            (
+                _e('FILE *f = fopen(path, "r");', "and \"w\", \"a\", \"rb\""),
+                _e("if (f == NULL) { /* failed */ }", "check every time"),
+                _e("fgets(line, sizeof line, f)", "NULL at end of file"),
+                _e('fprintf(f, "%d\\n", n);', "printf to a file"),
+                _e("fclose(f);", "or the last write may never land"),
+                _e("feof(f)", "true only AFTER a read has failed"),
+            ),
+        ),
+        Section(
+            "Headers and building",
+            "What goes where, and how the pieces are joined.",
+            (
+                _e("#ifndef POINT_H\n#define POINT_H\n#endif", "an include guard"),
+                _e("#pragma once", "the same job, one line, near-universal"),
+                _e('#include "point.h"', "quotes for yours, angles for the system"),
+                _e("static int helper(void)", "private to this file"),
+                _e("extern int shared;", "defined somewhere else"),
+                _e("#define MAX(a, b) ((a) > (b) ? (a) : (b))", "wrap every argument"),
+                _e("gcc -std=c17 -Wall -Wextra main.c", "turn the warnings on"),
+                _e("gcc -g main.c", "debug symbols"),
+                _e("gcc -o app main.c util.c", "several files, one binary"),
+            ),
+        ),
+        Section(
+            "Traps",
+            "The ones that compile cleanly and then behave strangely.",
+            (
+                _e("int x;", "uninitialised: whatever was there before"),
+                _e("arr[n]", "one past the end; nothing stops you"),
+                _e("MAX(i++, j)", "a macro may use its argument twice"),
+                _e("if (a = b)", "assignment in a condition; use == or -Wall"),
+                _e("char *s = \"literal\";", "read-only; writing through it crashes"),
+                _e("free(p); use(p);", "use after free — often works, then does not"),
+                _e("f(i++, i++)", "argument order is unspecified"),
+                _e("int overflow = INT_MAX + 1;", "signed overflow is undefined"),
+            ),
+        ),
+    ),
+)
+
+register(SHEET)
