@@ -251,6 +251,51 @@ function isStacked(): boolean {
 const FREE_KEY = "code-coach:free-buffer";
 
 /**
+ * Which panes are on screen.
+ *
+ * On a short window there is not room for the menu, the target, the problem,
+ * the editor and the terminal at once, and the answer to that is not to make
+ * them all smaller — it is to put away the ones you are not using. Every one
+ * of them can go.
+ */
+type Panes = {
+  nav: boolean;
+  target: boolean;
+  study: boolean;
+  editor: boolean;
+  term: boolean;
+};
+
+const ALL_PANES: Panes = {
+  nav: true,
+  target: true,
+  study: true,
+  editor: true,
+  term: true,
+};
+
+const PANES_KEY = "code-coach:panes-v1";
+
+function loadPanes(): Panes {
+  try {
+    const raw = localStorage.getItem(PANES_KEY);
+    if (raw) return { ...ALL_PANES, ...(JSON.parse(raw) as Partial<Panes>) };
+  } catch {
+    /* a bad blob shouldn't cost you the whole workspace */
+  }
+  return ALL_PANES;
+}
+
+/** What each toggle is called, in the order they appear on screen. */
+const PANE_LABELS: { key: keyof Panes; label: string; title: string }[] = [
+  { key: "nav", label: "Menu", title: "The class, lesson and exercise bar" },
+  { key: "target", label: "Type this", title: "The line you're copying" },
+  { key: "study", label: "Problem", title: "The question and its lesson" },
+  { key: "editor", label: "Editor", title: "Where you type" },
+  { key: "term", label: "Terminal", title: "Run output" },
+];
+
+/**
  * Class → Lesson → Exercise.
  * Exercises auto-advance when completed.
  * ← Back / Next → always steer between lessons (never grayed for "not done").
@@ -276,6 +321,7 @@ export default function App() {
   // Lessons takes the whole screen for the same reason typing does: it is
   // reading, and reading in a side panel next to an editor is glancing.
   const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [panes, setPanes] = useState<Panes>(loadPanes);
   /** Current exercise within the active lesson. */
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseDone, setExerciseDone] = useState(false);
@@ -560,6 +606,18 @@ export default function App() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PANES_KEY, JSON.stringify(panes));
+    } catch {
+      /* ignore */
+    }
+  }, [panes]);
+
+  const togglePane = useCallback((key: keyof Panes) => {
+    setPanes((p) => ({ ...p, [key]: !p[key] }));
   }, []);
 
   const onChange = useCallback(
@@ -1090,7 +1148,11 @@ export default function App() {
 
   return (
     <div
-      className="ws-shell ws-shell-stack"
+      className={
+        "ws-shell ws-shell-stack" +
+        (panes.nav ? "" : " no-nav") +
+        (panes.term ? "" : " no-term")
+      }
       ref={shellRef}
       style={
         {
@@ -1104,9 +1166,26 @@ export default function App() {
         } as CSSProperties
       }
     >
+      {/* The pane switches. Fixed, tiny, and never hidden — whatever else
+          you put away, this is how you get it back. */}
+      <div className="ws-panes" role="group" aria-label="Show and hide panes">
+        {PANE_LABELS.map(({ key, label, title }) => (
+          <button
+            key={key}
+            type="button"
+            className={`ws-pane-btn${panes[key] ? " on" : ""}`}
+            aria-pressed={panes[key]}
+            title={title}
+            onClick={() => togglePane(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Coach strip — hidden in free mode. The app toolbar rides on its
           first line instead of owning a header row. */}
-      {freeMode ? (
+      {!panes.nav ? null : freeMode ? (
         <div className="coach-banner free-banner">
           <div className="cur-nav-line">
             <span className="coach-banner-done">
@@ -1171,7 +1250,16 @@ export default function App() {
 
       {/* Editor left, code-to-type right. Stacks below ~1050px so the
           target block never squeezes the editor into a gutter. */}
-      <div className={`ws-work${freeMode ? " solo" : ""}`} ref={workRef}>
+      <div
+        className={
+          "ws-work" +
+          (freeMode ? " solo" : "") +
+          (panes.editor ? "" : " no-editor") +
+          (panes.target || panes.study ? "" : " no-side")
+        }
+        ref={workRef}
+      >
+        {panes.editor ? (
         <div className="ws-editor">
           <EditorPane
             code={seedCode}
@@ -1182,7 +1270,8 @@ export default function App() {
             fileName={runCommandFor(session.language ?? "python").file}
           />
         </div>
-        {!freeMode ? (
+        ) : null}
+        {!freeMode && panes.editor && (panes.target || panes.study) ? (
           <>
             <div
               className="ws-split-col"
@@ -1194,31 +1283,47 @@ export default function App() {
             />
             {/* Right column: what to type on top, the problem it comes from
                 below, with a divider you can slide between them. */}
-            <div className="ws-side" ref={sideRef}>
-              <TypeTarget
-                session={session}
-                result={result}
-                exerciseIndex={exerciseIndex}
-                onReview={onReview}
-                onDictationLevel={(n) => void onDictationLevel(n)}
-              />
-              <div
-                className="ws-split-side"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  drag.current = "tt";
-                  document.body.classList.add("is-resizing");
-                }}
-              />
-              <StudyPanel
-                study={session.steps[exerciseIndex]?.study ?? null}
-                getCode={() => codeRef.current}
-              />
-            </div>
           </>
+        ) : null}
+        {!freeMode && (panes.target || panes.study) ? (
+            <div
+              className={
+                "ws-side" +
+                (panes.target ? "" : " no-target") +
+                (panes.study ? "" : " no-study")
+              }
+              ref={sideRef}
+            >
+              {panes.target ? (
+                <TypeTarget
+                  session={session}
+                  result={result}
+                  exerciseIndex={exerciseIndex}
+                  onReview={onReview}
+                  onDictationLevel={(n) => void onDictationLevel(n)}
+                />
+              ) : null}
+              {panes.target && panes.study ? (
+                <div
+                  className="ws-split-side"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    drag.current = "tt";
+                    document.body.classList.add("is-resizing");
+                  }}
+                />
+              ) : null}
+              {panes.study ? (
+                <StudyPanel
+                  study={session.steps[exerciseIndex]?.study ?? null}
+                  getCode={() => codeRef.current}
+                />
+              ) : null}
+            </div>
         ) : null}
       </div>
 
+      {panes.term ? (
       <div
         className="ws-split-row"
         onPointerDown={(e) => {
@@ -1227,7 +1332,9 @@ export default function App() {
           document.body.classList.add("is-resizing");
         }}
       />
+      ) : null}
 
+      {panes.term ? (
       <div className="ws-term" style={{ height: layout.term }}>
         <Terminal
           stdout={result?.stdout ?? ""}
@@ -1239,6 +1346,7 @@ export default function App() {
           language={session.language ?? "python"}
         />
       </div>
+      ) : null}
 
       {progressOpen && progress ? (
         <ProgressPanel

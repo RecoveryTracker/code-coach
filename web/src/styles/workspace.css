@@ -14,6 +14,21 @@
   grid-template-rows: auto minmax(0, 1fr) 6px var(--term-h, 140px);
 }
 
+/* The tracks follow the panes. A grid does not drop a row when its child
+   goes, so without these the editor gets sized by the row the terminal
+   vacated — and with the menu gone as well it collapses to nothing. */
+.ws-shell-stack.no-term {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ws-shell-stack.no-nav {
+  grid-template-rows: minmax(0, 1fr) 6px var(--term-h, 140px);
+}
+
+.ws-shell-stack.no-nav.no-term {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .ws-boot {
   display: grid;
   place-items: center;
@@ -312,8 +327,17 @@ body.is-resizing .ws-split-side {
 }
 
 /* Free mode hides the target panel — the editor takes the whole row. */
-.ws-work.solo {
+.ws-work.solo,
+.ws-work.no-side,
+.ws-work.no-editor {
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* One half of the right column on its own takes the whole of it, rather than
+   leaving the other half's track empty above or below. */
+.ws-side.no-target,
+.ws-side.no-study {
   grid-template-rows: minmax(0, 1fr);
 }
 
@@ -2562,6 +2586,82 @@ body.is-resizing .coach-explain-grip {
 
 .study-section-label {
   margin-bottom: 4px;
+}
+
+
+/* ── Pane switches ─────────────────────────────────────────
+   Fixed, small, and never hidden. Whatever else you put away, this is how it
+   comes back — a control that can hide itself is a trap on a short window,
+   which is the situation this whole feature exists for. */
+.ws-panes {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 60;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 7px;
+  background: rgba(13, 17, 23, 0.94);
+  /* Faint until wanted: it sits over the terminal, and it is a control you
+     reach for occasionally rather than read. */
+  opacity: 0.45;
+  transition: opacity 0.12s ease;
+}
+
+.ws-panes:hover,
+.ws-panes:focus-within {
+  opacity: 1;
+}
+
+.ws-pane-btn {
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: none;
+  color: #6e7b8b;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ws-pane-btn:hover {
+  background: #1a222c;
+  color: #cdd9e5;
+}
+
+/* On means the pane is showing. */
+.ws-pane-btn.on {
+  border-color: #2b3a4d;
+  background: #172029;
+  color: #9ff0c0;
+}
+
+/* The editor and the right column share a row; when one of them is gone the
+   other takes the width rather than leaving a gap where it used to be. */
+.ws-work > .ws-editor:only-child,
+.ws-work > .ws-side:only-child {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+}
+
+/* Room for the switches, so the last line of the terminal is not underneath
+   them. Only when the terminal is the thing at the bottom. */
+.ws-term {
+  padding-bottom: 2px;
+}
+
+@media (max-height: 700px) {
+  /* A short window is the case this is for, so the switches get smaller
+     rather than eating the room they are meant to free. */
+  .ws-pane-btn {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
 }
 
 /* ── The worked lesson ───────────────────────────────────
