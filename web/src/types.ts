@@ -196,6 +196,24 @@ export type PatternLessonInfo = {
   worked?: WorkedInfo | null;
 };
 
+/** One line on the cheat sheet, and the shortest useful note about it. */
+export type ReferenceEntry = {
+  code: string;
+  note: string;
+};
+
+export type ReferenceSection = {
+  name: string;
+  blurb: string;
+  entries: ReferenceEntry[];
+};
+
+export type ReferenceSheet = {
+  language: string;
+  has_sheet: boolean;
+  sections: ReferenceSection[];
+};
+
 /** One problem a lesson points you at once you've read it. */
 export type LessonProblem = {
   number: number;

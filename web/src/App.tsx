@@ -25,6 +25,7 @@ import { StudyPanel } from "./components/StudyPanel";
 import { runCommandFor, Terminal } from "./components/Terminal";
 import { TypeTarget } from "./components/TypeTarget";
 import Lessons from "./components/Lessons";
+import Reference from "./components/Reference";
 import TypingTrainer from "./components/TypingTrainer";
 import type {
   DrillEvaluateResult,
@@ -321,6 +322,7 @@ export default function App() {
   // Lessons takes the whole screen for the same reason typing does: it is
   // reading, and reading in a side panel next to an editor is glancing.
   const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /** Current exercise within the active lesson. */
   const [exerciseIndex, setExerciseIndex] = useState(0);
@@ -1070,6 +1072,14 @@ export default function App() {
       <button
         type="button"
         className="ws-btn"
+        onClick={() => setReferenceOpen(true)}
+        title="Cheat sheet and flashcards for the language you're in"
+      >
+        Reference
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
         onClick={() => setTypingOpen(true)}
         title="Keyboard practice — key sections, symbols, speed and vocabulary"
       >
@@ -1109,6 +1119,24 @@ export default function App() {
   );
 
   const brand = <span className="ws-brand-inline">Code Coach</span>;
+
+  if (referenceOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Reference</span>
+          <button
+            type="button"
+            className="ws-btn"
+            onClick={() => setReferenceOpen(false)}
+          >
+            Back to code
+          </button>
+        </div>
+        <Reference />
+      </div>
+    );
+  }
 
   if (lessonsOpen) {
     return (

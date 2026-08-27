@@ -602,6 +602,38 @@ def practice_more_lines() -> PracticeSession:
     return _session_from_progress()
 
 
+@app.get("/api/reference")
+def reference() -> dict:
+    """The cheat sheet for the language being practised.
+
+    A desk mat rather than a lesson: the lines worth having in your head,
+    densest and most-used first. Flashcards are drawn from the same entries,
+    so there is one place to add something rather than two.
+    """
+    from code_coach.reference import sheet_for
+
+    progress = _store.load()
+    language = getattr(progress, "language", "python") or "python"
+    sheet = sheet_for(language)
+    if sheet is None:
+        # Better to say so than to quietly hand over another language's.
+        return {"language": language, "sections": [], "has_sheet": False}
+    return {
+        "language": language,
+        "has_sheet": True,
+        "sections": [
+            {
+                "name": section.name,
+                "blurb": section.blurb,
+                "entries": [
+                    {"code": e.code, "note": e.note} for e in section.entries
+                ],
+            }
+            for section in sheet.sections
+        ],
+    }
+
+
 @app.get("/api/lessons")
 def lessons() -> list[dict]:
     """Every pattern lesson, for the Lessons screen.

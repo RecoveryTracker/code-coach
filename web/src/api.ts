@@ -7,6 +7,7 @@ import type {
   PracticeMode,
   PracticeSession,
   ProgressInfo,
+  ReferenceSheet,
   SkillInfo,
   TypingCatalog,
   TypingCourse,
@@ -65,6 +66,10 @@ export async function setDictationLevel(
 
 export function fetchCurrentPractice(): Promise<PracticeSession> {
   return request("/api/practice/current");
+}
+
+export function fetchReference(): Promise<ReferenceSheet> {
+  return request("/api/reference");
 }
 
 export function fetchLessons(): Promise<LessonEntry[]> {
