@@ -59,6 +59,7 @@ def _e(code: str, note: str = "") -> Entry:
 def _register_all() -> None:
     """Import the per-language sheets for their side effects."""
     from code_coach.reference import (  # noqa: F401
+        dart,
         javascript,
         python,
         typescript,

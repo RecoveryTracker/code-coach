@@ -26,7 +26,7 @@ class CoverageTests(unittest.TestCase):
         self.assertTrue(languages_with_sheets())
 
     def test_the_working_languages_have_one(self) -> None:
-        for language in ("python", "javascript", "typescript"):
+        for language in ("python", "javascript", "typescript", "dart"):
             with self.subTest(language=language):
                 self.assertIsNotNone(sheet_for(language))
 
@@ -138,7 +138,7 @@ class EndpointTests(unittest.TestCase):
         real = server._store
         try:
             server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
-            for language in ("python", "javascript", "typescript"):
+            for language in ("python", "javascript", "typescript", "dart"):
                 progress = server._store.load()
                 progress.language = language
                 server._store.save(progress)
