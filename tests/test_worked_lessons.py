@@ -295,6 +295,64 @@ class GotoProblemTests(unittest.TestCase):
         finally:
             real_module._store = real
 
+    def test_a_language_without_solutions_says_so(self) -> None:
+        """It used to answer with the fundamentals session instead.
+
+        patterns_for_language falls back to Python's bank rather than
+        failing, so the jump found a batch, saved the position, and then
+        handed back a session with no problem in it at all. Clicking "Two
+        Sum" in Rust landed you on println!("Hello, world!") with nothing
+        said about why. Four of the eight languages did this.
+        """
+        from fastapi import HTTPException
+
+        from code_coach.api import server as real_module
+        from code_coach.api.schemas import GotoProblemRequest
+        from code_coach.leetcode.bank import has_own_bank
+        from code_coach.languages import LANGUAGES
+
+        real = real_module._store
+        try:
+            server = self._server()
+            for language in LANGUAGES:
+                progress = server._store.load()
+                progress.language = language.id
+                server._store.save(progress)
+                request = GotoProblemRequest(
+                    pattern_id="lc-hashmap", problem_number=1
+                )
+                with self.subTest(language=language.id):
+                    if has_own_bank(language.id):
+                        session = server.practice_goto_problem(request)
+                        step = session.steps[session.jump_to_exercise]
+                        self.assertIsNotNone(step.study)
+                        self.assertEqual(step.study.problem.number, 1)
+                    else:
+                        with self.assertRaises(HTTPException) as caught:
+                            server.practice_goto_problem(request)
+                        self.assertEqual(caught.exception.status_code, 409)
+                        self.assertIn(
+                            language.id, caught.exception.detail
+                        )
+        finally:
+            real_module._store = real
+
+    def test_the_screen_is_told_whether_the_link_will_work(self) -> None:
+        """So it can show the title without pretending it is clickable."""
+        from code_coach.leetcode.bank import has_own_bank, lessons_catalogue
+        from code_coach.languages import LANGUAGES
+
+        for language in LANGUAGES:
+            entries = lessons_catalogue(language.id)
+            with self.subTest(language=language.id):
+                self.assertTrue(entries)
+                for entry in entries:
+                    self.assertEqual(
+                        entry["can_open"], has_own_bank(language.id)
+                    )
+                    # The reading is worth showing either way.
+                    self.assertEqual(len(entry["problems"]), 8)
+
     def test_a_problem_that_is_not_there_is_a_404(self) -> None:
         from fastapi import HTTPException
 

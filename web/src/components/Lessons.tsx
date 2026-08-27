@@ -172,7 +172,7 @@ export default function Lessons({ onOpenProblem }: Props) {
                   {/* Reading about a problem and then hunting for it in the
                       curriculum is a chore nobody should do twice, so the
                       title opens it. */}
-                  {onOpenProblem ? (
+                  {onOpenProblem && open.can_open ? (
                     <button
                       type="button"
                       className="lessons-prob-open"
@@ -182,7 +182,18 @@ export default function Lessons({ onOpenProblem }: Props) {
                       #{p.number} {p.title}
                     </button>
                   ) : (
-                    <span className="lessons-prob-name">
+                    // The solutions are not written in every language yet.
+                    // A title that looks clickable and then lands you on
+                    // "Hello, world!" is worse than one that plainly is not,
+                    // so it says why on hover instead.
+                    <span
+                      className="lessons-prob-name"
+                      title={
+                        onOpenProblem
+                          ? "Not written in this language yet — read it here, or switch language to type it"
+                          : undefined
+                      }
+                    >
                       #{p.number} {p.title}
                     </span>
                   )}

@@ -241,6 +241,8 @@ export type LessonProblem = {
 /** A pattern lesson as the Lessons screen wants it: whole, and on its own. */
 export type LessonEntry = {
   id: string;
+  /** Whether the problems can be opened in this language, or only read. */
+  can_open: boolean;
   name: string;
   order: number;
   blurb: string;

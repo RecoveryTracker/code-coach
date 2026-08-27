@@ -785,3 +785,43 @@ class WholeFunctionModeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OneBankPredicateTests(unittest.TestCase):
+    """There is one answer to "does this language have its own solutions".
+
+    There used to be three: a copy in curriculum.py, a copy in teach.py, and
+    nothing at all in bank.py, which is where the fallback that makes the
+    question necessary actually lives. The endpoint that opens a problem from
+    a lesson was the caller that forgot to ask, and it shipped.
+    """
+
+    def test_the_callers_agree_with_the_bank(self) -> None:
+        from code_coach.leetcode.bank import has_own_bank
+        from code_coach.typing.curriculum import _has_own_leetcode
+        from code_coach.typing.teach import has_own_solutions
+        from code_coach.languages import LANGUAGES
+
+        for language in LANGUAGES:
+            with self.subTest(language=language.id):
+                expected = has_own_bank(language.id)
+                self.assertEqual(_has_own_leetcode(language.id), expected)
+                self.assertEqual(has_own_solutions(language.id), expected)
+
+    def test_it_is_not_fooled_by_the_fallback(self) -> None:
+        """The whole point: a language with no bank gets Python's, and the
+        predicate has to see through that rather than counting patterns."""
+        from code_coach.leetcode.bank import has_own_bank, patterns_for_language
+
+        for language in ("c", "cpp", "rust", "sql"):
+            with self.subTest(language=language):
+                # It does get a full-looking bank back...
+                self.assertEqual(len(patterns_for_language(language)), 13)
+                # ...which is Python's, and this must not be fooled by it.
+                self.assertFalse(has_own_bank(language))
+
+    def test_python_counts_as_having_its_own(self) -> None:
+        """It IS the fallback, so an identity check alone would say no."""
+        from code_coach.leetcode.bank import has_own_bank
+
+        self.assertTrue(has_own_bank("python"))

@@ -42,15 +42,11 @@ def _clean(text: str) -> str:
 def has_own_solutions(language: str) -> bool:
     """True when this language has its own LeetCode bank.
 
-    patterns_for_language falls back to Python's rather than failing, so
-    without this a C learner would be handed Python solutions to type.
+    Delegates to bank.py, where the fallback this protects against lives.
     """
-    from code_coach.leetcode.bank import patterns_for_language
-    from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
+    from code_coach.leetcode.bank import has_own_bank
 
-    if language == "python":
-        return True
-    return patterns_for_language(language) is not PY_PATTERNS
+    return has_own_bank(language)
 
 
 def solution_pairs(language: str) -> list[Pair]:

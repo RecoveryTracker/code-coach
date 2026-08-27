@@ -616,11 +616,23 @@ def practice_goto_problem(body: GotoProblemRequest) -> PracticeSession:
     in the window, so the client can land on it rather than on the window's
     first line.
     """
-    from code_coach.leetcode.bank import batch_holding
+    from code_coach.leetcode.bank import batch_holding, has_own_bank
 
     progress = _store.load()
     language = getattr(progress, "language", "python") or "python"
     level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
+
+    # Without its own bank there is no problem to open, and the session that
+    # would come back is the fundamentals one — so the link used to land you
+    # on "Hello, world!" with nothing said. Better to name the reason.
+    if not has_own_bank(language):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"The problems aren't written in {language} yet, so this one "
+                "can't be opened here. Switch language to work through it."
+            ),
+        )
 
     found = batch_holding(body.pattern_id, body.problem_number, level, language)
     if found is None:

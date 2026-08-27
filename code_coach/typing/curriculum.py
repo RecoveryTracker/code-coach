@@ -53,15 +53,12 @@ def _lines_of(code: str) -> list[str]:
 def _has_own_leetcode(language: str) -> bool:
     """True when this language has its own solution bank.
 
-    `patterns_for_language` falls back to Python's rather than failing, so
-    without this check a Rust code theme would hand out Python.
+    The check now lives beside the fallback it guards, in bank.py — this was
+    one of three separate copies of it, and copies drift.
     """
-    from code_coach.leetcode.bank import patterns_for_language
-    from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
+    from code_coach.leetcode.bank import has_own_bank
 
-    if language == "python":
-        return True
-    return patterns_for_language(language) is not PY_PATTERNS
+    return has_own_bank(language)
 
 
 def fundamentals_lines(language: str) -> list[Passage]:

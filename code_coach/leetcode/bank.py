@@ -89,6 +89,20 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
     return PATTERNS
 
 
+def has_own_bank(language: str) -> bool:
+    """True when this language has real solutions, not Python's by default.
+
+    `patterns_for_language` falls back rather than failing, which is right for
+    keeping a curriculum walkable but silent at the point of use — a caller
+    that forgets to ask ends up serving Python to a Rust learner.
+
+    This lives here, next to the fallback, because two callers had already
+    written their own copy of it and a third forgot to. One of them being
+    wrong is a content bug nobody sees until they read the editor.
+    """
+    return language == "python" or patterns_for_language(language) is not PATTERNS
+
+
 def current_language() -> str:
     """The student's chosen language.
 
@@ -599,6 +613,11 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
         worked = worked_for(pattern.id)
         entry: dict[str, Any] = {
             "id": pattern.id,
+            # Whether clicking a problem can actually open it. Languages
+            # without their own bank fall back to Python's, so the link would
+            # either serve the wrong language or drop you in fundamentals —
+            # the reading is still worth showing, the link is not.
+            "can_open": has_own_bank(language),
             "name": pattern.name,
             "order": pattern.order,
             "blurb": pattern.blurb,
