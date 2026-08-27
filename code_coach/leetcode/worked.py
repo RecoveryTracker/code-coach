@@ -1357,6 +1357,25 @@ CANONICAL: dict[str, int] = {
 }
 
 
+def _merge_more() -> None:
+    """Fold in the second module.
+
+    Imported here rather than at the top because worked2 imports Worked and
+    _s from this module, and a top-level import would close the circle. The
+    two files are one registry from the outside; the split is only so neither
+    of them has to be scrolled past.
+    """
+    from code_coach.leetcode.worked2 import MORE
+
+    clashes = sorted(set(WORKED) & set(MORE))
+    if clashes:  # pragma: no cover - a mistake, not a state to handle
+        raise AssertionError(f"two lessons for {clashes}")
+    WORKED.update(MORE)
+
+
+_merge_more()
+
+
 def worked_for_problem(number: int | None) -> Worked | None:
     """The lesson for one problem."""
     if number is None:

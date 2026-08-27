@@ -48,6 +48,15 @@ class CoverageTests(unittest.TestCase):
             with self.subTest(pattern=pattern_id):
                 self.assertIn(number, numbers)
 
+    def test_every_problem_has_its_own_lesson(self) -> None:
+        """The fallback exists for a gap; there are no gaps left.
+
+        A problem added without one still works — it borrows its pattern's —
+        but it should be a decision rather than an oversight, so this says so.
+        """
+        missing = [p.number for p in all_problems() if p.number not in WORKED]
+        self.assertEqual(missing, [])
+
     def test_every_lesson_belongs_to_a_real_problem(self) -> None:
         known = {p.number for p in all_problems()}
         self.assertEqual(sorted(n for n in WORKED if n not in known), [])
@@ -139,15 +148,16 @@ class PayloadTests(unittest.TestCase):
                 self.assertEqual(payload["lesson"]["worked"]["problem"], number)
 
     def test_a_problem_without_one_falls_back_to_the_pattern(self) -> None:
-        """Better the pattern's lesson than a blank panel, while the rest are
-        still being written."""
+        """Better the pattern's lesson than a blank panel.
+
+        Every problem in the bank now has its own lesson, so this can no
+        longer be provoked with a real problem number — it used to loop over
+        the unwritten ones and quietly did nothing once the last was written.
+        A number that is deliberately not in the bank keeps the path covered
+        for whenever a problem is added ahead of its lesson.
+        """
         for pattern in PATTERNS:
-            unwritten = [
-                p.number for p in pattern.problems if p.number not in WORKED
-            ]
-            if not unwritten:
-                continue
-            payload = study_payload(pattern.id, unwritten[0], "python")
+            payload = study_payload(pattern.id, 999999, "python")
             with self.subTest(pattern=pattern.id):
                 self.assertEqual(
                     payload["lesson"]["worked"]["problem"], CANONICAL[pattern.id]
