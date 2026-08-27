@@ -180,12 +180,17 @@ class SqlRunnerTests(unittest.TestCase):
 
 
 # Which languages can be executed here, and what each needs to be present.
-# The compiled three are skipped rather than assumed: a snippet nobody can run
-# is a snippet nobody has checked, and saying so is better than pretending.
+# A language is skipped rather than assumed: a snippet nobody can run is a
+# snippet nobody has checked, and saying so is better than pretending.
+#
+# Rust sat outside this for as long as there was no rustc on the machine, and
+# the snippets went unexecuted the whole time — they were reviewed, which is
+# not the same thing. With a toolchain present they are checked like the rest.
 RUNNABLE = {
     "javascript": lambda: shutil.which("node") is not None,
     "typescript": typescript_available,
     "dart": dart_available,
+    "rust": lambda: shutil.which("rustc") is not None,
     "sql": lambda: True,  # sqlite3 ships with Python
 }
 
