@@ -662,7 +662,25 @@ export default function TypingTrainer() {
     "speed",
     "perfect",
     "blocks",
+    "teach",
   ].includes(modeId);
+
+  /**
+   * Learn and Type teaches one language, and the theme slot is how you say
+   * which. It used to read the editor's language and print that nowhere, so
+   * there was no way to tell what you were being taught or to change it.
+   */
+  const teachLanguages = catalog?.teach_languages ?? [];
+  const isTeach = modeId === "teach";
+  const teachLanguage = useMemo(() => {
+    const known = teachLanguages.map((l) => l.id);
+    if (known.includes(themeId)) return themeId;
+    // Otherwise the server picked one — it falls back to the editor's
+    // language — and reports it on the drill. Read that rather than guess.
+    return drill && known.includes(drill.theme)
+      ? drill.theme
+      : (known[0] ?? "");
+  }, [drill, themeId, teachLanguages]);
 
   /** The themes this mode can actually be driven by. */
   const themeChoices = useMemo(() => {
@@ -915,16 +933,22 @@ export default function TypingTrainer() {
                   on Whack-a-Key would be a control that does nothing. */}
               {usesText && (
                 <label className="typing-field">
-                  <span>Text</span>
+                  <span>{isTeach ? "Language" : "Text"}</span>
                   <select
-                    value={themeId}
+                    value={isTeach ? teachLanguage : themeId}
                     onChange={(e) => chooseTheme(e.target.value)}
                   >
-                    {themeChoices.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
+                    {isTeach
+                      ? teachLanguages.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}
+                          </option>
+                        ))
+                      : themeChoices.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
                   </select>
                 </label>
               )}

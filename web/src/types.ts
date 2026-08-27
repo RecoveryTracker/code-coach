@@ -35,9 +35,17 @@ export type TypingTheme = {
   has_blocks?: boolean;
 };
 
+/** A language Learn and Type can teach. */
+export type TypingTeachLanguage = {
+  id: string;
+  name: string;
+};
+
 export type TypingCatalog = {
   sections: TypingSection[];
   themes: TypingTheme[];
+  /** Languages Learn and Type can teach, for its own picker. */
+  teach_languages: TypingTeachLanguage[];
   keyboard: TypingKey[][];
   fingers: Record<string, string>;
   /** Spoken names for punctuation, e.g. "|" → "pipe". */

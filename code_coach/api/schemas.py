@@ -338,8 +338,15 @@ class TypingThemeInfo(BaseModel):
     has_blocks: bool = False
 
 
+class TypingTeachLanguage(BaseModel):
+    id: str
+    name: str
+
+
 class TypingCatalogResponse(BaseModel):
     sections: list[TypingSectionInfo]
+    # Which languages Learn and Type can teach, for its own picker.
+    teach_languages: list[TypingTeachLanguage] = []
     # What the words and lines are about — a separate choice from which keys
     # you're drilling.
     themes: list[TypingThemeInfo]

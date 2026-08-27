@@ -142,11 +142,12 @@ def teaching_pairs(language: str) -> list[Pair]:
     program; lesson stages and solutions are the real thing. Ordering them
     that way means a run starts where you can keep up.
     """
-    # The lesson stages are pseudocode in a Python-leaning style, which is
-    # fine to read in any language and wrong to TYPE in one that looks
-    # nothing like it. They are offered only where the pattern material is
-    # genuinely part of that language's curriculum.
-    lessons = lesson_pairs() if has_own_solutions(language) else []
+    # Python only. The lesson stages are pseudocode in a Python-leaning
+    # style — fine to READ in any language, and wrong to type in any other,
+    # because `for price in prices[1:]` is not something a Dart student
+    # should be practising. Every other language has its own solutions,
+    # fundamentals and cheat sheet to draw on instead.
+    lessons = lesson_pairs() if language == "python" else []
     pairs = (
         reference_pairs(language)
         + fundamentals_pairs(language)

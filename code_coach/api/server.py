@@ -83,6 +83,7 @@ from code_coach.typing.drills import (
     THEMES_BY_ID as TYPING_THEMES_BY_ID,
     build_drill as build_typing_drill,
     catalog as typing_sections,
+    teach_languages as typing_teach_languages,
     theme_catalog as typing_themes,
 )
 from code_coach.typing.guide import guide_payload
@@ -297,6 +298,7 @@ def typing_catalog() -> TypingCatalogResponse:
             for s in typing_sections()
         ],
         themes=[TypingThemeInfo(**t) for t in typing_themes()],
+        teach_languages=typing_teach_languages(),
         keyboard=keyboard_payload(),
         fingers=FINGER_NAMES,
         names=dict(SYMBOL_NAMES),

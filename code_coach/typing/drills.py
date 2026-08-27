@@ -746,9 +746,10 @@ def build_drill(
         # the deal is over PAIRS and each one contributes two targets.
         from code_coach.typing.teach import teaching_pairs
 
-        pool = teaching_pairs(_active_typing_language())
+        teaching = _teach_language(theme_id)
+        pool = teaching_pairs(teaching)
         if pool:
-            key = f"teach:{_active_typing_language()}"
+            key = f"teach:{teaching}"
             wanted = max(5, count // 6)
             for pair in _deal_pairs(key, pool, rng, wanted):
                 targets.append(
@@ -785,19 +786,58 @@ def build_drill(
             )
         scoring = "wpm"
 
-    suffix = "" if theme.id == "mixed" else f"-{theme.id}"
-    named = "" if theme.id == "mixed" else f" · {theme.name}"
+    if mode.id == "teach":
+        # The name has to carry it: a run that does not say which language it
+        # is teaching leaves you guessing, which is what it did at first.
+        from code_coach.languages import get_language
+
+        teaching = _teach_language(theme_id)
+        suffix = f"-{teaching}"
+        named = f" · {get_language(teaching).name}"
+    else:
+        suffix = "" if theme.id == "mixed" else f"-{theme.id}"
+        named = "" if theme.id == "mixed" else f" · {theme.name}"
     return TypingDrill(
         id=f"typing-{section.id}-{mode.id}{suffix}",
         section=section.id,
         mode=mode.id,
-        theme=theme.id,
+        theme=_teach_language(theme_id) if mode.id == "teach" else theme.id,
         name=f"{section.name} · {mode.name}{named}",
         description=mode.description,
         targets=targets,
         hidden=mode.hidden,
         scoring=scoring,
     )
+
+
+def teach_languages() -> list[dict[str, str]]:
+    """Languages with enough teaching pairs to fill a run.
+
+    Offered in the trainer's own picker, so the mode does not silently
+    inherit whatever the editor happens to be set to.
+    """
+    from code_coach.languages import LANGUAGES
+    from code_coach.typing.teach import teaching_pairs
+
+    out: list[dict[str, str]] = []
+    for language in LANGUAGES:
+        if len(teaching_pairs(language.id)) >= 20:
+            out.append({"id": language.id, "name": language.name})
+    return out
+
+
+def _teach_language(theme_id: str) -> str:
+    """The language for a Learn and Type run.
+
+    The theme slot names it: for this mode "what the text is about" IS the
+    language. Anything else falls back to what the editor is set to, which is
+    what someone opening the mode for the first time expects.
+    """
+    known = {entry["id"] for entry in teach_languages()}
+    if theme_id in known:
+        return theme_id
+    active = _active_typing_language()
+    return active if active in known else "python"
 
 
 def _active_typing_language() -> str:
