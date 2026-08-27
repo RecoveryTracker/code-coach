@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles/iae.css";
 import "./styles/workspace.css";
 import "./styles/typing.css";
+import "./styles/lessons.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

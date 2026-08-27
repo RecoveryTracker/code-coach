@@ -3,6 +3,7 @@ import type {
   DrillEvaluateResult,
   ExplainResult,
   LanguageInfo,
+  LessonEntry,
   PracticeMode,
   PracticeSession,
   ProgressInfo,
@@ -64,6 +65,10 @@ export async function setDictationLevel(
 
 export function fetchCurrentPractice(): Promise<PracticeSession> {
   return request("/api/practice/current");
+}
+
+export function fetchLessons(): Promise<LessonEntry[]> {
+  return request("/api/lessons");
 }
 
 export function fetchNextPractice(): Promise<PracticeSession> {

@@ -24,6 +24,7 @@ import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
 import { runCommandFor, Terminal } from "./components/Terminal";
 import { TypeTarget } from "./components/TypeTarget";
+import Lessons from "./components/Lessons";
 import TypingTrainer from "./components/TypingTrainer";
 import type {
   DrillEvaluateResult,
@@ -272,6 +273,9 @@ export default function App() {
   // The typing trainer takes the whole screen: it listens on every keypress,
   // so it can't share a window with an editor that wants the same keys.
   const [typingOpen, setTypingOpen] = useState(false);
+  // Lessons takes the whole screen for the same reason typing does: it is
+  // reading, and reading in a side panel next to an editor is glancing.
+  const [lessonsOpen, setLessonsOpen] = useState(false);
   /** Current exercise within the active lesson. */
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseDone, setExerciseDone] = useState(false);
@@ -1000,6 +1004,14 @@ export default function App() {
       <button
         type="button"
         className="ws-btn"
+        onClick={() => setLessonsOpen(true)}
+        title="The patterns, taught — how to get from a question to a solution"
+      >
+        Lessons
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
         onClick={() => setTypingOpen(true)}
         title="Keyboard practice — key sections, symbols, speed and vocabulary"
       >
@@ -1039,6 +1051,24 @@ export default function App() {
   );
 
   const brand = <span className="ws-brand-inline">Code Coach</span>;
+
+  if (lessonsOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Lessons</span>
+          <button
+            type="button"
+            className="ws-btn"
+            onClick={() => setLessonsOpen(false)}
+          >
+            Back to code
+          </button>
+        </div>
+        <Lessons />
+      </div>
+    );
+  }
 
   if (typingOpen) {
     return (

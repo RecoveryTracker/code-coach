@@ -196,6 +196,32 @@ export type PatternLessonInfo = {
   worked?: WorkedInfo | null;
 };
 
+/** One problem a lesson points you at once you've read it. */
+export type LessonProblem = {
+  number: number;
+  title: string;
+  difficulty: string;
+  idea: string;
+  complexity: string;
+  url: string;
+};
+
+/** A pattern lesson as the Lessons screen wants it: whole, and on its own. */
+export type LessonEntry = {
+  id: string;
+  name: string;
+  order: number;
+  blurb: string;
+  tell: string;
+  summary: string;
+  when: string;
+  template: string;
+  steps: string[];
+  pitfalls: string[];
+  worked: (WorkedInfo & { title: string; statement: string }) | null;
+  problems: LessonProblem[];
+};
+
 export type StudyInfo = {
   problem: ProblemBriefInfo | null;
   lesson: PatternLessonInfo | null;

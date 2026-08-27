@@ -1,0 +1,303 @@
+/* Lessons — the patterns, read on their own.
+ *
+ * A reading screen, so it is set like one: a measured column rather than the
+ * full width, generous leading, and the code samples narrower than the prose
+ * so the eye can tell them apart without a border doing all the work.
+ */
+
+.lessons {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── The list of patterns ─────────────────────────────── */
+
+.lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px 24px;
+  border-right: 1px solid var(--border, #232c38);
+  overflow-y: auto;
+}
+
+.lessons-item {
+  display: flex;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lessons-item:hover {
+  background: #151b23;
+}
+
+.lessons-item.on {
+  border-color: #2b3a4d;
+  background: #172029;
+}
+
+.lessons-item-n {
+  flex: none;
+  width: 18px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  color: #5c6a7a;
+}
+
+.lessons-item.on .lessons-item-n {
+  color: #7ee2a8;
+}
+
+.lessons-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lessons-item-name {
+  font-size: 13px;
+  color: #cdd9e5;
+}
+
+/* The tell, not the summary: what makes you reach for this one. */
+.lessons-item-tell {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6e7b8b;
+}
+
+/* ── The lesson ───────────────────────────────────────── */
+
+.lessons-read {
+  padding: 20px 28px 64px;
+  overflow-y: auto;
+}
+
+.lessons-head {
+  max-width: 46rem;
+  margin-bottom: 22px;
+}
+
+.lessons-head h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.lessons-blurb {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #b6c2cf;
+}
+
+.lessons-block {
+  max-width: 46rem;
+  margin-bottom: 26px;
+}
+
+.lessons-block h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #6e7b8b;
+}
+
+.lessons-block p {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #cdd9e5;
+}
+
+/* ── The worked lesson ────────────────────────────────── */
+
+.lessons-worked {
+  padding: 16px 18px;
+  border: 1px solid var(--border, #232c38);
+  border-left: 3px solid #7ee2a8;
+  border-radius: 8px;
+  background: #0c1015;
+}
+
+.lessons-worked h3 {
+  color: #7ee2a8;
+}
+
+.lessons-statement {
+  margin-bottom: 16px !important;
+  color: #b6c2cf !important;
+}
+
+.lessons-note {
+  margin-bottom: 12px;
+}
+
+.lessons-note-tag {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6e7b8b;
+}
+
+/* The one the other two are there to set up. */
+.lessons-note.is-move p {
+  color: #9ff0c0;
+}
+
+.lessons-reveal {
+  margin-top: 6px;
+  padding: 8px 14px;
+  border: 1px solid #2b3a4d;
+  border-radius: 6px;
+  background: #141c25;
+  color: #9ff0c0;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.lessons-reveal:hover {
+  background: #18222d;
+}
+
+.lessons-stages {
+  margin: 16px 0 0;
+  padding-left: 20px;
+}
+
+.lessons-stages li {
+  margin-bottom: 14px;
+}
+
+.lessons-stages p {
+  margin: 0 0 6px;
+}
+
+.lessons-stages pre,
+.lessons-template {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  background: #0a0c10;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #8bbbff;
+  /* Long lines scroll in place rather than stretching the column. */
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.lessons-steps,
+.lessons-pitfalls {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.lessons-steps li,
+.lessons-pitfalls li {
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #cdd9e5;
+}
+
+/* ── What to practise ─────────────────────────────────── */
+
+.lessons-problems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lessons-problems li {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-top: 1px solid #1b2430;
+}
+
+.lessons-diff {
+  grid-row: span 2;
+  align-self: start;
+  padding: 2px 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lessons-diff.easy {
+  color: #7ee2a8;
+}
+.lessons-diff.medium {
+  color: #ffb454;
+}
+.lessons-diff.hard {
+  color: #ff7b72;
+}
+
+.lessons-prob-name {
+  font-size: 13px;
+  color: #cdd9e5;
+}
+
+.lessons-prob-idea {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6e7b8b;
+}
+
+.lessons-empty {
+  padding: 40px;
+  color: #6e7b8b;
+}
+
+/* One column on a narrow window: the list becomes a strip along the top
+   rather than eating half the reading width. */
+@media (max-width: 900px) {
+  .lessons {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .lessons-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border, #232c38);
+  }
+
+  .lessons-item {
+    flex: none;
+  }
+
+  .lessons-item-tell {
+    display: none;
+  }
+
+  .lessons-read {
+    padding: 16px;
+  }
+}

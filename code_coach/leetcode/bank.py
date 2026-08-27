@@ -577,3 +577,64 @@ def _class_name(class_id: str) -> str:
         return "LeetCode — Every Answer"
     pattern = get_pattern(class_id)
     return f"LeetCode — {pattern.name}" if pattern else "LeetCode"
+
+
+def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
+    """Every pattern's lesson, in learning order, free of any one problem.
+
+    `study_payload` answers "what should I read about the line I am typing?".
+    This answers "teach me the patterns", which is a different question and
+    wants the whole set rather than the one you happen to be on.
+    """
+    from code_coach.leetcode.study import brief_for, lesson_for
+    from code_coach.leetcode.worked import worked_for
+
+    out: list[dict[str, Any]] = []
+    for pattern in patterns_for_language(language):
+        lesson = lesson_for(pattern.id)
+        if not lesson:
+            continue
+        worked = worked_for(pattern.id)
+        entry: dict[str, Any] = {
+            "id": pattern.id,
+            "name": pattern.name,
+            "order": pattern.order,
+            "blurb": pattern.blurb,
+            "tell": pattern.tell,
+            "summary": lesson.summary,
+            "when": lesson.when,
+            "template": lesson.template,
+            "steps": list(lesson.steps),
+            "pitfalls": list(lesson.pitfalls),
+            "worked": None,
+            "problems": [
+                {
+                    "number": p.number,
+                    "title": p.title,
+                    "difficulty": p.difficulty,
+                    "idea": p.idea,
+                    "complexity": p.complexity,
+                    "url": (brief_for(p.number).url if brief_for(p.number) else ""),
+                }
+                for p in pattern.problems
+            ],
+        }
+        if worked:
+            brief = brief_for(worked.problem)
+            entry["worked"] = {
+                "problem": worked.problem,
+                "title": next(
+                    (p.title for p in pattern.problems if p.number == worked.problem),
+                    "",
+                ),
+                "statement": brief.statement if brief else "",
+                "naive": worked.naive,
+                "why_not": worked.why_not,
+                "insight": worked.insight,
+                "stages": [
+                    {"explain": st.explain, "code": st.code} for st in worked.stages
+                ],
+            }
+        out.append(entry)
+    out.sort(key=lambda e: e["order"])
+    return out

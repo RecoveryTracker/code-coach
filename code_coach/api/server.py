@@ -602,6 +602,19 @@ def practice_more_lines() -> PracticeSession:
     return _session_from_progress()
 
 
+@app.get("/api/lessons")
+def lessons() -> list[dict]:
+    """Every pattern lesson, for the Lessons screen.
+
+    Not tied to the drill you are on: this is the reading, browsed on its own,
+    the way the typing trainer is its own place rather than a panel.
+    """
+    from code_coach.leetcode.bank import lessons_catalogue
+
+    progress = _store.load()
+    return lessons_catalogue(getattr(progress, "language", "python") or "python")
+
+
 @app.get("/api/curriculum")
 def curriculum_tree() -> list[dict]:
     progress = _store.load()

@@ -144,5 +144,55 @@ class ContentTests(unittest.TestCase):
                 self.assertIn(worked.problem, numbers)
 
 
+class CatalogueTests(unittest.TestCase):
+    """The Lessons screen asks for the whole set, not the one you're on."""
+
+    def test_it_serves_every_pattern_in_learning_order(self) -> None:
+        from code_coach.leetcode.bank import lessons_catalogue
+
+        entries = lessons_catalogue("python")
+        self.assertEqual(len(entries), len(PATTERNS))
+        orders = [e["order"] for e in entries]
+        self.assertEqual(orders, sorted(orders))
+
+    def test_each_entry_carries_its_lesson_and_its_problems(self) -> None:
+        from code_coach.leetcode.bank import lessons_catalogue
+
+        for entry in lessons_catalogue("python"):
+            with self.subTest(pattern=entry["id"]):
+                self.assertTrue(entry["summary"])
+                self.assertTrue(entry["when"])
+                self.assertTrue(entry["template"])
+                self.assertIsNotNone(entry["worked"])
+                self.assertTrue(entry["worked"]["title"])
+                self.assertTrue(entry["worked"]["statement"])
+                self.assertEqual(len(entry["problems"]), 8)
+
+    def test_the_practice_list_links_to_the_real_questions(self) -> None:
+        from code_coach.leetcode.bank import lessons_catalogue
+
+        for entry in lessons_catalogue("python"):
+            for problem in entry["problems"]:
+                with self.subTest(problem=problem["number"]):
+                    self.assertTrue(
+                        problem["url"].startswith("https://leetcode.com/")
+                    )
+
+    def test_it_follows_the_language(self) -> None:
+        """The problems listed should be the ones that language can serve."""
+        from code_coach.leetcode.bank import lessons_catalogue
+
+        for language in ("python", "javascript", "typescript", "dart"):
+            with self.subTest(language=language):
+                self.assertEqual(len(lessons_catalogue(language)), len(PATTERNS))
+
+    def test_the_endpoint_returns_it(self) -> None:
+        from code_coach.api import server
+
+        entries = server.lessons()
+        self.assertEqual(len(entries), len(PATTERNS))
+        self.assertTrue(entries[0]["worked"]["stages"])
+
+
 if __name__ == "__main__":
     unittest.main()
