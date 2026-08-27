@@ -13,6 +13,7 @@ sheet's non-obvious claims are assembled into one program and compiled.
 
 from __future__ import annotations
 
+import shutil
 import unittest
 
 from code_coach.engine import run_code
@@ -159,13 +160,206 @@ class CppTests(unittest.TestCase):
     def test_the_sheets_claims_compile_and_hold(self) -> None:
         out, err, code = run_code(CPP_PROGRAM, language="cpp")
         if code != 0 and "isn't on your PATH" in err:
-            self.skipTest("needs g++ or clang++ on PATH")
+            self.skipTest("needs g++, clang++, or an MSVC install")
         self.assertEqual(code, 0, err or out)
         # The manipulators are on the card with specific claims about what
         # they do, so check the output rather than only the exit code.
         self.assertIn("1.50", out)
         self.assertIn("     pad", out)
         self.assertIn("true", out)
+
+
+# The same idea for Rust: every claim on the sheet that could plausibly be a
+# misremembered method name, in one program. A wrong name will not compile,
+# and a wrong behaviour trips an assert naming itself.
+RUST_PROGRAM = r"""
+use std::collections::HashMap;
+use std::collections::HashSet;
+
+#[derive(Debug, Clone, PartialEq)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+impl Point {
+    fn new(x: i32) -> Self {
+        Self { x, y: 0 }
+    }
+    fn total(&self) -> i32 {
+        self.x + self.y
+    }
+}
+
+#[derive(Debug)]
+enum Shape {
+    Circle(f64),
+    Rect(f64, f64),
+}
+
+struct Wrapper(i32);
+
+fn area(shape: &Shape) -> f64 {
+    match shape {
+        Shape::Circle(r) => *r,
+        Shape::Rect(w, h) => w * h,
+    }
+}
+
+fn borrows(s: &String) -> usize {
+    s.len()
+}
+
+fn takes_str(s: &str) -> usize {
+    s.len()
+}
+
+fn maybe_double(maybe: Option<i32>) -> Option<i32> {
+    let n = maybe?;
+    Some(n * 2)
+}
+
+fn run() -> Result<i32, String> {
+    let n: i32 = "42".parse().map_err(|_| "bad".to_string())?;
+    Ok(n)
+}
+
+fn main() {
+    // ownership
+    let a = String::from("x");
+    let b = a.clone();
+    let c = a;
+    assert_eq!(b, c);
+    let n = 5;
+    let m = n;
+    assert_eq!(n, m);
+    assert_eq!(borrows(&b), 1);
+    assert_eq!(takes_str("hi"), 2);
+    assert_eq!(5.to_string(), "5");
+
+    // Option
+    let maybe: Option<i32> = Some(5);
+    let nothing: Option<i32> = None;
+    assert_eq!(match maybe { Some(v) => v, None => 0 }, 5);
+    if let Some(v) = maybe { assert_eq!(v, 5); }
+    assert_eq!(nothing.unwrap_or(0), 0);
+    assert_eq!(nothing.unwrap_or_else(|| 1), 1);
+    assert_eq!(maybe.unwrap(), 5);
+    assert_eq!(maybe.expect("should exist"), 5);
+    assert!(maybe.is_some() && nothing.is_none());
+    assert_eq!(maybe.map(|v| v * 2), Some(10));
+    assert_eq!(maybe_double(maybe), Some(10));
+    assert_eq!(maybe_double(nothing), None);
+
+    // Result
+    let ok: Result<i32, String> = Ok(5);
+    let bad: Result<i32, String> = Err("bad".to_string());
+    assert!(ok.is_ok() && bad.is_err());
+    assert_eq!(bad.unwrap_or(0), 0);
+    assert!("42".parse::<i32>().is_ok());
+    let parsed: i32 = "42".parse().unwrap();
+    assert_eq!(parsed, 42);
+    assert_eq!(run(), Ok(42));
+
+    // Vec and slices
+    let mut v: Vec<i32> = Vec::new();
+    v.push(4);
+    assert_eq!(v.pop(), Some(4));
+    let zeros = vec![0; 10];
+    assert_eq!(zeros.len(), 10);
+    let mut v = vec![1, 2, 3];
+    assert!(!v.is_empty());
+    assert_eq!(v[0], 1);
+    assert_eq!(v.get(0), Some(&1));
+    assert_eq!(&v[1..3], &[2, 3]);
+    assert_eq!(v.iter().sum::<i32>(), 6);
+    assert!(v.contains(&3));
+    v.sort();
+
+    // iterators
+    assert_eq!(v.iter().map(|n| n * 2).collect::<Vec<_>>(), vec![2, 4, 6]);
+    assert_eq!(v.iter().filter(|n| **n > 2).count(), 1);
+    let out: Vec<i32> = v.iter().map(|n| n * 2).collect();
+    assert_eq!(out, vec![2, 4, 6]);
+    assert_eq!(v.iter().enumerate().next(), Some((0, &1)));
+    assert_eq!(v.iter().max(), Some(&3));
+    assert_eq!(v.iter().min(), Some(&1));
+    assert!(v.iter().any(|n| *n > 2));
+    assert!(v.iter().all(|n| *n > 0));
+    assert_eq!(v.iter().find(|n| **n > 2), Some(&3));
+    assert_eq!(v.iter().rev().next(), Some(&3));
+    assert_eq!(v.iter().fold(0, |acc, n| acc + n), 6);
+    for x in &mut v { *x += 0; }
+    for x in &v { assert!(*x > 0); }
+
+    // strings
+    let mut s = String::from("hi");
+    assert_eq!(s.len(), 2);
+    assert_eq!(s.chars().count(), 2);
+    s.push_str(" more");
+    assert!(s.contains("hi"));
+    assert_eq!(s.split(',').count(), 1);
+    assert_eq!("  x  ".trim(), "x");
+    assert_eq!("a".to_uppercase(), "A");
+    assert_eq!("aa".replace("a", "b"), "bb");
+    assert_eq!(&s[0..2], "hi");
+    assert_eq!(format!("{}-{}", 1, 2), "1-2");
+
+    // structs and enums
+    let p = Point { x: 1, y: 2 };
+    let q = Point::new(1);
+    assert_eq!(p.total(), 3);
+    assert_eq!(q.y, 0);
+    assert_eq!(p.clone(), p);
+    assert_eq!(area(&Shape::Circle(2.0)), 2.0);
+    assert_eq!(area(&Shape::Rect(2.0, 3.0)), 6.0);
+    let w = Wrapper(7);
+    assert_eq!(w.0, 7);
+
+    // maps and sets
+    let mut counts: HashMap<String, i32> = HashMap::new();
+    counts.insert("a".to_string(), 1);
+    assert_eq!(counts.get("a"), Some(&1));
+    assert_eq!(counts["a"], 1);
+    *counts.entry("a".to_string()).or_insert(0) += 1;
+    assert_eq!(counts["a"], 2);
+    assert!(counts.contains_key("a"));
+    for (k, v) in &counts { assert!(!k.is_empty() && *v > 0); }
+    let mut set: HashSet<i32> = HashSet::new();
+    assert!(set.insert(3));
+
+    // odds and ends
+    const MAX: i32 = 100;
+    let closure = |n: i32| n * 2;
+    assert_eq!(closure(2), 4);
+    assert_eq!(3.9_f64 as i32, 3);
+    assert_eq!(MAX, 100);
+
+    println!("{MAX}");
+    println!("{}, {}", 1, 2);
+    println!("{0} {1} {0}", 1, 2);
+    println!("{:?}", v);
+    println!("{:.2}", 1.5);
+    println!("{:>8}", "pad");
+    print!("no newline");
+    println!();
+    eprintln!("oops");
+    println!("all good");
+}
+"""
+
+
+class RustTests(unittest.TestCase):
+    def test_the_sheets_claims_compile_and_hold(self) -> None:
+        if shutil.which("rustc") is None:
+            self.skipTest("needs rustc on PATH")
+        out, err, code = run_code(RUST_PROGRAM, language="rust")
+        self.assertEqual(code, 0, err or out)
+        self.assertIn("all good", out)
+        self.assertIn("1.50", out)
+        self.assertIn("     pad", out)
+        # A snippet someone copies should not teach them to ignore warnings.
+        self.assertNotIn("warning:", err, err)
 
 
 if __name__ == "__main__":

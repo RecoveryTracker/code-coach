@@ -25,10 +25,16 @@ class CoverageTests(unittest.TestCase):
     def test_there_are_sheets(self) -> None:
         self.assertTrue(languages_with_sheets())
 
-    def test_the_working_languages_have_one(self) -> None:
-        for language in ("python", "javascript", "typescript", "dart"):
-            with self.subTest(language=language):
-                self.assertIsNotNone(sheet_for(language))
+    def test_every_language_the_app_offers_has_one(self) -> None:
+        """A sheet per language, with no gaps left to explain away."""
+        from code_coach.languages import LANGUAGES
+
+        for language in LANGUAGES:
+            with self.subTest(language=language.id):
+                self.assertIsNotNone(
+                    sheet_for(language.id),
+                    f"{language.id} is offered but has no cheat sheet",
+                )
 
     def test_an_unknown_language_gets_nothing_rather_than_the_wrong_one(
         self,
@@ -151,8 +157,22 @@ class EndpointTests(unittest.TestCase):
             server._store = real
 
     def test_a_language_without_a_sheet_says_so(self) -> None:
+        """An honest gap, rather than another language's card.
+
+        This used to set the stored language to "rust" and check the endpoint
+        reported no sheet. Both halves of that have since stopped working:
+        Rust has a sheet now, and the store sanitises an unknown language back
+        to Python, so nothing written through it can reach this branch any
+        more. Every language the app offers has a card, which is the good
+        outcome and also what makes the path unreachable from outside.
+
+        The branch is still worth keeping — a language added before its sheet
+        is written would land on it — so it is exercised directly instead of
+        through a store that will not produce the state.
+        """
         import tempfile
         from pathlib import Path
+        from unittest import mock
 
         from code_coach.api import server
         from code_coach.progress.store import ProgressStore
@@ -160,12 +180,15 @@ class EndpointTests(unittest.TestCase):
         real = server._store
         try:
             server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
-            progress = server._store.load()
-            progress.language = "rust"
-            server._store.save(progress)
-            payload = server.reference()
+            with mock.patch(
+                "code_coach.reference.sheet_for", return_value=None
+            ):
+                payload = server.reference()
             self.assertFalse(payload["has_sheet"])
             self.assertEqual(payload["sections"], [])
+            # It still says WHICH language it has nothing for, so the screen
+            # can name it rather than showing an unexplained blank.
+            self.assertTrue(payload["language"])
         finally:
             server._store = real
 

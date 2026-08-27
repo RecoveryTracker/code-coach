@@ -64,6 +64,7 @@ def _register_all() -> None:
         dart,
         javascript,
         python,
+        rust,
         sql,
         typescript,
     )
