@@ -29,6 +29,16 @@ import { TypeTarget } from "./components/TypeTarget";
 import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
 import TypingTrainer from "./components/TypingTrainer";
+import {
+  clearAllDrafts,
+  clearDraft,
+  type DraftSlot,
+  loadDraft,
+  loadPos,
+  saveDraft,
+  savePos,
+  stampOf,
+} from "./lib/drafts";
 import type {
   DrillEvaluateResult,
   PracticeSession,
@@ -37,147 +47,6 @@ import type {
 } from "./types";
 
 const DEBOUNCE_MS = 180;
-
-/**
- * Every exercise gets its own buffer.
- *
- * The drill id alone isn't enough: it's shared by all exercises in a lesson,
- * and it stays the same across difficulties (a class's Lesson 1 is `<class>-l1`
- * at every level), so both used to spill their code into each other.
- */
-type DraftSlot = {
-  drillId: string;
-  index: number;
-  level: number;
-  language: string;
-  /** Which window of an endless type-along — 0 for every other lesson. */
-  window: number;
-};
-
-function draftKey({ drillId, index, level, language, window: win }: DraftSlot) {
-  // Language belongs in the key: the drill id is the same in both languages,
-  // so without it your Python answer shows up in the Dart editor.
-  const lang = language === "python" ? "" : `:${language}`;
-  // So does the window. Every window of a class's type-along shares one drill
-  // id, so loading the next eight lines used to land on the previous eight's
-  // saved buffers — overwriting the first one with whatever was on screen.
-  const win_ = win ? `:w${win}` : "";
-  return `code-coach:drill:${drillId}${lang}:lv${level}${win_}:ex${index}`;
-}
-
-/** Pre-per-exercise key: one shared buffer for a whole lesson. */
-function legacyDraftKey(drillId: string) {
-  return `code-coach:drill:${drillId}`;
-}
-
-/** Pre-per-window key: every window of a type-along shared one set of slots. */
-function preWindowDraftKey(slot: DraftSlot) {
-  return draftKey({ ...slot, window: 0 });
-}
-
-function loadDraft(slot: DraftSlot): string | null {
-  try {
-    const found = localStorage.getItem(draftKey(slot));
-    if (found != null) return found;
-    // Work saved before the window joined the key sits in the window-0 slots.
-    // Read it through rather than opening a blank editor on someone's
-    // half-finished line; the first save writes it back under the new key.
-    if (slot.window) {
-      const shared = localStorage.getItem(preWindowDraftKey(slot));
-      if (shared != null) return shared;
-    }
-    // Work saved before drafts were split per exercise/difficulty lives under
-    // the old lesson-wide key. Adopt it for the first exercise rather than
-    // silently losing it; the original is left in place as a backstop.
-    if (slot.index === 0) {
-      return localStorage.getItem(legacyDraftKey(slot.drillId));
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(slot: DraftSlot, code: string) {
-  try {
-    localStorage.setItem(draftKey(slot), code);
-  } catch {
-    /* ignore */
-  }
-}
-
-/**
- * Where you were in a lesson, so coming back doesn't dump you on exercise 1
- * looking at a blank editor while your work sits in a slot you can't see.
- */
-function posKey(
-  drillId: string,
-  level: number,
-  language = "python",
-  win = 0,
-) {
-  const lang = language === "python" ? "" : `:${language}`;
-  const win_ = win ? `:w${win}` : "";
-  return `code-coach:pos:${drillId}${lang}:lv${level}${win_}`;
-}
-
-function savePos(
-  drillId: string,
-  level: number,
-  index: number,
-  language: string,
-  win: number,
-) {
-  try {
-    localStorage.setItem(posKey(drillId, level, language, win), String(index));
-  } catch {
-    /* ignore */
-  }
-}
-
-function loadPos(
-  drillId: string,
-  level: number,
-  language: string,
-  win: number,
-): number | null {
-  try {
-    const raw = localStorage.getItem(posKey(drillId, level, language, win));
-    if (raw == null) return null;
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearDraft(slot: DraftSlot) {
-  try {
-    localStorage.removeItem(draftKey(slot));
-  } catch {
-    /* ignore */
-  }
-}
-
-/**
- * Every saved editor buffer, everywhere. Only reachable from the Progress
- * panel behind a confirmation — it destroys work you can't see from where you
- * click. Deliberately leaves saved scripts and the free-mode buffer alone.
- */
-function clearAllDrafts() {
-  try {
-    const doomed: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && (k.startsWith("code-coach:drill:") || k.startsWith("code-coach:pos:"))) {
-        doomed.push(k);
-      }
-    }
-    doomed.forEach((k) => localStorage.removeItem(k));
-  } catch {
-    /* ignore */
-  }
-}
 
 /**
  * term  — terminal height
@@ -356,17 +225,20 @@ export default function App() {
   /** Endless type-along window the current buffers belong to — likewise. */
   const windowRef = useRef(0);
 
-  /** The slot the editor is currently showing. */
-  const slotNow = useCallback(
-    (index?: number): DraftSlot => ({
+  /** The exercises on screen, so a draft can be stamped with its own. */
+  const stepsRef = useRef<PracticeSession["steps"]>([]);
+
+  const slotNow = useCallback((index?: number): DraftSlot => {
+    const at = index ?? exerciseIndexRef.current;
+    return {
       drillId: drillRef.current ?? "",
-      index: index ?? exerciseIndexRef.current,
+      index: at,
       level: levelRef.current,
       language: languageRef.current,
       window: windowRef.current,
-    }),
-    [],
-  );
+      stamp: stampOf(stepsRef.current[at]),
+    };
+  }, []);
   const evalSeq = useRef(0);
   const debounce = useRef<number | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -456,6 +328,7 @@ export default function App() {
       carryIndex?: number,
     ) => {
       setSession(s);
+      stepsRef.current = s.steps;
       setProgress(s.progress);
       drillRef.current = s.drill_id;
       levelRef.current = s.dictation_level ?? 1;
@@ -493,6 +366,7 @@ export default function App() {
         level: levelRef.current,
         language: languageRef.current,
         window: windowRef.current,
+        stamp: stampOf(s.steps[startIndex]),
       };
 
       let initial = s.starter;
