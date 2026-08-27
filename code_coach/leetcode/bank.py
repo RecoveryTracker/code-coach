@@ -507,7 +507,7 @@ def study_payload(
     eight times to build one session.
     """
     from code_coach.leetcode.study import brief_for, lesson_for
-    from code_coach.leetcode.worked import worked_for
+    from code_coach.leetcode.worked import worked_for, worked_for_problem
 
     if not pattern_id:
         return None
@@ -533,7 +533,9 @@ def study_payload(
         # The lesson proper: one problem taken from the question to a
         # finished solution. Everything above says what the pattern is; this
         # is the part that shows how anyone gets there.
-        worked = worked_for(pattern_id)
+        # The lesson for the problem you are on, falling back to the one the
+        # pattern opens with while a problem is still waiting for its own.
+        worked = worked_for_problem(problem_number) or worked_for(pattern_id)
         if worked:
             out["lesson"]["worked"] = {
                 "problem": worked.problem,
@@ -587,7 +589,7 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
     wants the whole set rather than the one you happen to be on.
     """
     from code_coach.leetcode.study import brief_for, lesson_for
-    from code_coach.leetcode.worked import worked_for
+    from code_coach.leetcode.worked import worked_for, worked_for_problem
 
     out: list[dict[str, Any]] = []
     for pattern in patterns_for_language(language):
@@ -608,14 +610,7 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
             "pitfalls": list(lesson.pitfalls),
             "worked": None,
             "problems": [
-                {
-                    "number": p.number,
-                    "title": p.title,
-                    "difficulty": p.difficulty,
-                    "idea": p.idea,
-                    "complexity": p.complexity,
-                    "url": (brief_for(p.number).url if brief_for(p.number) else ""),
-                }
+                _lesson_problem(p, brief_for(p.number), worked_for_problem(p.number))
                 for p in pattern.problems
             ],
         }
@@ -638,3 +633,29 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
         out.append(entry)
     out.sort(key=lambda e: e["order"])
     return out
+
+
+def _lesson_problem(problem, brief, worked) -> dict[str, Any]:
+    """One problem in a pattern's list, with its own lesson attached."""
+    return {
+        "number": problem.number,
+        "title": problem.title,
+        "difficulty": problem.difficulty,
+        "idea": problem.idea,
+        "complexity": problem.complexity,
+        "url": brief.url if brief else "",
+        "statement": brief.statement if brief else "",
+        "worked": (
+            {
+                "problem": worked.problem,
+                "naive": worked.naive,
+                "why_not": worked.why_not,
+                "insight": worked.insight,
+                "stages": [
+                    {"explain": st.explain, "code": st.code} for st in worked.stages
+                ],
+            }
+            if worked
+            else None
+        ),
+    }
