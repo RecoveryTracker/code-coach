@@ -916,13 +916,32 @@ _STACK = Pattern(
 )
 
 
-# The remaining nine patterns are still being written. Until every pattern is
-# here this bank is deliberately NOT registered in `patterns_for_language`:
-# a partial bank would let `has_own_bank` say yes and then serve Python for
-# whatever is missing, which is the exact failure that was just fixed.
-PARTIAL: tuple[Pattern, ...] = (
+# The rest of the patterns live in problems_rust2 to keep each file a readable
+# length; PATTERNS below stitches them together.
+from code_coach.leetcode.problems_rust2 import (  # noqa: E402
+    _BINARY_SEARCH,
+    _DP,
+    _GRAPH,
+    _HEAP,
+    _LINKED_LIST,
+    _SUBSETS,
+    _TOPOLOGICAL,
+    _TREE_BFS,
+    _TREE_DFS,
+)
+
+PATTERNS: tuple[Pattern, ...] = (
     _HASH_MAP,
     _TWO_POINTERS,
     _SLIDING_WINDOW,
     _STACK,
+    _LINKED_LIST,
+    _BINARY_SEARCH,
+    _TREE_DFS,
+    _TREE_BFS,
+    _GRAPH,
+    _SUBSETS,
+    _HEAP,
+    _TOPOLOGICAL,
+    _DP,
 )

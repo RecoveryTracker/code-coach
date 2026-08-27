@@ -592,13 +592,19 @@ class CurriculumCodeThemeTests(unittest.TestCase):
 
     def test_a_code_theme_never_serves_another_language(self) -> None:
         """`patterns_for_language` falls back to Python's bank rather than
-        failing, so without a guard the Rust theme handed out Python."""
+        failing, so without a guard the Rust theme handed out Python.
+
+        Which languages have a bank is asked rather than listed. It used to be
+        spelled out here, and went stale the moment Rust got one.
+        """
+        from code_coach.leetcode.bank import has_own_bank
         from code_coach.typing.curriculum import leetcode_lines
 
-        for language in ("c", "cpp", "rust", "sql"):
+        for language in _WITHOUT_BANK:
             with self.subTest(language=language):
                 # No bank of its own — so no solution lines at all, rather
                 # than Python's.
+                self.assertFalse(has_own_bank(language))
                 self.assertEqual(leetcode_lines(language), [])
 
         for language in ("javascript", "typescript", "dart"):
@@ -749,9 +755,17 @@ class WholeFunctionModeTests(unittest.TestCase):
     def test_a_language_serves_its_own_blocks(self) -> None:
         from code_coach.typing.curriculum import leetcode_blocks
 
-        for language in ("c", "cpp", "rust", "sql"):
+        for language in _WITHOUT_BANK:
             with self.subTest(language=language):
                 self.assertEqual(leetcode_blocks(language), [])
+
+    def test_a_language_with_a_bank_gets_blocks_from_it(self) -> None:
+        """The other half of the same claim, which nothing checked."""
+        from code_coach.typing.curriculum import leetcode_blocks
+
+        for language in _WITH_BANK:
+            with self.subTest(language=language):
+                self.assertTrue(leetcode_blocks(language))
 
     def test_every_block_note_names_its_language(self) -> None:
         """Ten lines of Python and ten of Dart can look alike enough that you
@@ -787,6 +801,26 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def _bank_split() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Languages with their own solution bank, and those still borrowing.
+
+    Asked of the code rather than listed, so writing a bank moves a language
+    from one group to the other without anyone having to remember to edit a
+    test. Python is excluded: it IS the fallback, so it belongs in neither.
+    """
+    from code_coach.leetcode.bank import has_own_bank
+    from code_coach.languages import LANGUAGES
+
+    ids = [lang.id for lang in LANGUAGES if lang.id != "python"]
+    return (
+        tuple(i for i in ids if has_own_bank(i)),
+        tuple(i for i in ids if not has_own_bank(i)),
+    )
+
+
+_WITH_BANK, _WITHOUT_BANK = _bank_split()
+
+
 class OneBankPredicateTests(unittest.TestCase):
     """There is one answer to "does this language have its own solutions".
 
@@ -813,7 +847,7 @@ class OneBankPredicateTests(unittest.TestCase):
         predicate has to see through that rather than counting patterns."""
         from code_coach.leetcode.bank import has_own_bank, patterns_for_language
 
-        for language in ("c", "cpp", "rust", "sql"):
+        for language in _WITHOUT_BANK:
             with self.subTest(language=language):
                 # It does get a full-looking bank back...
                 self.assertEqual(len(patterns_for_language(language)), 13)

@@ -17,6 +17,18 @@ from code_coach.typing.teach import (
 )
 
 
+def _without_bank() -> tuple[str, ...]:
+    """Languages still borrowing Python's solutions."""
+    from code_coach.leetcode.bank import has_own_bank
+    from code_coach.languages import LANGUAGES
+
+    return tuple(
+        lang.id
+        for lang in LANGUAGES
+        if lang.id != "python" and not has_own_bank(lang.id)
+    )
+
+
 class PairTests(unittest.TestCase):
     def test_every_language_has_something_to_teach(self) -> None:
         for language in ("python", "javascript", "typescript", "dart", "c"):
@@ -48,7 +60,9 @@ class PairTests(unittest.TestCase):
     def test_a_language_is_never_taught_another_language(self) -> None:
         """patterns_for_language falls back to Python's bank, so without a
         guard a C learner would be typing Python solutions."""
-        for language in ("c", "cpp", "rust", "sql"):
+        # Asked of the code, not listed: Rust used to be in this group
+        # and now has a bank of its own.
+        for language in _without_bank():
             with self.subTest(language=language):
                 self.assertFalse(has_own_solutions(language))
                 for pair in teaching_pairs(language):
