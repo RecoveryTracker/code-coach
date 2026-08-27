@@ -499,6 +499,10 @@ MODES: tuple[Mode, ...] = (
         "A whole solution at a time — Enter for the next line, indentation and all.",
     ),
     Mode(
+        "teach", "Learn and Type",
+        "Type the idea, then type the code it describes. Reading, but slower on purpose.",
+    ),
+    Mode(
         "chain", "Word Chain",
         "A word and its meaning, then one close to it, and on down the trail.",
     ),
@@ -526,6 +530,14 @@ UNTYPEABLE = {
     "…": "...",  # ellipsis
     " ": " ",  # non-breaking space
     "­": "",  # soft hyphen
+    # Maths symbols. Prose about code slips into these easily, and none of
+    # them is on a keyboard — a target containing one cannot be completed.
+    "≤": "<=",
+    "≥": ">=",
+    "≠": "!=",
+    "×": "x",
+    "÷": "/",
+    "→": "->",
 }
 
 
@@ -728,6 +740,33 @@ def build_drill(
             )
         scoring = "wpm"
 
+    elif mode.id == "teach":
+        # Pairs, kept adjacent and in order: the sentence and then the code
+        # it is about. Shuffling them apart would lose the whole point, so
+        # the deal is over PAIRS and each one contributes two targets.
+        from code_coach.typing.teach import teaching_pairs
+
+        pool = teaching_pairs(_active_typing_language())
+        if pool:
+            key = f"teach:{_active_typing_language()}"
+            wanted = max(5, count // 6)
+            for pair in _deal_pairs(key, pool, rng, wanted):
+                targets.append(
+                    Target(
+                        text=typeable(pair.prose),
+                        prompt=typeable(pair.prose),
+                        note=f"the idea - {pair.source}",
+                    )
+                )
+                targets.append(
+                    Target(
+                        text=pair.code,
+                        prompt=pair.code,
+                        note="now the code it describes",
+                    )
+                )
+        scoring = "wpm"
+
     elif mode.id == "blocks":
         # Few, because each one is a whole function. Four ten-line solutions
         # is already a longer run than any other mode here.
@@ -759,6 +798,33 @@ def build_drill(
         hidden=mode.hidden,
         scoring=scoring,
     )
+
+
+def _active_typing_language() -> str:
+    """Which language's material to teach. Read once, here."""
+    try:
+        from code_coach.progress.store import ProgressStore
+
+        return getattr(ProgressStore().load(), "language", "python") or "python"
+    except Exception:
+        return "python"
+
+
+# What each teaching deal has already handed out, keyed the same way the
+# passage deals are. Pairs rather than lines, because a pair is the unit.
+_dealt_pairs: dict[str, set[str]] = {}
+
+
+def _deal_pairs(key: str, pool: list, rng: random.Random, wanted: int) -> list:
+    """`wanted` pairs, preferring ones this deal has not served yet."""
+    served = _dealt_pairs.setdefault(key, set())
+    fresh = [p for p in pool if p.code not in served]
+    if len(fresh) < wanted:
+        served.clear()
+        fresh = list(pool)
+    picks = list(rng.sample(fresh, k=min(wanted, len(fresh))))
+    served.update(p.code for p in picks)
+    return picks
 
 
 def _random_mix(
@@ -915,6 +981,7 @@ def _deal(
 def reset_deals() -> None:
     """Forget what's been served. Tests need a clean pool to measure against."""
     _dealt.clear()
+    _dealt_pairs.clear()
 
 
 def _speed_passages(
@@ -1040,6 +1107,10 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     # language is written with. A row section has none of that, and offering
     # the mode there would serve a function it cannot type a line of.
     if mode.id == "blocks" and not _can_type_code(section):
+        return False
+    # Learn and Type asks for a sentence and then a line of code, so it needs
+    # everything a code section needs plus ordinary prose punctuation.
+    if mode.id == "teach" and not _can_type_code(section):
         return False
     return True
 

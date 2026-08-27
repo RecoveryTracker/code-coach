@@ -439,7 +439,7 @@ _SLIDING_WINDOW = Pattern(
         ),
         _p(
             424, "Longest Repeating Character Replacement", "Medium",
-            "A window is valid while its size minus its commonest letter is ≤ k.",
+            "A window is valid while its size minus its commonest letter is at most k.",
             "O(n) time, O(1) space",
             """
             function characterReplacement(s, k) {
