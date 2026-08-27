@@ -90,6 +90,10 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.leetcode.problems_rust import PATTERNS as RUST_PATTERNS
 
         return RUST_PATTERNS
+    if language == "cpp":
+        from code_coach.leetcode.problems_cpp import PATTERNS as CPP_PATTERNS
+
+        return CPP_PATTERNS
     return PATTERNS
 
 
