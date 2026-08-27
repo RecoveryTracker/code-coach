@@ -41,6 +41,12 @@ export type TypingTeachLanguage = {
   name: string;
 };
 
+/** One reminder about code that won't run. */
+export type SyntaxHint = {
+  line: number;
+  message: string;
+};
+
 export type TypingCatalog = {
   sections: TypingSection[];
   themes: TypingTheme[];

@@ -8,6 +8,7 @@ import type {
   PracticeSession,
   ProgressInfo,
   ReferenceSheet,
+  SyntaxHint,
   SkillInfo,
   TypingCatalog,
   TypingCourse,
@@ -66,6 +67,17 @@ export async function setDictationLevel(
 
 export function fetchCurrentPractice(): Promise<PracticeSession> {
   return request("/api/practice/current");
+}
+
+/** Reminders about code that won't run. Empty when there's nothing to say. */
+export function fetchHints(
+  code: string,
+  language: string,
+): Promise<{ hints: SyntaxHint[] }> {
+  return request("/api/hints", {
+    method: "POST",
+    body: JSON.stringify({ code, language }),
+  });
 }
 
 /** Open the type-along for one problem, from a lesson. */

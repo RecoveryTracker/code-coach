@@ -9,6 +9,7 @@ import {
   backFromReview,
   evaluateDrill,
   fetchCurrentPractice,
+  fetchHints,
   fetchMoreLines,
   gotoLesson,
   gotoProblem,
@@ -32,6 +33,7 @@ import type {
   DrillEvaluateResult,
   PracticeSession,
   ProgressInfo,
+  SyntaxHint,
 } from "./types";
 
 const DEBOUNCE_MS = 180;
@@ -325,6 +327,19 @@ export default function App() {
   const [lessonsOpen, setLessonsOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
+  /**
+   * Free mode's reminders. Not the coach: they say nothing about whether you
+   * solved anything, only that a quote is open or a bracket never closes.
+   * Off is a real option, because sometimes you are mid-thought and know.
+   */
+  const [hints, setHints] = useState<SyntaxHint[]>([]);
+  const [hintsOn, setHintsOn] = useState(() => {
+    try {
+      return localStorage.getItem("code-coach:free-hints") !== "off";
+    } catch {
+      return true;
+    }
+  });
   /** Current exercise within the active lesson. */
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseDone, setExerciseDone] = useState(false);
@@ -361,10 +376,12 @@ export default function App() {
     "term" | "side" | "tt" | "explain" | "msg" | "viz" | null
   >(null);
   const freeModeRef = useRef(false);
+  const hintsOnRef = useRef(true);
 
   exerciseIndexRef.current = exerciseIndex;
   exerciseDoneRef.current = exerciseDone;
   freeModeRef.current = freeMode;
+  hintsOnRef.current = hintsOn;
 
   const score = useCallback(
     async (
@@ -619,6 +636,15 @@ export default function App() {
     }
   }, [panes]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("code-coach:free-hints", hintsOn ? "on" : "off");
+    } catch {
+      /* ignore */
+    }
+    if (!hintsOn) setHints([]);
+  }, [hintsOn]);
+
   const togglePane = useCallback((key: keyof Panes) => {
     setPanes((p) => ({ ...p, [key]: !p[key] }));
   }, []);
@@ -632,6 +658,25 @@ export default function App() {
         } catch {
           /* ignore */
         }
+        if (debounce.current) window.clearTimeout(debounce.current);
+        debounce.current = window.setTimeout(() => {
+          debounce.current = null;
+          if (!hintsOnRef.current) {
+            setHints([]);
+            return;
+          }
+          void (async () => {
+            try {
+              const got = await fetchHints(
+                codeRef.current,
+                languageRef.current,
+              );
+              setHints(got.hints);
+            } catch {
+              /* a reminder that cannot be fetched is not worth a message */
+            }
+          })();
+        }, DEBOUNCE_MS);
         return;
       }
       if (debounce.current) window.clearTimeout(debounce.current);
@@ -1109,13 +1154,17 @@ export default function App() {
         type="button"
         className={`ws-btn${freeMode ? " primary" : ""}`}
         onClick={toggleFreeMode}
+        aria-pressed={freeMode}
         title={
           freeMode
-            ? "Turn the coach back on"
-            : "Code freely without coach prompts"
+            ? "Leave free mode and go back to the exercises"
+            : "Code anything you like, with the exercises paused"
         }
       >
-        {freeMode ? "Coach on" : "Free mode"}
+        {/* The name never changes, so you look for the same word to get
+            back. It used to become "Coach on", which reads as a different
+            button and is somewhere else on the row by the time you want it. */}
+        Free mode{freeMode ? " · on" : ""}
       </button>
       {!freeMode ? (
         <button
@@ -1241,10 +1290,36 @@ export default function App() {
         <div className="coach-banner free-banner">
           <div className="cur-nav-line">
             <span className="coach-banner-done">
-              Free mode — code anything. Use <strong>Save</strong> /{" "}
-              <strong>Load…</strong> for your scripts.{" "}
-              <strong>Coach on</strong> returns to practice.
+              {hints.length > 0 && hintsOn ? (
+                <span className="free-hints">
+                  {hints.map((h, i) => (
+                    <span className="free-hint" key={i}>
+                      <span className="free-hint-line">line {h.line}</span>
+                      {h.message}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <>
+                  Free mode — code anything. <strong>Save</strong> /{" "}
+                  <strong>Load…</strong> keep your scripts.{" "}
+                  <strong>Free mode</strong> again returns to the exercises.
+                </>
+              )}
             </span>
+            <button
+              type="button"
+              className={`free-hints-toggle${hintsOn ? " on" : ""}`}
+              onClick={() => setHintsOn((on) => !on)}
+              aria-pressed={hintsOn}
+              title={
+                hintsOn
+                  ? "Reminders about quotes, brackets and blocks are on"
+                  : "No reminders — you're on your own"
+              }
+            >
+              Reminders {hintsOn ? "on" : "off"}
+            </button>
             {brand}
             {toolbar}
           </div>

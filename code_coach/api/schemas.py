@@ -341,6 +341,22 @@ class TypingThemeInfo(BaseModel):
     has_blocks: bool = False
 
 
+class HintsRequest(BaseModel):
+    """Code as it stands, for a reminder about anything that won't run."""
+
+    code: str
+    language: str = "python"
+
+
+class HintInfo(BaseModel):
+    line: int
+    message: str
+
+
+class HintsResponse(BaseModel):
+    hints: list[HintInfo] = []
+
+
 class GotoProblemRequest(BaseModel):
     """Open the type-along for one problem, from a lesson."""
 

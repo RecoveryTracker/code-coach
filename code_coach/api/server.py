@@ -63,6 +63,9 @@ from code_coach.skills.drills import get_drill, set_class1_batch
 from code_coach.api.schemas import (
     GotoLessonRequest,
     GotoProblemRequest,
+    HintInfo,
+    HintsRequest,
+    HintsResponse,
     NavigateRequest,
     ReviewRequest,
     SupportLinkInfo,
@@ -639,6 +642,23 @@ def practice_goto_problem(body: GotoProblemRequest) -> PracticeSession:
     session = _session_from_progress()
     session.jump_to_exercise = offset
     return session
+
+
+@app.post("/api/hints", response_model=HintsResponse)
+def hints(body: HintsRequest) -> HintsResponse:
+    """Reminders about code that will not run.
+
+    Free mode turns the coach off, and this is deliberately not the coach:
+    it says nothing about whether you solved anything, only that a quote is
+    open or a bracket never closes. Empty most of the time, which is the
+    point — a hint on working code is worse than no hint.
+    """
+    from code_coach.syntax_hints import hints_for
+
+    found = hints_for(body.code or "", body.language or "python")
+    return HintsResponse(
+        hints=[HintInfo(line=h.line, message=h.message) for h in found]
+    )
 
 
 @app.get("/api/reference")

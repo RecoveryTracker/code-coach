@@ -2589,6 +2589,54 @@ body.is-resizing .coach-explain-grip {
 }
 
 
+/* ── Free mode reminders ───────────────────────────────────
+   Not the coach. These say a quote is open or a bracket never closes, and
+   nothing at all about whether the code is any good — so they are stated
+   plainly rather than scored, and they can be switched off. */
+.free-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.free-hint {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #ffb454;
+}
+
+.free-hint-line {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e7b8b;
+}
+
+.free-hints-toggle {
+  flex: none;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 5px;
+  background: none;
+  color: #6e7b8b;
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.free-hints-toggle:hover {
+  background: #1a222c;
+  color: #cdd9e5;
+}
+
+.free-hints-toggle.on {
+  border-color: #2b3a4d;
+  color: #9ff0c0;
+}
+
 /* ── Pane switches ─────────────────────────────────────────
    Fixed, small, and never hidden. Whatever else you put away, this is how it
    comes back — a control that can hide itself is a trap on a short window,
