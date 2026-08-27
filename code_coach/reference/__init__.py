@@ -60,9 +60,11 @@ def _register_all() -> None:
     """Import the per-language sheets for their side effects."""
     from code_coach.reference import (  # noqa: F401
         c,
+        cpp,
         dart,
         javascript,
         python,
+        sql,
         typescript,
     )
 
