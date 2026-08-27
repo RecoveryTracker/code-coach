@@ -8,6 +8,7 @@ scores waypoints, returns teaching-oriented next step (not personal data).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import os
 import signal
 import shutil
@@ -115,7 +116,13 @@ def _interpreter_for(path: Path) -> list[str] | None:
 _COMPILERS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     ".c": (("gcc", "clang"), ("-std=c17", "-lm")),
     ".cpp": (("g++", "clang++"), ("-std=c++17",)),
-    ".rs": (("rustc",), ("-O",)),
+    # Pin the edition. Without it rustc defaults to 2015, which is not what
+    # anyone writing Rust means today — and the difference is not cosmetic:
+    # array .into_iter() yields references in 2015 and values in 2021, so
+    # ordinary modern code fails for a reason that is nothing to do with it.
+    # C and C++ above already pin their language version; Rust was the odd
+    # one out.
+    ".rs": (("rustc",), ("-O", "--edition", "2021")),
 }
 
 
@@ -201,12 +208,134 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
             pass
 
 
+# Windows without a GNU toolchain still compiles: fall back to MSVC. cl.exe
+# only works inside the environment vcvars64.bat sets up, so a build is one
+# cmd session that calls that first and then compiles.
+_MSVC_STD = {".c": "/std:c17", ".cpp": "/std:c++17"}
+_VSWHERE = Path(
+    r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+)
+_VCVARS_FALLBACK = Path(
+    r"C:\Program Files\Microsoft Visual Studio\2022\Community"
+    r"\VC\Auxiliary\Build\vcvars64.bat"
+)
+
+
+@lru_cache(maxsize=1)
+def _find_vcvars() -> Path | None:
+    """vcvars64.bat from the newest Visual Studio that ships the C++ tools.
+
+    vswhere is the supported way to find an install — Professional, Enterprise
+    and side-by-side versions all answer it — and the hardcoded Community path
+    is only a backstop for machines missing the installer. Cached because every
+    Run would otherwise pay for the lookup.
+    """
+    if os.name != "nt":
+        return None
+
+    candidates: list[Path] = []
+    if _VSWHERE.exists():
+        try:
+            found = subprocess.run(
+                [
+                    str(_VSWHERE),
+                    "-latest",
+                    "-products", "*",
+                    "-requires",
+                    "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                    "-property", "installationPath",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            found = None
+        if found is not None and found.returncode == 0:
+            root = found.stdout.strip().splitlines()
+            if root:
+                candidates.append(
+                    Path(root[0]) / "VC" / "Auxiliary" / "Build" / "vcvars64.bat"
+                )
+    candidates.append(_VCVARS_FALLBACK)
+
+    return next((c for c in candidates if c.exists()), None)
+
+
+def msvc_available() -> bool:
+    return _find_vcvars() is not None
+
+
+def _strip_cl_echo(text: str, source: Path) -> str:
+    """Drop the source file name cl prints before anything else.
+
+    That line is build chatter; the student never wrote a program to say it.
+    """
+    kept = [line for line in text.splitlines() if line.strip() != source.name]
+    return "\n".join(kept).strip()
+
+
+def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
+    """Compile with cl.exe inside a vcvars64 session, then run the result.
+
+    vcvars64.bat changes the working directory, so the source, the .obj and
+    the .exe are all named absolutely; the build products land in their own
+    temp directory instead of beside the source.
+    """
+    vcvars = _find_vcvars()
+    if vcvars is None:  # pragma: no cover - callers look before they leap
+        return "", "No Visual Studio C++ toolchain was found.", 127
+
+    with tempfile.TemporaryDirectory(prefix="code-coach-msvc-") as build:
+        build_dir = Path(build)
+        obj = build_dir / "program.obj"
+        exe = build_dir / "program.exe"
+        command = (
+            f'call "{vcvars}" >nul && '
+            f'cl /nologo /EHsc {_MSVC_STD[path.suffix.lower()]} '
+            f'"{path}" /Fo"{obj}" /Fe"{exe}"'
+        )
+        # One string, not a list: an argv list gets re-quoted on the way to
+        # cmd and the quotes around these paths come out mangled. `/s` tells
+        # cmd to strip the outer quotes and run the rest verbatim.
+        try:
+            built = subprocess.run(
+                f'cmd /s /c "{command}"',
+                capture_output=True,
+                text=True,
+                errors="replace",  # cl speaks the console codepage
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            return "", f"Compiler timed out after {timeout:g}s.", 124
+
+        if built.returncode != 0 or not exe.exists():
+            # cl reports diagnostics on stdout, so that is the error text.
+            problem = _strip_cl_echo(built.stdout, path) or built.stderr.strip()
+            return "", _cap_output(problem), built.returncode or 1
+
+        # A successful build says only the file name; that is not output.
+        try:
+            ran = subprocess.run(
+                [str(exe)],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                stdin=subprocess.DEVNULL,
+            )
+            return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
+        except subprocess.TimeoutExpired:
+            return "", f"Program timed out after {timeout:g}s.", 124
+
+
 def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
     """Build the source, then run what came out."""
     suffix = path.suffix.lower()
     candidates, extra = _COMPILERS[suffix]
     compiler = next((c for c in candidates if shutil.which(c)), None)
     if compiler is None:
+        if suffix in _MSVC_STD and _find_vcvars() is not None:
+            return _run_msvc(path, timeout)
         names = " or ".join(candidates)
         return (
             "",

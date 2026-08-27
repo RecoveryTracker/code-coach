@@ -1516,8 +1516,7 @@ _SUBSETS = Pattern(
                     ('8', "tuv"),
                     ('9', "wxyz"),
                 ]
-                .iter()
-                .copied()
+                .into_iter()
                 .collect();
                 fn walk(
                     index: usize,
