@@ -94,6 +94,10 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.leetcode.problems_cpp import PATTERNS as CPP_PATTERNS
 
         return CPP_PATTERNS
+    if language == "c":
+        from code_coach.leetcode.problems_c import PATTERNS as C_PATTERNS
+
+        return C_PATTERNS
     return PATTERNS
 
 
@@ -119,9 +123,9 @@ def current_language() -> str:
     those would otherwise need a language argument it doesn't care about.
     """
     try:
-        from code_coach.progress.store import ProgressStore
+        from code_coach.progress.store import active_store
 
-        return getattr(ProgressStore().load(), "language", "python") or "python"
+        return getattr(active_store().load(), "language", "python") or "python"
     except Exception:
         return "python"
 
@@ -247,8 +251,10 @@ def _units(class_id: str, level: int, language: str = "python") -> tuple[Unit, .
     return tuple(deduped)
 
 
-def unit_count(class_id: str, level: int) -> int:
-    return len(_units(class_id, max(1, min(5, level)), current_language()))
+def unit_count(class_id: str, level: int, language: str | None = None) -> int:
+    return len(
+        _units(class_id, max(1, min(5, level)), language or current_language())
+    )
 
 
 # ── Lesson 1 — endless verbatim type-along ──────────────────
@@ -271,10 +277,23 @@ def _spec_for(unit: Unit, position: int) -> LineSpec:
     )
 
 
-def leetcode_specs(class_id: str, *, batch: int, count: int, level: int) -> list[LineSpec]:
-    """The `batch`-th window of this class's material, wrapping at the end."""
+def leetcode_specs(
+    class_id: str,
+    *,
+    batch: int,
+    count: int,
+    level: int,
+    language: str | None = None,
+) -> list[LineSpec]:
+    """The `batch`-th window of this class's material, wrapping at the end.
+
+    The language is an argument because `batch_holding` takes one, and the two
+    have to be counting the same units — a window built from one language's
+    solutions and an offset computed from another's does not point where it
+    says it does.
+    """
     level = max(1, min(5, int(level)))
-    units = _units(class_id, level, current_language())
+    units = _units(class_id, level, language or current_language())
     if not units:
         return []
     # Never serve more exercises than the class has answers. A class with four
@@ -296,12 +315,16 @@ def make_leetcode_batch(
     count: int = 8,
     level: int = 1,
     drill_id: str | None = None,
+    language: str | None = None,
 ) -> Any:
     from code_coach.dictation.session import specs_to_drill
 
     level = max(1, min(5, int(level)))
-    specs = leetcode_specs(class_id, batch=batch, count=count, level=level)
-    units = _units(class_id, level, current_language())
+    language = language or current_language()
+    specs = leetcode_specs(
+        class_id, batch=batch, count=count, level=level, language=language
+    )
+    units = _units(class_id, level, language)
     total = len(units) or 1
     # The window may have been trimmed to fit the class, so count what was
     # actually served rather than what was asked for.

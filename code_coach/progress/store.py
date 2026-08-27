@@ -21,6 +21,32 @@ CoachLevel = int
 
 DEFAULT_PATH = Path.home() / ".code_coach" / "student_progress.json"
 
+# The one store the app is using. Everything that needs to know about the
+# student reads it through here, so there is a single answer rather than one
+# per caller that happens to construct its own.
+_ACTIVE: "ProgressStore | None" = None
+
+
+def active_store() -> "ProgressStore":
+    """The store this process is working with, made on first use."""
+    global _ACTIVE
+    if _ACTIVE is None:
+        _ACTIVE = ProgressStore()
+    return _ACTIVE
+
+
+def use_store(store: "ProgressStore") -> "ProgressStore":
+    """Point the app at a different store, and hand back the previous one.
+
+    Tests swap in a temporary store this way; returning the old one means
+    they can put it back rather than leaving the process pointed somewhere
+    unexpected.
+    """
+    global _ACTIVE
+    previous = active_store()
+    _ACTIVE = store
+    return previous
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()

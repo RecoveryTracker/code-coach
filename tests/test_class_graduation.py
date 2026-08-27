@@ -17,7 +17,7 @@ from pathlib import Path
 from code_coach.api import server
 from code_coach.api.schemas import GotoLessonRequest
 from code_coach.leetcode.bank import unit_count
-from code_coach.progress.store import ProgressStore
+from code_coach.progress.store import ProgressStore, active_store, use_store
 
 
 class GraduationTests(unittest.TestCase):
@@ -25,7 +25,10 @@ class GraduationTests(unittest.TestCase):
         # A throwaway progress file, so tests can't disturb real progress or
         # each other.
         self._real_store = server._store
-        server._store = ProgressStore(Path(tempfile.mkdtemp()) / "progress.json")
+        use_store(
+            ProgressStore(Path(tempfile.mkdtemp()) / "progress.json")
+        )
+        server._store = active_store()
         progress = server._store.load()
         progress.language = "python"
         # Whole functions: one unit per problem, so a class ends quickly.
@@ -103,7 +106,10 @@ class DeclaredFundamentalsTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self._real_store = server._store
-        server._store = ProgressStore(Path(tempfile.mkdtemp()) / "progress.json")
+        use_store(
+            ProgressStore(Path(tempfile.mkdtemp()) / "progress.json")
+        )
+        server._store = active_store()
         progress = server._store.load()
         progress.language = "javascript"
         progress.dictation_level = 1

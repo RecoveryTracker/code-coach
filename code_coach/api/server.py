@@ -57,7 +57,7 @@ from code_coach.practice.session import (
     mark_drill_complete,
     progress_summary,
 )
-from code_coach.progress.store import ProgressStore, StudentProgress
+from code_coach.progress.store import active_store, StudentProgress
 from code_coach.skills.catalog import get_skill, list_skills
 from code_coach.skills.drills import get_drill, set_class1_batch
 from code_coach.api.schemas import (
@@ -144,7 +144,7 @@ async def _guard_host(request: Request, call_next):
     return await call_next(request)
 
 
-_store = ProgressStore()
+_store = active_store()
 
 
 def _progress_response() -> ProgressResponse:

@@ -245,9 +245,13 @@ class GotoProblemTests(unittest.TestCase):
         from pathlib import Path
 
         from code_coach.api import server
-        from code_coach.progress.store import ProgressStore
+        from code_coach.progress.store import ProgressStore, active_store, use_store
 
-        server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
+        # use_store, not just server._store: the bank reads the
+        # active store too, and if only one moves they answer
+        # about different students.
+        use_store(ProgressStore(Path(tempfile.mkdtemp()) / "p.json"))
+        server._store = active_store()
         return server
 
     def test_it_lands_on_the_problem_asked_for(self) -> None:

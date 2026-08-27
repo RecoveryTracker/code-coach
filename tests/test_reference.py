@@ -139,11 +139,12 @@ class EndpointTests(unittest.TestCase):
         from pathlib import Path
 
         from code_coach.api import server
-        from code_coach.progress.store import ProgressStore
+        from code_coach.progress.store import ProgressStore, active_store, use_store
 
         real = server._store
         try:
-            server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
+            use_store(ProgressStore(Path(tempfile.mkdtemp()) / "p.json"))
+            server._store = active_store()
             for language in ("python", "javascript", "typescript", "dart"):
                 progress = server._store.load()
                 progress.language = language
@@ -175,11 +176,12 @@ class EndpointTests(unittest.TestCase):
         from unittest import mock
 
         from code_coach.api import server
-        from code_coach.progress.store import ProgressStore
+        from code_coach.progress.store import ProgressStore, active_store, use_store
 
         real = server._store
         try:
-            server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
+            use_store(ProgressStore(Path(tempfile.mkdtemp()) / "p.json"))
+            server._store = active_store()
             with mock.patch(
                 "code_coach.reference.sheet_for", return_value=None
             ):
