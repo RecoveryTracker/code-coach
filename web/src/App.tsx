@@ -11,6 +11,7 @@ import {
   fetchCurrentPractice,
   fetchMoreLines,
   gotoLesson,
+  gotoProblem,
   navigateCurriculum,
   setDictationLevel,
   startReview,
@@ -663,6 +664,25 @@ export default function App() {
     void score(id, codeRef.current, true);
   }, [score, slotNow]);
 
+  /**
+   * Open one problem, from a lesson. Lands on the exercise the server says
+   * the problem sits at rather than the top of its window, and leaves the
+   * Lessons screen so you arrive in the editor.
+   */
+  const openProblem = useCallback(
+    async (patternId: string, problemNumber: number) => {
+      if (drillRef.current) saveDraft(slotNow(), codeRef.current);
+      try {
+        const next = await gotoProblem(patternId, problemNumber);
+        await loadSession(next, false, null, next.jump_to_exercise ?? undefined);
+        setLessonsOpen(false);
+      } catch {
+        /* stay in the lesson rather than half-navigating */
+      }
+    },
+    [loadSession, slotNow],
+  );
+
   const jumpTo = useCallback(
     async (body: {
       class_id?: string;
@@ -1151,7 +1171,11 @@ export default function App() {
             Back to code
           </button>
         </div>
-        <Lessons />
+        <Lessons
+          onOpenProblem={(patternId, problemNumber) =>
+            void openProblem(patternId, problemNumber)
+          }
+        />
       </div>
     );
   }

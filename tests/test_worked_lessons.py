@@ -222,5 +222,98 @@ class CatalogueTests(unittest.TestCase):
         self.assertTrue(entries[0]["worked"]["stages"])
 
 
+class GotoProblemTests(unittest.TestCase):
+    """Clicking a problem in a lesson opens it in the editor.
+
+    The window a problem lives in depends on the batch and the difficulty, so
+    the jump has to work out which one holds it rather than assuming the
+    first — otherwise the link lands you near the problem instead of on it.
+    """
+
+    def _server(self):
+        import tempfile
+        from pathlib import Path
+
+        from code_coach.api import server
+        from code_coach.progress.store import ProgressStore
+
+        server._store = ProgressStore(Path(tempfile.mkdtemp()) / "p.json")
+        return server
+
+    def test_it_lands_on_the_problem_asked_for(self) -> None:
+        from code_coach.api import server as real_module
+        from code_coach.api.schemas import GotoProblemRequest
+
+        real = real_module._store
+        try:
+            server = self._server()
+            for pattern in PATTERNS:
+                for problem in pattern.problems[:3]:
+                    session = server.practice_goto_problem(
+                        GotoProblemRequest(
+                            pattern_id=pattern.id, problem_number=problem.number
+                        )
+                    )
+                    step = session.steps[session.jump_to_exercise]
+                    with self.subTest(problem=problem.number):
+                        self.assertEqual(session.class_id, pattern.id)
+                        self.assertEqual(session.lesson_number, 1)
+                        self.assertEqual(
+                            step.study.problem.number, problem.number
+                        )
+        finally:
+            real_module._store = real
+
+    def test_it_works_at_every_difficulty(self) -> None:
+        """The windows are cut differently at each chunk size."""
+        from code_coach.api import server as real_module
+        from code_coach.api.schemas import GotoProblemRequest
+
+        real = real_module._store
+        try:
+            server = self._server()
+            for level in (1, 3, 5):
+                progress = server._store.load()
+                progress.dictation_level = level
+                server._store.save(progress)
+                session = server.practice_goto_problem(
+                    GotoProblemRequest(pattern_id="lc-dp", problem_number=152)
+                )
+                step = session.steps[session.jump_to_exercise]
+                with self.subTest(level=level):
+                    self.assertEqual(step.study.problem.number, 152)
+        finally:
+            real_module._store = real
+
+    def test_a_problem_that_is_not_there_is_a_404(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api import server as real_module
+        from code_coach.api.schemas import GotoProblemRequest
+
+        real = real_module._store
+        try:
+            server = self._server()
+            with self.assertRaises(HTTPException) as caught:
+                server.practice_goto_problem(
+                    GotoProblemRequest(pattern_id="lc-dp", problem_number=99999)
+                )
+            self.assertEqual(caught.exception.status_code, 404)
+        finally:
+            real_module._store = real
+
+    def test_arriving_any_other_way_does_not_jump(self) -> None:
+        """jump_to_exercise is the lesson link's business only; every other
+        route wants wherever you left off."""
+        from code_coach.api import server as real_module
+
+        real = real_module._store
+        try:
+            server = self._server()
+            self.assertIsNone(server.practice_current().jump_to_exercise)
+        finally:
+            real_module._store = real
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -62,6 +62,7 @@ from code_coach.skills.catalog import get_skill, list_skills
 from code_coach.skills.drills import get_drill, set_class1_batch
 from code_coach.api.schemas import (
     GotoLessonRequest,
+    GotoProblemRequest,
     NavigateRequest,
     ReviewRequest,
     SupportLinkInfo,
@@ -602,6 +603,42 @@ def practice_more_lines() -> PracticeSession:
     progress.exercise_index = 0
     _store.save(progress)
     return _session_from_progress()
+
+
+@app.post("/api/practice/goto-problem", response_model=PracticeSession)
+def practice_goto_problem(body: GotoProblemRequest) -> PracticeSession:
+    """Open the type-along for one problem, from a lesson.
+
+    Returns the session with `jump_to_exercise` set to where the problem sits
+    in the window, so the client can land on it rather than on the window's
+    first line.
+    """
+    from code_coach.leetcode.bank import batch_holding
+
+    progress = _store.load()
+    language = getattr(progress, "language", "python") or "python"
+    level = max(1, min(5, int(getattr(progress, "dictation_level", 1) or 1)))
+
+    found = batch_holding(body.pattern_id, body.problem_number, level, language)
+    if found is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"#{body.problem_number} isn't in {body.pattern_id} at this "
+                "difficulty."
+            ),
+        )
+    batch, offset = found
+
+    goto_position(progress, class_id=body.pattern_id, lesson_number=1)
+    progress.set_batch(body.pattern_id, batch)
+    progress.current_drill_id = None
+    progress.exercise_index = offset
+    _store.save(progress)
+
+    session = _session_from_progress()
+    session.jump_to_exercise = offset
+    return session
 
 
 @app.get("/api/reference")

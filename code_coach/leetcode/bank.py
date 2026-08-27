@@ -659,3 +659,21 @@ def _lesson_problem(problem, brief, worked) -> dict[str, Any]:
             else None
         ),
     }
+
+def batch_holding(
+    class_id: str, problem_number: int, level: int, language: str = "python"
+) -> tuple[int, int] | None:
+    """Which window holds a problem, and where in it — or None if it isn't
+    in this class at this difficulty.
+
+    A class is served in windows of WINDOW_SIZE units, so a problem's window
+    is its unit's position divided by that, and its offset is the remainder.
+    """
+    from code_coach.dictation.bank import WINDOW_SIZE
+
+    units = _units(class_id, max(1, min(5, level)), language)
+    for position, unit in enumerate(units):
+        if unit.problem_number == problem_number:
+            stride = min(WINDOW_SIZE, len(units)) or WINDOW_SIZE
+            return position // stride, position % stride
+    return None

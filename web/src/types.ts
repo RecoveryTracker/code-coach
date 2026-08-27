@@ -380,6 +380,8 @@ export type PracticeSession = {
   class_total?: number;
   /** Where this window starts inside that total. */
   class_position?: number;
+  /** Where a lesson link asked us to land; null means "where you left off". */
+  jump_to_exercise?: number | null;
   /** Which window of the endless type-along this is — part of the draft key. */
   window?: number;
   /** "Watch it run" needs a tracer — Python only, for now. */

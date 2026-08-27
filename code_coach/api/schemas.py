@@ -242,6 +242,9 @@ class PracticeSession(BaseModel):
     class_total: int = 0
     # How far into that total the current window starts.
     class_position: int = 0
+    # Where to land when a lesson sent you here. None means "wherever you
+    # left off", which is what every other way of arriving wants.
+    jump_to_exercise: int | None = None
     # Which window of the endless type-along this is. The client keys its
     # saved editor buffers on it: the drill id is the same for every window of
     # a class, so without it a new window lands on the previous one's drafts
@@ -336,6 +339,13 @@ class TypingThemeInfo(BaseModel):
     has_words: bool
     has_passages: bool
     has_blocks: bool = False
+
+
+class GotoProblemRequest(BaseModel):
+    """Open the type-along for one problem, from a lesson."""
+
+    pattern_id: str
+    problem_number: int
 
 
 class TypingTeachLanguage(BaseModel):

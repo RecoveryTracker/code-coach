@@ -74,6 +74,12 @@ class StudentProgress:
     def lines_for(self, class_id: str) -> int:
         return int(self.dictation_lines.get(class_id, 0) or 0)
 
+    def set_batch(self, class_id: str, batch: int) -> int:
+        """Land on a specific window. Used when a lesson links to a problem
+        that is not in the window you happen to be on."""
+        self.dictation_batches[class_id] = max(0, int(batch))
+        return self.dictation_batches[class_id]
+
     def bump_batch(self, class_id: str) -> int:
         nxt = self.batch_for(class_id) + 1
         self.dictation_batches[class_id] = nxt

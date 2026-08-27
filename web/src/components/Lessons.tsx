@@ -14,7 +14,12 @@ import type { LessonEntry } from "../types";
  * So this is a place rather than a panel: the thirteen patterns down the side
  * in learning order, and one of them open at a time.
  */
-export default function Lessons() {
+type Props = {
+  /** Open this problem in the editor. Set by the app; absent while browsing. */
+  onOpenProblem?: (patternId: string, problemNumber: number) => void;
+};
+
+export default function Lessons({ onOpenProblem }: Props) {
   const [lessons, setLessons] = useState<LessonEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -164,9 +169,23 @@ export default function Lessons() {
                   <span className={`lessons-diff ${p.difficulty.toLowerCase()}`}>
                     {p.difficulty}
                   </span>
-                  <span className="lessons-prob-name">
-                    #{p.number} {p.title}
-                  </span>
+                  {/* Reading about a problem and then hunting for it in the
+                      curriculum is a chore nobody should do twice, so the
+                      title opens it. */}
+                  {onOpenProblem ? (
+                    <button
+                      type="button"
+                      className="lessons-prob-open"
+                      onClick={() => onOpenProblem(open.id, p.number)}
+                      title="Open this one in the editor"
+                    >
+                      #{p.number} {p.title}
+                    </button>
+                  ) : (
+                    <span className="lessons-prob-name">
+                      #{p.number} {p.title}
+                    </span>
+                  )}
                   <span className="lessons-prob-idea">{p.idea}</span>
                 </li>
               ))}

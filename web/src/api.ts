@@ -68,6 +68,20 @@ export function fetchCurrentPractice(): Promise<PracticeSession> {
   return request("/api/practice/current");
 }
 
+/** Open the type-along for one problem, from a lesson. */
+export function gotoProblem(
+  patternId: string,
+  problemNumber: number,
+): Promise<PracticeSession> {
+  return request("/api/practice/goto-problem", {
+    method: "POST",
+    body: JSON.stringify({
+      pattern_id: patternId,
+      problem_number: problemNumber,
+    }),
+  });
+}
+
 export function fetchReference(): Promise<ReferenceSheet> {
   return request("/api/reference");
 }
