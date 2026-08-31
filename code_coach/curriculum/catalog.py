@@ -504,6 +504,32 @@ def _build_leetcode_classes(first_number: int) -> list[ClassDef]:
 CLASSES.extend(_build_leetcode_classes(first_number=len(CLASSES) + 1))
 
 
+def _build_systems_classes(first_number: int) -> list[ClassDef]:
+    """Implement-the-primitive classes: the systems and quant material.
+
+    Built from the C++ bank because that is the only language they exist in
+    so far; `classes_for_language` is what keeps them out of the others.
+    """
+    from code_coach.systems import patterns_for_language as systems_for
+
+    out = []
+    for offset, pattern in enumerate(
+        sorted(systems_for("cpp"), key=lambda p: p.order)
+    ):
+        out.append(
+            _leetcode_class(
+                class_id=pattern.id,
+                name=f"Systems — {pattern.name}",
+                description=pattern.blurb,
+                number=first_number + offset,
+            )
+        )
+    return out
+
+
+CLASSES.extend(_build_systems_classes(first_number=len(CLASSES) + 1))
+
+
 def get_class(class_id: str) -> ClassDef | None:
     for c in CLASSES:
         if c.id == class_id:
@@ -519,20 +545,26 @@ def classes_for_language(language: str) -> list[ClassDef]:
     declared snippets. Offering one without material handed out Python
     exercises to type into a .dart file, so every answer failed.
     """
-    if language == "python":
-        return list(CLASSES)
+    # Python used to short-circuit to everything, which was true while every
+    # class was either fundamentals or LeetCode. It stopped being true when a
+    # family arrived that Python has no answer for — there is no Python
+    # version of "write a spinlock" — so it goes through the same filter.
 
     from code_coach.fundamentals.base import has_fundamentals
-    from code_coach.leetcode.bank import patterns_for_language
+    from code_coach.leetcode.bank import has_own_bank
+    from code_coach.systems import has_systems, is_systems_class
 
-    # A language has the LeetCode classes when it has its own solution bank —
-    # patterns_for_language falls back to Python's, so check by identity.
-    from code_coach.leetcode.problems import PATTERNS as PY_PATTERNS
-
-    has_leetcode = patterns_for_language(language) is not PY_PATTERNS
+    # has_own_bank rather than an identity check written out again here —
+    # patterns_for_language falls back to Python's, and asking four separate
+    # places to remember that is how one of them forgets.
+    has_leetcode = has_own_bank(language)
+    offers_systems = has_systems(language)
     out: list[ClassDef] = []
     for c in CLASSES:
-        if is_leetcode_class(c.id):
+        if is_systems_class(c.id):
+            if offers_systems:
+                out.append(c)
+        elif is_leetcode_class(c.id):
             if has_leetcode:
                 out.append(c)
         elif has_fundamentals(language, c.id):

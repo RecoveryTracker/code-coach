@@ -65,7 +65,16 @@ _FRAGMENT_STARTS = (
 
 
 def is_leetcode_class(class_id: str) -> bool:
-    return class_id in LEETCODE_CLASS_IDS
+    """Whether this class is served by the type-along drill builder.
+
+    The systems classes are too: they carry the same Pattern and Problem
+    shapes, so they want the same windows, difficulties and study panel. The
+    name is now narrower than what it decides, but renaming it would touch
+    every caller for no gain.
+    """
+    from code_coach.systems import is_systems_class
+
+    return class_id in LEETCODE_CLASS_IDS or is_systems_class(class_id)
 
 
 def patterns_for_language(language: str) -> tuple[Pattern, ...]:
@@ -144,7 +153,24 @@ class Unit:
 
 
 def _patterns_for(class_id: str, language: str | None = None) -> tuple[Pattern, ...]:
-    patterns = patterns_for_language(language or current_language())
+    """The patterns a class draws on.
+
+    This is the single place the rest of the machinery asks, so a second
+    family of material only has to be known here — units, windows, the study
+    panel and the lesson links all come along on their own.
+    """
+    language = language or current_language()
+
+    from code_coach.systems import is_systems_class
+    from code_coach.systems import patterns_for_language as systems_for
+
+    if is_systems_class(class_id):
+        found = next(
+            (p for p in systems_for(language) if p.id == class_id), None
+        )
+        return (found,) if found else ()
+
+    patterns = patterns_for_language(language)
     if class_id == ALL_CLASS_ID:
         return patterns
     found = next((p for p in patterns if p.id == class_id), None)
