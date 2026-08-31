@@ -43,9 +43,15 @@ def _q(ask: str, answer: str, follow_up: str = "") -> Question:
 
 
 def topics() -> tuple[Topic, ...]:
-    from code_coach.concepts.bank import TOPICS
+    """Every topic, from both banks.
 
-    return TOPICS
+    The split is only so neither file has to be scrolled past to reach the
+    other; from the outside it is one bank.
+    """
+    from code_coach.concepts.bank import TOPICS
+    from code_coach.concepts.bank2 import MORE_TOPICS
+
+    return TOPICS + MORE_TOPICS
 
 
 def topic(topic_id: str) -> Topic | None:

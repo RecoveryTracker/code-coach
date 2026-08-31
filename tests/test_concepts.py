@@ -15,8 +15,8 @@ from code_coach.concepts import payload, question_count, topic, topics
 
 class CoverageTests(unittest.TestCase):
     def test_there_is_a_substantial_bank(self) -> None:
-        self.assertGreaterEqual(len(topics()), 5)
-        self.assertGreaterEqual(question_count(), 60)
+        self.assertGreaterEqual(len(topics()), 9)
+        self.assertGreaterEqual(question_count(), 100)
 
     def test_every_topic_is_a_full_set(self) -> None:
         """A topic with three questions in it reads as unfinished."""
@@ -25,7 +25,8 @@ class CoverageTests(unittest.TestCase):
                 self.assertGreaterEqual(len(t.questions), 10)
 
     def test_the_topics_a_systems_interview_asks_about(self) -> None:
-        """The five getcracked-style areas, so nothing whole is missing."""
+        """The areas a systems or quant round actually covers, so nothing
+        whole is missing."""
         have = {t.id for t in topics()}
         for wanted in (
             "cpp-semantics",
@@ -33,6 +34,10 @@ class CoverageTests(unittest.TestCase):
             "cpu-memory",
             "concurrency",
             "networking",
+            "floating-point",
+            "build-linking",
+            "probability",
+            "microstructure",
         ):
             with self.subTest(topic=wanted):
                 self.assertIn(wanted, have)
