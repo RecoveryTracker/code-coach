@@ -965,15 +965,42 @@ class ShapeTests(unittest.TestCase):
                     self.assertNotIn(problem.number, taken)
 
     def test_the_curriculum_offers_them_only_where_they_exist(self) -> None:
+        """Per class and per language.
+
+        Rust shares some of these class ids on purpose — the same class in
+        another language, so switching keeps your place — so this asks what
+        each language actually has rather than assuming C++ has them alone.
+        """
         from code_coach.curriculum.catalog import classes_for_language
+        from code_coach.systems import has_class
 
         ours = {p.id for p in PATTERNS}
         offered = {c.id for c in classes_for_language("cpp")}
         self.assertTrue(ours <= offered, "C++ should be offered all of them")
+
         for language in ("python", "c", "rust", "javascript", "sql"):
+            theirs = {
+                c.id
+                for c in classes_for_language(language)
+                if c.id.startswith("sys-")
+            }
             with self.subTest(language=language):
-                theirs = {c.id for c in classes_for_language(language)}
-                self.assertFalse(ours & theirs)
+                # Exactly what that language has material for: no more, and
+                # no less.
+                expected = {cid for cid in ours if has_class(cid, language)}
+                self.assertEqual(theirs, expected)
+
+    def test_a_language_without_the_material_is_offered_none_of_it(self) -> None:
+        from code_coach.curriculum.catalog import classes_for_language
+
+        for language in ("python", "c", "javascript", "sql"):
+            with self.subTest(language=language):
+                theirs = {
+                    c.id
+                    for c in classes_for_language(language)
+                    if c.id.startswith("sys-")
+                }
+                self.assertEqual(theirs, set())
 
     def test_no_language_gets_them_by_accident(self) -> None:
         """Unlike the LeetCode bank this must NOT fall back — there is no
