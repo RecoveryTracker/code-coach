@@ -337,6 +337,345 @@ CHECKS = {
                   "the pool finishes its queue before destructing");
         }
     """,
+    "sys-lockfree": """
+        // Atomicity is not ordering: both counts are exact.
+        {
+            Counter counter;
+            vector<thread> workers;
+            for (int i = 0; i < 4; i++) {
+                workers.emplace_back([&counter] {
+                    for (int n = 0; n < 5000; n++) {
+                        counter.bump_relaxed();
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            check(counter.get() == 20000, "relaxed increments lose nothing");
+            Counter ordered;
+            workers.clear();
+            for (int i = 0; i < 4; i++) {
+                workers.emplace_back([&ordered] {
+                    for (int n = 0; n < 5000; n++) {
+                        ordered.bump_ordered();
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            check(ordered.get() == 20000, "seq_cst increments lose nothing");
+        }
+        // CAS loop settles on the real maximum.
+        {
+            AtomicMax best;
+            vector<thread> workers;
+            for (int i = 0; i < 4; i++) {
+                workers.emplace_back([&best, i] {
+                    for (int n = 1; n <= 1000; n++) {
+                        best.offer((long long)n * (i + 1));
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            check(best.get() == 4000, "CAS loop finds the true maximum");
+        }
+        // SPSC queue: everything across, in order, nothing duplicated.
+        {
+            SpscQueue<int, 64> queue;
+            const int total = 20000;
+            vector<int> got;
+            got.reserve(total);
+            thread consumer([&queue, &got, total] {
+                int value = 0;
+                while ((int)got.size() < total) {
+                    if (queue.pop(value)) {
+                        got.push_back(value);
+                    }
+                }
+            });
+            for (int i = 0; i < total; i++) {
+                while (!queue.push(i)) {
+                }
+            }
+            consumer.join();
+            check((int)got.size() == total, "SPSC moved everything");
+            bool ordered = true;
+            for (int i = 0; i < total; i++) {
+                if (got[i] != i) {
+                    ordered = false;
+                    break;
+                }
+            }
+            check(ordered, "SPSC kept the order and duplicated nothing");
+            int spare = 0;
+            check(!queue.pop(spare), "an empty SPSC queue pops nothing");
+        }
+        // Treiber stack conserves what was pushed.
+        {
+            TreiberStack<int> stack;
+            vector<thread> workers;
+            for (int i = 0; i < 4; i++) {
+                workers.emplace_back([&stack] {
+                    for (int n = 0; n < 500; n++) {
+                        stack.push(1);
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            long long total = 0;
+            int value = 0;
+            while (stack.pop(value)) {
+                total += value;
+            }
+            check(total == 2000, "Treiber stack kept every push");
+            check(!stack.pop(value), "and is empty afterwards");
+        }
+        // Seqlock: a reader never sees half of a write.
+        {
+            Seqlock book;
+            atomic<bool> stop{false};
+            atomic<long long> torn{0};
+            atomic<long long> reads{0};
+            // Every entry is written to the same number, so any reader that
+            // catches a write half-done sees two different numbers in one
+            // book — which is exactly what a torn read is.
+            thread writer([&book, &stop] {
+                long long n = 1;
+                while (!stop.load(memory_order_relaxed)) {
+                    Book fresh;
+                    for (int i = 0; i < 4; i++) {
+                        fresh.bid[i] = n;
+                        fresh.ask[i] = n;
+                    }
+                    book.write(fresh);
+                    n++;
+                }
+            });
+            thread reader([&book, &stop, &torn, &reads] {
+                while (!stop.load(memory_order_relaxed)) {
+                    Book seen = book.read();
+                    reads.fetch_add(1, memory_order_relaxed);
+                    long long first = seen.bid[0];
+                    bool consistent = true;
+                    for (int i = 0; i < 4; i++) {
+                        if (seen.bid[i] != first || seen.ask[i] != first) {
+                            consistent = false;
+                        }
+                    }
+                    if (!consistent) {
+                        torn.fetch_add(1, memory_order_relaxed);
+                    }
+                }
+            });
+            this_thread::sleep_for(chrono::milliseconds(60));
+            stop.store(true);
+            writer.join();
+            reader.join();
+            check(reads.load() > 0, "the seqlock reader actually ran");
+            check(torn.load() == 0, "no reader ever saw a torn pair");
+        }
+        // Acquire/release publishes the payload with the flag.
+        {
+            for (int round = 0; round < 200; round++) {
+                Mailbox box;
+                atomic<int> mismatches{0};
+                thread reader([&box, &mismatches] {
+                    int a = 0;
+                    int b = 0;
+                    while (!box.collect(a, b)) {
+                    }
+                    if (a != 11 || b != 22) {
+                        mismatches++;
+                    }
+                });
+                box.publish(11, 22);
+                reader.join();
+                check(mismatches.load() == 0,
+                      "the flag published the payload with it");
+            }
+        }
+        // Backoff lock still excludes.
+        {
+            BackoffLock lock;
+            long long counter = 0;
+            vector<thread> workers;
+            for (int i = 0; i < 4; i++) {
+                workers.emplace_back([&lock, &counter] {
+                    for (int n = 0; n < 200; n++) {
+                        lock.lock();
+                        long long seen = counter;
+                        this_thread::yield();
+                        counter = seen + 1;
+                        lock.unlock();
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            check(counter == 800, "BackoffLock excludes");
+        }
+        // Atomic refcount: exactly one release reports last.
+        {
+            AtomicRefCount refs;
+            check(refs.count() == 1, "starts at one");
+            for (int i = 0; i < 7; i++) {
+                refs.acquire();
+            }
+            check(refs.count() == 8, "acquires add up");
+            atomic<int> claimed_last{0};
+            vector<thread> workers;
+            for (int i = 0; i < 8; i++) {
+                workers.emplace_back([&refs, &claimed_last] {
+                    if (refs.release()) {
+                        claimed_last++;
+                    }
+                });
+            }
+            for (thread& w : workers) {
+                w.join();
+            }
+            check(claimed_last.load() == 1,
+                  "exactly one releaser is told it was last");
+            check(refs.count() == 0, "and the count reached zero");
+        }
+    """,
+    "sys-cache": """
+        // Cache line arithmetic.
+        {
+            check(CACHE_LINE == 64, "the number worth knowing");
+            alignas(CACHE_LINE) char block[128];
+            check(same_cache_line(&block[0], &block[63]),
+                  "bytes inside one line share it");
+            check(!same_cache_line(&block[0], &block[64]),
+                  "and the next byte starts a new one");
+            check(lines_spanned(1) == 1, "one byte is one line");
+            check(lines_spanned(64) == 1, "so is exactly a line");
+            check(lines_spanned(65) == 2, "one more byte is two");
+            check(lines_spanned(0) == 0, "nothing spans nothing");
+        }
+        // False sharing: same answer either way, different layout.
+        {
+            Shared shared;
+            hammer(shared, 20000);
+            check(shared.a.load() == 20000 && shared.b.load() == 20000,
+                  "the shared pair still counts correctly");
+            Padded padded;
+            hammer(padded, 20000);
+            check(padded.a.load() == 20000 && padded.b.load() == 20000,
+                  "and so does the padded one");
+            // The layout is the point, and it is checkable without timing.
+            // Whether these two actually land on one line depends on where
+            // the struct fell, so the checkable fact is that they are small
+            // enough to — and that the padded pair cannot possibly.
+            check(sizeof(Shared) <= CACHE_LINE,
+                  "unpadded counters are small enough to share a line");
+            check(sizeof(Padded) >= 2 * CACHE_LINE,
+                  "padding really does cost the bytes");
+            check(alignof(Padded) == CACHE_LINE,
+                  "and puts each counter on its own line");
+        }
+        // Row vs column: identical answers, different walks.
+        {
+            size_t rows = 64;
+            size_t cols = 64;
+            vector<int> grid(rows * cols);
+            for (size_t i = 0; i < grid.size(); i++) {
+                grid[i] = (int)(i % 7);
+            }
+            long long by_row = sum_by_rows(grid, rows, cols);
+            long long by_col = sum_by_columns(grid, rows, cols);
+            check(by_row == by_col, "both walks reach the same total");
+            check(by_row > 0, "and it is a real total");
+        }
+        // Struct packing: field order changes the size.
+        {
+            check(sizeof(Tight) < sizeof(Loose),
+                  "ordering fields large to small is smaller");
+            check(wasted_bytes() > 0, "the loose one really does waste bytes");
+            check(per_cache_line(sizeof(Tight)) >=
+                      per_cache_line(sizeof(Loose)),
+                  "so more of them fit in a line");
+            check(per_cache_line(0) == 0, "and nothing divides by zero");
+        }
+        // AoS vs SoA: same total, different bytes touched.
+        {
+            vector<Particle> aos;
+            Particles soa;
+            for (int i = 0; i < 100; i++) {
+                aos.push_back(Particle{(double)i, 0.0, 0.0, 2.0});
+                soa.add((double)i, 0.0, 0.0, 2.0);
+            }
+            check(total_mass(aos) == 200.0, "array of structs sums the mass");
+            check(total_mass(soa) == 200.0, "struct of arrays agrees");
+            check(sizeof(Particle) == 4 * sizeof(double),
+                  "a particle is its four doubles");
+        }
+        // Pointer chasing vs contiguous: same sum.
+        {
+            vector<int> items;
+            for (int i = 0; i < 500; i++) {
+                items.push_back(i);
+            }
+            vector<Link> nodes(items.size());
+            for (size_t i = 0; i < items.size(); i++) {
+                nodes[i].value = items[i];
+                nodes[i].next = (i + 1 < items.size()) ? &nodes[i + 1] : nullptr;
+            }
+            check(walk_links(&nodes[0]) == walk_array(items),
+                  "both walks reach the same total");
+            check(walk_links(nullptr) == 0, "an empty list sums to nothing");
+        }
+        // Branch prediction: branchless agrees with branchy.
+        {
+            vector<int> items;
+            for (int i = 0; i < 1000; i++) {
+                items.push_back((i * 37) % 256);
+            }
+            long long branchy = sum_over(items, 128);
+            long long branchless = sum_over_branchless(items, 128);
+            check(branchy == branchless, "branchless agrees with branchy");
+            check(branchy > 0, "and there was something to add");
+            // Sorting does not change the answer, only the cost.
+            vector<int> sorted = items;
+            for (size_t i = 1; i < sorted.size(); i++) {
+                int value = sorted[i];
+                size_t j = i;
+                while (j > 0 && sorted[j - 1] > value) {
+                    sorted[j] = sorted[j - 1];
+                    j--;
+                }
+                sorted[j] = value;
+            }
+            check(sum_over(sorted, 128) == branchy,
+                  "sorting changes the speed, not the answer");
+        }
+        // Blocked transpose: same result as the plain one.
+        {
+            size_t n = 64;
+            vector<int> src(n * n);
+            for (size_t i = 0; i < src.size(); i++) {
+                src[i] = (int)i;
+            }
+            vector<int> plain(n * n, 0);
+            vector<int> blocked(n * n, 0);
+            transpose_naive(src, plain, n);
+            transpose_blocked(src, blocked, n, 8);
+            check(plain == blocked, "blocking does not change the answer");
+            check(plain[1 * n + 0] == (int)(0 * n + 1),
+                  "and the transpose is actually transposed");
+            // A block size that does not divide n must still be right.
+            vector<int> odd(n * n, 0);
+            transpose_blocked(src, odd, n, 7);
+            check(plain == odd, "a block size that does not divide n is fine");
+        }
+    """,
 }
 
 # Types the checks need. A destructor that counts is the only honest way to

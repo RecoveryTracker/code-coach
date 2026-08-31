@@ -732,7 +732,556 @@ _CONCURRENCY = Pattern(
 )
 
 
+
+
+# ── 3. Lock-free and atomics ────────────────────────────────
+
+_LOCKFREE = Pattern(
+    id="sys-lockfree",
+    name="Lock-free & Atomics",
+    order=103,
+    blurb="No lock at all: atomics, compare-and-swap, and the orderings that make it safe.",
+    tell="A hot path where even an uncontended mutex is too much.",
+    preamble=(ATOMIC, THREAD, CSTDDEF, VECTOR, USING),
+    problems=(
+        _p(
+            9301, "Relaxed vs Sequential Counter", "Medium",
+            "Both counts are exact — atomicity is not ordering. Relaxed only "
+            "gives up the guarantee about what OTHER writes you see around it.",
+            "O(1) per increment, relaxed is markedly cheaper",
+            """
+            class Counter {
+            public:
+                void bump_relaxed() {
+                    value.fetch_add(1, memory_order_relaxed);
+                }
+
+                void bump_ordered() {
+                    value.fetch_add(1, memory_order_seq_cst);
+                }
+
+                long long get() const {
+                    return value.load(memory_order_relaxed);
+                }
+
+            private:
+                atomic<long long> value{0};
+            };
+            """,
+        ),
+        _p(
+            9302, "CAS Loop", "Medium",
+            "Read, compute, swap it in if nothing moved. compare_exchange_weak "
+            "may fail spuriously, which is why it always lives in a loop.",
+            "O(1) uncontended, retries under contention",
+            """
+            class AtomicMax {
+            public:
+                void offer(long long candidate) {
+                    long long seen = best.load(memory_order_relaxed);
+                    while (candidate > seen &&
+                           !best.compare_exchange_weak(seen, candidate,
+                                                       memory_order_release,
+                                                       memory_order_relaxed)) {
+                        // seen was refreshed by the failed exchange, so the
+                        // next comparison uses the value that beat us.
+                    }
+                }
+
+                long long get() const {
+                    return best.load(memory_order_acquire);
+                }
+
+            private:
+                atomic<long long> best{0};
+            };
+            """,
+        ),
+        _p(
+            9303, "SPSC Ring Buffer", "Hard",
+            "One producer, one consumer, no lock. The release on write pairs "
+            "with the acquire on read, and that pairing is the whole safety "
+            "argument.",
+            "O(1) per item, wait-free for both sides",
+            """
+            template <typename T, size_t N>
+            class SpscQueue {
+            public:
+                bool push(const T& value) {
+                    size_t head = write.load(memory_order_relaxed);
+                    size_t next = (head + 1) % N;
+                    if (next == read.load(memory_order_acquire)) {
+                        return false;
+                    }
+                    slots[head] = value;
+                    write.store(next, memory_order_release);
+                    return true;
+                }
+
+                bool pop(T& out) {
+                    size_t tail = read.load(memory_order_relaxed);
+                    if (tail == write.load(memory_order_acquire)) {
+                        return false;
+                    }
+                    out = slots[tail];
+                    read.store((tail + 1) % N, memory_order_release);
+                    return true;
+                }
+
+            private:
+                T slots[N];
+                atomic<size_t> write{0};
+                atomic<size_t> read{0};
+            };
+            """,
+        ),
+        _p(
+            9304, "Treiber Stack", "Hard",
+            "Push and pop by swapping the head. Lock-free, and it leaks on "
+            "purpose here — reclaiming a popped node safely is the hard part, "
+            "and it needs hazard pointers or epochs.",
+            "O(1) uncontended, retries under contention",
+            """
+            template <typename T>
+            class TreiberStack {
+            public:
+                void push(const T& value) {
+                    Node* fresh = new Node{value, nullptr};
+                    fresh->next = head.load(memory_order_relaxed);
+                    while (!head.compare_exchange_weak(fresh->next, fresh,
+                                                       memory_order_release,
+                                                       memory_order_relaxed)) {
+                    }
+                }
+
+                bool pop(T& out) {
+                    Node* top = head.load(memory_order_acquire);
+                    while (top && !head.compare_exchange_weak(
+                                      top, top->next, memory_order_acquire,
+                                      memory_order_relaxed)) {
+                    }
+                    if (!top) {
+                        return false;
+                    }
+                    out = top->value;
+                    // Deliberately not deleted: another thread may still be
+                    // reading top->next. This is the ABA problem's home.
+                    return true;
+                }
+
+            private:
+                struct Node {
+                    T value;
+                    Node* next;
+                };
+
+                atomic<Node*> head{nullptr};
+            };
+            """,
+        ),
+        _p(
+            9305, "Seqlock", "Hard",
+            "Writers never wait, readers retry. An odd counter means a write "
+            "is in flight, so a reader that sees one just goes round again.",
+            "O(1) write, readers retry under contention",
+            """
+            // A seqlock earns its keep when the payload is too big to copy
+            // in one atomic step. Two words would not need one; a book of
+            // levels does, and that is the realistic case.
+            struct Book {
+                long long bid[4];
+                long long ask[4];
+            };
+
+            class Seqlock {
+            public:
+                void write(const Book& fresh) {
+                    version.fetch_add(1, memory_order_release);
+                    atomic_thread_fence(memory_order_release);
+                    held = fresh;
+                    atomic_thread_fence(memory_order_release);
+                    version.fetch_add(1, memory_order_release);
+                }
+
+                Book read() const {
+                    Book copy;
+                    unsigned before;
+                    do {
+                        before = version.load(memory_order_acquire);
+                        if (before & 1u) {
+                            continue;
+                        }
+                        copy = held;
+                        atomic_thread_fence(memory_order_acquire);
+                    } while (before != version.load(memory_order_acquire) ||
+                             (before & 1u));
+                    return copy;
+                }
+
+            private:
+                atomic<unsigned> version{0};
+                Book held{};
+            };
+            """,
+        ),
+        _p(
+            9306, "Acquire-Release Message Passing", "Medium",
+            "The flag is what publishes the payload. Release on the store and "
+            "acquire on the load means a reader seeing the flag must also see "
+            "everything written before it.",
+            "O(1), and no lock anywhere",
+            """
+            class Mailbox {
+            public:
+                void publish(int a, int b) {
+                    first = a;
+                    second = b;
+                    ready.store(true, memory_order_release);
+                }
+
+                bool collect(int& a, int& b) const {
+                    if (!ready.load(memory_order_acquire)) {
+                        return false;
+                    }
+                    a = first;
+                    b = second;
+                    return true;
+                }
+
+            private:
+                int first = 0;
+                int second = 0;
+                atomic<bool> ready{false};
+            };
+            """,
+        ),
+        _p(
+            9307, "Spin With Backoff", "Medium",
+            "Spinning flat out starves the thread holding the lock. Backing "
+            "off, then yielding, gets out of its way.",
+            "O(1) uncontended, far kinder under contention",
+            """
+            class BackoffLock {
+            public:
+                void lock() {
+                    int spins = 1;
+                    while (taken.exchange(true, memory_order_acquire)) {
+                        for (int i = 0; i < spins; i++) {
+                            // Burn a little, then look again.
+                        }
+                        if (spins < 1024) {
+                            spins *= 2;
+                        } else {
+                            this_thread::yield();
+                        }
+                    }
+                }
+
+                void unlock() { taken.store(false, memory_order_release); }
+
+            private:
+                atomic<bool> taken{false};
+            };
+            """,
+        ),
+        _p(
+            9308, "Atomic Reference Count", "Hard",
+            "The increment can be relaxed; the decrement cannot. The release "
+            "on the way down and the acquire before deleting are what stop "
+            "the destructor racing another thread's last use.",
+            "O(1) per copy",
+            """
+            class AtomicRefCount {
+            public:
+                void acquire() { refs.fetch_add(1, memory_order_relaxed); }
+
+                bool release() {
+                    if (refs.fetch_sub(1, memory_order_release) != 1) {
+                        return false;
+                    }
+                    // Last one out. Acquire so everything the other threads
+                    // did is visible before whatever cleans up runs.
+                    atomic_thread_fence(memory_order_acquire);
+                    return true;
+                }
+
+                long count() const { return refs.load(memory_order_relaxed); }
+
+            private:
+                atomic<long> refs{1};
+            };
+            """,
+        ),
+    ),
+)
+
+
+# ── 4. Cache and memory hierarchy ───────────────────────────
+
+_CACHE = Pattern(
+    id="sys-cache",
+    name="Cache & Memory Hierarchy",
+    order=104,
+    blurb="The same work, laid out two ways, running an order of magnitude apart.",
+    tell="It should be fast and it is not, and the algorithm is already right.",
+    preamble=(ATOMIC, THREAD, CSTDDEF, CSTDINT, VECTOR, USING),
+    problems=(
+        _p(
+            9401, "Cache Line", "Easy",
+            "Memory moves in lines, not bytes. Sixty-four is the number to "
+            "have in your head; C++17 spells it "
+            "hardware_destructive_interference_size.",
+            "O(1) — this is a fact, not an algorithm",
+            """
+            constexpr size_t CACHE_LINE = 64;
+
+            inline bool same_cache_line(const void* a, const void* b) {
+                uintptr_t x = reinterpret_cast<uintptr_t>(a);
+                uintptr_t y = reinterpret_cast<uintptr_t>(b);
+                return (x / CACHE_LINE) == (y / CACHE_LINE);
+            }
+
+            inline size_t lines_spanned(size_t bytes) {
+                return (bytes + CACHE_LINE - 1) / CACHE_LINE;
+            }
+            """,
+        ),
+        _p(
+            9402, "False Sharing", "Hard",
+            "Two threads writing different variables on the SAME line fight "
+            "over it. Padding them apart costs bytes and buys back the "
+            "bandwidth.",
+            "Same instruction count, wildly different time",
+            """
+            struct Shared {
+                atomic<long long> a{0};
+                atomic<long long> b{0};
+            };
+
+            struct Padded {
+                alignas(CACHE_LINE) atomic<long long> a{0};
+                alignas(CACHE_LINE) atomic<long long> b{0};
+            };
+
+            template <typename Pair>
+            void hammer(Pair& pair, int rounds) {
+                thread first([&pair, rounds] {
+                    for (int i = 0; i < rounds; i++) {
+                        pair.a.fetch_add(1, memory_order_relaxed);
+                    }
+                });
+                thread second([&pair, rounds] {
+                    for (int i = 0; i < rounds; i++) {
+                        pair.b.fetch_add(1, memory_order_relaxed);
+                    }
+                });
+                first.join();
+                second.join();
+            }
+            """,
+        ),
+        _p(
+            9403, "Row Major vs Column Major", "Medium",
+            "The array is the same; the walk is not. Going along a row uses "
+            "every byte of each line fetched, going down a column throws most "
+            "of it away.",
+            "Same O(n*n), an order of magnitude apart in practice",
+            """
+            long long sum_by_rows(const vector<int>& grid, size_t rows,
+                                  size_t cols) {
+                long long total = 0;
+                for (size_t r = 0; r < rows; r++) {
+                    for (size_t c = 0; c < cols; c++) {
+                        total += grid[r * cols + c];
+                    }
+                }
+                return total;
+            }
+
+            long long sum_by_columns(const vector<int>& grid, size_t rows,
+                                     size_t cols) {
+                long long total = 0;
+                for (size_t c = 0; c < cols; c++) {
+                    for (size_t r = 0; r < rows; r++) {
+                        total += grid[r * cols + c];
+                    }
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9404, "Struct Packing", "Medium",
+            "Field order changes the size. The compiler pads each field to its "
+            "own alignment, so scattering small ones between large ones wastes "
+            "space you then have to fetch.",
+            "O(1) — but it decides how many objects fit in a line",
+            """
+            struct Loose {
+                char flag;
+                double value;
+                char other;
+                int count;
+            };
+
+            struct Tight {
+                double value;
+                int count;
+                char flag;
+                char other;
+            };
+
+            inline size_t wasted_bytes() {
+                return sizeof(Loose) - sizeof(Tight);
+            }
+
+            inline size_t per_cache_line(size_t object_size) {
+                return object_size ? CACHE_LINE / object_size : 0;
+            }
+            """,
+        ),
+        _p(
+            9405, "Array of Structs vs Struct of Arrays", "Medium",
+            "If you only read one field, an array of structs drags the rest "
+            "along for the ride. Splitting the fields means every byte "
+            "fetched is one you wanted.",
+            "Same work, far fewer lines touched",
+            """
+            struct Particle {
+                double x;
+                double y;
+                double z;
+                double mass;
+            };
+
+            struct Particles {
+                vector<double> x;
+                vector<double> y;
+                vector<double> z;
+                vector<double> mass;
+
+                void add(double px, double py, double pz, double m) {
+                    x.push_back(px);
+                    y.push_back(py);
+                    z.push_back(pz);
+                    mass.push_back(m);
+                }
+            };
+
+            inline double total_mass(const vector<Particle>& items) {
+                double total = 0;
+                for (const Particle& p : items) {
+                    total += p.mass;
+                }
+                return total;
+            }
+
+            inline double total_mass(const Particles& items) {
+                double total = 0;
+                for (double m : items.mass) {
+                    total += m;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9406, "Pointer Chasing vs Contiguous", "Medium",
+            "A linked list makes the processor wait for each node before it "
+            "knows where the next one is. An array it can prefetch.",
+            "Same O(n), and the constant is what gets you",
+            """
+            struct Link {
+                int value;
+                Link* next;
+            };
+
+            inline long long walk_links(Link* head) {
+                long long total = 0;
+                while (head) {
+                    total += head->value;
+                    head = head->next;
+                }
+                return total;
+            }
+
+            inline long long walk_array(const vector<int>& items) {
+                long long total = 0;
+                for (int value : items) {
+                    total += value;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9407, "Branch Prediction", "Medium",
+            "A branch the processor can guess is nearly free; one it cannot is "
+            "a stall. Sorting first makes the SAME branch predictable.",
+            "Same comparisons, very different cost",
+            """
+            inline long long sum_over(const vector<int>& items, int threshold) {
+                long long total = 0;
+                for (int value : items) {
+                    if (value >= threshold) {
+                        total += value;
+                    }
+                }
+                return total;
+            }
+
+            // No branch at all: build a mask and multiply. Slower when the
+            // branch predicts well, faster when it cannot.
+            inline long long sum_over_branchless(const vector<int>& items,
+                                                 int threshold) {
+                long long total = 0;
+                for (int value : items) {
+                    long long mask = -(long long)(value >= threshold);
+                    total += value & mask;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9408, "Blocked Transpose", "Hard",
+            "Transposing straight through misses on one side or the other. "
+            "Working a tile at a time keeps both the source and the "
+            "destination in cache.",
+            "Same O(n*n), far fewer misses",
+            """
+            void transpose_naive(const vector<int>& src, vector<int>& dst,
+                                 size_t n) {
+                for (size_t r = 0; r < n; r++) {
+                    for (size_t c = 0; c < n; c++) {
+                        dst[c * n + r] = src[r * n + c];
+                    }
+                }
+            }
+
+            void transpose_blocked(const vector<int>& src, vector<int>& dst,
+                                   size_t n, size_t block) {
+                for (size_t r0 = 0; r0 < n; r0 += block) {
+                    for (size_t c0 = 0; c0 < n; c0 += block) {
+                        size_t r_end = r0 + block < n ? r0 + block : n;
+                        size_t c_end = c0 + block < n ? c0 + block : n;
+                        for (size_t r = r0; r < r_end; r++) {
+                            for (size_t c = c0; c < c_end; c++) {
+                                dst[c * n + r] = src[r * n + c];
+                            }
+                        }
+                    }
+                }
+            }
+            """,
+        ),
+    ),
+)
+
+
 PATTERNS: tuple[Pattern, ...] = (
     _MEMORY,
     _CONCURRENCY,
+    _LOCKFREE,
+    _CACHE,
 )
