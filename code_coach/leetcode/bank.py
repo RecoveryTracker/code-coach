@@ -577,14 +577,33 @@ def study_payload(
     resolving it internally meant re-reading and re-parsing the progress file
     eight times to build one session.
     """
-    from code_coach.leetcode.study import brief_for, lesson_for
-    from code_coach.leetcode.worked import worked_for, worked_for_problem
+    from code_coach.systems import is_systems_class
 
     if not pattern_id:
         return None
+
+    # The systems family keeps its own study material, because the questions
+    # it answers are different ones — there is no LeetCode page to link to,
+    # and "what does the real standard library version also do" is a note the
+    # algorithm problems have no use for.
+    if is_systems_class(pattern_id):
+        from code_coach.systems.study import brief_for, lesson_for
+        from code_coach.systems.worked import worked_for, worked_for_problem
+    else:
+        from code_coach.leetcode.study import (  # type: ignore[assignment]
+            brief_for,
+            lesson_for,
+        )
+        from code_coach.leetcode.worked import (  # type: ignore[assignment]
+            worked_for,
+            worked_for_problem,
+        )
+
     # Look the pattern up in the active language's bank so the complexity and
     # idea shown match the code on screen.
-    patterns = patterns_for_language(language)
+    patterns = _patterns_for(pattern_id, language) or patterns_for_language(
+        language
+    )
     pattern = next((p for p in patterns if p.id == pattern_id), None) or get_pattern(
         pattern_id
     )
@@ -634,7 +653,9 @@ def study_payload(
                 "note": brief.note,
                 "idea": problem.idea,
                 "complexity": problem.complexity,
-                "url": brief.url,
+                # A systems primitive has no page to link to; the brief
+                # says where the real implementation differs instead.
+                "url": getattr(brief, "url", ""),
                 # The whole solution, not just the chunk being typed — this is
                 # what "check my work" compares against.
                 "solution": problem.code,
@@ -661,9 +682,70 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
     """
     from code_coach.leetcode.study import brief_for, lesson_for
     from code_coach.leetcode.worked import worked_for, worked_for_problem
+    from code_coach.systems import patterns_for_language as systems_for
+    from code_coach.systems.study import brief_for as sys_brief_for
+    from code_coach.systems.study import lesson_for as sys_lesson_for
+    from code_coach.systems.worked import worked_for as sys_worked_for
+    from code_coach.systems.worked import (
+        worked_for_problem as sys_worked_for_problem,
+    )
+
+    # Two families, one builder. The systems classes keep their own study
+    # material — there is no page to link to and the notes answer a different
+    # question — but the shape of an entry is identical, so the loop is too.
+    families = (
+        (
+            patterns_for_language(language),
+            lesson_for,
+            brief_for,
+            worked_for,
+            worked_for_problem,
+            has_own_bank(language),
+        ),
+        (
+            systems_for(language),
+            sys_lesson_for,
+            sys_brief_for,
+            sys_worked_for,
+            sys_worked_for_problem,
+            True,
+        ),
+    )
 
     out: list[dict[str, Any]] = []
-    for pattern in patterns_for_language(language):
+    for (
+        patterns,
+        lesson_lookup,
+        brief_lookup,
+        worked_lookup,
+        worked_problem_lookup,
+        openable,
+    ) in families:
+        out.extend(
+            _catalogue_family(
+                patterns,
+                lesson_lookup,
+                brief_lookup,
+                worked_lookup,
+                worked_problem_lookup,
+                openable,
+            )
+        )
+    out.sort(key=lambda e: e["order"])
+    return out
+
+
+def _catalogue_family(
+    patterns,
+    lesson_for,
+    brief_for,
+    worked_for,
+    worked_for_problem,
+    can_open: bool,
+) -> list[dict[str, Any]]:
+    """Every entry for one family of classes."""
+    out: list[dict[str, Any]] = []
+    for pattern in patterns:
         lesson = lesson_for(pattern.id)
         if not lesson:
             continue
@@ -674,7 +756,7 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
             # without their own bank fall back to Python's, so the link would
             # either serve the wrong language or drop you in fundamentals —
             # the reading is still worth showing, the link is not.
-            "can_open": has_own_bank(language),
+            "can_open": can_open,
             "name": pattern.name,
             "order": pattern.order,
             "blurb": pattern.blurb,
@@ -707,7 +789,6 @@ def lessons_catalogue(language: str = "python") -> list[dict[str, Any]]:
                 ],
             }
         out.append(entry)
-    out.sort(key=lambda e: e["order"])
     return out
 
 
@@ -719,7 +800,8 @@ def _lesson_problem(problem, brief, worked) -> dict[str, Any]:
         "difficulty": problem.difficulty,
         "idea": problem.idea,
         "complexity": problem.complexity,
-        "url": brief.url if brief else "",
+        # A systems primitive has no page behind it, so no url.
+        "url": getattr(brief, "url", "") if brief else "",
         "statement": brief.statement if brief else "",
         "worked": (
             {
