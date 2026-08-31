@@ -676,6 +676,178 @@ CHECKS = {
             check(plain == odd, "a block size that does not divide n is fine");
         }
     """,
+    "sys-market": """
+        // Fixed point is exact where a double is not.
+        {
+            Price a = Price::from_double(0.1);
+            Price b = Price::from_double(0.2);
+            Price sum = a + b;
+            check(sum == Price::from_double(0.3),
+                  "0.1 + 0.2 is exactly 0.3 in ticks");
+            check(0.1 + 0.2 != 0.3, "...which is more than a double manages");
+            check(Price::from_double(1.2345).raw() == 12345, "scaling is exact");
+            check(Price::from_double(-1.5).raw() == -15000,
+                  "and rounds negatives away from zero too");
+            Price diff = Price::from_double(1.0) - Price::from_double(0.25);
+            check(diff.to_double() == 0.75, "subtraction comes back out right");
+            check(Price(1) < Price(2), "prices order by ticks");
+        }
+        // A level is a total, not a list.
+        {
+            Level level(Price::from_double(10.0), 100);
+            check(level.quantity == 100 && level.orders == 1, "one order in");
+            level.add(50);
+            check(level.quantity == 150 && level.orders == 2, "two orders in");
+            level.remove(150);
+            check(level.empty(), "emptied");
+            level.remove(999);
+            check(level.quantity == 0, "removing past empty does not go negative");
+        }
+        // The book keeps both sides sorted the right way round.
+        {
+            OrderBook book;
+            book.add_bid(Price::from_double(9.0), 10);
+            book.add_bid(Price::from_double(11.0), 20);
+            book.add_bid(Price::from_double(10.0), 30);
+            book.add_ask(Price::from_double(14.0), 10);
+            book.add_ask(Price::from_double(12.0), 20);
+            book.add_ask(Price::from_double(13.0), 30);
+            Level bid;
+            Level ask;
+            check(book.best_bid(bid) && bid.price == Price::from_double(11.0),
+                  "best bid is the highest");
+            check(book.best_ask(ask) && ask.price == Price::from_double(12.0),
+                  "best ask is the lowest");
+            check(book.bids.size() == 3 && book.asks.size() == 3,
+                  "three levels a side");
+            bool bids_descend = true;
+            for (size_t i = 1; i < book.bids.size(); i++) {
+                if (book.bids[i - 1].price < book.bids[i].price) {
+                    bids_descend = false;
+                }
+            }
+            check(bids_descend, "bids run high to low");
+            bool asks_ascend = true;
+            for (size_t i = 1; i < book.asks.size(); i++) {
+                if (book.asks[i].price < book.asks[i - 1].price) {
+                    asks_ascend = false;
+                }
+            }
+            check(asks_ascend, "asks run low to high");
+            check(book.spread_ticks() == 10000, "spread is one whole unit");
+            check(!book.crossed(), "and the book is not crossed");
+            book.add_bid(Price::from_double(12.0), 5);
+            check(book.crossed(), "a bid at the ask crosses it");
+            // Same price twice joins the level rather than making a new one.
+            OrderBook second;
+            second.add_bid(Price::from_double(5.0), 10);
+            second.add_bid(Price::from_double(5.0), 10);
+            check(second.bids.size() == 1, "same price is one level");
+            check(second.bids[0].quantity == 20, "with the quantities added");
+            Level none;
+            check(!OrderBook().best_bid(none), "an empty book has no best bid");
+            check(OrderBook().spread_ticks() == -1, "and no spread");
+        }
+        // Matching eats the book from the best price outward.
+        {
+            OrderBook book;
+            book.add_ask(Price::from_double(10.0), 50);
+            book.add_ask(Price::from_double(11.0), 50);
+            book.add_ask(Price::from_double(12.0), 50);
+            vector<Fill> fills = match_buy(book, Price::from_double(11.0), 80);
+            check(fills.size() == 2, "it took two levels");
+            check(fills[0].price == Price::from_double(10.0),
+                  "starting at the best price");
+            check(fills[0].quantity == 50, "taking all of it");
+            check(fills[1].quantity == 30, "and part of the next");
+            check(filled_quantity(fills) == 80, "filled exactly what was asked");
+            check(book.asks.size() == 2, "the emptied level is gone");
+            check(book.asks[0].quantity == 20, "and the partial one is reduced");
+            // A limit below the book fills nothing.
+            OrderBook untouched;
+            untouched.add_ask(Price::from_double(10.0), 50);
+            vector<Fill> nothing =
+                match_buy(untouched, Price::from_double(9.0), 10);
+            check(nothing.empty(), "a limit below the ask fills nothing");
+            check(untouched.asks[0].quantity == 50, "and leaves the book alone");
+            // Wanting more than the book has takes what there is.
+            OrderBook thin;
+            thin.add_ask(Price::from_double(10.0), 5);
+            vector<Fill> partial =
+                match_buy(thin, Price::from_double(99.0), 100);
+            check(filled_quantity(partial) == 5, "an empty book stops the fill");
+            check(thin.asks.empty(), "and the book is cleared out");
+        }
+        // VWAP weights by size, and cannot be got by averaging averages.
+        {
+            Vwap vwap;
+            Price out;
+            check(!vwap.value(out), "no trades, no VWAP");
+            vwap.add(Price::from_double(10.0), 100);
+            vwap.add(Price::from_double(20.0), 300);
+            check(vwap.value(out), "two trades, a VWAP");
+            check(out == Price::from_double(17.5),
+                  "weighted toward the bigger trade");
+            check(out.to_double() != 15.0,
+                  "which is not the plain average of the prices");
+            check(vwap.total_volume() == 400, "volume adds up");
+        }
+        // Rolling window drops the oldest.
+        {
+            RollingWindow window(3);
+            double mean = 0;
+            check(!window.mean(mean), "an empty window has no mean");
+            window.push(10);
+            window.push(20);
+            window.push(30);
+            check(window.size() == 3 && window.sum() == 60, "three in");
+            check(window.mean(mean) && mean == 20.0, "mean of the three");
+            check(window.highest() == 30, "and the highest of them");
+            window.push(40);
+            check(window.size() == 3, "still three");
+            check(window.sum() == 90, "the oldest fell out of the sum");
+            check(window.mean(mean) && mean == 30.0, "and out of the mean");
+            check(window.highest() == 40, "the new value is the highest");
+        }
+        // Histogram answers percentiles without keeping the samples.
+        {
+            Histogram hist(10, 100);
+            check(hist.percentile(0.5) == -1, "no samples, no percentile");
+            for (int i = 0; i < 99; i++) {
+                hist.record(50);
+            }
+            hist.record(950);
+            check(hist.samples() == 100, "every sample counted");
+            check(hist.percentile(0.5) == 100, "the median is in the low bucket");
+            check(hist.percentile(0.999) == 1000,
+                  "the tail shows up at the top");
+            Histogram narrow(4, 10);
+            narrow.record(100000);
+            check(narrow.percentile(0.5) == 40,
+                  "anything past the last bucket lands in it");
+        }
+        // Tick parsing, in place.
+        {
+            const char* line = "AAPL,123.45,500";
+            Tick tick = parse_tick(line, 15);
+            check(tick.valid, "a well-formed tick parses");
+            check(tick.symbol[0] == 'A' && tick.symbol[3] == 'L',
+                  "the symbol comes through");
+            check(tick.symbol[4] == 0, "and is terminated");
+            check(tick.price == Price::from_double(123.45),
+                  "the price is exact");
+            check(tick.quantity == 500, "and so is the quantity");
+            const char* whole = "MSFT,7,10";
+            Tick no_fraction = parse_tick(whole, 9);
+            check(no_fraction.valid, "a price with no decimal parses");
+            check(no_fraction.price == Price::from_double(7.0),
+                  "and scales correctly");
+            Tick truncated = parse_tick("AAPL,123.45", 11);
+            check(!truncated.valid, "a tick missing its quantity is rejected");
+            Tick empty = parse_tick("", 0);
+            check(!empty.valid, "and so is an empty line");
+        }
+    """,
 }
 
 # Types the checks need. A destructor that counts is the only honest way to

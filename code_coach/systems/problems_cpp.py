@@ -28,6 +28,8 @@ CSTDDEF = "#include <cstddef>"
 CSTDINT = "#include <cstdint>"
 NEW = "#include <new>"
 VECTOR = "#include <vector>"
+STRING = "#include <string>"
+ALGORITHM = "#include <algorithm>"
 FUNCTIONAL = "#include <functional>"
 USING = "using namespace std;"
 
@@ -1279,9 +1281,409 @@ _CACHE = Pattern(
 )
 
 
+
+
+# ── 5. Market data and matching ─────────────────────────────
+
+_MARKET = Pattern(
+    id="sys-market",
+    name="Market Data & Matching",
+    order=105,
+    blurb="The pieces a trading system is actually made of, small enough to write out.",
+    tell="Prices, quantities, a book, and a latency number somebody cares about.",
+    preamble=(CSTDDEF, CSTDINT, VECTOR, STRING, ALGORITHM, USING),
+    problems=(
+        _p(
+            9501, "Fixed-Point Price", "Medium",
+            "Money is not a double. Store it as an integer number of ticks and "
+            "the arithmetic is exact; 0.1 + 0.2 is a bug report waiting to be "
+            "filed.",
+            "O(1), and exactly representable",
+            """
+            class Price {
+            public:
+                static constexpr long long SCALE = 10000;
+
+                Price() : ticks(0) {}
+                explicit Price(long long raw_ticks) : ticks(raw_ticks) {}
+
+                static Price from_double(double value) {
+                    double scaled = value * (double)SCALE;
+                    long long rounded =
+                        (long long)(scaled < 0 ? scaled - 0.5 : scaled + 0.5);
+                    return Price(rounded);
+                }
+
+                double to_double() const { return (double)ticks / SCALE; }
+                long long raw() const { return ticks; }
+
+                Price operator+(const Price& other) const {
+                    return Price(ticks + other.ticks);
+                }
+
+                Price operator-(const Price& other) const {
+                    return Price(ticks - other.ticks);
+                }
+
+                bool operator<(const Price& other) const {
+                    return ticks < other.ticks;
+                }
+
+                bool operator==(const Price& other) const {
+                    return ticks == other.ticks;
+                }
+
+            private:
+                long long ticks;
+            };
+            """,
+        ),
+        _p(
+            9502, "Price Level", "Easy",
+            "Everything resting at one price, held as a total rather than a "
+            "list. The book only needs the sum until something trades.",
+            "O(1) add and remove",
+            """
+            struct Level {
+                Price price;
+                long long quantity;
+                int orders;
+
+                Level() : price(), quantity(0), orders(0) {}
+                Level(Price p, long long q) : price(p), quantity(q), orders(1) {}
+
+                void add(long long q) {
+                    quantity += q;
+                    orders++;
+                }
+
+                void remove(long long q) {
+                    quantity -= q < quantity ? q : quantity;
+                    if (orders > 0) {
+                        orders--;
+                    }
+                }
+
+                bool empty() const { return quantity <= 0; }
+            };
+            """,
+        ),
+        _p(
+            9503, "Order Book", "Hard",
+            "Bids sorted high to low, asks low to high, so the best of each is "
+            "always at the front. Keeping them that way on insert is cheaper "
+            "than sorting on every read.",
+            "O(levels) insert, O(1) best",
+            """
+            class OrderBook {
+            public:
+                void add_bid(Price price, long long quantity) {
+                    insert(bids, price, quantity, true);
+                }
+
+                void add_ask(Price price, long long quantity) {
+                    insert(asks, price, quantity, false);
+                }
+
+                bool best_bid(Level& out) const {
+                    if (bids.empty()) {
+                        return false;
+                    }
+                    out = bids.front();
+                    return true;
+                }
+
+                bool best_ask(Level& out) const {
+                    if (asks.empty()) {
+                        return false;
+                    }
+                    out = asks.front();
+                    return true;
+                }
+
+                bool crossed() const {
+                    return !bids.empty() && !asks.empty() &&
+                           !(bids.front().price < asks.front().price);
+                }
+
+                long long spread_ticks() const {
+                    if (bids.empty() || asks.empty()) {
+                        return -1;
+                    }
+                    return asks.front().price.raw() - bids.front().price.raw();
+                }
+
+                vector<Level> bids;
+                vector<Level> asks;
+
+            private:
+                static void insert(vector<Level>& side, Price price,
+                                   long long quantity, bool descending) {
+                    for (size_t i = 0; i < side.size(); i++) {
+                        if (side[i].price == price) {
+                            side[i].add(quantity);
+                            return;
+                        }
+                        bool before = descending ? (price < side[i].price
+                                                        ? false
+                                                        : true)
+                                                 : (price < side[i].price);
+                        if (descending) {
+                            before = side[i].price < price;
+                        }
+                        if (before) {
+                            side.insert(side.begin() + i,
+                                        Level(price, quantity));
+                            return;
+                        }
+                    }
+                    side.push_back(Level(price, quantity));
+                }
+            };
+            """,
+        ),
+        _p(
+            9504, "Matching Step", "Hard",
+            "An aggressive order eats the book from the best price outward, "
+            "and stops when it is filled or the price is no longer acceptable.",
+            "O(levels touched)",
+            """
+            struct Fill {
+                Price price;
+                long long quantity;
+            };
+
+            inline vector<Fill> match_buy(OrderBook& book, Price limit,
+                                          long long wanted) {
+                vector<Fill> fills;
+                while (wanted > 0 && !book.asks.empty()) {
+                    Level& best = book.asks.front();
+                    if (limit < best.price) {
+                        break;
+                    }
+                    long long taken = wanted < best.quantity ? wanted
+                                                             : best.quantity;
+                    fills.push_back(Fill{best.price, taken});
+                    best.quantity -= taken;
+                    wanted -= taken;
+                    if (best.empty()) {
+                        book.asks.erase(book.asks.begin());
+                    }
+                }
+                return fills;
+            }
+
+            inline long long filled_quantity(const vector<Fill>& fills) {
+                long long total = 0;
+                for (const Fill& fill : fills) {
+                    total += fill.quantity;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9505, "VWAP", "Medium",
+            "Volume-weighted, so a big trade counts for more. Carry the two "
+            "running totals rather than the average — you cannot average "
+            "averages.",
+            "O(1) per trade",
+            """
+            class Vwap {
+            public:
+                void add(Price price, long long quantity) {
+                    notional += price.raw() * quantity;
+                    volume += quantity;
+                }
+
+                bool value(Price& out) const {
+                    if (volume == 0) {
+                        return false;
+                    }
+                    out = Price(notional / volume);
+                    return true;
+                }
+
+                long long total_volume() const { return volume; }
+
+            private:
+                long long notional = 0;
+                long long volume = 0;
+            };
+            """,
+        ),
+        _p(
+            9506, "Rolling Window", "Medium",
+            "A fixed-size ring of the last n values. Nothing is shifted and "
+            "nothing is allocated after construction.",
+            "O(1) push, O(n) statistics",
+            """
+            class RollingWindow {
+            public:
+                explicit RollingWindow(size_t capacity)
+                    : slots(capacity, 0), next(0), filled(0), running(0) {}
+
+                void push(long long value) {
+                    if (filled == slots.size()) {
+                        running -= slots[next];
+                    } else {
+                        filled++;
+                    }
+                    slots[next] = value;
+                    running += value;
+                    next = (next + 1) % slots.size();
+                }
+
+                size_t size() const { return filled; }
+                long long sum() const { return running; }
+
+                bool mean(double& out) const {
+                    if (filled == 0) {
+                        return false;
+                    }
+                    out = (double)running / (double)filled;
+                    return true;
+                }
+
+                long long highest() const {
+                    long long best = 0;
+                    for (size_t i = 0; i < filled; i++) {
+                        if (i == 0 || slots[i] > best) {
+                            best = slots[i];
+                        }
+                    }
+                    return best;
+                }
+
+            private:
+                vector<long long> slots;
+                size_t next;
+                size_t filled;
+                long long running;
+            };
+            """,
+        ),
+        _p(
+            9507, "Latency Histogram", "Medium",
+            "Keeping every sample to find the 99th percentile is the wrong "
+            "trade. Bucket on the way in and the answer is a scan of the "
+            "buckets.",
+            "O(1) record, O(buckets) percentile",
+            """
+            class Histogram {
+            public:
+                explicit Histogram(size_t buckets, long long width)
+                    : counts(buckets, 0), bucket_width(width), total(0) {}
+
+                void record(long long nanos) {
+                    size_t at = (size_t)(nanos / bucket_width);
+                    if (at >= counts.size()) {
+                        at = counts.size() - 1;
+                    }
+                    counts[at]++;
+                    total++;
+                }
+
+                long long percentile(double fraction) const {
+                    if (total == 0) {
+                        return -1;
+                    }
+                    long long wanted = (long long)(fraction * (double)total);
+                    long long seen = 0;
+                    for (size_t i = 0; i < counts.size(); i++) {
+                        seen += counts[i];
+                        if (seen > wanted) {
+                            return (long long)(i + 1) * bucket_width;
+                        }
+                    }
+                    return (long long)counts.size() * bucket_width;
+                }
+
+                long long samples() const { return total; }
+
+            private:
+                vector<long long> counts;
+                long long bucket_width;
+                long long total;
+            };
+            """,
+        ),
+        _p(
+            9508, "Tick Parsing", "Medium",
+            "Parse the wire format in place. No substr, no allocation — on a "
+            "feed, the allocator is the latency.",
+            "O(length), no allocation",
+            """
+            struct Tick {
+                char symbol[8];
+                Price price;
+                long long quantity;
+                bool valid;
+            };
+
+            inline Tick parse_tick(const char* line, size_t length) {
+                Tick tick;
+                tick.valid = false;
+                tick.quantity = 0;
+                for (size_t i = 0; i < sizeof(tick.symbol); i++) {
+                    tick.symbol[i] = '\\0';
+                }
+
+                size_t at = 0;
+                size_t wrote = 0;
+                while (at < length && line[at] != ',' &&
+                       wrote + 1 < sizeof(tick.symbol)) {
+                    tick.symbol[wrote++] = line[at++];
+                }
+                if (at >= length || line[at] != ',') {
+                    return tick;
+                }
+                at++;
+
+                long long whole = 0;
+                while (at < length && line[at] >= '0' && line[at] <= '9') {
+                    whole = whole * 10 + (line[at++] - '0');
+                }
+                long long frac = 0;
+                long long scale = Price::SCALE;
+                if (at < length && line[at] == '.') {
+                    at++;
+                    while (at < length && line[at] >= '0' && line[at] <= '9' &&
+                           scale > 1) {
+                        scale /= 10;
+                        frac += (line[at++] - '0') * scale;
+                    }
+                }
+                if (at >= length || line[at] != ',') {
+                    return tick;
+                }
+                at++;
+
+                long long quantity = 0;
+                bool any = false;
+                while (at < length && line[at] >= '0' && line[at] <= '9') {
+                    quantity = quantity * 10 + (line[at++] - '0');
+                    any = true;
+                }
+                if (!any) {
+                    return tick;
+                }
+
+                tick.price = Price(whole * Price::SCALE + frac);
+                tick.quantity = quantity;
+                tick.valid = true;
+                return tick;
+            }
+            """,
+        ),
+    ),
+)
+
+
 PATTERNS: tuple[Pattern, ...] = (
     _MEMORY,
     _CONCURRENCY,
     _LOCKFREE,
     _CACHE,
+    _MARKET,
 )
