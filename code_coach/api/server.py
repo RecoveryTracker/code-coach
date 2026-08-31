@@ -705,6 +705,20 @@ def reference() -> dict:
     }
 
 
+@app.get("/api/concepts")
+def concepts() -> list[dict]:
+    """The concept questions, grouped by topic.
+
+    The half of a systems or quant interview that is not a coding problem —
+    what happens on a page fault, why acquire and release come in pairs, what
+    a branch misprediction costs. Not language-specific except the C++ topic,
+    so unlike the code banks everyone gets it.
+    """
+    from code_coach.concepts import payload
+
+    return payload()
+
+
 @app.get("/api/lessons")
 def lessons() -> list[dict]:
     """Every pattern lesson, for the Lessons screen.

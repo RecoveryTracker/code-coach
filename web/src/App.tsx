@@ -26,6 +26,7 @@ import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
 import { runCommandFor, Terminal } from "./components/Terminal";
 import { TypeTarget } from "./components/TypeTarget";
+import Concepts from "./components/Concepts";
 import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
 import TypingTrainer from "./components/TypingTrainer";
@@ -195,6 +196,9 @@ export default function App() {
   // reading, and reading in a side panel next to an editor is glancing.
   const [lessonsOpen, setLessonsOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
+  // Concepts is reading too, so it takes the screen for the same reason
+  // Lessons does.
+  const [conceptsOpen, setConceptsOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /**
    * Free mode's reminders. Not the coach: they say nothing about whether you
@@ -1011,6 +1015,14 @@ export default function App() {
       <button
         type="button"
         className="ws-btn"
+        onClick={() => setConceptsOpen(true)}
+        title="The questions an interview asks that aren't coding problems"
+      >
+        Concepts
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
         onClick={() => setReferenceOpen(true)}
         title="Cheat sheet and flashcards for the language you're in"
       >
@@ -1077,6 +1089,24 @@ export default function App() {
           </button>
         </div>
         <Reference />
+      </div>
+    );
+  }
+
+  if (conceptsOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Concepts</span>
+          <button
+            type="button"
+            className="ws-btn"
+            onClick={() => setConceptsOpen(false)}
+          >
+            Back to code
+          </button>
+        </div>
+        <Concepts />
       </div>
     );
   }

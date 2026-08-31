@@ -489,3 +489,18 @@ export type ExplainResult = {
   output_notes: string[];
   error_note: string | null;
 };
+
+export type ConceptQuestion = {
+  ask: string;
+  answer: string;
+  /** The one an interviewer reaches for when you answer the first well. */
+  follow_up: string;
+};
+
+export type ConceptTopic = {
+  id: string;
+  name: string;
+  blurb: string;
+  order: number;
+  questions: ConceptQuestion[];
+};

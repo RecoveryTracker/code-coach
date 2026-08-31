@@ -3,6 +3,7 @@ import type {
   DrillEvaluateResult,
   ExplainResult,
   LanguageInfo,
+  ConceptTopic,
   LessonEntry,
   PracticeMode,
   PracticeSession,
@@ -100,6 +101,10 @@ export function fetchReference(): Promise<ReferenceSheet> {
 
 export function fetchLessons(): Promise<LessonEntry[]> {
   return request("/api/lessons");
+}
+
+export function fetchConcepts(): Promise<ConceptTopic[]> {
+  return request("/api/concepts");
 }
 
 export function fetchNextPractice(): Promise<PracticeSession> {
