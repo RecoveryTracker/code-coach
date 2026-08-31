@@ -635,7 +635,1088 @@ _LOCKFREE = Pattern(
 )
 
 
+
+
+# ── 2. Concurrency primitives ───────────────────────────────
+
+_CONCURRENCY = Pattern(
+    id="sys-concurrency",
+    name="Concurrency Primitives",
+    order=102,
+    blurb="C11 threads, and every piece of state named at file scope because there are no closures.",
+    tell="Threads sharing anything: a counter, a queue, a piece of state.",
+    preamble=(STDLIB, STRING_H, STDBOOL, STDDEF, ATOMIC, THREADS),
+    problems=(
+        _p(
+            9201, "Mutex and Condition Variable", "Medium",
+            "The pairing C11 gives you. The mutex is released atomically as "
+            "you wait, which is what closes the window where a signal could "
+            "arrive before you were listening.",
+            "O(1) per operation",
+            """
+            typedef struct {
+                mtx_t guard;
+                cnd_t ready;
+                int value;
+            } Latch;
+
+            static void latch_init(Latch *latch) {
+                mtx_init(&latch->guard, mtx_plain);
+                cnd_init(&latch->ready);
+                latch->value = 0;
+            }
+
+            static void latch_set(Latch *latch, int value) {
+                mtx_lock(&latch->guard);
+                latch->value = value;
+                mtx_unlock(&latch->guard);
+                cnd_broadcast(&latch->ready);
+            }
+
+            static void latch_wait_for(Latch *latch, int wanted) {
+                mtx_lock(&latch->guard);
+                /* A loop, not an if: a wakeup does not promise the predicate. */
+                while (latch->value != wanted) {
+                    cnd_wait(&latch->ready, &latch->guard);
+                }
+                mtx_unlock(&latch->guard);
+            }
+
+            static void latch_destroy(Latch *latch) {
+                cnd_destroy(&latch->ready);
+                mtx_destroy(&latch->guard);
+            }
+            """,
+        ),
+        _p(
+            9202, "Semaphore", "Medium",
+            "A count of permits. Waiters sleep rather than spin, which is the "
+            "right trade when the wait might be long.",
+            "O(1) per acquire",
+            """
+            typedef struct {
+                mtx_t guard;
+                cnd_t ready;
+                int permits;
+            } Semaphore;
+
+            static void sem_init_with(Semaphore *sem, int permits) {
+                mtx_init(&sem->guard, mtx_plain);
+                cnd_init(&sem->ready);
+                sem->permits = permits;
+            }
+
+            static void sem_acquire(Semaphore *sem) {
+                mtx_lock(&sem->guard);
+                while (sem->permits == 0) {
+                    cnd_wait(&sem->ready, &sem->guard);
+                }
+                sem->permits--;
+                mtx_unlock(&sem->guard);
+            }
+
+            static void sem_release(Semaphore *sem) {
+                mtx_lock(&sem->guard);
+                sem->permits++;
+                mtx_unlock(&sem->guard);
+                cnd_signal(&sem->ready);
+            }
+
+            static int sem_available(Semaphore *sem) {
+                mtx_lock(&sem->guard);
+                int now = sem->permits;
+                mtx_unlock(&sem->guard);
+                return now;
+            }
+
+            static void sem_destroy(Semaphore *sem) {
+                cnd_destroy(&sem->ready);
+                mtx_destroy(&sem->guard);
+            }
+            """,
+        ),
+        _p(
+            9203, "Reader-Writer Lock", "Hard",
+            "Many readers or one writer. Letting waiting writers block new "
+            "readers is what stops a steady stream of readers starving them.",
+            "O(1) per acquire",
+            """
+            typedef struct {
+                mtx_t guard;
+                cnd_t ready;
+                int readers;
+                int writers;
+                int waiting_writers;
+            } RwLock;
+
+            static void rw_init(RwLock *lock) {
+                mtx_init(&lock->guard, mtx_plain);
+                cnd_init(&lock->ready);
+                lock->readers = 0;
+                lock->writers = 0;
+                lock->waiting_writers = 0;
+            }
+
+            static void rw_read_lock(RwLock *lock) {
+                mtx_lock(&lock->guard);
+                while (lock->writers > 0 || lock->waiting_writers > 0) {
+                    cnd_wait(&lock->ready, &lock->guard);
+                }
+                lock->readers++;
+                mtx_unlock(&lock->guard);
+            }
+
+            static void rw_read_unlock(RwLock *lock) {
+                mtx_lock(&lock->guard);
+                lock->readers--;
+                mtx_unlock(&lock->guard);
+                cnd_broadcast(&lock->ready);
+            }
+
+            static void rw_write_lock(RwLock *lock) {
+                mtx_lock(&lock->guard);
+                lock->waiting_writers++;
+                while (lock->writers > 0 || lock->readers > 0) {
+                    cnd_wait(&lock->ready, &lock->guard);
+                }
+                lock->waiting_writers--;
+                lock->writers++;
+                mtx_unlock(&lock->guard);
+            }
+
+            static void rw_write_unlock(RwLock *lock) {
+                mtx_lock(&lock->guard);
+                lock->writers--;
+                mtx_unlock(&lock->guard);
+                cnd_broadcast(&lock->ready);
+            }
+
+            static int rw_readers_now(RwLock *lock) {
+                mtx_lock(&lock->guard);
+                int now = lock->readers;
+                mtx_unlock(&lock->guard);
+                return now;
+            }
+            """,
+        ),
+        _p(
+            9204, "Barrier", "Medium",
+            "Nobody leaves until everybody arrives. The generation counter is "
+            "what stops a fast thread lapping the others and passing twice.",
+            "O(1) per arrival",
+            """
+            typedef struct {
+                mtx_t guard;
+                cnd_t ready;
+                int total;
+                int waiting;
+                unsigned generation;
+            } Barrier;
+
+            static void barrier_init(Barrier *barrier, int total) {
+                mtx_init(&barrier->guard, mtx_plain);
+                cnd_init(&barrier->ready);
+                barrier->total = total;
+                barrier->waiting = 0;
+                barrier->generation = 0;
+            }
+
+            static void barrier_wait(Barrier *barrier) {
+                mtx_lock(&barrier->guard);
+                unsigned mine = barrier->generation;
+                if (++barrier->waiting == barrier->total) {
+                    barrier->waiting = 0;
+                    barrier->generation++;
+                    mtx_unlock(&barrier->guard);
+                    cnd_broadcast(&barrier->ready);
+                    return;
+                }
+                while (barrier->generation == mine) {
+                    cnd_wait(&barrier->ready, &barrier->guard);
+                }
+                mtx_unlock(&barrier->guard);
+            }
+
+            static void barrier_destroy(Barrier *barrier) {
+                cnd_destroy(&barrier->ready);
+                mtx_destroy(&barrier->guard);
+            }
+            """,
+        ),
+        _p(
+            9205, "Blocking Queue", "Hard",
+            "A ring buffer with two condition variables, because full and "
+            "empty are different waits and one variable would wake the wrong "
+            "side.",
+            "O(1) per operation",
+            """
+            #define QUEUE_CAP 16
+
+            typedef struct {
+                mtx_t guard;
+                cnd_t not_full;
+                cnd_t not_empty;
+                int slots[QUEUE_CAP];
+                size_t head;
+                size_t tail;
+                size_t count;
+            } BlockingQueue;
+
+            static void queue_init(BlockingQueue *queue) {
+                mtx_init(&queue->guard, mtx_plain);
+                cnd_init(&queue->not_full);
+                cnd_init(&queue->not_empty);
+                queue->head = 0;
+                queue->tail = 0;
+                queue->count = 0;
+            }
+
+            static void queue_push(BlockingQueue *queue, int value) {
+                mtx_lock(&queue->guard);
+                while (queue->count == QUEUE_CAP) {
+                    cnd_wait(&queue->not_full, &queue->guard);
+                }
+                queue->slots[queue->tail] = value;
+                queue->tail = (queue->tail + 1) % QUEUE_CAP;
+                queue->count++;
+                mtx_unlock(&queue->guard);
+                cnd_signal(&queue->not_empty);
+            }
+
+            static int queue_pop(BlockingQueue *queue) {
+                mtx_lock(&queue->guard);
+                while (queue->count == 0) {
+                    cnd_wait(&queue->not_empty, &queue->guard);
+                }
+                int value = queue->slots[queue->head];
+                queue->head = (queue->head + 1) % QUEUE_CAP;
+                queue->count--;
+                mtx_unlock(&queue->guard);
+                cnd_signal(&queue->not_full);
+                return value;
+            }
+
+            static void queue_destroy(BlockingQueue *queue) {
+                cnd_destroy(&queue->not_empty);
+                cnd_destroy(&queue->not_full);
+                mtx_destroy(&queue->guard);
+            }
+            """,
+        ),
+        _p(
+            9206, "Thread-Local Accumulator", "Medium",
+            "Give each worker its own slot and add them up at the end. No "
+            "lock at all, and no contention — the cheapest way to count.",
+            "O(1) per update, O(workers) to total",
+            """
+            #define MAX_WORKERS 16
+
+            typedef struct {
+                /* One slot per worker, each padded to its own cache line so
+                   the workers do not fight over one. */
+                _Alignas(64) long long slot[MAX_WORKERS][8];
+                int workers;
+            } Accumulator;
+
+            static void accumulator_init(Accumulator *acc, int workers) {
+                acc->workers = workers;
+                for (int i = 0; i < workers; i++) {
+                    acc->slot[i][0] = 0;
+                }
+            }
+
+            static void accumulator_add(Accumulator *acc, int worker,
+                                        long long amount) {
+                acc->slot[worker][0] += amount;
+            }
+
+            static long long accumulator_total(const Accumulator *acc) {
+                long long total = 0;
+                for (int i = 0; i < acc->workers; i++) {
+                    total += acc->slot[i][0];
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9207, "Lock Ordering", "Medium",
+            "Two locks taken in two orders is a deadlock waiting for the wrong "
+            "interleaving. One fixed order everywhere breaks the circular "
+            "wait, which is the cheapest of the four conditions to break.",
+            "O(1), and it is the difference between working and hanging",
+            """
+            typedef struct {
+                int id;
+                mtx_t guard;
+                long long balance;
+            } Account;
+
+            static void account_init(Account *account, int id,
+                                     long long balance) {
+                account->id = id;
+                mtx_init(&account->guard, mtx_plain);
+                account->balance = balance;
+            }
+
+            static bool account_transfer(Account *from, Account *to,
+                                         long long amount) {
+                /* Always lock the lower id first, whichever way the call
+                   came in. */
+                Account *first = from->id < to->id ? from : to;
+                Account *second = from->id < to->id ? to : from;
+
+                mtx_lock(&first->guard);
+                mtx_lock(&second->guard);
+
+                bool ok = from->balance >= amount;
+                if (ok) {
+                    from->balance -= amount;
+                    to->balance += amount;
+                }
+
+                mtx_unlock(&second->guard);
+                mtx_unlock(&first->guard);
+                return ok;
+            }
+
+            static void account_destroy(Account *account) {
+                mtx_destroy(&account->guard);
+            }
+            """,
+        ),
+        _p(
+            9208, "Thread Pool", "Hard",
+            "Workers wait on a queue of jobs. A stopping flag plus a broadcast "
+            "is what lets them all wake up and leave rather than waiting "
+            "forever on a queue nobody will fill.",
+            "O(1) submit, work spread over the workers",
+            """
+            typedef struct {
+                void (*run)(void *);
+                void *context;
+            } Job;
+
+            typedef struct {
+                mtx_t guard;
+                cnd_t ready;
+                Job jobs[256];
+                size_t head;
+                size_t tail;
+                size_t count;
+                bool stopping;
+                thrd_t workers[8];
+                int worker_count;
+            } ThreadPool;
+
+            static int pool_worker(void *arg) {
+                ThreadPool *pool = arg;
+                for (;;) {
+                    mtx_lock(&pool->guard);
+                    while (pool->count == 0 && !pool->stopping) {
+                        cnd_wait(&pool->ready, &pool->guard);
+                    }
+                    if (pool->count == 0 && pool->stopping) {
+                        mtx_unlock(&pool->guard);
+                        return 0;
+                    }
+                    Job job = pool->jobs[pool->head];
+                    pool->head = (pool->head + 1) % 256;
+                    pool->count--;
+                    mtx_unlock(&pool->guard);
+                    job.run(job.context);
+                }
+            }
+
+            static void pool_start(ThreadPool *pool, int workers) {
+                mtx_init(&pool->guard, mtx_plain);
+                cnd_init(&pool->ready);
+                pool->head = 0;
+                pool->tail = 0;
+                pool->count = 0;
+                pool->stopping = false;
+                pool->worker_count = workers;
+                for (int i = 0; i < workers; i++) {
+                    thrd_create(&pool->workers[i], pool_worker, pool);
+                }
+            }
+
+            static void pool_submit(ThreadPool *pool, void (*run)(void *),
+                                    void *context) {
+                mtx_lock(&pool->guard);
+                pool->jobs[pool->tail].run = run;
+                pool->jobs[pool->tail].context = context;
+                pool->tail = (pool->tail + 1) % 256;
+                pool->count++;
+                mtx_unlock(&pool->guard);
+                cnd_signal(&pool->ready);
+            }
+
+            static void pool_stop(ThreadPool *pool) {
+                mtx_lock(&pool->guard);
+                pool->stopping = true;
+                mtx_unlock(&pool->guard);
+                cnd_broadcast(&pool->ready);
+                for (int i = 0; i < pool->worker_count; i++) {
+                    thrd_join(pool->workers[i], NULL);
+                }
+                cnd_destroy(&pool->ready);
+                mtx_destroy(&pool->guard);
+            }
+            """,
+        ),
+    ),
+)
+
+
+# ── 4. Cache and memory hierarchy ───────────────────────────
+
+_CACHE = Pattern(
+    id="sys-cache",
+    name="Cache & Memory Hierarchy",
+    order=104,
+    blurb="The same work, laid out two ways, running an order of magnitude apart.",
+    tell="It should be fast and it is not, and the algorithm is already right.",
+    preamble=(STDLIB, STRING_H, STDBOOL, STDINT, STDDEF, ATOMIC, THREADS),
+    problems=(
+        _p(
+            9401, "Cache Line", "Easy",
+            "Memory moves in lines, not bytes. Sixty-four is the number to "
+            "have in your head.",
+            "O(1) — this is a fact, not an algorithm",
+            """
+            #define CACHE_LINE 64
+
+            static bool same_cache_line(const void *a, const void *b) {
+                uintptr_t x = (uintptr_t)a;
+                uintptr_t y = (uintptr_t)b;
+                return (x / CACHE_LINE) == (y / CACHE_LINE);
+            }
+
+            static size_t lines_spanned(size_t bytes) {
+                return (bytes + CACHE_LINE - 1) / CACHE_LINE;
+            }
+            """,
+        ),
+        _p(
+            9402, "False Sharing", "Hard",
+            "Two threads writing different variables on the SAME line fight "
+            "over it. _Alignas pushes them apart, at the cost of the bytes.",
+            "Same instruction count, wildly different time",
+            """
+            typedef struct {
+                atomic_llong a;
+                atomic_llong b;
+            } SharedPair;
+
+            typedef struct {
+                _Alignas(CACHE_LINE) atomic_llong a;
+                _Alignas(CACHE_LINE) atomic_llong b;
+            } PaddedPair;
+
+            static void shared_pair_init(SharedPair *pair) {
+                atomic_init(&pair->a, 0);
+                atomic_init(&pair->b, 0);
+            }
+
+            static void padded_pair_init(PaddedPair *pair) {
+                atomic_init(&pair->a, 0);
+                atomic_init(&pair->b, 0);
+            }
+            """,
+        ),
+        _p(
+            9403, "Row Major vs Column Major", "Medium",
+            "The array is the same; the walk is not. Along a row uses every "
+            "byte of each line fetched; down a column throws most away.",
+            "Same O(n*n), an order of magnitude apart in practice",
+            """
+            static long long sum_by_rows(const int *grid, size_t rows,
+                                         size_t cols) {
+                long long total = 0;
+                for (size_t r = 0; r < rows; r++) {
+                    for (size_t c = 0; c < cols; c++) {
+                        total += grid[r * cols + c];
+                    }
+                }
+                return total;
+            }
+
+            static long long sum_by_columns(const int *grid, size_t rows,
+                                            size_t cols) {
+                long long total = 0;
+                for (size_t c = 0; c < cols; c++) {
+                    for (size_t r = 0; r < rows; r++) {
+                        total += grid[r * cols + c];
+                    }
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9404, "Struct Packing", "Medium",
+            "Field order changes the size, because each field is padded to its "
+            "own alignment. C never reorders for you — what you write is what "
+            "you get.",
+            "O(1) — but it decides how many fit in a line",
+            """
+            typedef struct {
+                char flag;
+                double value;
+                char other;
+                int count;
+            } Loose;
+
+            typedef struct {
+                double value;
+                int count;
+                char flag;
+                char other;
+            } Tight;
+
+            static size_t wasted_bytes(void) {
+                return sizeof(Loose) - sizeof(Tight);
+            }
+
+            static size_t per_cache_line(size_t object_size) {
+                return object_size ? CACHE_LINE / object_size : 0;
+            }
+            """,
+        ),
+        _p(
+            9405, "Array of Structs vs Struct of Arrays", "Medium",
+            "Reading one field out of an array of structs drags the rest along "
+            "for the ride. Splitting the fields means every byte fetched is "
+            "one you wanted.",
+            "Same work, far fewer lines touched",
+            """
+            typedef struct {
+                double x;
+                double y;
+                double z;
+                double mass;
+            } Particle;
+
+            typedef struct {
+                double *x;
+                double *y;
+                double *z;
+                double *mass;
+                size_t count;
+            } Particles;
+
+            static double total_mass_aos(const Particle *items, size_t count) {
+                double total = 0;
+                for (size_t i = 0; i < count; i++) {
+                    total += items[i].mass;
+                }
+                return total;
+            }
+
+            static double total_mass_soa(const Particles *items) {
+                double total = 0;
+                for (size_t i = 0; i < items->count; i++) {
+                    total += items->mass[i];
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9406, "Pointer Chasing vs Contiguous", "Medium",
+            "A linked list makes the processor wait for each node before it "
+            "knows where the next one is. An array it can prefetch.",
+            "Same O(n), and the constant is what gets you",
+            """
+            typedef struct Link {
+                int value;
+                struct Link *next;
+            } Link;
+
+            static long long walk_links(const Link *head) {
+                long long total = 0;
+                while (head) {
+                    total += head->value;
+                    head = head->next;
+                }
+                return total;
+            }
+
+            static long long walk_array(const int *items, size_t count) {
+                long long total = 0;
+                for (size_t i = 0; i < count; i++) {
+                    total += items[i];
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9407, "Branch Prediction", "Medium",
+            "A branch the processor can guess is nearly free; one it cannot is "
+            "a stall. Sorting first makes the SAME branch predictable.",
+            "Same comparisons, very different cost",
+            """
+            static long long sum_over(const int *items, size_t count,
+                                      int threshold) {
+                long long total = 0;
+                for (size_t i = 0; i < count; i++) {
+                    if (items[i] >= threshold) {
+                        total += items[i];
+                    }
+                }
+                return total;
+            }
+
+            static long long sum_over_branchless(const int *items, size_t count,
+                                                 int threshold) {
+                long long total = 0;
+                for (size_t i = 0; i < count; i++) {
+                    long long mask = -(long long)(items[i] >= threshold);
+                    total += items[i] & mask;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9408, "Blocked Transpose", "Hard",
+            "Transposing straight through misses on one side or the other. A "
+            "tile at a time keeps both source and destination in cache.",
+            "Same O(n*n), far fewer misses",
+            """
+            static void transpose_naive(const int *src, int *dst, size_t n) {
+                for (size_t r = 0; r < n; r++) {
+                    for (size_t c = 0; c < n; c++) {
+                        dst[c * n + r] = src[r * n + c];
+                    }
+                }
+            }
+
+            static void transpose_blocked(const int *src, int *dst, size_t n,
+                                          size_t block) {
+                for (size_t r0 = 0; r0 < n; r0 += block) {
+                    for (size_t c0 = 0; c0 < n; c0 += block) {
+                        size_t r_end = r0 + block < n ? r0 + block : n;
+                        size_t c_end = c0 + block < n ? c0 + block : n;
+                        for (size_t r = r0; r < r_end; r++) {
+                            for (size_t c = c0; c < c_end; c++) {
+                                dst[c * n + r] = src[r * n + c];
+                            }
+                        }
+                    }
+                }
+            }
+            """,
+        ),
+    ),
+)
+
+
+# ── 5. Market data and matching ─────────────────────────────
+
+_MARKET = Pattern(
+    id="sys-market",
+    name="Market Data & Matching",
+    order=105,
+    blurb="The pieces a trading system is made of, small enough to write out.",
+    tell="Prices, quantities, a book, and a latency number somebody cares about.",
+    preamble=(STDLIB, STRING_H, STDBOOL, STDINT, STDDEF),
+    problems=(
+        _p(
+            9501, "Fixed-Point Price", "Medium",
+            "Money is not a double. Store it as an integer number of ticks and "
+            "the arithmetic is exact.",
+            "O(1), and exactly representable",
+            """
+            #define PRICE_SCALE 10000
+
+            typedef struct {
+                long long ticks;
+            } Price;
+
+            static Price price_from_double(double value) {
+                double scaled = value * PRICE_SCALE;
+                long long rounded =
+                    (long long)(scaled < 0 ? scaled - 0.5 : scaled + 0.5);
+                Price price = {rounded};
+                return price;
+            }
+
+            static double price_to_double(Price price) {
+                return (double)price.ticks / PRICE_SCALE;
+            }
+
+            static Price price_add(Price a, Price b) {
+                Price out = {a.ticks + b.ticks};
+                return out;
+            }
+
+            static Price price_sub(Price a, Price b) {
+                Price out = {a.ticks - b.ticks};
+                return out;
+            }
+
+            static bool price_equal(Price a, Price b) {
+                return a.ticks == b.ticks;
+            }
+            """,
+        ),
+        _p(
+            9502, "Price Level", "Easy",
+            "Everything resting at one price, kept as a total rather than a "
+            "list. The book only needs the sum until something trades.",
+            "O(1) add and remove",
+            """
+            typedef struct {
+                Price price;
+                long long quantity;
+                int orders;
+            } Level;
+
+            static Level level_new(Price price, long long quantity) {
+                Level level = {price, quantity, 1};
+                return level;
+            }
+
+            static void level_add(Level *level, long long quantity) {
+                level->quantity += quantity;
+                level->orders++;
+            }
+
+            static void level_remove(Level *level, long long quantity) {
+                level->quantity -=
+                    quantity < level->quantity ? quantity : level->quantity;
+                if (level->orders > 0) {
+                    level->orders--;
+                }
+            }
+
+            static bool level_empty(const Level *level) {
+                return level->quantity <= 0;
+            }
+            """,
+        ),
+        _p(
+            9503, "Order Book", "Hard",
+            "Bids sorted high to low, asks low to high, so the best of each is "
+            "the front. Fixed arrays, because a feed does not want an "
+            "allocator in the path.",
+            "O(levels) insert, O(1) best",
+            """
+            #define MAX_LEVELS 64
+
+            typedef struct {
+                Level bids[MAX_LEVELS];
+                size_t bid_count;
+                Level asks[MAX_LEVELS];
+                size_t ask_count;
+            } OrderBook;
+
+            static void book_init(OrderBook *book) {
+                book->bid_count = 0;
+                book->ask_count = 0;
+            }
+
+            static void side_insert(Level *side, size_t *count, Price price,
+                                    long long quantity, bool descending) {
+                for (size_t i = 0; i < *count; i++) {
+                    if (price_equal(side[i].price, price)) {
+                        level_add(&side[i], quantity);
+                        return;
+                    }
+                    bool before = descending
+                                      ? side[i].price.ticks < price.ticks
+                                      : price.ticks < side[i].price.ticks;
+                    if (before) {
+                        for (size_t j = *count; j > i; j--) {
+                            side[j] = side[j - 1];
+                        }
+                        side[i] = level_new(price, quantity);
+                        (*count)++;
+                        return;
+                    }
+                }
+                side[*count] = level_new(price, quantity);
+                (*count)++;
+            }
+
+            static void book_add_bid(OrderBook *book, Price price,
+                                     long long quantity) {
+                side_insert(book->bids, &book->bid_count, price, quantity, true);
+            }
+
+            static void book_add_ask(OrderBook *book, Price price,
+                                     long long quantity) {
+                side_insert(book->asks, &book->ask_count, price, quantity, false);
+            }
+
+            static long long book_spread_ticks(const OrderBook *book) {
+                if (book->bid_count == 0 || book->ask_count == 0) {
+                    return -1;
+                }
+                return book->asks[0].price.ticks - book->bids[0].price.ticks;
+            }
+
+            static bool book_crossed(const OrderBook *book) {
+                return book->bid_count > 0 && book->ask_count > 0 &&
+                       book->bids[0].price.ticks >= book->asks[0].price.ticks;
+            }
+            """,
+        ),
+        _p(
+            9504, "Matching Step", "Hard",
+            "An aggressive order eats the book from the best price outward and "
+            "stops when it is filled or the price stops being acceptable.",
+            "O(levels touched)",
+            """
+            typedef struct {
+                Price price;
+                long long quantity;
+            } Fill;
+
+            static size_t match_buy(OrderBook *book, Price limit,
+                                    long long wanted, Fill *fills,
+                                    size_t max_fills) {
+                size_t made = 0;
+                while (wanted > 0 && book->ask_count > 0 && made < max_fills) {
+                    Level *best = &book->asks[0];
+                    if (limit.ticks < best->price.ticks) {
+                        break;
+                    }
+                    long long taken =
+                        wanted < best->quantity ? wanted : best->quantity;
+                    fills[made].price = best->price;
+                    fills[made].quantity = taken;
+                    made++;
+                    best->quantity -= taken;
+                    wanted -= taken;
+                    if (level_empty(best)) {
+                        for (size_t i = 0; i + 1 < book->ask_count; i++) {
+                            book->asks[i] = book->asks[i + 1];
+                        }
+                        book->ask_count--;
+                    }
+                }
+                return made;
+            }
+
+            static long long filled_quantity(const Fill *fills, size_t count) {
+                long long total = 0;
+                for (size_t i = 0; i < count; i++) {
+                    total += fills[i].quantity;
+                }
+                return total;
+            }
+            """,
+        ),
+        _p(
+            9505, "VWAP", "Medium",
+            "Volume-weighted, so a big trade counts for more. Carry the two "
+            "running totals — you cannot average averages.",
+            "O(1) per trade",
+            """
+            typedef struct {
+                long long notional;
+                long long volume;
+            } Vwap;
+
+            static void vwap_init(Vwap *vwap) {
+                vwap->notional = 0;
+                vwap->volume = 0;
+            }
+
+            static void vwap_add(Vwap *vwap, Price price, long long quantity) {
+                vwap->notional += price.ticks * quantity;
+                vwap->volume += quantity;
+            }
+
+            static bool vwap_value(const Vwap *vwap, Price *out) {
+                if (vwap->volume == 0) {
+                    return false;
+                }
+                out->ticks = vwap->notional / vwap->volume;
+                return true;
+            }
+            """,
+        ),
+        _p(
+            9506, "Rolling Window", "Medium",
+            "A fixed-size ring of the last n values. Nothing shifts and nothing "
+            "is allocated after construction.",
+            "O(1) push, O(n) statistics",
+            """
+            #define WINDOW_CAP 64
+
+            typedef struct {
+                long long slots[WINDOW_CAP];
+                size_t capacity;
+                size_t next;
+                size_t filled;
+                long long running;
+            } RollingWindow;
+
+            static void window_init(RollingWindow *window, size_t capacity) {
+                window->capacity = capacity < WINDOW_CAP ? capacity : WINDOW_CAP;
+                window->next = 0;
+                window->filled = 0;
+                window->running = 0;
+            }
+
+            static void window_push(RollingWindow *window, long long value) {
+                if (window->filled == window->capacity) {
+                    window->running -= window->slots[window->next];
+                } else {
+                    window->filled++;
+                }
+                window->slots[window->next] = value;
+                window->running += value;
+                window->next = (window->next + 1) % window->capacity;
+            }
+
+            static bool window_mean(const RollingWindow *window, double *out) {
+                if (window->filled == 0) {
+                    return false;
+                }
+                *out = (double)window->running / (double)window->filled;
+                return true;
+            }
+
+            static long long window_highest(const RollingWindow *window) {
+                long long best = 0;
+                for (size_t i = 0; i < window->filled; i++) {
+                    if (i == 0 || window->slots[i] > best) {
+                        best = window->slots[i];
+                    }
+                }
+                return best;
+            }
+            """,
+        ),
+        _p(
+            9507, "Latency Histogram", "Medium",
+            "Keeping every sample to find the 99th percentile is the wrong "
+            "trade. Bucket on the way in and the answer is a scan.",
+            "O(1) record, O(buckets) percentile",
+            """
+            #define MAX_BUCKETS 64
+
+            typedef struct {
+                long long counts[MAX_BUCKETS];
+                size_t buckets;
+                long long width;
+                long long total;
+            } Histogram;
+
+            static void hist_init(Histogram *hist, size_t buckets,
+                                  long long width) {
+                hist->buckets = buckets < MAX_BUCKETS ? buckets : MAX_BUCKETS;
+                hist->width = width;
+                hist->total = 0;
+                memset(hist->counts, 0, sizeof(hist->counts));
+            }
+
+            static void hist_record(Histogram *hist, long long nanos) {
+                size_t at = (size_t)(nanos / hist->width);
+                if (at >= hist->buckets) {
+                    at = hist->buckets - 1;
+                }
+                hist->counts[at]++;
+                hist->total++;
+            }
+
+            static long long hist_percentile(const Histogram *hist,
+                                             double fraction) {
+                if (hist->total == 0) {
+                    return -1;
+                }
+                long long wanted = (long long)(fraction * (double)hist->total);
+                long long seen = 0;
+                for (size_t i = 0; i < hist->buckets; i++) {
+                    seen += hist->counts[i];
+                    if (seen > wanted) {
+                        return (long long)(i + 1) * hist->width;
+                    }
+                }
+                return (long long)hist->buckets * hist->width;
+            }
+            """,
+        ),
+        _p(
+            9508, "Tick Parsing", "Medium",
+            "Parse the wire format in place. No strtok, no allocation — on a "
+            "feed, the allocator is the latency.",
+            "O(length), no allocation",
+            """
+            typedef struct {
+                char symbol[8];
+                Price price;
+                long long quantity;
+                bool valid;
+            } Tick;
+
+            static Tick parse_tick(const char *line, size_t length) {
+                Tick tick;
+                memset(&tick, 0, sizeof(tick));
+
+                size_t at = 0;
+                size_t wrote = 0;
+                while (at < length && line[at] != ',') {
+                    if (wrote + 1 < sizeof(tick.symbol)) {
+                        tick.symbol[wrote++] = line[at];
+                    }
+                    at++;
+                }
+                if (at >= length) {
+                    return tick;
+                }
+                at++;
+
+                long long whole = 0;
+                while (at < length && line[at] >= '0' && line[at] <= '9') {
+                    whole = whole * 10 + (line[at++] - '0');
+                }
+                long long frac = 0;
+                long long scale = PRICE_SCALE;
+                if (at < length && line[at] == '.') {
+                    at++;
+                    while (at < length && line[at] >= '0' && line[at] <= '9' &&
+                           scale > 1) {
+                        scale /= 10;
+                        frac += (line[at++] - '0') * scale;
+                    }
+                }
+                if (at >= length || line[at] != ',') {
+                    return tick;
+                }
+                at++;
+
+                long long quantity = 0;
+                bool any = false;
+                while (at < length && line[at] >= '0' && line[at] <= '9') {
+                    quantity = quantity * 10 + (line[at++] - '0');
+                    any = true;
+                }
+                if (!any) {
+                    return tick;
+                }
+
+                tick.price.ticks = whole * PRICE_SCALE + frac;
+                tick.quantity = quantity;
+                tick.valid = true;
+                return tick;
+            }
+            """,
+        ),
+    ),
+)
+
+
 PATTERNS: tuple[Pattern, ...] = (
     _MEMORY,
+    _CONCURRENCY,
     _LOCKFREE,
+    _CACHE,
+    _MARKET,
 )
