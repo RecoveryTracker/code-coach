@@ -37,11 +37,25 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.systems.problems_cpp import PATTERNS
 
         return PATTERNS
+    if language == "rust":
+        from code_coach.systems.problems_rust import PATTERNS as RUST_PATTERNS
+
+        return RUST_PATTERNS
     return ()
 
 
 def has_systems(language: str) -> bool:
     return bool(patterns_for_language(language))
+
+
+def has_class(class_id: str, language: str) -> bool:
+    """Whether this language has THIS systems class.
+
+    Per class, not per language: the C++ bank is ahead of the Rust one, and
+    offering Rust an empty class is the same failure as handing a Dart
+    student Python exercises to type.
+    """
+    return any(p.id == class_id for p in patterns_for_language(language))
 
 
 def class_ids(language: str = "cpp") -> tuple[str, ...]:

@@ -552,17 +552,18 @@ def classes_for_language(language: str) -> list[ClassDef]:
 
     from code_coach.fundamentals.base import has_fundamentals
     from code_coach.leetcode.bank import has_own_bank
-    from code_coach.systems import has_systems, is_systems_class
+    from code_coach.systems import has_class as has_systems_class
+    from code_coach.systems import is_systems_class
 
     # has_own_bank rather than an identity check written out again here —
     # patterns_for_language falls back to Python's, and asking four separate
     # places to remember that is how one of them forgets.
     has_leetcode = has_own_bank(language)
-    offers_systems = has_systems(language)
     out: list[ClassDef] = []
     for c in CLASSES:
         if is_systems_class(c.id):
-            if offers_systems:
+            # Per class: the C++ bank is ahead of the Rust one.
+            if has_systems_class(c.id, language):
                 out.append(c)
         elif is_leetcode_class(c.id):
             if has_leetcode:
