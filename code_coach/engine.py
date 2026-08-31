@@ -211,7 +211,14 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
 # Windows without a GNU toolchain still compiles: fall back to MSVC. cl.exe
 # only works inside the environment vcvars64.bat sets up, so a build is one
 # cmd session that calls that first and then compiles.
-_MSVC_STD = {".c": "/std:c17", ".cpp": "/std:c++17"}
+# C11 atomics are standard C, but MSVC keeps <stdatomic.h> behind a switch
+# and errors out with "C atomic support is not enabled" without it. Passing
+# it makes standard code compile; gcc and clang need nothing, which is why
+# this lives on the MSVC path rather than in the shared flags.
+_MSVC_STD = {
+    ".c": "/std:c17 /experimental:c11atomics",
+    ".cpp": "/std:c++17",
+}
 _VSWHERE = Path(
     r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
 )

@@ -41,6 +41,10 @@ def patterns_for_language(language: str) -> tuple[Pattern, ...]:
         from code_coach.systems.problems_rust import PATTERNS as RUST_PATTERNS
 
         return RUST_PATTERNS
+    if language == "c":
+        from code_coach.systems.problems_c import PATTERNS as C_PATTERNS
+
+        return C_PATTERNS
     return ()
 
 

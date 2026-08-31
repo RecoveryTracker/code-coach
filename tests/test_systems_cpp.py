@@ -991,9 +991,19 @@ class ShapeTests(unittest.TestCase):
                 self.assertEqual(theirs, expected)
 
     def test_a_language_without_the_material_is_offered_none_of_it(self) -> None:
-        from code_coach.curriculum.catalog import classes_for_language
+        """Asked, not listed.
 
-        for language in ("python", "c", "javascript", "sql"):
+        This hardcoded ("python", "c", "javascript", "sql") and went stale
+        within one commit, when C got a systems bank. Third time a hardcoded
+        language list in this suite has rotted, so it now derives the set.
+        """
+        from code_coach.curriculum.catalog import classes_for_language
+        from code_coach.languages import LANGUAGES
+        from code_coach.systems import has_systems
+
+        without = [lang.id for lang in LANGUAGES if not has_systems(lang.id)]
+        self.assertTrue(without, "some language should still have none")
+        for language in without:
             with self.subTest(language=language):
                 theirs = {
                     c.id
