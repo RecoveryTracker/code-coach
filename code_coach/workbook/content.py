@@ -22,6 +22,7 @@ from code_coach.workbook.content3 import MORE_PAGES_3
 from code_coach.workbook.content4 import MORE_PAGES_4
 from code_coach.workbook.content5 import MORE_PAGES_5
 from code_coach.workbook.content_intermediate import INTERMEDIATE_PAGES
+from code_coach.workbook.content_intermediate2 import INTERMEDIATE_PAGES_2
 from code_coach.workbook.content_practice import PRACTICE_PAGES
 
 
@@ -516,4 +517,5 @@ PAGES: tuple[Page, ...] = (
     + MORE_PAGES_5
     + PRACTICE_PAGES
     + INTERMEDIATE_PAGES
+    + INTERMEDIATE_PAGES_2
 )

@@ -210,10 +210,11 @@ class ReferenceRunTests(unittest.TestCase):
     def test_dart_runs_one_of_every_shape_it_has(self) -> None:
         """Dart's coverage is every shape on a page Dart is offered — which
         is all of them bar the Python-only tier."""
-        from code_coach.workbook.emit_python import SHAPE_IDS as PYTHON_ONLY
+        from code_coach.workbook.emit_python import SHAPE_IDS as PY1
+        from code_coach.workbook.emit_python2 import SHAPE_IDS as PY2
 
         shapes = {e.shape for _, e in _one_per_shape("dart")}
-        self.assertEqual(shapes, set(all_shape_ids()) - set(PYTHON_ONLY))
+        self.assertEqual(shapes, set(all_shape_ids()) - set(PY1) - set(PY2))
 
 
 class EndpointTests(unittest.TestCase):
