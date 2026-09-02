@@ -514,8 +514,14 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_more4,
         emit_python,
         emit_python2,
+        emit_python3,
+        emit_python4,
     )
 
+    if emit_python4.handles(shape):
+        return emit_python4.solution(language, shape, args)
+    if emit_python3.handles(shape):
+        return emit_python3.solution(language, shape, args)
     if emit_python2.handles(shape):
         return emit_python2.solution(language, shape, args)
     if emit_python.handles(shape):
@@ -547,6 +553,8 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_more4,
         emit_python,
         emit_python2,
+        emit_python3,
+        emit_python4,
     )
 
     return (
@@ -557,4 +565,6 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_more4.SHAPE_IDS
         + emit_python.SHAPE_IDS
         + emit_python2.SHAPE_IDS
+        + emit_python3.SHAPE_IDS
+        + emit_python4.SHAPE_IDS
     )

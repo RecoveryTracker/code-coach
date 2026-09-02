@@ -212,9 +212,12 @@ class ReferenceRunTests(unittest.TestCase):
         is all of them bar the Python-only tier."""
         from code_coach.workbook.emit_python import SHAPE_IDS as PY1
         from code_coach.workbook.emit_python2 import SHAPE_IDS as PY2
+        from code_coach.workbook.emit_python3 import SHAPE_IDS as PY3
+        from code_coach.workbook.emit_python4 import SHAPE_IDS as PY4
 
+        python_only = set(PY1) | set(PY2) | set(PY3) | set(PY4)
         shapes = {e.shape for _, e in _one_per_shape("dart")}
-        self.assertEqual(shapes, set(all_shape_ids()) - set(PY1) - set(PY2))
+        self.assertEqual(shapes, set(all_shape_ids()) - python_only)
 
 
 class EndpointTests(unittest.TestCase):
