@@ -20,6 +20,7 @@ from code_coach.workbook import Exercise, Page
 from code_coach.workbook.content2 import MORE_PAGES
 from code_coach.workbook.content3 import MORE_PAGES_3
 from code_coach.workbook.content4 import MORE_PAGES_4
+from code_coach.workbook.content5 import MORE_PAGES_5
 
 
 # Positional-only up to the shape, so a shape argument can share a name
@@ -501,4 +502,6 @@ _FIRST: tuple[Page, ...] = (
 
 # Pages 12 onwards are Python, JavaScript and Dart only, and say so
 # themselves — see content2 for why.
-PAGES: tuple[Page, ...] = _FIRST + MORE_PAGES + MORE_PAGES_3 + MORE_PAGES_4
+PAGES: tuple[Page, ...] = (
+    _FIRST + MORE_PAGES + MORE_PAGES_3 + MORE_PAGES_4 + MORE_PAGES_5
+)

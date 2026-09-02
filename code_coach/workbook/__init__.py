@@ -91,8 +91,15 @@ def _value(expr: str, names: dict):
 
 
 def expected_output(shape: str, args: dict) -> str:
-    from code_coach.workbook import emit_more, emit_more2, emit_more3
+    from code_coach.workbook import (
+        emit_more,
+        emit_more2,
+        emit_more3,
+        emit_more4,
+    )
 
+    if emit_more4.handles(shape):
+        return emit_more4.expected_output(shape, args, _value)
     if emit_more3.handles(shape):
         return emit_more3.expected_output(shape, args, _value)
     if emit_more2.handles(shape):

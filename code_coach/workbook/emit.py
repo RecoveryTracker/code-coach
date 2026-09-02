@@ -507,8 +507,15 @@ def solution(language: str, shape: str, args: dict) -> str | None:
     everything asks here regardless, so nothing else has to know where a
     given shape is written.
     """
-    from code_coach.workbook import emit_more, emit_more2, emit_more3
+    from code_coach.workbook import (
+        emit_more,
+        emit_more2,
+        emit_more3,
+        emit_more4,
+    )
 
+    if emit_more4.handles(shape):
+        return emit_more4.solution(language, shape, args)
     if emit_more3.handles(shape):
         return emit_more3.solution(language, shape, args)
     if emit_more2.handles(shape):
@@ -527,11 +534,17 @@ def supports(language: str) -> bool:
 
 
 def all_shape_ids() -> tuple[str, ...]:
-    from code_coach.workbook import emit_more, emit_more2, emit_more3
+    from code_coach.workbook import (
+        emit_more,
+        emit_more2,
+        emit_more3,
+        emit_more4,
+    )
 
     return (
         SHAPE_IDS
         + emit_more.SHAPE_IDS
         + emit_more2.SHAPE_IDS
         + emit_more3.SHAPE_IDS
+        + emit_more4.SHAPE_IDS
     )

@@ -396,11 +396,45 @@ class LanguageReachTests(unittest.TestCase):
         "rust",
     )
 
-    def test_every_language_gets_the_whole_ramp(self) -> None:
-        for language in self.DEEP:
+    # Where each language's ramp ends, and why. C stops at 48 because
+    # splitting text and looking things up by key need types it has not got —
+    # and the honest C answer to either is a week of memory management rather
+    # than one exercise.
+    EVERY_PAGE = (
+        "python",
+        "javascript",
+        "typescript",
+        "dart",
+        "cpp",
+        "rust",
+    )
+
+    def test_most_languages_get_the_whole_ramp(self) -> None:
+        for language in self.EVERY_PAGE:
             with self.subTest(language=language):
                 self.assertEqual(len(pages(language)), len(pages()))
-                self.assertGreaterEqual(exercise_count(language), 300)
+                self.assertGreaterEqual(exercise_count(language), 600)
+
+    def test_c_stops_where_its_types_do(self) -> None:
+        """Deliberate, not an accident — so a later page cannot quietly drop
+        C without someone deciding to."""
+        numbers = [p.number for p in pages("c")]
+        self.assertEqual(max(numbers), 48)
+        self.assertEqual(len(numbers), 48)
+        dropped = {p.id for p in pages() if not p.applies_to("c")}
+        self.assertEqual(
+            dropped,
+            {
+                "split-words",
+                "count-words",
+                "join-list",
+                "map-lookup",
+                "map-build",
+                "str-contains",
+                "str-slice",
+                "str-find",
+            },
+        )
 
     def test_the_languages_that_get_it_are_the_ones_that_can_run_it(self) -> None:
         """The list on the pages and the list of runners have to be the same
@@ -427,12 +461,15 @@ class LanguageReachTests(unittest.TestCase):
             with self.subTest(page=p.id):
                 self.assertEqual(p.languages, ())
 
-    def test_the_later_pages_name_the_seven(self) -> None:
+    def test_the_later_pages_name_who_they_are_for(self) -> None:
+        """Past page 11 a page always says which languages it is for, and the
+        set is always one the app actually runs."""
         for p in pages():
             if p.number <= 11:
                 continue
             with self.subTest(page=p.id):
-                self.assertEqual(set(p.languages), set(self.DEEP))
+                self.assertTrue(p.languages)
+                self.assertTrue(set(p.languages) <= set(self.DEEP))
 
     def test_no_two_languages_are_told_to_print_different_things(self) -> None:
         """The rule the whole design rests on. An exercise has one expected
