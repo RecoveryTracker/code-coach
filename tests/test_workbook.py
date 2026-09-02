@@ -79,28 +79,31 @@ class ShapeTests(unittest.TestCase):
                 self.assertGreater(len(e.prompt), 20)
                 self.assertTrue(e.prompt.strip().endswith("."))
 
+    # Shapes whose body can legitimately not run at all: a condition that
+    # does not hold, or a filter nothing matches. Keyed on the shape rather
+    # than the page, because the same shape gets drilled again on the
+    # practice pages and the rule travels with it.
+    MAY_PRINT_NOTHING = {"if_print", "for_if_print", "list_filter"}
+
     def test_an_exercise_prints_something_unless_that_is_the_point(self) -> None:
-        """Printing nothing is a real answer on the conditional pages — the
-        condition does not hold, so the body never runs. Anywhere else an
-        empty expectation is a mistake in the data."""
-        allowed = {"only-when", "list-filter"}
+        """Printing nothing is a real answer where the body may never run.
+        Anywhere else an empty expectation is a mistake in the data."""
         for p, e in ALL:
-            if p.id in allowed:
+            if e.shape in self.MAY_PRINT_NOTHING:
                 continue
             with self.subTest(exercise=e.id):
                 self.assertTrue(e.expect.strip(), "prints nothing")
 
-    def test_the_pages_that_allow_it_really_use_it(self) -> None:
+    def test_the_shapes_that_allow_it_really_use_it(self) -> None:
         """If none of them printed nothing, the exemption above would be
-        quietly covering a page that no longer needs it."""
-        from code_coach.workbook import page as find_page
-
-        for page_id in ("only-when", "list-filter"):
-            with self.subTest(page=page_id):
-                found = find_page(page_id)
+        quietly covering shapes that no longer need it."""
+        for shape in self.MAY_PRINT_NOTHING:
+            with self.subTest(shape=shape):
                 self.assertTrue(
-                    any(e.expect == "" for e in found.exercises),
-                    "no exercise here prints nothing any more",
+                    any(
+                        e.expect == "" for _, e in ALL if e.shape == shape
+                    ),
+                    "nothing with this shape prints nothing any more",
                 )
 
     def test_no_exercise_id_is_used_twice(self) -> None:
@@ -188,9 +191,13 @@ class ReferenceRunTests(unittest.TestCase):
                 self._run("python", e)
 
     def test_every_exercise_solves_in_javascript(self) -> None:
-        for p, e in ALL:
-            with self.subTest(exercise=e.id):
-                self._run("javascript", e)
+        """The pages JavaScript is offered — not all of them. The
+        intermediate tier is Python only and has no JavaScript answer to
+        run."""
+        for p in pages("javascript"):
+            for e in p.exercises:
+                with self.subTest(exercise=e.id):
+                    self._run("javascript", e)
 
     def test_every_shape_compiles_and_runs_in_every_language(self) -> None:
         """One per shape rather than all of them: within a shape only the
@@ -200,11 +207,13 @@ class ReferenceRunTests(unittest.TestCase):
                 with self.subTest(language=language, shape=e.shape):
                     self._run(language, e)
 
-    def test_dart_runs_one_of_everything_it_has(self) -> None:
-        """Dart is one of the three the long ramp is written for, so its
-        coverage is every shape rather than only the shared ones."""
+    def test_dart_runs_one_of_every_shape_it_has(self) -> None:
+        """Dart's coverage is every shape on a page Dart is offered — which
+        is all of them bar the Python-only tier."""
+        from code_coach.workbook.emit_python import SHAPE_IDS as PYTHON_ONLY
+
         shapes = {e.shape for _, e in _one_per_shape("dart")}
-        self.assertEqual(shapes, set(all_shape_ids()))
+        self.assertEqual(shapes, set(all_shape_ids()) - set(PYTHON_ONLY))
 
 
 class EndpointTests(unittest.TestCase):
@@ -409,19 +418,46 @@ class LanguageReachTests(unittest.TestCase):
         "rust",
     )
 
-    def test_most_languages_get_the_whole_ramp(self) -> None:
-        for language in self.EVERY_PAGE:
-            with self.subTest(language=language):
-                self.assertEqual(len(pages(language)), len(pages()))
-                self.assertGreaterEqual(exercise_count(language), 600)
+    def test_python_gets_everything(self) -> None:
+        """Python is the language the book goes deep in, so it is the one
+        that must never be missing a page."""
+        self.assertEqual(len(pages("python")), len(pages()))
 
-    def test_c_stops_where_its_types_do(self) -> None:
+    def test_the_shared_tiers_go_to_the_languages_that_can_run_them(
+        self,
+    ) -> None:
+        """Beginner and practice are written for several languages; only the
+        eight collection pages are ever dropped, and only by C."""
+        for language in self.EVERY_PAGE:
+            shared = [
+                p
+                for p in pages()
+                if p.tier in ("beginner", "practice")
+            ]
+            offered = [p for p in pages(language) if p.tier in ("beginner", "practice")]
+            with self.subTest(language=language):
+                self.assertEqual(len(offered), len(shared))
+
+    def test_the_intermediate_tier_is_python_for_now(self) -> None:
+        """It is Python only on purpose — one language is what buys the
+        depth. This will change a page at a time, and when it does the change
+        should be deliberate enough to come here first."""
+        for p in pages():
+            if p.tier != "intermediate":
+                continue
+            with self.subTest(page=p.id):
+                self.assertEqual(p.languages, ("python",))
+
+    def test_c_misses_exactly_the_pages_it_cannot_answer(self) -> None:
         """Deliberate, not an accident — so a later page cannot quietly drop
-        C without someone deciding to."""
-        numbers = [p.number for p in pages("c")]
-        self.assertEqual(max(numbers), 48)
-        self.assertEqual(len(numbers), 48)
-        dropped = {p.id for p in pages() if not p.applies_to("c")}
+        C without someone deciding to. Named rather than counted: C keeps
+        gaining pages as practice ones land, and the list of what it cannot
+        do should not move when that happens."""
+        # Of the pages written for more than one language, these are the
+        # ones C cannot answer. Single-language pages are a separate matter
+        # and are not C being dropped from anything.
+        shared = [p for p in pages() if len(p.languages) != 1]
+        dropped = {p.id for p in shared if not p.applies_to("c")}
         self.assertEqual(
             dropped,
             {
@@ -435,6 +471,7 @@ class LanguageReachTests(unittest.TestCase):
                 "str-find",
             },
         )
+        self.assertEqual(len(pages("c")), len(shared) - len(dropped))
 
     def test_the_languages_that_get_it_are_the_ones_that_can_run_it(self) -> None:
         """The list on the pages and the list of runners have to be the same
@@ -472,11 +509,18 @@ class LanguageReachTests(unittest.TestCase):
                 self.assertTrue(set(p.languages) <= set(self.DEEP))
 
     def test_no_two_languages_are_told_to_print_different_things(self) -> None:
-        """The rule the whole design rests on. An exercise has one expected
-        output, so if two languages would print different characters for it
-        the exercise is unanswerable in one of them — and it fails quietly,
-        for that language only."""
+        """The rule the multi-language pages rest on. An exercise has one
+        expected output, so if two languages would print different characters
+        for it the exercise is unanswerable in one of them — and it fails
+        quietly, for that language only.
+
+        A page written for exactly one language is exempt, and that exemption
+        is the whole point of the Python tier: there it may print a list as a
+        list.
+        """
         for p in pages():
+            if len(p.languages) == 1:
+                continue
             for e in p.exercises:
                 with self.subTest(exercise=e.id):
                     self.assertIsInstance(e.expect, str)
@@ -485,6 +529,18 @@ class LanguageReachTests(unittest.TestCase):
                     self.assertNotIn("[", e.expect)
                     self.assertNotIn("True", e.expect)
                     self.assertNotIn("False", e.expect)
+
+    def test_the_single_language_pages_really_use_the_exemption(self) -> None:
+        """If none of them printed something the others could not, the
+        exemption above would be covering nothing and the tier would not need
+        to be single-language at all."""
+        printed = " ".join(
+            e.expect
+            for p in pages()
+            if len(p.languages) == 1
+            for e in p.exercises
+        )
+        self.assertIn("[", printed)
 
     def test_the_payload_only_carries_pages_you_can_do(self) -> None:
         from code_coach.api import server

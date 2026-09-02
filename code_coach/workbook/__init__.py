@@ -65,6 +65,15 @@ class Page:
     # loops. Past that the languages stop agreeing enough for one exercise to
     # be one question.
     languages: tuple[str, ...] = field(default_factory=tuple)
+    # Which section of the book this belongs to. The screen groups by it,
+    # because a flat list of everything stops being findable somewhere around
+    # page forty.
+    #
+    #   beginner      teaches an idea for the first time
+    #   practice      drills an idea already taught, with fresh values
+    #   intermediate  builds on all of it, and adds real language features
+    #   advanced      later
+    tier: str = "beginner"
 
     def applies_to(self, language: str) -> bool:
         if not self.languages:
@@ -96,8 +105,11 @@ def expected_output(shape: str, args: dict) -> str:
         emit_more2,
         emit_more3,
         emit_more4,
+        emit_python,
     )
 
+    if emit_python.handles(shape):
+        return emit_python.expected_output(shape, args, _value)
     if emit_more4.handles(shape):
         return emit_more4.expected_output(shape, args, _value)
     if emit_more3.handles(shape):
@@ -225,6 +237,7 @@ def payload(language: str) -> list[dict]:
                 "name": p.name,
                 "teaches": p.teaches,
                 "example": p.example,
+                "tier": p.tier,
                 "exercises": [
                     {
                         "id": e.id,

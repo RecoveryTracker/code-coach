@@ -21,6 +21,8 @@ from code_coach.workbook.content2 import MORE_PAGES
 from code_coach.workbook.content3 import MORE_PAGES_3
 from code_coach.workbook.content4 import MORE_PAGES_4
 from code_coach.workbook.content5 import MORE_PAGES_5
+from code_coach.workbook.content_intermediate import INTERMEDIATE_PAGES
+from code_coach.workbook.content_practice import PRACTICE_PAGES
 
 
 # Positional-only up to the shape, so a shape argument can share a name
@@ -502,6 +504,16 @@ _FIRST: tuple[Page, ...] = (
 
 # Pages 12 onwards are Python, JavaScript and Dart only, and say so
 # themselves — see content2 for why.
+# Teaching pages first, then the practice pages that rework their shapes.
+# The practice pages sit at the end rather than beside the ones they drill
+# because the teaching examples refer to each other by number, and
+# interleaving would make every one of those references wrong.
 PAGES: tuple[Page, ...] = (
-    _FIRST + MORE_PAGES + MORE_PAGES_3 + MORE_PAGES_4 + MORE_PAGES_5
+    _FIRST
+    + MORE_PAGES
+    + MORE_PAGES_3
+    + MORE_PAGES_4
+    + MORE_PAGES_5
+    + PRACTICE_PAGES
+    + INTERMEDIATE_PAGES
 )

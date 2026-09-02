@@ -45,6 +45,22 @@ type Props = {
   language: string;
 };
 
+/**
+ * The sections, in the order they are worked through, with what each one is
+ * for. Anything with a tier not listed here still shows, under its own name —
+ * better a heading nobody wrote than a page nobody can find.
+ */
+const TIERS: { id: string; name: string; blurb: string }[] = [
+  { id: "beginner", name: "Beginner", blurb: "One new idea per page." },
+  { id: "practice", name: "More practice", blurb: "Ideas you have met, again." },
+  {
+    id: "intermediate",
+    name: "Intermediate",
+    blurb: "Built on all of it, plus real language features.",
+  },
+  { id: "advanced", name: "Advanced", blurb: "Later." },
+];
+
 export default function Workbook({ language }: Props) {
   const [data, setData] = useState<WorkbookData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +120,33 @@ export default function Workbook({ language }: Props) {
     () => data?.pages.find((p) => p.id === pageId) ?? null,
     [data, pageId],
   );
+
+  /**
+   * The pages grouped into sections, in tier order, keeping each tier's own
+   * page order. A tier nobody has written pages for does not appear, and a
+   * tier this code has never heard of still does — at the end, under its own
+   * name, rather than vanishing.
+   */
+  const sections = useMemo(() => {
+    const all = data?.pages ?? [];
+    const known = TIERS.map((t) => ({
+      ...t,
+      pages: all.filter((p) => p.tier === t.id),
+    })).filter((t) => t.pages.length > 0);
+    const named = new Set(TIERS.map((t) => t.id));
+    const rest = [...new Set(all.map((p) => p.tier))].filter(
+      (t) => !named.has(t),
+    );
+    return [
+      ...known,
+      ...rest.map((id) => ({
+        id,
+        name: id,
+        blurb: "",
+        pages: all.filter((p) => p.tier === id),
+      })),
+    ];
+  }, [data]);
   const exercise = page?.exercises[index] ?? null;
 
   // Opening a page lands on the first exercise you have not done, so coming
@@ -314,24 +357,39 @@ export default function Workbook({ language }: Props) {
           A sentence, an empty box, and you write it. {data.pages.length} pages,
           one new idea each, twelve goes at every one.
         </p>
-        {data.pages.map((p) => {
-          const n = p.exercises.filter((e) => done.has(e.id)).length;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              className={`lessons-pick${p.id === pageId ? " on" : ""}`}
-              onClick={() => setPageId(p.id)}
-            >
-              <span className="lessons-pick-name">
-                {p.number}. {p.name}
+        {sections.map((section) => (
+          <div className="wb-section" key={section.id}>
+            <h4 className="wb-section-head">
+              {section.name}
+              <span className="wb-section-count">
+                {section.pages.length} pages
               </span>
-              <span className="lessons-pick-blurb">
-                {n === p.exercises.length ? "done" : `${n} of ${p.exercises.length}`}
-              </span>
-            </button>
-          );
-        })}
+            </h4>
+            {section.blurb ? (
+              <p className="wb-section-blurb">{section.blurb}</p>
+            ) : null}
+            {section.pages.map((p) => {
+              const n = p.exercises.filter((e) => done.has(e.id)).length;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`lessons-pick${p.id === pageId ? " on" : ""}`}
+                  onClick={() => setPageId(p.id)}
+                >
+                  <span className="lessons-pick-name">
+                    {p.number}. {p.name}
+                  </span>
+                  <span className="lessons-pick-blurb">
+                    {n === p.exercises.length
+                      ? "done"
+                      : `${n} of ${p.exercises.length}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {page && exercise ? (

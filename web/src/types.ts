@@ -521,6 +521,8 @@ export type WorkbookPage = {
   name: string;
   teaches: string;
   example: string;
+  /** Which section of the book: beginner | practice | intermediate | advanced. */
+  tier: string;
   exercises: WorkbookExercise[];
 };
 

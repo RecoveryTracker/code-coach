@@ -692,3 +692,40 @@
   font-size: 12.5px;
   color: #7d8f9e;
 }
+
+/* ── The workbook's sections ──────────────────────────────
+   Ninety pages in one column is a wall. These break it into the parts of
+   the book, so where you are is visible without counting. */
+
+.wb-section + .wb-section {
+  margin-top: 16px;
+}
+
+.wb-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 2px;
+  padding: 0 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #7ee2a8;
+}
+
+.wb-section-count {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #5c6a7a;
+}
+
+.wb-section-blurb {
+  margin: 0 0 6px;
+  padding: 0 9px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6e7b8b;
+}
