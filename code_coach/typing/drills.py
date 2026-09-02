@@ -31,6 +31,7 @@ from code_coach.typing.texts import (
     THEMED,
     CONSCIOUS_LINES,
     CONSCIOUS_WORDS,
+    KEYBOARD,
     PROSE,
     TYPING_LINES,
     VERSES,
@@ -245,6 +246,14 @@ THEMES: tuple[Theme, ...] = (
         "typinglore", "About Typing",
         "Technique, practice and what actually makes anyone faster.",
         passages=TYPING_LINES,
+    ),
+    # Next to About Typing because it is the same idea one step out: that one
+    # is about moving your fingers well, this one is about driving the machine
+    # they are attached to.
+    Theme(
+        "keyboard", "Keyboard Tricks",
+        "Shortcuts, chords and mouse tricks — the ones nobody teaches you.",
+        passages=KEYBOARD,
     ),
     Theme(
         "wordlore", "Word Origins",

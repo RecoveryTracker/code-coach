@@ -15,11 +15,13 @@ import type { LessonEntry } from "../types";
  * in learning order, and one of them open at a time.
  */
 type Props = {
+  /** Which language's classes to list. Changing it refetches. */
+  language: string;
   /** Open this problem in the editor. Set by the app; absent while browsing. */
   onOpenProblem?: (patternId: string, problemNumber: number) => void;
 };
 
-export default function Lessons({ onOpenProblem }: Props) {
+export default function Lessons({ language, onOpenProblem }: Props) {
   const [lessons, setLessons] = useState<LessonEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -30,10 +32,16 @@ export default function Lessons({ onOpenProblem }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const all = await fetchLessons();
+        const all = await fetchLessons(language);
         if (cancelled) return;
         setLessons(all);
-        setOpenId((id) => id ?? all[0]?.id ?? null);
+        // Stay on the class you were reading if the new language also has it,
+        // so switching shows you the same pattern rather than sending you back
+        // to the top. The systems classes only exist for some languages, which
+        // is why this has to be checked rather than assumed.
+        setOpenId((id) =>
+          id && all.some((l) => l.id === id) ? id : (all[0]?.id ?? null),
+        );
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "API error");
       }
@@ -41,7 +49,7 @@ export default function Lessons({ onOpenProblem }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language]);
 
   const open = useMemo(
     () => lessons?.find((l) => l.id === openId) ?? null,

@@ -29,6 +29,7 @@ import { TypeTarget } from "./components/TypeTarget";
 import Concepts from "./components/Concepts";
 import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
+import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
   clearAllDrafts,
@@ -199,6 +200,9 @@ export default function App() {
   // Concepts is reading too, so it takes the screen for the same reason
   // Lessons does.
   const [conceptsOpen, setConceptsOpen] = useState(false);
+  // The workbook is the one screen you are producing on rather than reading,
+  // so it takes the whole window the same way the editor does.
+  const [workbookOpen, setWorkbookOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /**
    * Free mode's reminders. Not the coach: they say nothing about whether you
@@ -907,7 +911,25 @@ export default function App() {
     return () => window.removeEventListener("resize", reclamp);
   }, [ready, freeMode, clampLayout]);
 
+  // Ctrl+Enter runs the code. It listens on the window so it works from
+  // anywhere in the workspace, which means it also has to know when it is
+  // NOT the workspace: every takeover screen covers the editor, none of them
+  // has anything to run, and the Workbook uses the same chord for its own
+  // check — so it was checking an exercise and running the editor behind it
+  // at the same time.
+  const takeoverOpen =
+    workbookOpen || lessonsOpen || conceptsOpen || referenceOpen || typingOpen;
+
+  // A takeover screen unmounts the editor, and the next one is built from
+  // seedCode. That is not updated per keystroke on purpose, so without this
+  // the editor came back holding whatever was last loaded into it — going to
+  // the Workbook and back threw away everything typed since.
   useEffect(() => {
+    if (!takeoverOpen) return;
+    setSeedCode(codeRef.current);
+  }, [takeoverOpen]);
+  useEffect(() => {
+    if (takeoverOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
       if ((e.target as HTMLElement)?.closest?.(".monaco-editor")) return;
@@ -916,7 +938,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onRun]);
+  }, [onRun, takeoverOpen]);
 
   if (bootError) {
     return (
@@ -959,23 +981,25 @@ export default function App() {
   // App-level actions. These used to own a whole 44px header row of their own;
   // they now ride along on the coach line, which buys that height back for the
   // editor.
+  // Reload the session so drills, starter and editor mode all come back in the
+  // new language — but stay on the exercise you were on, so switching shows you
+  // the same problem in the other language.
+  const onLanguageChanged = () => {
+    const stayOn = exerciseIndexRef.current;
+    void (async () => {
+      try {
+        await loadSession(await fetchCurrentPractice(), false, null, stayOn);
+      } catch {
+        /* stay */
+      }
+    })();
+  };
+
   const toolbar = (
     <div className="ws-top-actions">
       <LanguagePicker
         current={session?.language ?? "python"}
-        onChanged={() => {
-          // Reload the session so drills, starter and editor mode all come
-          // back in the new language — but stay on the exercise you were on,
-          // so switching shows you the same problem in the other language.
-          const stayOn = exerciseIndexRef.current;
-          void (async () => {
-            try {
-              await loadSession(await fetchCurrentPractice(), false, null, stayOn);
-            } catch {
-              /* stay */
-            }
-          })();
-        }}
+        onChanged={onLanguageChanged}
       />
       <ScriptLibrary
         source={freeMode ? "free" : "lesson"}
@@ -1011,6 +1035,14 @@ export default function App() {
         title="The patterns, taught — how to get from a question to a solution"
       >
         Lessons
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
+        onClick={() => setWorkbookOpen(true)}
+        title="Pages of small exercises you solve by typing"
+      >
+        Workbook
       </button>
       <button
         type="button"
@@ -1075,20 +1107,51 @@ export default function App() {
 
   const brand = <span className="ws-brand-inline">Code Coach</span>;
 
+  // The reading screens each show one language's material, so the picker
+  // belongs on them too rather than only behind a trip back to the editor.
+  const viewingLanguage = session?.language ?? "python";
+  const panelLanguage = (
+    <LanguagePicker current={viewingLanguage} onChanged={onLanguageChanged} />
+  );
+
   if (referenceOpen) {
     return (
       <div className="typing-shell">
         <div className="typing-topbar">
           <span className="ws-brand-inline">Reference</span>
-          <button
-            type="button"
-            className="ws-btn"
-            onClick={() => setReferenceOpen(false)}
-          >
-            Back to code
-          </button>
+          <div className="panel-actions">
+            {panelLanguage}
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setReferenceOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
         </div>
-        <Reference />
+        <Reference language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (workbookOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Workbook</span>
+          <div className="panel-actions">
+            {panelLanguage}
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setWorkbookOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
+        </div>
+        <Workbook language={viewingLanguage} />
       </div>
     );
   }
@@ -1098,15 +1161,18 @@ export default function App() {
       <div className="typing-shell">
         <div className="typing-topbar">
           <span className="ws-brand-inline">Concepts</span>
-          <button
-            type="button"
-            className="ws-btn"
-            onClick={() => setConceptsOpen(false)}
-          >
-            Back to code
-          </button>
+          <div className="panel-actions">
+            {panelLanguage}
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setConceptsOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
         </div>
-        <Concepts />
+        <Concepts language={viewingLanguage} />
       </div>
     );
   }
@@ -1116,15 +1182,19 @@ export default function App() {
       <div className="typing-shell">
         <div className="typing-topbar">
           <span className="ws-brand-inline">Lessons</span>
-          <button
-            type="button"
-            className="ws-btn"
-            onClick={() => setLessonsOpen(false)}
-          >
-            Back to code
-          </button>
+          <div className="panel-actions">
+            {panelLanguage}
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setLessonsOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
         </div>
         <Lessons
+          language={viewingLanguage}
           onOpenProblem={(patternId, problemNumber) =>
             void openProblem(patternId, problemNumber)
           }

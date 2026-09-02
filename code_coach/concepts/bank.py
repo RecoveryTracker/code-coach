@@ -12,8 +12,9 @@ from code_coach.concepts import Topic, _q
 _CPP = Topic(
     id="cpp-semantics",
     name="C++ Semantics",
-    order=1,
+    order=7,
     blurb="What the language is doing behind the syntax, and where it stops helping.",
+    languages=("cpp",),
     questions=(
         _q(
             "What is the rule of five?",
@@ -128,7 +129,7 @@ _CPP = Topic(
 _OS = Topic(
     id="os-internals",
     name="OS Internals",
-    order=2,
+    order=20,
     blurb="Processes, memory, and what the kernel is doing while your code waits.",
     questions=(
         _q(
@@ -234,7 +235,7 @@ _OS = Topic(
 _CPU = Topic(
     id="cpu-memory",
     name="CPU & Memory Hierarchy",
-    order=3,
+    order=30,
     blurb="Why the same instruction count runs at wildly different speeds.",
     questions=(
         _q(
@@ -344,7 +345,7 @@ _CPU = Topic(
 _CONCURRENCY = Topic(
     id="concurrency",
     name="Concurrency",
-    order=4,
+    order=40,
     blurb="Races, orderings, and the difference between a lock and no lock.",
     questions=(
         _q(
@@ -446,7 +447,7 @@ _CONCURRENCY = Topic(
 _NETWORKING = Topic(
     id="networking",
     name="Networking & Latency",
-    order=5,
+    order=50,
     blurb="Where the microseconds go between two machines.",
     questions=(
         _q(

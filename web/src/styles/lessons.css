@@ -386,3 +386,309 @@
   font-weight: 600;
   opacity: 0.7;
 }
+
+/* ── The Concepts screen's frame ──────────────────────────
+   The question cards below had styles from the start; the page around them
+   never did. Concepts was written against .lessons-wrap, .lessons-pick and
+   .lessons-open, none of which existed, so the screen fell back to an
+   unstyled stack: one column, full bleed, and the text running into the
+   window edge with the item rules ending flush against it.
+
+   Same shape as the Lessons screen next door, because it is the same thing —
+   a list of topics down the side and one of them open. */
+
+.lessons-wrap {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Below this the two columns are each too narrow to read, so the picker goes
+   above the reading rather than beside it. */
+@media (max-width: 860px) {
+  .lessons-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+
+.lessons-wrap > .lessons-list {
+  padding: 14px 10px 24px;
+}
+
+.lessons-wrap > .lessons-list h2 {
+  margin: 0 0 4px;
+  padding: 0 9px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.lessons-intro {
+  margin: 0 0 12px;
+  padding: 0 9px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #6e7b8b;
+}
+
+.lessons-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lessons-pick:hover {
+  background: #151b23;
+}
+
+.lessons-pick.on {
+  border-color: #2b3a4d;
+  background: #172029;
+}
+
+.lessons-pick-name {
+  font-size: 13px;
+  color: #cdd9e5;
+}
+
+.lessons-pick-blurb {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6e7b8b;
+}
+
+/* The reading column. The padding is the fix the screen was missing: the
+   questions had nothing between them and the edge of the window. */
+.lessons-open {
+  padding: 20px 28px 64px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.lessons-open > header {
+  max-width: 46rem;
+  margin-bottom: 4px;
+}
+
+.lessons-open h3 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+/* A measure, not the full width. A 1400px line of prose is hard to track back
+   to the start of. */
+.lessons-open .concept-list,
+.lessons-open .lessons-blurb {
+  max-width: 46rem;
+}
+
+/* ── Workbook ─────────────────────────────────────────────
+   Shares the Lessons frame — list of pages down the side, one open — and adds
+   the working area: prompt, box, verdict. */
+
+.lessons-open.wb {
+  max-width: 62rem;
+}
+
+.wb-example {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid #2b3a4d;
+  background: #141a21;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b6c2cf;
+}
+
+/* One dot per exercise, so how far through you are is a glance rather than a
+   number you have to find. */
+.wb-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 20px 0 18px;
+}
+
+.wb-dot {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #2a3340;
+  border-radius: 6px;
+  background: #131920;
+  color: #6e7b8b;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.wb-dot.done {
+  border-color: #2f6f47;
+  background: #16281d;
+  color: #7ee2a8;
+}
+
+.wb-dot.on {
+  border-color: #4a9eff;
+  color: #cdd9e5;
+}
+
+.wb-count {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #6e7b8b;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-prompt {
+  margin: 0 0 12px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #e6edf3;
+}
+
+.wb-code {
+  display: block;
+  width: 100%;
+  /* Tall enough for the longest shape written the long way round — a Rust or
+     C running total is seven lines with the boilerplate. Below that the box
+     scrolls while you are still typing into it. */
+  min-height: 12rem;
+  padding: 12px 14px;
+  border: 1px solid #2a3340;
+  border-radius: 8px;
+  background: #0d1117;
+  color: #cdd9e5;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  /* Tabs are a real key on this keyboard and a real character in this box. */
+  tab-size: 4;
+}
+
+.wb-code:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.wb-code.ok {
+  border-color: #2f6f47;
+}
+
+.wb-code.bad {
+  border-color: #7a3b3b;
+}
+
+.wb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.wb-spacer {
+  flex: 1;
+}
+
+.wb-chord {
+  font-size: 11px;
+  color: #5c6a7a;
+}
+
+/* What it has to print, shown before you start rather than only after you get
+   it wrong. The exercise is writing the program, not guessing the format. */
+.wb-wanted {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  color: #8b97a5;
+}
+
+.wb-wanted code {
+  color: #9fb4ff;
+}
+
+.wb-verdict {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.wb-verdict.ok {
+  border-color: #2f6f47;
+  background: #121d16;
+  color: #a8e6c0;
+}
+
+.wb-verdict.bad {
+  border-color: #6b3a3a;
+  background: #1c1416;
+  color: #e6b6b6;
+}
+
+/* Side by side, because "wrong" tells you nothing and the two columns tell
+   you everything. */
+.wb-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.wb-diff h4,
+.wb-answer h4 {
+  margin: 0 0 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #6e7b8b;
+}
+
+.wb-diff pre,
+.wb-stderr,
+.wb-answer pre {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #cdd9e5;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.wb-stderr {
+  margin-top: 8px;
+  color: #e6b6b6;
+}
+
+.wb-answer {
+  margin: 16px 0 0;
+}
+
+/* Says why there is already code in the box on an exercise you have done. */
+.wb-restored {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: #7d8f9e;
+}

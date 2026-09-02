@@ -33,6 +33,8 @@ from code_coach.api.schemas import (
     VisualizeRequest,
     VisualizeResponse,
     WaypointInfo,
+    WorkbookCheckRequest,
+    WorkbookCheckResponse,
 )
 from code_coach.leetcode.bank import study_payload as leetcode_study_payload
 from code_coach.curriculum.catalog import (
@@ -673,8 +675,26 @@ def hints(body: HintsRequest) -> HintsResponse:
     )
 
 
+def _viewing_language(asked: str | None) -> str:
+    """Which language a reading screen should show.
+
+    The reading screens carry a language picker of their own, so they can ask
+    for one explicitly. Asking beats the stored value because the two round
+    trips race otherwise: the panel refetches as soon as the switch is
+    acknowledged, which can be before the save has landed. An unknown name
+    falls back rather than 404s — the sheet or the topics simply come back
+    for the stored language.
+    """
+    from code_coach.languages import LANGUAGES
+
+    if asked and any(lang.id == asked for lang in LANGUAGES):
+        return asked
+    progress = _store.load()
+    return getattr(progress, "language", "python") or "python"
+
+
 @app.get("/api/reference")
-def reference() -> dict:
+def reference(language: str | None = None) -> dict:
     """The cheat sheet for the language being practised.
 
     A desk mat rather than a lesson: the lines worth having in your head,
@@ -683,8 +703,7 @@ def reference() -> dict:
     """
     from code_coach.reference import sheet_for
 
-    progress = _store.load()
-    language = getattr(progress, "language", "python") or "python"
+    language = _viewing_language(language)
     sheet = sheet_for(language)
     if sheet is None:
         # Better to say so than to quietly hand over another language's.
@@ -706,21 +725,116 @@ def reference() -> dict:
 
 
 @app.get("/api/concepts")
-def concepts() -> list[dict]:
+def concepts(language: str | None = None) -> list[dict]:
     """The concept questions, grouped by topic.
 
     The half of a systems or quant interview that is not a coding problem —
     what happens on a page fault, why acquire and release come in pairs, what
-    a branch misprediction costs. Not language-specific except the C++ topic,
-    so unlike the code banks everyone gets it.
+    a branch misprediction costs. Most of it is about the machine and goes to
+    everybody; the one topic on the language's own semantics follows whichever
+    language you are in, so a Python student is not opened on the rule of five.
     """
     from code_coach.concepts import payload
 
-    return payload()
+    return payload(_viewing_language(language))
+
+
+@app.get("/api/workbook")
+def workbook(language: str | None = None) -> dict:
+    """The workbook: pages of small exercises you solve by typing.
+
+    Everything else in the app is material to read or type along with. This is
+    the part where you are given a sentence and an empty editor and have to
+    produce the thing yourself, a dozen times, with one detail changing each
+    time.
+    """
+    from code_coach.languages import get_language
+    from code_coach.workbook import has_workbook, payload
+
+    language = _viewing_language(language)
+    # The screen writes the name into a sentence ("Write it in Rust"), so it
+    # needs the one with the capital letter rather than the id.
+    name = get_language(language).name
+    if not has_workbook(language):
+        # Better than a page of exercises that cannot be written.
+        return {
+            "language": language,
+            "language_name": name,
+            "has_workbook": False,
+            "pages": [],
+            "done": [],
+        }
+    progress = _store.load()
+    return {
+        "language": language,
+        "language_name": name,
+        "has_workbook": True,
+        "pages": payload(language),
+        "done": progress.workbook_for(language),
+        # Where to open. Empty means the student has not started, so the
+        # screen falls back to page one on its own.
+        "at": progress.workbook_page_for(language),
+        # What they wrote, per exercise. Their own work is worth keeping and
+        # is the one thing here they cannot get back any other way.
+        "answers": progress.workbook_answers_for(language),
+    }
+
+
+@app.post("/api/workbook/check", response_model=WorkbookCheckResponse)
+def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
+    """Run what the student typed and compare what it printed.
+
+    Deliberately not a check on the code itself. There are several right ways
+    to print the numbers 1 to 5 and all of them should pass; what is being
+    asked is whether the program does what the sentence said.
+    """
+    from code_coach.workbook import exercise as find_exercise
+    from code_coach.workbook import has_workbook, matches, page as find_page
+
+    language = _viewing_language(body.language)
+    if not has_workbook(language):
+        raise HTTPException(
+            status_code=409, detail=f"No workbook for {language}"
+        )
+    found = find_exercise(body.page_id, body.exercise_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown exercise {body.exercise_id}"
+        )
+
+    stdout, stderr, exit_code = run_code(body.code, language=language)
+    expect = found.expect
+    passed = exit_code == 0 and matches(stdout, expect)
+
+    progress = _store.load()
+    # Where you were is worth keeping whether or not the answer was right —
+    # coming back to the page you were stuck on is the point.
+    progress.set_workbook_page(language, body.page_id)
+    if passed:
+        progress.mark_workbook(language, found.id)
+        progress.remember_workbook_answer(language, found.id, body.code)
+    _store.save(progress)
+
+    progress = _store.load()
+    done = set(progress.workbook_for(language))
+    holding = find_page(body.page_id)
+    on_page = [e.id for e in holding.exercises] if holding else []
+    return WorkbookCheckResponse(
+        passed=passed,
+        stdout=stdout,
+        stderr=stderr,
+        expect=expect,
+        exit_code=exit_code,
+        # An empty run with a bad exit code is a program that never got as far
+        # as printing — a compile error, usually. Worth saying separately.
+        failed_to_run=exit_code != 0,
+        done_on_page=sum(1 for e in on_page if e in done),
+        page_total=len(on_page),
+    )
 
 
 @app.get("/api/lessons")
-def lessons() -> list[dict]:
+def lessons(language: str | None = None) -> list[dict]:
     """Every pattern lesson, for the Lessons screen.
 
     Not tied to the drill you are on: this is the reading, browsed on its own,
@@ -728,8 +842,7 @@ def lessons() -> list[dict]:
     """
     from code_coach.leetcode.bank import lessons_catalogue
 
-    progress = _store.load()
-    return lessons_catalogue(getattr(progress, "language", "python") or "python")
+    return lessons_catalogue(_viewing_language(language))
 
 
 @app.get("/api/curriculum")

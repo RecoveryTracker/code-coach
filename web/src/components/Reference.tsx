@@ -14,16 +14,26 @@ type Card = { code: string; note: string; section: string };
  *
  * Both read the same entries, so adding a line to the sheet adds a card too.
  */
-export default function Reference() {
+type Props = {
+  /** Which language's sheet to show. Changing it refetches. */
+  language: string;
+};
+
+export default function Reference({ language }: Props) {
   const [sheet, setSheet] = useState<ReferenceSheet | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"sheet" | "cards">("sheet");
 
+  // Keyed on the language because the picker now lives on this screen: the
+  // panel is no longer remounted on the way in, so nothing else would notice
+  // the switch.
   useEffect(() => {
     let cancelled = false;
+    setSheet(null);
+    setError(null);
     (async () => {
       try {
-        const data = await fetchReference();
+        const data = await fetchReference(language);
         if (!cancelled) setSheet(data);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "API error");
@@ -32,7 +42,7 @@ export default function Reference() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language]);
 
   if (error) {
     return <div className="ref-empty">Couldn't load the reference: {error}</div>;
@@ -63,7 +73,6 @@ export default function Reference() {
         >
           Flashcards
         </button>
-        <span className="ref-lang">{sheet.language}</span>
       </div>
 
       {mode === "sheet" ? <SheetView sheet={sheet} /> : <Cards sheet={sheet} />}

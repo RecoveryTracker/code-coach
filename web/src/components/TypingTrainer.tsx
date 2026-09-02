@@ -160,6 +160,22 @@ export default function TypingTrainer() {
   const [stats, setStats] = useState<Record<string, KeyStat>>({});
   const [hits, setHits] = useState(0);
   const [misses, setMisses] = useState(0);
+  /**
+   * Backspaces that actually removed a character.
+   *
+   * They used to cost nothing, and that made the accuracy read high on
+   * exactly the runs where it should have read low. A mistake was one miss,
+   * and then every character you deleted and retyped came back as a fresh
+   * hit — so a badly typed line that you fixed character by character could
+   * finish above ninety, and over-deleting past the mistake made it look
+   * BETTER rather than worse.
+   *
+   * They belong in the denominator because they are keystrokes that produced
+   * no text. That is the difference between "of the keys you pressed, how
+   * many were the right one" and "did you eventually get there", and only
+   * the first is worth measuring.
+   */
+  const [corrections, setCorrections] = useState(0);
   const [restarts, setRestarts] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   /** The clock has stopped itself because nothing has been typed lately. */
@@ -244,6 +260,7 @@ export default function TypingTrainer() {
         setStats({});
         setHits(0);
         setMisses(0);
+        setCorrections(0);
         setRestarts(0);
         setElapsed(0);
         setPaused(false);
@@ -474,7 +491,16 @@ export default function TypingTrainer() {
       if (event.key === "Backspace") {
         event.preventDefault();
         touchClock();
-        setTyped((t) => t.slice(0, -1));
+        // Only when there is something to delete. Backspace against an empty
+        // line is a key that did nothing, not a correction.
+        //
+        // Counted out here rather than inside the setTyped updater: an
+        // updater has to be pure, and React runs it twice in development, so
+        // a setState in there would count every backspace as two.
+        if (typed.length > 0) {
+          setCorrections((n) => n + 1);
+          setTyped(typed.slice(0, -1));
+        }
         return;
       }
       // Enter is the newline in a whole-function target. Everywhere else it
@@ -581,7 +607,9 @@ export default function TypingTrainer() {
 
   // ── Derived numbers ───────────────────────────────────────
 
-  const total = hits + misses;
+  // Every key that did something, including the ones spent undoing. Accuracy
+  // is the share of them that put the right character on the screen.
+  const total = hits + misses + corrections;
   const accuracy = pct(hits, total);
   const clock = isTimed ? Math.min(elapsed, TIMED_SECONDS * 1000) : elapsed;
   const wpm = wpmOf(hits, clock);

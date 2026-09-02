@@ -797,6 +797,71 @@ class WholeFunctionModeTests(unittest.TestCase):
         self.assertTrue([t for t in theme_catalog() if t["has_blocks"]])
 
 
+class KeyboardTricksTests(unittest.TestCase):
+    """Shortcuts and mouse tricks, as a typing theme.
+
+    Typing them out is a reasonable way to meet them, so the bar is that they
+    are true, specific, and say which platform they are for when it matters.
+    """
+
+    def _theme(self):
+        from code_coach.typing.drills import THEMES_BY_ID
+
+        return THEMES_BY_ID["keyboard"]
+
+    def test_it_is_offered(self) -> None:
+        from code_coach.typing.drills import THEMES
+
+        self.assertIn("keyboard", {t.id for t in THEMES})
+        self.assertEqual(self._theme().name, "Keyboard Tricks")
+
+    def test_there_are_enough_to_be_a_theme(self) -> None:
+        self.assertGreaterEqual(len(self._theme().passages), 25)
+
+    def test_each_one_is_a_typeable_line_with_a_source(self) -> None:
+        for passage in self._theme().passages:
+            with self.subTest(text=passage.text[:40]):
+                self.assertNotIn("\n", passage.text)
+                self.assertTrue(passage.source.strip())
+                # Long enough to be worth a run, short enough to finish.
+                self.assertGreater(len(passage.text), 100)
+                self.assertLess(len(passage.text), 320)
+                self.assertTrue(passage.text.strip().endswith("."))
+
+    def test_nothing_is_said_twice(self) -> None:
+        texts = [p.text for p in self._theme().passages]
+        self.assertEqual(len(texts), len(set(texts)))
+
+    def test_it_covers_more_than_one_kind_of_trick(self) -> None:
+        """A list of thirty browser shortcuts would be a narrower thing than
+        the theme claims to be."""
+        sources = {p.source for p in self._theme().passages}
+        self.assertGreaterEqual(len(sources), 6)
+
+    def test_the_chords_are_named_the_way_they_are_pressed(self) -> None:
+        """Ctrl+Shift+T, not "control shift t" — you have to be able to read
+        it off the line and press it."""
+        joined = " ".join(p.text for p in self._theme().passages)
+        for chord in ("Shift+Tab", "Ctrl+Backspace", "Ctrl+R", "Ctrl+Shift+T"):
+            with self.subTest(chord=chord):
+                self.assertIn(chord, joined)
+
+    def test_it_answers_the_question_that_started_it(self) -> None:
+        """Shift+Tab reversing the cycle, and the name of the thing it walks."""
+        joined = " ".join(p.text for p in self._theme().passages)
+        self.assertIn("focus order", joined)
+        self.assertIn("tab order", joined)
+
+    def test_platform_specific_advice_says_which_platform(self) -> None:
+        """A Windows-only chord presented as universal is worse than nothing:
+        you press it, nothing happens, and you distrust the whole list."""
+        for passage in self._theme().passages:
+            if "Windows key" not in passage.text:
+                continue
+            with self.subTest(text=passage.text[:40]):
+                self.assertIn(passage.source, ("windows", "keyboards"))
+
+
 if __name__ == "__main__":
     unittest.main()
 

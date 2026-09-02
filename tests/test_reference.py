@@ -157,6 +157,39 @@ class EndpointTests(unittest.TestCase):
         finally:
             server._store = real
 
+    def test_the_endpoint_takes_the_language_it_is_asked_for(self) -> None:
+        """The Reference screen has a picker on it now. Asking beats the
+        stored value because the two round trips race: the panel refetches as
+        soon as the switch is acknowledged, which can be before the save has
+        landed."""
+        from code_coach.api import server
+
+        for language in ("python", "rust", "sql"):
+            with self.subTest(language=language):
+                payload = server.reference(language)
+                self.assertEqual(payload["language"], language)
+                self.assertTrue(payload["has_sheet"])
+
+    def test_an_unknown_language_falls_back_to_the_stored_one(self) -> None:
+        """Nothing useful to 404 about on a reading screen."""
+        import tempfile
+        from pathlib import Path
+
+        from code_coach.api import server
+        from code_coach.progress.store import ProgressStore, active_store, use_store
+
+        real = server._store
+        try:
+            use_store(ProgressStore(Path(tempfile.mkdtemp()) / "p.json"))
+            server._store = active_store()
+            progress = server._store.load()
+            progress.language = "rust"
+            server._store.save(progress)
+            self.assertEqual(server.reference("klingon")["language"], "rust")
+            self.assertEqual(server.reference(None)["language"], "rust")
+        finally:
+            server._store = real
+
     def test_a_language_without_a_sheet_says_so(self) -> None:
         """An honest gap, rather than another language's card.
 

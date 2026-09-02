@@ -37,7 +37,22 @@ const EDITOR_OPTIONS = {
   autoSurround: "never" as const,
   autoIndent: "none" as const,
   acceptSuggestionOnEnter: "off" as const,
+  // Input goes through the classic hidden textarea rather than the browser's
+  // EditContext API. Monaco 0.55 turns EditContext on by default, which marks
+  // that textarea readonly and leaves it there purely for IME — typing keeps
+  // working because Monaco writes to its own model, and paste stops, because
+  // that path needs the clipboard event to land in a writable field. Nothing
+  // here needs EditContext, and Ctrl+V is not optional.
+  editContext: false,
 };
+
+/**
+ * Where the cursor was when the editor was last torn down, and the text it
+ * was in. Module level because a takeover screen unmounts this component, so
+ * a ref would not outlive it — and coming back to the top of the file every
+ * time is exactly the thing being fixed.
+ */
+let lastPlace: { value: string; line: number; column: number } | null = null;
 
 /**
  * Uncontrolled while typing: no live `value` prop, so coach re-scores cannot
@@ -77,6 +92,75 @@ export function EditorPane({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    // Paste, done by hand. See the note at the top of this file: Monaco's own
+    // handling was not applying it, and the event carries everything needed.
+    const container = editor.getContainerDomNode();
+    const onPaste = (event: ClipboardEvent) => {
+      const text = event.clipboardData?.getData("text/plain");
+      // Nothing usable — an image, say. Leave it to Monaco rather than
+      // swallowing the event and making it worse.
+      if (!text) return;
+      // One cursor only. With several, Monaco splits the pasted lines
+      // between them, and that is worth more than anything we do here.
+      const selections = editor.getSelections();
+      if (!selections || selections.length !== 1) return;
+      const selection = selections[0];
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Where the caret belongs afterwards: the end of what was inserted.
+      // executeEdits moves markers but not the caret, so without passing this
+      // the cursor stayed at the start of the paste and the next thing typed
+      // went in front of it.
+      const pasted = text.split(/\r\n|\r|\n/);
+      const endLine = selection.startLineNumber + pasted.length - 1;
+      const endColumn =
+        pasted.length === 1
+          ? selection.startColumn + text.length
+          : pasted[pasted.length - 1].length + 1;
+
+      editor.executeEdits(
+        "clipboard-paste",
+        [{ range: selection, text, forceMoveMarkers: true }],
+        [new monaco.Selection(endLine, endColumn, endLine, endColumn)],
+      );
+      editor.pushUndoStop();
+      // executeEdits does not scroll, so a long paste can land out of sight.
+      editor.revealPositionInCenterIfOutsideViewport({
+        lineNumber: endLine,
+        column: endColumn,
+      });
+    };
+    container.addEventListener("paste", onPaste, true);
+
+    // Put the cursor back where it was, but only if this is the same text it
+    // was left in — a different lesson should start at the top.
+    if (lastPlace && editor.getValue() === lastPlace.value) {
+      editor.setPosition({
+        lineNumber: lastPlace.line,
+        column: lastPlace.column,
+      });
+      editor.revealPositionInCenterIfOutsideViewport({
+        lineNumber: lastPlace.line,
+        column: lastPlace.column,
+      });
+    }
+
+    // Kept up to date as it moves. Reading it on dispose was too late — the
+    // editor is already going and the position reads back empty.
+    editor.onDidChangeCursorPosition((e) => {
+      lastPlace = {
+        value: editor.getValue(),
+        line: e.position.lineNumber,
+        column: e.position.column,
+      };
+    });
+
+    editor.onDidDispose(() =>
+      container.removeEventListener("paste", onPaste, true),
+    );
+
     // Monaco owns focus while typing — register run here, not only on window.
     editor.addAction({
       id: "code-coach.run",

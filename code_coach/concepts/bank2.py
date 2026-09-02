@@ -14,7 +14,7 @@ from code_coach.concepts import Topic, _q
 _FLOAT = Topic(
     id="floating-point",
     name="Floating Point & Numerics",
-    order=6,
+    order=60,
     blurb="Why 0.1 + 0.2 is not 0.3, and what to do about it when it is money.",
     questions=(
         _q(
@@ -120,7 +120,7 @@ _FLOAT = Topic(
 _BUILD = Topic(
     id="build-linking",
     name="Builds & Linking",
-    order=7,
+    order=70,
     blurb="What happens between your source file and something that runs.",
     questions=(
         _q(
@@ -220,7 +220,7 @@ _BUILD = Topic(
 _PROBABILITY = Topic(
     id="probability",
     name="Probability & Expectation",
-    order=8,
+    order=80,
     blurb="The questions every quant first round asks, and the reasoning behind them.",
     questions=(
         _q(
@@ -319,7 +319,7 @@ _PROBABILITY = Topic(
 _MICROSTRUCTURE = Topic(
     id="microstructure",
     name="Market Microstructure",
-    order=9,
+    order=90,
     blurb="How a market actually works underneath the price.",
     questions=(
         _q(

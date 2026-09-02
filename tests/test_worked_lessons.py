@@ -227,9 +227,27 @@ class CatalogueTests(unittest.TestCase):
     def test_the_endpoint_returns_it(self) -> None:
         from code_coach.api import server
 
-        entries = server.lessons()
+        entries = server.lessons("python")
         self.assertEqual(len(entries), len(PATTERNS))
         self.assertTrue(entries[0]["worked"]["stages"])
+
+    def test_the_endpoint_takes_the_language_it_is_asked_for(self) -> None:
+        """The Lessons screen has a picker on it now, so it names the language
+        rather than waiting for the store to catch up with the switch that
+        triggered the refetch."""
+        from code_coach.api import server
+
+        cpp = {e["id"] for e in server.lessons("cpp")}
+        python = {e["id"] for e in server.lessons("python")}
+        self.assertTrue(any(i.startswith("sys-") for i in cpp))
+        self.assertFalse(any(i.startswith("sys-") for i in python))
+
+    def test_an_unknown_language_falls_back_rather_than_failing(self) -> None:
+        from code_coach.api import server
+
+        self.assertEqual(
+            len(server.lessons("klingon")), len(server.lessons(None))
+        )
 
 
 class GotoProblemTests(unittest.TestCase):

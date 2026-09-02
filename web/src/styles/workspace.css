@@ -83,31 +83,70 @@
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  flex-shrink: 0;
+  /* Wraps rather than overflowing. It used to be flex-shrink: 0, which meant
+     a narrow window pushed the last four buttons off screen entirely and set
+     the whole page scrolling sideways.
+
+     Scrolling this group was the first fix and was wrong: the language menu
+     is absolutely positioned inside it, and an ancestor with overflow other
+     than visible clips its absolutely positioned descendants — so the menu
+     turned into a pair of scrollbars in a 25px box. Wrapping keeps every
+     button reachable AND lets the menu hang below the row. */
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 4px;
 }
 
-/* Pinned to the true centre of the line rather than centred in the leftover
-   flex space, which drifted right as the status text grew. Out of the flow, so
-   it can't push the buttons around; non-interactive so it can't eat a click. */
+/* The buttons keep their size; the group is what gives. Without this they
+   squash into unreadable slivers before any scrolling starts. */
+.ws-top-actions > * {
+  flex: 0 0 auto;
+}
+
+/* Takes the leftover space and centres itself inside it, so the title sits
+   between the two button groups.
+
+   It used to be pinned to the true centre with position: absolute, which put
+   it out of the flow — so once the left-hand group grew past the middle the
+   buttons were drawn straight over the top of it. A viewport media query hid
+   it below 1180px, but what decides the collision is how long the status text
+   is, not how wide the window is, so a narrower-than-full-screen window with a
+   long line still overlapped. In the flow it can only ever be squeezed. */
 .ws-brand-inline {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Basis zero, not auto: the title must contribute nothing to the decision
+     about whether this row wraps. With an auto basis its own width pushed the
+     button group onto a second line at middling widths, which costs the editor
+     a row of height. It only ever absorbs space nobody else wanted. */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
   padding: 0 10px;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--text-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
-/* Below this the two button groups meet in the middle and the title would
-   collide with them. */
-@media (max-width: 1180px) {
-  .ws-brand-inline {
-    display: none;
-  }
+/* The reading screens' own controls: the language picker beside the way out. */
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Wraps, for the same reason as .ws-top-actions above: this group holds
+     the language picker, and clipping it clips the menu. */
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 4px;
+}
+
+.panel-actions > * {
+  flex: 0 0 auto;
 }
 
 .ws-btn {

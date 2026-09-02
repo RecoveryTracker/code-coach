@@ -17,3 +17,6 @@ venv/
 web/node_modules/
 web/dist/
 web/.vite/
+
+# Server output, so a crash in a minimised window leaves a trace
+logs/

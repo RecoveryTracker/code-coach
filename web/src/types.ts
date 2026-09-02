@@ -504,3 +504,48 @@ export type ConceptTopic = {
   order: number;
   questions: ConceptQuestion[];
 };
+
+/** One workbook exercise: a sentence, and what the program has to print. */
+export type WorkbookExercise = {
+  id: string;
+  prompt: string;
+  expect: string;
+  /** The reference program, hidden until asked for. */
+  answer: string;
+};
+
+/** A page: one new idea and a dozen goes at it. */
+export type WorkbookPage = {
+  id: string;
+  number: number;
+  name: string;
+  teaches: string;
+  example: string;
+  exercises: WorkbookExercise[];
+};
+
+export type WorkbookData = {
+  language: string;
+  /** The display name, for writing into a sentence. */
+  language_name: string;
+  has_workbook: boolean;
+  pages: WorkbookPage[];
+  /** Exercise ids already solved in this language. */
+  done: string[];
+  /** The page last worked on, so it opens there. "" before you start. */
+  at: string;
+  /** Your own accepted code, by exercise id. */
+  answers: Record<string, string>;
+};
+
+export type WorkbookCheck = {
+  passed: boolean;
+  stdout: string;
+  stderr: string;
+  expect: string;
+  exit_code: number;
+  /** The program never ran — a compile or syntax error, not a wrong answer. */
+  failed_to_run: boolean;
+  done_on_page: number;
+  page_total: number;
+};

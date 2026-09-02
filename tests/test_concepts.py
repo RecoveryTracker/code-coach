@@ -133,13 +133,18 @@ class PayloadTests(unittest.TestCase):
         self.assertEqual(orders, sorted(orders))
 
     def test_the_endpoint_returns_it(self) -> None:
+        """One language's worth, not the whole bank: the shared topics plus
+        that language's own."""
         from code_coach.api import server
 
-        served = server.concepts()
-        self.assertEqual(len(served), len(topics()))
-        self.assertEqual(
-            sum(len(t["questions"]) for t in served), question_count()
-        )
+        for language in ("python", "cpp"):
+            with self.subTest(language=language):
+                served = server.concepts(language)
+                self.assertEqual(len(served), len(topics(language)))
+                self.assertEqual(
+                    sum(len(t["questions"]) for t in served),
+                    question_count(language),
+                )
 
     def test_it_is_offered_regardless_of_language(self) -> None:
         """Only the C++ topic is language-specific, and the rest are not, so

@@ -275,6 +275,35 @@ class DrillEvaluateRequest(BaseModel):
     exercise_index: int | None = None
 
 
+class WorkbookCheckRequest(BaseModel):
+    """One workbook exercise, and what the student typed for it."""
+
+    page_id: str = ""
+    exercise_id: str = ""
+    code: str = ""
+    # The screen carries its own language picker, so it says which one rather
+    # than leaving the server to guess from the store.
+    language: str | None = None
+
+
+class WorkbookCheckResponse(BaseModel):
+    passed: bool = False
+    # What the program printed, and what it had to print. Both go on screen
+    # side by side when they differ, because "wrong" on its own teaches you
+    # nothing about which part was wrong.
+    stdout: str = ""
+    stderr: str = ""
+    expect: str = ""
+    exit_code: int = 0
+    # Set when the program did not run at all, as opposed to running and
+    # printing the wrong thing. A compile error is a different problem from a
+    # logic error and should not read as the same one.
+    failed_to_run: bool = False
+    # How far through the page this leaves you.
+    done_on_page: int = 0
+    page_total: int = 0
+
+
 class CheckAnswerRequest(BaseModel):
     """Compare the student's own attempt against a problem's real solution."""
 

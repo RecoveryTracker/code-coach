@@ -1,16 +1,16 @@
 import type {
   CheckAnswerResult,
+  ConceptTopic,
   DrillEvaluateResult,
   ExplainResult,
   LanguageInfo,
-  ConceptTopic,
   LessonEntry,
   PracticeMode,
   PracticeSession,
   ProgressInfo,
   ReferenceSheet,
-  SyntaxHint,
   SkillInfo,
+  SyntaxHint,
   TypingCatalog,
   TypingCourse,
   TypingDrill,
@@ -18,6 +18,8 @@ import type {
   TypingRecord,
   TypingRunResult,
   VisualizeResult,
+  WorkbookCheck,
+  WorkbookData,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -95,16 +97,39 @@ export function gotoProblem(
   });
 }
 
-export function fetchReference(): Promise<ReferenceSheet> {
-  return request("/api/reference");
+/* The three reading screens carry a language picker of their own, so they say
+   which language they want rather than relying on the store having caught up
+   with the switch that triggered the refetch. */
+function withLanguage(path: string, language?: string): string {
+  return language ? `${path}?language=${encodeURIComponent(language)}` : path;
 }
 
-export function fetchLessons(): Promise<LessonEntry[]> {
-  return request("/api/lessons");
+export function fetchReference(language?: string): Promise<ReferenceSheet> {
+  return request(withLanguage("/api/reference", language));
 }
 
-export function fetchConcepts(): Promise<ConceptTopic[]> {
-  return request("/api/concepts");
+export function fetchLessons(language?: string): Promise<LessonEntry[]> {
+  return request(withLanguage("/api/lessons", language));
+}
+
+export function fetchConcepts(language?: string): Promise<ConceptTopic[]> {
+  return request(withLanguage("/api/concepts", language));
+}
+
+export function fetchWorkbook(language?: string): Promise<WorkbookData> {
+  return request(withLanguage("/api/workbook", language));
+}
+
+export function checkWorkbook(body: {
+  page_id: string;
+  exercise_id: string;
+  code: string;
+  language: string;
+}): Promise<WorkbookCheck> {
+  return request("/api/workbook/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchNextPractice(): Promise<PracticeSession> {

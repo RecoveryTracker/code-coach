@@ -10,23 +10,40 @@ import { useEffect, useState } from "react";
 import { fetchConcepts } from "../api";
 import type { ConceptTopic } from "../types";
 
-export default function Concepts() {
+type Props = {
+  /** Which language's topics to show. Changing it refetches. */
+  language: string;
+};
+
+export default function Concepts({ language }: Props) {
   const [topics, setTopics] = useState<ConceptTopic[]>([]);
   const [openTopic, setOpenTopic] = useState<string | null>(null);
   const [shown, setShown] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
+  // Most of the bank is about the machine and is the same whatever you write,
+  // but the topic on the language's own semantics follows the picker — so this
+  // has to refetch rather than load once.
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
-        const got = await fetchConcepts();
+        const got = await fetchConcepts(language);
+        if (cancelled) return;
         setTopics(got);
-        setOpenTopic(got.length ? got[0].id : null);
+        // Keep the topic you were reading when it exists in both languages,
+        // which is all but the language one.
+        setOpenTopic((id) =>
+          id && got.some((t) => t.id === id) ? id : (got[0]?.id ?? null),
+        );
       } catch {
-        setError("Couldn't load the concept questions.");
+        if (!cancelled) setError("Couldn't load the concept questions.");
       }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   const open = topics.find((t) => t.id === openTopic) ?? null;
 
@@ -60,7 +77,9 @@ export default function Concepts() {
   };
 
   if (error) {
-    return <div className="lessons-wrap">{error}</div>;
+    // Not lessons-wrap: that is the two-column grid, and an error squeezed
+    // into the 260px topic column is its own small bug.
+    return <div className="lessons-empty">{error}</div>;
   }
 
   const total = topics.reduce((sum, t) => sum + t.questions.length, 0);

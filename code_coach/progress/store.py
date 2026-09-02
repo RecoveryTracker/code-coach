@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 import json
 import os
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Any, Literal
 
@@ -20,6 +22,10 @@ Mode = Literal["progressive", "skill", "random", "reps"]
 CoachLevel = int
 
 DEFAULT_PATH = Path.home() / ".code_coach" / "student_progress.json"
+
+# A workbook answer is a handful of lines. This is only here so a paste
+# of something enormous cannot quietly turn the progress file into one.
+MAX_ANSWER_CHARS = 4000
 
 # The one store the app is using. Everything that needs to know about the
 # student reads it through here, so there is a single answer rather than one
@@ -91,6 +97,17 @@ class StudentProgress:
     # Which language the drills are in. Only Python is implemented; see
     # code_coach/languages.py for what a second one needs.
     language: str = "python"
+    # Workbook exercises finished, keyed by language. Solving "print the
+    # numbers 1 to 5" in Python does not mean you can do it in Rust, so these
+    # are counted separately rather than being one shared tick.
+    workbook_done: dict[str, list[str]] = field(default_factory=dict)
+    # The page you were last working on, per language, so the workbook opens
+    # where you left it rather than back at page 1.
+    workbook_page: dict[str, str] = field(default_factory=dict)
+    # The code you wrote for each exercise you got right: language, then
+    # exercise id. Your own answers are the one thing in this app you cannot
+    # get back if it is not kept.
+    workbook_answers: dict[str, dict[str, str]] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -115,6 +132,38 @@ class StudentProgress:
         total = self.lines_for(class_id) + int(n)
         self.dictation_lines[class_id] = total
         return total
+
+    # ── Workbook ──
+    def workbook_for(self, language: str) -> list[str]:
+        return list(self.workbook_done.get(language, []))
+
+    def mark_workbook(self, language: str, exercise_id: str) -> bool:
+        """Record a solved exercise. True when it is the first time."""
+        done = self.workbook_done.setdefault(language, [])
+        if exercise_id in done:
+            return False
+        done.append(exercise_id)
+        return True
+
+    def remember_workbook_answer(
+        self, language: str, exercise_id: str, code: str
+    ) -> None:
+        """Keep what they wrote. A later correct answer replaces an earlier
+        one — it is the version they would want to look back at."""
+        # Bounded so a pasted novel cannot bloat the file. Nothing on these
+        # pages is longer than a few lines.
+        self.workbook_answers.setdefault(language, {})[exercise_id] = code[
+            :MAX_ANSWER_CHARS
+        ]
+
+    def workbook_answers_for(self, language: str) -> dict[str, str]:
+        return dict(self.workbook_answers.get(language, {}))
+
+    def workbook_page_for(self, language: str) -> str:
+        return self.workbook_page.get(language, "")
+
+    def set_workbook_page(self, language: str, page_id: str) -> None:
+        self.workbook_page[language] = page_id
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -186,8 +235,46 @@ class StudentProgress:
             exercise_index=int(raw.get("exercise_index") or 0),
             # Unknown ids fall back to Python rather than failing to load.
             language=_known_language(raw.get("language")),
+            workbook_done={
+                str(k): [str(x) for x in (v or [])]
+                for k, v in (raw.get("workbook_done") or {}).items()
+            },
+            workbook_page={
+                str(k): str(v)
+                for k, v in (raw.get("workbook_page") or {}).items()
+            },
+            workbook_answers={
+                str(k): {
+                    str(ex): str(code)[:MAX_ANSWER_CHARS]
+                    for ex, code in (v or {}).items()
+                }
+                for k, v in (raw.get("workbook_answers") or {}).items()
+            },
             updated_at=str(raw.get("updated_at") or _now()),
         )
+
+
+# Windows refuses to replace a file that another handle has open, and reports
+# it as a permission error rather than waiting. The app opens this file on
+# nearly every request, so two that arrive together are enough: one saves
+# while the other reads, and the save raises.
+#
+# The overlap lasts microseconds. Retrying briefly is the whole fix; anything
+# still failing after that is a real permissions problem and is raised, since
+# a save that quietly does not happen is worse than an error that says so.
+_REPLACE_ATTEMPTS = 12
+_REPLACE_PAUSE = 0.01
+
+
+def _replace_with_retry(source: str, target: Path) -> None:
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_PAUSE)
 
 
 def _known_language(value: object) -> str:
@@ -207,8 +294,21 @@ def default_progress() -> StudentProgress:
 class ProgressStore:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or DEFAULT_PATH
+        # One reader or one writer at a time. The server answers requests on a
+        # thread pool and the UI fires several at once on load, so without
+        # this a save could land while another thread had the file open —
+        # which on Windows is a permission error, not a wait, and surfaced as
+        # a 500 on startup.
+        #
+        # Reentrant because a caller holding it may go on to save what it just
+        # loaded, and that should not deadlock.
+        self._lock = threading.RLock()
 
     def load(self) -> StudentProgress:
+        with self._lock:
+            return self._load()
+
+    def _load(self) -> StudentProgress:
         if not self.path.exists():
             return default_progress()
         try:
@@ -220,6 +320,10 @@ class ProgressStore:
             return default_progress()
 
     def save(self, progress: StudentProgress) -> StudentProgress:
+        with self._lock:
+            return self._save(progress)
+
+    def _save(self, progress: StudentProgress) -> StudentProgress:
         progress.updated_at = _now()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(progress.to_dict(), indent=2, sort_keys=True) + "\n"
@@ -233,7 +337,7 @@ class ProgressStore:
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 fh.write(payload)
-            os.replace(tmp_name, self.path)
+            _replace_with_retry(tmp_name, self.path)
         except Exception:
             try:
                 os.unlink(tmp_name)

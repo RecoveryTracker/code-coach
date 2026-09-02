@@ -1360,3 +1360,217 @@ CONSCIOUS_LINES: tuple[Passage, ...] = (
     _p("Sun is shining, the weather is sweet.", "roots"),
     _p("Wake up and live.", "roots"),
 )
+
+
+# ── Keyboard and computer tricks ────────────────────────────
+# The things nobody teaches you and everybody eventually picks up by watching
+# someone else do it. Typing them out is a reasonable way to meet them,
+# because the ones you never meet you never use.
+#
+# Where a chord differs by platform the passage says which one it is for.
+# "It depends" is not useful at the keyboard.
+
+KEYBOARD: tuple[Passage, ...] = (
+    _p(
+        "Tab moves forward through the focus order and Shift+Tab moves back "
+        "through it. Shift reverses almost anything that cycles, which is one "
+        "fact rather than fifty: shift the chord and it runs the other way.",
+        "focus",
+    ),
+    _p(
+        "The order Tab follows is called the tab order, and on a web page it "
+        "is the order the elements appear in the markup rather than the order "
+        "they appear on the screen. That is why a badly built form sometimes "
+        "sends you somewhere surprising.",
+        "focus",
+    ),
+    _p(
+        "Enter presses whichever button a dialog has marked as the default "
+        "and Escape cancels. You can answer most dialogs without ever "
+        "looking for the mouse, and the one you should read is the one where "
+        "the default is not what you want.",
+        "dialogs",
+    ),
+    _p(
+        "Ctrl and an arrow key moves by word instead of by character. Add "
+        "Shift and it selects by word. Modifiers stack like that all over the "
+        "place: one changes the size of the step, the other turns the step "
+        "into a selection.",
+        "editing",
+    ),
+    _p(
+        "Home goes to the start of the line and End to the end of it. Ctrl "
+        "with either goes to the start or end of the whole document, which is "
+        "faster than any amount of scrolling and works in almost everything.",
+        "editing",
+    ),
+    _p(
+        "Ctrl+Backspace deletes the word behind the cursor rather than one "
+        "letter. It is the single best return on effort in this whole list, "
+        "because the alternative is holding Backspace and watching.",
+        "editing",
+    ),
+    _p(
+        "Double-click selects a word and triple-click selects the line or "
+        "paragraph. Then Shift+click somewhere else extends that selection "
+        "instead of starting a new one, which beats dragging across three "
+        "screens of text.",
+        "the mouse",
+    ),
+    _p(
+        "Middle-click does three useful things: on a link it opens a new "
+        "background tab, on a tab it closes it, and on Linux it pastes "
+        "whatever you last selected. The third one is a separate clipboard "
+        "that most people never learn they have.",
+        "the mouse",
+    ),
+    _p(
+        "Ctrl+Shift+T reopens the tab you just closed, and it keeps going "
+        "back if you press it again. The same chord reopens a closed file in "
+        "several editors, which is not a coincidence — they copied it.",
+        "browsers",
+    ),
+    _p(
+        "Ctrl+L jumps to the address bar. It is worth knowing because the "
+        "address bar is also the search box, so the whole sequence from "
+        "thinking of something to looking it up never touches the mouse.",
+        "browsers",
+    ),
+    _p(
+        "Ctrl+Shift+V pastes without the formatting. Anyone who has pasted "
+        "into a document and got someone else's font, colour and line height "
+        "along with the words has needed this and not known it existed.",
+        "editing",
+    ),
+    _p(
+        "Alt+Tab switches between windows and Ctrl+Tab switches between tabs "
+        "inside the window you are in. Holding Alt down while tapping Tab "
+        "lets you go further back than one, which is the part people miss.",
+        "windows",
+    ),
+    _p(
+        "The Windows key with an arrow snaps the current window to half the "
+        "screen, and again to a quarter. Two windows side by side in about a "
+        "second, without dragging anything to an edge and hoping.",
+        "windows",
+    ),
+    _p(
+        "Windows keeps a clipboard history at Windows key and V, once you "
+        "turn it on the first time you press it. Everything you copied is "
+        "still there, which changes how you move several things at once.",
+        "windows",
+    ),
+    _p(
+        "Ctrl+Shift+Escape opens the Task Manager directly. The long way "
+        "round is Ctrl+Alt+Delete and then choosing it from a menu, which is "
+        "two extra steps at exactly the moment the machine is busy.",
+        "windows",
+    ),
+    _p(
+        "Shift+Delete deletes without going through the recycle bin. Useful, "
+        "and worth knowing precisely so that you notice which one you have "
+        "pressed, because there is nowhere to get it back from.",
+        "windows",
+    ),
+    _p(
+        "F2 renames the selected file. Not many single keys do anything worth "
+        "having, but this one saves the click, the pause and the second click "
+        "that a slow double-click turns into.",
+        "windows",
+    ),
+    _p(
+        "In a terminal, Ctrl+C is not copy. It sends an interrupt to whatever "
+        "is running, which is why the copy shortcut there is usually "
+        "Ctrl+Shift+C — the plain one was taken thirty years earlier.",
+        "the shell",
+    ),
+    _p(
+        "Ctrl+D at a shell prompt means end of input, so on an empty line it "
+        "logs you out. Ctrl+Z is not undo either: it suspends the running "
+        "program, and typing fg brings it back.",
+        "the shell",
+    ),
+    _p(
+        "Ctrl+A goes to the start of the line and Ctrl+E to the end, in "
+        "almost every shell and in a lot of text boxes on a Mac. They come "
+        "from a library called readline that half the tools you use quietly "
+        "share.",
+        "the shell",
+    ),
+    _p(
+        "Ctrl+W deletes the word behind the cursor and Ctrl+U deletes to the "
+        "start of the line. Neither is really deleting: the text goes into a "
+        "buffer, and Ctrl+Y puts it back.",
+        "the shell",
+    ),
+    _p(
+        "Ctrl+R searches backwards through the commands you have already run. "
+        "Start typing any part of one and it finds it, which is faster than "
+        "pressing the up arrow forty times and much faster than retyping it.",
+        "the shell",
+    ),
+    _p(
+        "Tab completes a half-typed name, and pressing it twice lists every "
+        "completion when there is more than one. Typing full paths by hand is "
+        "a habit worth losing early.",
+        "the shell",
+    ),
+    _p(
+        "Ctrl+L clears the screen in a shell and jumps to the address bar in "
+        "a browser. Chords are not global: the same keys mean whatever the "
+        "program in front of you decided they mean.",
+        "chords",
+    ),
+    _p(
+        "Ctrl+Z undoes and Ctrl+Y redoes on Windows, while a lot of programs "
+        "also take Ctrl+Shift+Z for redo. When you are unsure which one an "
+        "application wants, Shift on the undo chord is the better guess.",
+        "editing",
+    ),
+    _p(
+        "Ctrl+F finds, and then Enter or F3 goes to the next match while "
+        "Shift with either goes to the previous one. That is the reversing "
+        "rule again, and it is worth trying on any key that repeats.",
+        "chords",
+    ),
+    _p(
+        "Space scrolls a page down and Shift+Space scrolls it back up. It is "
+        "the oldest reading shortcut there is and it still works in every "
+        "browser and most document viewers.",
+        "browsers",
+    ),
+    _p(
+        "The Windows key with a full stop opens the emoji picker, and with "
+        "Shift+S it starts a screenshot of any region you drag. Both are "
+        "faster than the applications people usually open to do them.",
+        "windows",
+    ),
+    _p(
+        "Pressing Shift five times in a row turns on Sticky Keys, which is "
+        "why a dialog sometimes appears in the middle of a game. It exists so "
+        "that chords can be pressed one key at a time by anyone who cannot "
+        "hold three at once.",
+        "accessibility",
+    ),
+    _p(
+        "Caps Lock sits on the home row under your strongest finger and does "
+        "almost nothing. Remapping it to Control is the most common keyboard "
+        "change there is, and the reason it feels right is that older "
+        "keyboards had Control there.",
+        "keyboards",
+    ),
+    _p(
+        "A modifier is a key that changes what another key means, and a chord "
+        "is the combination. Knowing the words is worth something: it is much "
+        "easier to search for what a chord does when you know it is called "
+        "one.",
+        "chords",
+    ),
+    _p(
+        "The fastest thing you can learn about any new program is where its "
+        "shortcut list lives. Ctrl+Shift+P or Ctrl+Shift+K opens a searchable "
+        "command list in a lot of modern editors, and every command in it "
+        "shows its own chord next to it.",
+        "chords",
+    ),
+)
