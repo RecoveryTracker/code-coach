@@ -250,6 +250,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_python20 import SHAPE_IDS as PY20
         from code_coach.workbook.emit_js import SHAPE_IDS as JS
         from code_coach.workbook.emit_js2 import SHAPE_IDS as JS2
+        from code_coach.workbook.emit_js3 import SHAPE_IDS as JS3
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -276,6 +277,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(PY21)
             | set(JS)
             | set(JS2)
+            | set(JS3)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)

@@ -128,8 +128,11 @@ def expected_output(shape: str, args: dict) -> str:
         emit_python21,
         emit_js,
         emit_js2,
+        emit_js3,
     )
 
+    if emit_js3.handles(shape):
+        return emit_js3.expected_output(shape, args, _value)
     if emit_js2.handles(shape):
         return emit_js2.expected_output(shape, args, _value)
     if emit_js.handles(shape):

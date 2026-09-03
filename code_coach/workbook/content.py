@@ -31,6 +31,7 @@ from code_coach.workbook.content_edges import EDGE_PAGES
 from code_coach.workbook.content_formats import FORMAT_PAGES
 from code_coach.workbook.content_js import JS_PAGES
 from code_coach.workbook.content_js2 import JS_PAGES_2
+from code_coach.workbook.content_js3 import JS_PAGES_3
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -560,4 +561,5 @@ PAGES: tuple[Page, ...] = (
     + PRECISION_PAGES
     + JS_PAGES
     + JS_PAGES_2
+    + JS_PAGES_3
 )
