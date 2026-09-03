@@ -62,10 +62,25 @@ class ShapeTests(unittest.TestCase):
                 shapes = {e.shape for e in p.exercises}
                 self.assertEqual(len(shapes), 1, f"{p.id} mixes {shapes}")
 
-    def test_the_pages_are_in_order_and_numbered_once_each(self) -> None:
-        numbers = [p.number for p in pages()]
-        self.assertEqual(numbers, sorted(numbers))
-        self.assertEqual(len(numbers), len(set(numbers)))
+    def test_each_language_is_numbered_in_order_and_once_each(self) -> None:
+        """Numbers are unique within one language's book, not across all of
+        them.
+
+        They used to be globally unique, which meant a second language could
+        only be given numbers continuing on from Python's - so JavaScript's
+        first intermediate page would have been 289 in a book that otherwise
+        ended at 80. Renumbering per language at serve time is the other
+        obvious fix and is worse: the pages refer to each other by number
+        ("page 6's loop stopped before its limit"), and C is already missing
+        eight beginner pages, so its numbering would shift under those
+        references. So a book is numbered as itself, and two languages may
+        both have a page 81 because no reader ever sees both.
+        """
+        for language in LANGUAGES:
+            numbers = [p.number for p in pages(language)]
+            with self.subTest(language=language):
+                self.assertEqual(numbers, sorted(numbers))
+                self.assertEqual(len(numbers), len(set(numbers)))
 
     def test_every_page_says_what_it_adds(self) -> None:
         for p in pages():
@@ -186,14 +201,17 @@ class ReferenceRunTests(unittest.TestCase):
         )
 
     def test_every_exercise_solves_in_python(self) -> None:
-        for p, e in ALL:
-            with self.subTest(exercise=e.id):
-                self._run("python", e)
+        """The pages Python is offered, which is no longer all of them:
+        JavaScript's own intermediate pages have no Python answer to run."""
+        for p in pages("python"):
+            for e in p.exercises:
+                with self.subTest(exercise=e.id):
+                    self._run("python", e)
 
     def test_every_exercise_solves_in_javascript(self) -> None:
-        """The pages JavaScript is offered — not all of them. The
-        intermediate tier is Python only and has no JavaScript answer to
-        run."""
+        """The pages JavaScript is offered — the shared tiers, plus its own
+        intermediate pages. Python's intermediate pages are not among
+        them."""
         for p in pages("javascript"):
             for e in p.exercises:
                 with self.subTest(exercise=e.id):
@@ -230,6 +248,9 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_python18 import SHAPE_IDS as PY18
         from code_coach.workbook.emit_python19 import SHAPE_IDS as PY19
         from code_coach.workbook.emit_python20 import SHAPE_IDS as PY20
+        from code_coach.workbook.emit_js import SHAPE_IDS as JS
+        from code_coach.workbook.emit_js2 import SHAPE_IDS as JS2
+        from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
             set(PY1)
@@ -252,6 +273,9 @@ class ReferenceRunTests(unittest.TestCase):
             | set(PY18)
             | set(PY19)
             | set(PY20)
+            | set(PY21)
+            | set(JS)
+            | set(JS2)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -459,10 +483,22 @@ class LanguageReachTests(unittest.TestCase):
         "rust",
     )
 
-    def test_python_gets_everything(self) -> None:
-        """Python is the language the book goes deep in, so it is the one
-        that must never be missing a page."""
-        self.assertEqual(len(pages("python")), len(pages()))
+    def test_python_only_misses_pages_another_language_claimed(self) -> None:
+        """Python is the language the book goes deep in, so the only pages
+        it does not get are ones written for a single other language.
+
+        This used to say Python gets every page there is, which held for as
+        long as Python was the only language with a tier of its own.
+        JavaScript now has one, so the claim is narrower — and still worth
+        making, because a page going missing from Python by accident is
+        exactly the mistake it was written to catch.
+        """
+        claimed = [p for p in pages() if not p.applies_to("python")]
+        for p in claimed:
+            with self.subTest(page=p.id):
+                self.assertEqual(len(p.languages), 1, "claimed by one")
+                self.assertNotIn("python", p.languages)
+        self.assertEqual(len(pages("python")) + len(claimed), len(pages()))
 
     def test_the_shared_tiers_go_to_the_languages_that_can_run_them(
         self,
@@ -479,15 +515,22 @@ class LanguageReachTests(unittest.TestCase):
             with self.subTest(language=language):
                 self.assertEqual(len(offered), len(shared))
 
-    def test_the_intermediate_tier_is_python_for_now(self) -> None:
-        """It is Python only on purpose — one language is what buys the
-        depth. This will change a page at a time, and when it does the change
-        should be deliberate enough to come here first."""
+    def test_an_intermediate_page_belongs_to_exactly_one_language(self) -> None:
+        """It was Python only, because one language is what buys the depth.
+        Python now has that depth, so JavaScript has started its own book.
+
+        The rule that stays is one language per page. A shared intermediate
+        page would have to print identical output in every language that got
+        it, and escaping exactly that constraint is what the single-language
+        tier is for.
+        """
+        allowed = {"python", "javascript"}
         for p in pages():
             if p.tier != "intermediate":
                 continue
             with self.subTest(page=p.id):
-                self.assertEqual(p.languages, ("python",))
+                self.assertEqual(len(p.languages), 1, "one language a page")
+                self.assertIn(p.languages[0], allowed)
 
     def test_c_misses_exactly_the_pages_it_cannot_answer(self) -> None:
         """Deliberate, not an accident — so a later page cannot quietly drop

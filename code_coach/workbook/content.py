@@ -29,6 +29,8 @@ from code_coach.workbook.content_craft import CRAFT_PAGES
 from code_coach.workbook.content_deeper import DEEPER_PAGES
 from code_coach.workbook.content_edges import EDGE_PAGES
 from code_coach.workbook.content_formats import FORMAT_PAGES
+from code_coach.workbook.content_js import JS_PAGES
+from code_coach.workbook.content_js2 import JS_PAGES_2
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -41,6 +43,7 @@ from code_coach.workbook.content_toolkit import TOOLKIT_PAGES
 from code_coach.workbook.content_typing import TYPING_PAGES
 from code_coach.workbook.content_world import WORLD_PAGES
 from code_coach.workbook.content_practice import PRACTICE_PAGES
+from code_coach.workbook.content_precision import PRECISION_PAGES
 from code_coach.workbook.content_protocols import PROTOCOL_PAGES
 
 
@@ -554,4 +557,7 @@ PAGES: tuple[Page, ...] = (
     + MACHINERY_PAGES
     + LAST_PAGES
     + FORMAT_PAGES
+    + PRECISION_PAGES
+    + JS_PAGES
+    + JS_PAGES_2
 )
