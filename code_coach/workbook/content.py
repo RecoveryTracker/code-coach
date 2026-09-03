@@ -25,6 +25,7 @@ from code_coach.workbook.content_intermediate import INTERMEDIATE_PAGES
 from code_coach.workbook.content_intermediate2 import INTERMEDIATE_PAGES_2
 from code_coach.workbook.content_advanced import ADVANCED_PAGES
 from code_coach.workbook.content_edges import EDGE_PAGES
+from code_coach.workbook.content_modern import MODERN_PAGES
 from code_coach.workbook.content_objects import OBJECT_PAGES
 from code_coach.workbook.content_patterns import PATTERN_PAGES
 from code_coach.workbook.content_shapes import SHAPE_PAGES
@@ -532,4 +533,5 @@ PAGES: tuple[Page, ...] = (
     + ADVANCED_PAGES
     + PATTERN_PAGES
     + WORLD_PAGES
+    + MODERN_PAGES
 )
