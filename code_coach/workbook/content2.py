@@ -70,6 +70,14 @@ _SAY = (
     ("lines", "12 * 12"),
     ("gap", "88 - 46"),
     ("share", "1000 % 7"),
+    ("rows", "9 * 9"),
+    ("miles", "250 - 130"),
+    ("hits", "16 + 48"),
+    ("rest_of", "97 % 8"),
+    ("width", "7 * 11"),
+    ("stock", "500 - 275"),
+    ("marks", "45 + 55"),
+    ("each", "144 % 12"),
 )
 
 _P12 = _page(
@@ -112,6 +120,14 @@ _REPEATS = (
     (4, "no counter needed"),
     (5, "same every time"),
     (10, "ten"),
+    (9, "nine times"),
+    (2, "just twice"),
+    (6, "six of them"),
+    (3, "still going"),
+    (11, "eleven"),
+    (4, "four lines"),
+    (7, "over and over"),
+    (5, "the last set"),
 )
 
 _P13 = _page(
@@ -152,6 +168,14 @@ _QUOTED = (
     'A string is "text in quotes".',
     'Reply "ok" when you are done.',
     'The error said "not found".',
+    'The label says "fragile".',
+    'Choose "yes" or "no".',
+    'It was marked "urgent".',
+    'The column is called "total".',
+    'She wrote "see notes" beside it.',
+    'The button reads "cancel".',
+    'It returns "none" when empty.',
+    'The heading was "results".',
 )
 
 _P14 = _page(
@@ -191,6 +215,14 @@ _ONLY_WHEN = (
     ("n", 9, "n % 2 == 0", "divides exactly by 2", "even"),
     ("stock", 2, "stock < 5", "is under 5", "running low"),
     ("stock", 40, "stock < 5", "is under 5", "running low"),
+    ("n", 12, "n > 10", "is more than 10", "over ten"),
+    ("n", 4, "n > 10", "is more than 10", "over ten"),
+    ("speed", 80, "speed > 70", "is above 70", "speeding"),
+    ("speed", 45, "speed > 70", "is above 70", "speeding"),
+    ("balance", -3, "balance < 0", "is below 0", "overdrawn"),
+    ("balance", 60, "balance < 0", "is below 0", "overdrawn"),
+    ("n", 21, "n % 7 == 0", "divides exactly by 7", "a seventh"),
+    ("n", 20, "n % 7 == 0", "divides exactly by 7", "a seventh"),
 )
 
 _P15 = _page(
@@ -234,6 +266,14 @@ _EITHER = (
     ("hour", 21, "hour < 12", "is under 12", "morning", "afternoon"),
     ("speed", 70, "speed > 60", "is over 60", "too fast", "fine"),
     ("balance", -5, "balance < 0", "is below 0", "overdrawn", "in credit"),
+    ("n", 50, "n >= 100", "is 100 or more", "large", "small"),
+    ("n", 120, "n >= 100", "is 100 or more", "large", "small"),
+    ("mark", 39, "mark >= 40", "is 40 or more", "passed", "failed"),
+    ("mark", 88, "mark >= 40", "is 40 or more", "passed", "failed"),
+    ("n", 12, "n % 3 == 0", "divides exactly by 3", "a third", "not a third"),
+    ("n", 14, "n % 3 == 0", "divides exactly by 3", "a third", "not a third"),
+    ("left", 0, "left > 0", "is more than 0", "some left", "none left"),
+    ("depth", 5, "depth > 10", "is over 10", "deep", "shallow"),
 )
 
 _P16 = _page(
@@ -278,6 +318,14 @@ _BIGGER = (
     ("a", 12, "b", 12),
     ("high", 300, "low", 30),
     ("start", 17, "finish", 4),
+    ("a", 33, "b", 8),
+    ("left", 4, "right", 40),
+    ("first", 60, "second", 60),
+    ("high", 999, "low", 1),
+    ("a", 21, "b", 19),
+    ("cost", 15, "budget", 150),
+    ("north", 7, "south", 7),
+    ("start", 200, "finish", 250),
 )
 
 _P17 = _page(
@@ -321,6 +369,14 @@ _BOTH = (
     ("n", 9, "n % 3 == 0", "n % 5 == 0", "and", "divides by both 3 and 5", "fizzbuzz", "neither"),
     ("stock", 0, "stock <= 0", "stock > 500", "or", "is 0 or under, or over 500", "check it", "carry on"),
     ("score", 55, "score >= 50", "score <= 70", "and", "is between 50 and 70", "middling", "not middling"),
+    ("n", 8, "n > 5", "n < 20", "and", "is over 5 and under 20", "middling", "not middling"),
+    ("n", 30, "n > 5", "n < 20", "and", "is over 5 and under 20", "middling", "not middling"),
+    ("hour", 3, "hour < 6", "hour > 22", "or", "is before 6 or after 22", "night", "day"),
+    ("hour", 14, "hour < 6", "hour > 22", "or", "is before 6 or after 22", "night", "day"),
+    ("n", 20, "n % 4 == 0", "n % 5 == 0", "and", "divides by both 4 and 5", "a twentieth", "not one"),
+    ("n", 16, "n % 4 == 0", "n % 5 == 0", "and", "divides by both 4 and 5", "a twentieth", "not one"),
+    ("stock", 700, "stock <= 0", "stock > 500", "or", "is 0 or under, or over 500", "check it", "carry on"),
+    ("score", 90, "score >= 50", "score <= 70", "and", "is between 50 and 70", "middling", "not middling"),
 )
 
 _P18 = _page(
@@ -368,6 +424,14 @@ _WHILE = (
     (1, 12, "i * 3", "the number times 3"),
     (5, 11, "i - 5", "the number minus 5"),
     (1, 7, "i % 3", "what is left over when the number is divided by 3"),
+    (1, 9, "i", "the number"),
+    (2, 11, "i", "the number"),
+    (1, 4, "i * 5", "the number times 5"),
+    (6, 12, "i - 5", "the number minus 5"),
+    (1, 10, "i * 4", "the number times 4"),
+    (3, 10, "i + 7", "the number plus 7"),
+    (1, 6, "i * i * i", "the number cubed"),
+    (1, 13, "i % 4", "what is left over when the number is divided by 4"),
 )
 
 _P19 = _page(
@@ -410,6 +474,14 @@ _WHILE_SUM = (
     (1, 30, "i", "each number"),
     (5, 10, "i * i", "each number times itself"),
     (1, 11, "i % 4", "the remainder of each number divided by 4"),
+    (1, 8, "i", "each number"),
+    (1, 25, "i", "each number"),
+    (2, 10, "i * 2", "each number doubled"),
+    (1, 12, "i * i", "each number times itself"),
+    (3, 9, "i + 3", "each number plus 3"),
+    (1, 14, "i * 5", "each number times 5"),
+    (6, 14, "i", "each number"),
+    (1, 13, "i % 5", "the remainder of each number divided by 5"),
 )
 
 _P20 = _page(
@@ -452,6 +524,14 @@ _LIST_LOOP = (
     ([6], "n", "each one"),
     ([11, 22, 33, 44], "n + n", "each one added to itself"),
     ([7, 14, 21], "n - 7", "each one minus 7"),
+    ([2, 9, 14], "n", "each one"),
+    ([5, 10, 15, 20], "n * 3", "each one times 3"),
+    ([8, 16], "n + 4", "each one plus 4"),
+    ([1, 3, 9, 27], "n * n", "each one times itself"),
+    ([50, 60, 70], "n - 25", "each one minus 25"),
+    ([13, 26, 39], "n % 6", "the remainder of each one divided by 6"),
+    ([4, 8, 12, 16], "n * 5", "each one times 5"),
+    ([21, 42], "n + 100", "each one plus 100"),
 )
 
 _P21 = _page(
@@ -493,6 +573,14 @@ _LIST_SUM = (
     [9, 9, 9, 9],
     [12, 8, 30, 50],
     [11, 22, 33, 44, 55],
+    [6, 7, 8],
+    [25, 25, 25, 25],
+    [1, 10, 100, 1000],
+    [13, 17],
+    [4, 4, 4, 4, 4, 4],
+    [90, 5, 5],
+    [31, 41, 59],
+    [2, 3, 5, 7, 11, 13],
 )
 
 _P22 = _page(
@@ -533,6 +621,14 @@ _LIST_INDEX = (
     ([7, 14, 21, 28], [3, 1]),
     ([1, 3, 5, 7, 9], [4]),
     ([6, 12, 18], [1, 1]),
+    ([8, 16, 24], [1]),
+    ([3, 6, 9, 12], [0, 2]),
+    ([50, 40, 30, 20, 10], [4, 2]),
+    ([7, 7, 8], [2]),
+    ([15, 25, 35, 45], [1, 3]),
+    ([2, 3], [0, 1]),
+    ([60, 70, 80, 90, 100], [3]),
+    ([5, 10, 15], [2, 0, 1]),
 )
 
 _P23 = _page(
@@ -580,6 +676,14 @@ _LIST_FILTER = (
     ([6, 7, 8, 9, 10], "n < 8", "are less than 8"),
     ([33, 44, 55, 66], "n % 11 == 0", "divide exactly by 11"),
     ([2, 4, 6, 8, 10, 12], "n > 4", "are more than 4"),
+    ([5, 10, 15, 20, 25], "n > 12", "are more than 12"),
+    ([9, 18, 27, 36], "n % 9 == 0", "divide exactly by 9"),
+    ([1, 4, 6, 8, 11], "n % 2 == 1", "are odd"),
+    ([21, 42, 63], "n > 50", "are more than 50"),
+    ([100, 200, 300], "n < 250", "are less than 250"),
+    ([3, 6, 9, 12, 15], "n % 6 == 0", "divide exactly by 6"),
+    ([8, 16, 32, 64], "n >= 32", "are 32 or more"),
+    ([2, 3, 5, 7, 11], "n > 20", "are more than 20"),
 )
 
 _P24 = _page(
@@ -621,6 +725,14 @@ _LIST_BUILD = (
     (10, 14, "i - 10", "the number minus 10"),
     (1, 8, "i % 3", "the remainder of the number divided by 3"),
     (3, 8, "i * 5", "the number times 5"),
+    (1, 9, "i", "the number"),
+    (2, 7, "i * 4", "the number times 4"),
+    (1, 6, "i + 20", "the number plus 20"),
+    (4, 9, "i - 3", "the number minus 3"),
+    (1, 4, "i * 1000", "the number times 1000"),
+    (3, 7, "i * i", "the number times itself"),
+    (1, 10, "i % 4", "the remainder of the number divided by 4"),
+    (6, 11, "i * 2", "the number doubled"),
 )
 
 _P25 = _page(
@@ -663,6 +775,14 @@ _LIST_MAX = (
     [6, 6, 7],
     [250, 40, 60, 240],
     [1, 100, 10, 1000, 11],
+    [4, 11, 2],
+    [30, 30, 29],
+    [9, 8, 7, 6, 5],
+    [1000, 999],
+    [2, 2, 2, 3],
+    [15, 60, 45, 30],
+    [77],
+    [5, 50, 500, 50, 5],
 )
 
 _P26 = _page(
@@ -703,6 +823,14 @@ _FUNC_PRINT = (
     ("beat", "thump", 6),
     ("nudge", "your turn", 2),
     ("echo", "again", 4),
+    ("mark", "here", 2),
+    ("call_out", "listen", 3),
+    ("stamp", "seen", 1),
+    ("ring", "ding", 5),
+    ("note_it", "remember", 2),
+    ("cheer", "well done", 4),
+    ("knock", "tap", 3),
+    ("close_it", "shut", 1),
 )
 
 _P27 = _page(
@@ -745,6 +873,14 @@ _FUNC_ARG = (
     ("cube", "n", "n * n * n", "the number cubed", [2, 3, 4]),
     ("tens", "n", "n % 10", "the last digit", [47, 130]),
     ("both", "n", "n + n", "the number added to itself", [6, 21]),
+    ("fourx", "n", "n * 4", "the number times 4", [3, 12]),
+    ("addfive", "n", "n + 5", "the number plus 5", [10, 95]),
+    ("taketen", "n", "n - 10", "the number minus 10", [40, 10]),
+    ("thirds", "n", "n % 3", "the remainder when divided by 3", [7, 9]),
+    ("sixx", "n", "n * 6", "the number times 6", [2, 8, 11]),
+    ("plustwo", "n", "n + 2", "the number plus 2", [0, 99]),
+    ("thousands", "n", "n * 1000", "the number times 1000", [3, 5]),
+    ("halfish", "n", "n * 2 - 1", "twice the number minus 1", [4, 20]),
 )
 
 _P28 = _page(
@@ -790,6 +926,14 @@ _FUNC_RETURN = (
     ("backone", "n", "n - 1", "the number minus 1", [1, 1000]),
     ("squareplus", "n", "n * n + 1", "the number squared, plus 1", [3, 7]),
     ("hundredless", "n", "100 - n", "100 minus the number", [40, 99]),
+    ("threex", "n", "n * 3", "the number times 3", [4, 15]),
+    ("addtwo", "n", "n + 2", "the number plus 2", [8, 40]),
+    ("lessfive", "n", "n - 5", "the number minus 5", [25, 5]),
+    ("sixthrest", "n", "n % 6", "the remainder when divided by 6", [17, 36]),
+    ("twentyx", "n", "n * 20", "the number times 20", [3, 9]),
+    ("squareless", "n", "n * n - 1", "the number squared, minus 1", [5, 8]),
+    ("fromfifty", "n", "50 - n", "50 minus the number", [12, 49]),
+    ("plusthree", "n", "n + 3", "the number plus 3", [7, 70]),
 )
 
 _P29 = _page(
@@ -835,6 +979,14 @@ _WORDS = (
     "repetition",
     "code",
     "practice",
+    "exercise",
+    "it",
+    "letters",
+    "workbook page",
+    "go",
+    "understanding",
+    "screen",
+    "twenty",
 )
 
 _P30 = _page(
@@ -874,6 +1026,14 @@ _LOOP_WORDS = (
     "letters",
     "work",
     "done",
+    "up",
+    "run",
+    "text",
+    "word",
+    "letter",
+    "b",
+    "line",
+    "twenty",
 )
 
 _P31 = _page(
@@ -912,6 +1072,14 @@ _UPPER_WORDS = (
     "done",
     "one more",
     "finished",
+    "quietly",
+    "shouting",
+    "small",
+    "big letters",
+    "workbook page",
+    "twenty of them",
+    "go on",
+    "the end",
 )
 
 _P32 = _page(
