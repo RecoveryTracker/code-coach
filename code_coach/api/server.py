@@ -34,6 +34,7 @@ from code_coach.api.schemas import (
     VisualizeResponse,
     WaypointInfo,
     WorkbookCheckRequest,
+    WorkbookDraftRequest,
     WorkbookCheckResponse,
 )
 from code_coach.leetcode.bank import study_payload as leetcode_study_payload
@@ -810,9 +811,14 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
     # Where you were is worth keeping whether or not the answer was right —
     # coming back to the page you were stuck on is the point.
     progress.set_workbook_page(language, body.page_id)
+    # And so is what you wrote. This used to keep only correct answers, on the
+    # grounds that the file should be a record of your work rather than your
+    # typos; the effect was that going to another exercise and back threw away
+    # everything you had not yet got right, which is exactly the work you most
+    # wanted back.
+    progress.remember_workbook_answer(language, found.id, body.code)
     if passed:
         progress.mark_workbook(language, found.id)
-        progress.remember_workbook_answer(language, found.id, body.code)
     _store.save(progress)
 
     progress = _store.load()
@@ -831,6 +837,36 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
         done_on_page=sum(1 for e in on_page if e in done),
         page_total=len(on_page),
     )
+
+
+@app.post("/api/workbook/draft")
+def workbook_draft(body: WorkbookDraftRequest) -> dict:
+    """Keep what is in the box, without running it.
+
+    Typing is the work, so it should survive leaving the exercise — whether
+    or not it was ever checked, and whether or not it was right. The screen
+    sends this shortly after you stop typing and again on the way out of an
+    exercise, so what comes back is what you left.
+    """
+    from code_coach.workbook import exercise as find_exercise
+    from code_coach.workbook import has_workbook
+
+    language = _viewing_language(body.language)
+    if not has_workbook(language):
+        raise HTTPException(
+            status_code=409, detail=f"No workbook for {language}"
+        )
+    found = find_exercise(body.page_id, body.exercise_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown exercise {body.exercise_id}"
+        )
+
+    progress = _store.load()
+    progress.set_workbook_page(language, body.page_id)
+    progress.remember_workbook_answer(language, found.id, body.code)
+    _store.save(progress)
+    return {"saved": True}
 
 
 @app.get("/api/lessons")

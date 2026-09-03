@@ -132,6 +132,27 @@ export function checkWorkbook(body: {
   });
 }
 
+/**
+ * Keep what is in the box without running it.
+ *
+ * Sent shortly after typing stops and again when leaving an exercise, so
+ * work survives moving around the workbook whether or not it was ever
+ * checked. Failures are deliberately swallowed by the caller: losing a
+ * draft save is not worth an error message over the exercise you are
+ * still typing.
+ */
+export function saveWorkbookDraft(body: {
+  page_id: string;
+  exercise_id: string;
+  code: string;
+  language: string;
+}): Promise<{ saved: boolean }> {
+  return request("/api/workbook/draft", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function fetchNextPractice(): Promise<PracticeSession> {
   return request("/api/practice/next", { method: "POST", body: "{}" });
 }

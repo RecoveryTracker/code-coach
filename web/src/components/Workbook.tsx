@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { checkWorkbook, fetchWorkbook } from "../api";
+import { checkWorkbook, fetchWorkbook, saveWorkbookDraft } from "../api";
 import type { WorkbookCheck, WorkbookData, WorkbookPage } from "../types";
 
 /** How wide one press of Tab is, when Tab is indenting. */
@@ -70,6 +70,15 @@ export default function Workbook({ language }: Props) {
   const [result, setResult] = useState<WorkbookCheck | null>(null);
   const [checking, setChecking] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  /**
+   * True while the box still holds exactly what was restored for this
+   * exercise, rather than something typed since arriving.
+   *
+   * Needed because drafts are now kept as you type: without it, "what you
+   * wrote last time" would appear over the sentence you are in the middle of
+   * writing, which is both untrue and unnerving.
+   */
+  const [restored, setRestored] = useState(false);
   /** Your own accepted code, restored into the box when you come back. */
   const [mine, setMine] = useState<Record<string, string>>({});
   /** Ids solved this session or in an earlier one. */
@@ -164,16 +173,89 @@ export default function Workbook({ language }: Props) {
     setIndex(firstUndone === -1 ? 0 : firstUndone);
   }, [pageStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * The draft not yet sent to the server, and the timer that will send it.
+   *
+   * Typing is the work, so it has to survive leaving the exercise. Sending on
+   * every keystroke would be a request per character, so it waits until you
+   * pause — but a pause is not guaranteed before you click away, which is why
+   * `flushDraft` exists and why leaving an exercise calls it.
+   */
+  const pending = useRef<{ pageId: string; exerciseId: string; code: string } | null>(
+    null,
+  );
+  const draftTimer = useRef<number | null>(null);
+
+  const flushDraft = useCallback(() => {
+    if (draftTimer.current !== null) {
+      window.clearTimeout(draftTimer.current);
+      draftTimer.current = null;
+    }
+    const waiting = pending.current;
+    pending.current = null;
+    if (!waiting) return;
+    // A draft that fails to save is not worth interrupting the typing for.
+    void saveWorkbookDraft({
+      page_id: waiting.pageId,
+      exercise_id: waiting.exerciseId,
+      code: waiting.code,
+      language,
+    }).catch(() => undefined);
+  }, [language]);
+
+  const rememberDraft = useCallback(
+    (text: string) => {
+      if (!page || !exercise) return;
+      pending.current = {
+        pageId: page.id,
+        exerciseId: exercise.id,
+        code: text,
+      };
+      if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+      draftTimer.current = window.setTimeout(flushDraft, 600);
+    },
+    [page, exercise, flushDraft],
+  );
+
+  // Leaving the screen entirely still has to keep what is in the box.
+  useEffect(() => flushDraft, [flushDraft]);
+
+  /**
+   * Change the box, and keep the change.
+   *
+   * Everything that edits the text goes through here — typing, both Tab
+   * indents, and Clear — so none of them can be the one that forgets. The
+   * restore when the exercise changes deliberately does not: that is reading
+   * what was kept, not writing it again.
+   */
+  const writeCode = useCallback(
+    (text: string) => {
+      setCode(text);
+      setRestored(false);
+      if (exercise) {
+        setMine((was) => ({ ...was, [exercise.id]: text }));
+      }
+      rememberDraft(text);
+    },
+    [exercise, rememberDraft],
+  );
+
   // A new exercise starts empty and focused, so the only thing between
-  // reading it and typing it is reading it. One you have already solved
-  // starts with what you wrote — the tick says you did it, and the box
-  // should show it rather than making you go and find it.
+  // reading it and typing it is reading it. One you have already worked on
+  // starts with what you wrote — whether or not it was ever checked, and
+  // whether or not it was right, because half-finished work is exactly what
+  // you came back for.
   useEffect(() => {
-    setCode(exercise ? (mineRef.current[exercise.id] ?? "") : "");
+    // Send whatever the last exercise was left holding before swapping the
+    // box out from under it.
+    flushDraft();
+    const kept = exercise ? (mineRef.current[exercise.id] ?? "") : "";
+    setCode(kept);
+    setRestored(kept !== "");
     setResult(null);
     setRevealed(false);
     box.current?.focus();
-  }, [exercise?.id]);
+  }, [exercise?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Editing through React means the value comes back on the next render, and
   // the browser has by then put the caret at the end. Anything that edits the
@@ -290,7 +372,7 @@ export default function Workbook({ language }: Props) {
               : line,
         )
         .join("\n");
-      setCode(code.slice(0, lineStart) + shifted + code.slice(lineEnd));
+      writeCode(code.slice(0, lineStart) + shifted + code.slice(lineEnd));
       caret.current = [lineStart, lineStart + shifted.length];
       return;
     }
@@ -300,12 +382,12 @@ export default function Workbook({ language }: Props) {
       const before = code.slice(lineStart, from);
       const spaces = before.length - before.replace(/ {1,4}$/, "").length;
       if (!spaces) return;
-      setCode(code.slice(0, from - spaces) + code.slice(from));
+      writeCode(code.slice(0, from - spaces) + code.slice(from));
       caret.current = [from - spaces, from - spaces];
       return;
     }
 
-    setCode(code.slice(0, from) + INDENT + code.slice(to));
+    writeCode(code.slice(0, from) + INDENT + code.slice(to));
     caret.current = [from + INDENT.length, from + INDENT.length];
   };
 
@@ -438,7 +520,10 @@ export default function Workbook({ language }: Props) {
             autoCorrect="off"
             placeholder={`Write it in ${data.language_name}…`}
             onChange={(e) => {
-              setCode(e.target.value);
+              // Kept immediately, so moving between exercises restores
+              // it without waiting for the server; the save that follows is
+              // for surviving a reload.
+              writeCode(e.target.value);
               // Editing after a wrong answer clears the verdict: leaving it
               // there next to changed code says something untrue.
               if (result && !result.passed) setResult(null);
@@ -479,7 +564,7 @@ export default function Workbook({ language }: Props) {
               type="button"
               className="ws-btn"
               onClick={() => {
-                setCode("");
+                writeCode("");
                 setResult(null);
                 box.current?.focus();
               }}
@@ -510,7 +595,7 @@ export default function Workbook({ language }: Props) {
             </button>
           </div>
 
-          {!result && mine[exercise.id] && code === mine[exercise.id] ? (
+          {!result && restored ? (
             <p className="wb-restored">
               This is what you wrote last time. Change it, or hit Clear to do
               it again from nothing.

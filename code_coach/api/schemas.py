@@ -286,6 +286,19 @@ class WorkbookCheckRequest(BaseModel):
     language: str | None = None
 
 
+class WorkbookDraftRequest(BaseModel):
+    """What is in the box right now, saved without running it.
+
+    The same fields as a check, because it is the same thing at an earlier
+    moment: half-typed, not yet run, and worth keeping anyway.
+    """
+
+    page_id: str = ""
+    exercise_id: str = ""
+    code: str = ""
+    language: str | None = None
+
+
 class WorkbookCheckResponse(BaseModel):
     passed: bool = False
     # What the program printed, and what it had to print. Both go on screen

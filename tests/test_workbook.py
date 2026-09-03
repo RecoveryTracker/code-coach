@@ -257,6 +257,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_js7 import SHAPE_IDS as JS7
         from code_coach.workbook.emit_js8 import SHAPE_IDS as JS8
         from code_coach.workbook.emit_ts import SHAPE_IDS as TS
+        from code_coach.workbook.emit_ts2 import SHAPE_IDS as TS2
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -290,6 +291,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JS7)
             | set(JS8)
             | set(TS)
+            | set(TS2)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -720,10 +722,51 @@ class MemoryTests(unittest.TestCase):
         answers = self.server.workbook("python")["answers"]
         self.assertEqual(answers["first-loop-01"], code)
 
-    def test_only_answers_that_worked_are_kept(self) -> None:
-        """A record of your work, not of your typos."""
+    def test_a_wrong_answer_is_kept_too(self) -> None:
+        """This used to keep only correct answers, on the grounds that the
+        file should be a record of your work rather than your typos.
+
+        The effect was that going to another exercise and back threw away
+        everything you had not yet got right — which is the work you most
+        wanted back. Being wrong is not a reason to lose it.
+        """
         self._check(self.server, "arithmetic", "arithmetic-01", "print(8)")
-        self.assertEqual(self.server.workbook("python")["answers"], {})
+        answers = self.server.workbook("python")["answers"]
+        self.assertEqual(answers["arithmetic-01"], "print(8)")
+        # Kept, but still not passed.
+        self.assertNotIn("arithmetic-01", self.server.workbook("python")["done"])
+
+    def test_typing_is_kept_without_running_it(self) -> None:
+        """Half-typed work survives leaving the exercise, which is the whole
+        point: it is saved as you type rather than as you succeed."""
+        from code_coach.api.schemas import WorkbookDraftRequest
+
+        self.server.workbook_draft(
+            WorkbookDraftRequest(
+                page_id="arithmetic",
+                exercise_id="arithmetic-01",
+                code="print(3 +",
+                language="python",
+            )
+        )
+        got = self.server.workbook("python")
+        self.assertEqual(got["answers"]["arithmetic-01"], "print(3 +")
+        # Nothing was run, so nothing is done and nothing claims to be.
+        self.assertEqual(got["done"], [])
+
+    def test_a_draft_also_keeps_your_place(self) -> None:
+        """Typing on a page is being on it."""
+        from code_coach.api.schemas import WorkbookDraftRequest
+
+        self.server.workbook_draft(
+            WorkbookDraftRequest(
+                page_id="arithmetic",
+                exercise_id="arithmetic-01",
+                code="print(",
+                language="python",
+            )
+        )
+        self.assertEqual(self.server.workbook("python")["at"], "arithmetic")
 
     def test_a_later_answer_replaces_an_earlier_one(self) -> None:
         self._check(self.server, "arithmetic", "arithmetic-01", "print(7)")
