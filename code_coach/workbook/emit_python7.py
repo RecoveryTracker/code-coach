@@ -29,7 +29,7 @@ SHAPES: tuple[Shape, ...] = (
     Shape("lt_dunder", "teaching sorted how to order them"),
     Shape("custom_error", "an exception type of your own"),
     Shape("try_else_finally", "the two halves of try most people skip"),
-    Shape("raise_and_catch", "raising your own, and catching it by type"),
+    Shape("error_hierarchy", "one except catching a whole family"),
 )
 
 SHAPE_IDS: tuple[str, ...] = tuple(s.id for s in SHAPES)
@@ -89,6 +89,11 @@ def _python(shape: str, a: dict) -> str:
             *calls,
         )
     if shape == "class_counter":
+        # The method and the counter share a namespace: name them the same
+        # and the def quietly replaces the attribute, which fails later and
+        # somewhere else.
+        if a["name"] == "made":
+            raise ValueError("class_counter method cannot be called 'made'")
         makes = [f"{a['cls']}()" for _ in range(a["times"])]
         return _lines(
             f"class {a['cls']}:",
@@ -145,13 +150,13 @@ def _python(shape: str, a: dict) -> str:
             "    pass",
             "",
             "",
-            f"def check(n):",
+            "def check(n):",
             f"    if {a['cond']}:",
             f"        raise {a['error']}({_q(a['message'])})",
             "    return n",
             "",
             "",
-            f"for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
+            "for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
             "    try:",
             "        print(check(n))",
             f"    except {a['error']} as problem:",
@@ -159,7 +164,7 @@ def _python(shape: str, a: dict) -> str:
         )
     if shape == "try_else_finally":
         return _lines(
-            f"for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
+            "for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
             "    try:",
             f"        result = {a['expr']}",
             f"    except {a['error']}:",
@@ -169,19 +174,31 @@ def _python(shape: str, a: dict) -> str:
             "    finally:",
             f"        print({_q(a['always'])})",
         )
-    if shape == "raise_and_catch":
+    if shape == "error_hierarchy":
         return _lines(
-            f"class {a['error']}(Exception):",
+            f"class {a['base']}(Exception):",
             "    pass",
             "",
             "",
-            f"for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
+            f"class {a['sub']}({a['base']}):",
+            "    pass",
+            "",
+            "",
+            "def check(n):",
+            f"    if {a['worse']}:",
+            f"        raise {a['sub']}({_q(a['sub'])})",
+            f"    if {a['bad']}:",
+            f"        raise {a['base']}({_q(a['base'])})",
+            "    return n",
+            "",
+            "",
+            "for n in [" + ", ".join(repr(v) for v in a["values"]) + "]:",
             "    try:",
-            f"        if {a['cond']}:",
-            f"            raise {a['error']}({_q(a['message'])})",
-            f"        print({a['ok']})",
-            f"    except {a['error']}:",
-            f"        print({_q(a['caught'])})",
+            "        print(check(n))",
+            f"    except {a['sub']}:",
+            f"        print({_q(a['sub_label'])})",
+            f"    except {a['base']}:",
+            f"        print({_q(a['base_label'])})",
         )
     raise KeyError(shape)
 
@@ -230,12 +247,16 @@ def expected_output(shape: str, args: dict, value) -> str:
             except ZeroDivisionError:
                 lines.append(a["failed"])
             lines.append(a["always"])
-    elif shape == "raise_and_catch":
+    elif shape == "error_hierarchy":
         for n in a["values"]:
-            if value(a["cond"], {"n": n, **_TOOLS}):
-                lines.append(a["caught"])
+            # The subclass is tested first, exactly as the excepts are
+            # ordered: put the base first and it would swallow both.
+            if value(a["worse"], {"n": n, **_TOOLS}):
+                lines.append(a["sub_label"])
+            elif value(a["bad"], {"n": n, **_TOOLS}):
+                lines.append(a["base_label"])
             else:
-                lines.append(str(value(a["ok"], {"n": n, **_TOOLS})))
+                lines.append(str(n))
     else:
         raise KeyError(shape)
     return NL.join(lines)
