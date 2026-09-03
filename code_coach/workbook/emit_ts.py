@@ -78,6 +78,56 @@ def _check_name(name: str) -> str:
     return name
 
 
+# The same problem one level up. An interface declared with the name of a
+# global type does not shadow it - it merges with it, so an object
+# literal that satisfies your fields is reported as missing the global
+# one's. The error names your interface, which makes it confusing.
+_TAKEN_TYPES = frozenset(
+    {
+        "Text",
+        "Image",
+        "File",
+        "Document",
+        "Event",
+        "Node",
+        "Element",
+        "Range",
+        "Request",
+        "Response",
+        "Headers",
+        "URL",
+        "Blob",
+        "Comment",
+        "Selection",
+        "Screen",
+        "Location",
+        "History",
+        "Storage",
+        "Worker",
+        "Notification",
+        "Map",
+        "Set",
+        "Date",
+        "Error",
+        "Promise",
+        "Proxy",
+        "Record",
+        "Array",
+        "Object",
+        "String",
+        "Number",
+        "Boolean",
+        "Symbol",
+    }
+)
+
+
+def check_type_name(name: str) -> str:
+    if name in _TAKEN_TYPES:
+        raise ValueError(f"{name!r} is already a type in TypeScript")
+    return name
+
+
 def _annotate(a: dict) -> str:
     return _lines(
         f"const who: string = {_q(a['name'])};",
