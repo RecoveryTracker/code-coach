@@ -117,8 +117,11 @@ def expected_output(shape: str, args: dict) -> str:
         emit_python10,
         emit_python11,
         emit_python12,
+        emit_python13,
     )
 
+    if emit_python13.handles(shape):
+        return emit_python13.expected_output(shape, args, _value)
     if emit_python12.handles(shape):
         return emit_python12.expected_output(shape, args, _value)
     if emit_python11.handles(shape):

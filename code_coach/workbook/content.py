@@ -34,6 +34,7 @@ from code_coach.workbook.content_shapes import SHAPE_PAGES
 from code_coach.workbook.content_typing import TYPING_PAGES
 from code_coach.workbook.content_world import WORLD_PAGES
 from code_coach.workbook.content_practice import PRACTICE_PAGES
+from code_coach.workbook.content_protocols import PROTOCOL_PAGES
 
 
 # Positional-only up to the shape, so a shape argument can share a name
@@ -538,4 +539,5 @@ PAGES: tuple[Page, ...] = (
     + MODERN_PAGES
     + CRAFT_PAGES
     + NUMBER_PAGES
+    + PROTOCOL_PAGES
 )
