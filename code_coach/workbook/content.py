@@ -34,6 +34,7 @@ from code_coach.workbook.content_js2 import JS_PAGES_2
 from code_coach.workbook.content_js3 import JS_PAGES_3
 from code_coach.workbook.content_js4 import JS_PAGES_4
 from code_coach.workbook.content_js5 import JS_PAGES_5
+from code_coach.workbook.content_js6 import JS_PAGES_6
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -566,4 +567,5 @@ PAGES: tuple[Page, ...] = (
     + JS_PAGES_3
     + JS_PAGES_4
     + JS_PAGES_5
+    + JS_PAGES_6
 )
