@@ -256,6 +256,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_js6 import SHAPE_IDS as JS6
         from code_coach.workbook.emit_js7 import SHAPE_IDS as JS7
         from code_coach.workbook.emit_js8 import SHAPE_IDS as JS8
+        from code_coach.workbook.emit_ts import SHAPE_IDS as TS
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -288,6 +289,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JS6)
             | set(JS7)
             | set(JS8)
+            | set(TS)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -536,7 +538,7 @@ class LanguageReachTests(unittest.TestCase):
         it, and escaping exactly that constraint is what the single-language
         tier is for.
         """
-        allowed = {"python", "javascript"}
+        allowed = {"python", "javascript", "typescript"}
         for p in pages():
             if p.tier != "intermediate":
                 continue
