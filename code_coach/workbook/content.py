@@ -31,6 +31,7 @@ from code_coach.workbook.content_numbers import NUMBER_PAGES
 from code_coach.workbook.content_objects import OBJECT_PAGES
 from code_coach.workbook.content_patterns import PATTERN_PAGES
 from code_coach.workbook.content_shapes import SHAPE_PAGES
+from code_coach.workbook.content_toolkit import TOOLKIT_PAGES
 from code_coach.workbook.content_typing import TYPING_PAGES
 from code_coach.workbook.content_world import WORLD_PAGES
 from code_coach.workbook.content_practice import PRACTICE_PAGES
@@ -540,4 +541,5 @@ PAGES: tuple[Page, ...] = (
     + CRAFT_PAGES
     + NUMBER_PAGES
     + PROTOCOL_PAGES
+    + TOOLKIT_PAGES
 )
