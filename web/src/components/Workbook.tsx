@@ -19,8 +19,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { checkWorkbook, fetchWorkbook, saveWorkbookDraft } from "../api";
-import type { WorkbookCheck, WorkbookData, WorkbookPage } from "../types";
+import {
+  checkWorkbook,
+  explainCode,
+  fetchWorkbook,
+  saveWorkbookDraft,
+} from "../api";
+import { VizPanel } from "./VizPanel";
+import type {
+  ExplainResult,
+  WorkbookCheck,
+  WorkbookData,
+  WorkbookPage,
+} from "../types";
 
 /** How wide one press of Tab is, when Tab is indenting. */
 const INDENT = "    ";
@@ -79,6 +90,19 @@ export default function Workbook({ language }: Props) {
    * writing, which is both untrue and unnerving.
    */
   const [restored, setRestored] = useState(false);
+  /**
+   * A line-by-line walkthrough of what is in the box, from /api/explain.
+   *
+   * Here because the alternative was copying the exercise into the main
+   * editor to find out why it printed what it printed, which is a lot of
+   * moving about to answer a question the workbook could answer itself.
+   */
+  const [walkthrough, setWalkthrough] = useState<ExplainResult | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  /** "Watch it run" — the step-through, same panel as the main screen. */
+  const [watching, setWatching] = useState(false);
+  /** "Time complexity" — what the shape you just wrote costs. */
+  const [costOpen, setCostOpen] = useState(false);
   /** Your own accepted code, restored into the box when you come back. */
   const [mine, setMine] = useState<Record<string, string>>({});
   /** Ids solved this session or in an earlier one. */
@@ -232,6 +256,8 @@ export default function Workbook({ language }: Props) {
     (text: string) => {
       setCode(text);
       setRestored(false);
+      // The walkthrough was about the code as it was a moment ago.
+      setWalkthrough(null);
       if (exercise) {
         setMine((was) => ({ ...was, [exercise.id]: text }));
       }
@@ -253,6 +279,9 @@ export default function Workbook({ language }: Props) {
     setCode(kept);
     setRestored(kept !== "");
     setResult(null);
+    setWalkthrough(null);
+    setWatching(false);
+    setCostOpen(false);
     setRevealed(false);
     box.current?.focus();
   }, [exercise?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -573,6 +602,63 @@ export default function Workbook({ language }: Props) {
             >
               Clear
             </button>
+            {/* The three "tell me about what I wrote" buttons. They behave
+                alike on purpose: each one opens a panel about the code in
+                the box, so none of it means leaving the workbook. */}
+            <button
+              type="button"
+              className={walkthrough ? "ws-btn on" : "ws-btn"}
+              onClick={async () => {
+                if (walkthrough) {
+                  setWalkthrough(null);
+                  return;
+                }
+                setExplaining(true);
+                try {
+                  setWalkthrough(await explainCode(code));
+                } catch (e) {
+                  setError(
+                    e instanceof Error ? e.message : "Couldn't explain that.",
+                  );
+                } finally {
+                  setExplaining(false);
+                }
+              }}
+              disabled={!code.trim() || explaining}
+              title="Say what each line does, and why it printed what it printed"
+            >
+              {explaining
+                ? "Reading…"
+                : walkthrough
+                  ? "Hide explain"
+                  : "Explain my code"}
+            </button>
+            <button
+              type="button"
+              className={watching ? "ws-btn on" : "ws-btn"}
+              onClick={() => setWatching((open) => !open)}
+              // The tracer is Python's alone for now, so the button says so
+              // rather than opening a panel that cannot answer.
+              disabled={!code.trim() || language !== "python"}
+              title={
+                language === "python"
+                  ? "Step through it and watch the variables change"
+                  : "The step-through only works in Python at the moment"
+              }
+            >
+              {watching ? "Hide picture" : "Watch it run"}
+            </button>
+            {page.cost ? (
+              <button
+                type="button"
+                className={costOpen ? "ws-btn on" : "ws-btn"}
+                onClick={() => setCostOpen((open) => !open)}
+                disabled={!code.trim()}
+                title="What this shape costs once the numbers get big"
+              >
+                {costOpen ? "Hide complexity" : "Time complexity"}
+              </button>
+            ) : null}
             <button
               type="button"
               className="ws-btn"
@@ -594,6 +680,46 @@ export default function Workbook({ language }: Props) {
               {tabIndents ? "Tab: indents" : "Tab: moves on"}
             </button>
           </div>
+
+          {costOpen && page.cost ? (
+            <p className="wb-cost">
+              <span className="wb-cost-label">{page.cost.label}</span>
+              {page.cost.note}
+            </p>
+          ) : null}
+
+          {watching ? (
+            <div className="wb-viz">
+              <VizPanel
+                getCode={() => code}
+                patternId={null}
+                problemNumber={null}
+                resetKey={exercise.id}
+              />
+            </div>
+          ) : null}
+
+          {walkthrough ? (
+            <div className="wb-walkthrough">
+              <p className="wb-walkthrough-summary">{walkthrough.summary}</p>
+              <ol className="wb-walkthrough-lines">
+                {walkthrough.lines.map((line) => (
+                  <li key={line.line} style={{ marginLeft: line.depth * 16 }}>
+                    <code>{line.source}</code>
+                    <span>{line.text}</span>
+                  </li>
+                ))}
+              </ol>
+              {walkthrough.output_notes.map((note) => (
+                <p className="wb-walkthrough-note" key={note}>
+                  {note}
+                </p>
+              ))}
+              {walkthrough.error_note ? (
+                <p className="wb-walkthrough-error">{walkthrough.error_note}</p>
+              ) : null}
+            </div>
+          ) : null}
 
           {!result && restored ? (
             <p className="wb-restored">

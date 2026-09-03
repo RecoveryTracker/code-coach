@@ -315,6 +315,17 @@
   font-weight: 600;
 }
 
+/* A toggle whose panel is currently open. Following .coach-chat-toggle
+   .active, which had the same job first: accent border and text, plus a
+   tint, so "this one is on" reads at a glance rather than only from the
+   label having changed. */
+.ws-btn.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .ws-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

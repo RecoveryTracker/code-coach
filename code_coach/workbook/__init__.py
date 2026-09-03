@@ -311,6 +311,22 @@ def has_workbook(language: str) -> bool:
     return supports(language)
 
 
+def _cost_of(page: Page) -> dict | None:
+    """The page's complexity note, ready to serve.
+
+    A page is one shape all the way through, so the cost is the shape's.
+    Pages whose shape has no note yet return None.
+    """
+    from code_coach.workbook.complexity import for_shape
+
+    if not page.exercises:
+        return None
+    found = for_shape(page.exercises[0].shape)
+    if found is None:
+        return None
+    return {"label": found.label, "note": found.note}
+
+
 def payload(language: str) -> list[dict]:
     """Every page, for the Workbook screen.
 
@@ -328,6 +344,10 @@ def payload(language: str) -> list[dict]:
                 "teaches": p.teaches,
                 "example": p.example,
                 "tier": p.tier,
+                # What this page's shape costs when the numbers get big.
+                # Absent where there is nothing honest to say yet, and the
+                # screen shows no panel rather than a guess.
+                "cost": _cost_of(p),
                 "exercises": [
                     {
                         "id": e.id,

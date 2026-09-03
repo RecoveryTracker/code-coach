@@ -344,7 +344,10 @@ class EndpointTests(unittest.TestCase):
             )
             self.assertTrue(got.passed)
             self.assertEqual(got.done_on_page, 1)
-            self.assertEqual(got.page_total, 12)
+            # Asked of the page rather than written down: this said 12 until
+            # the pages went to twenty, and a hard-coded count fails for a
+            # change that is not a fault.
+            self.assertEqual(got.page_total, len(page("arithmetic").exercises))
             # And it survives a reload — the store's from_dict is an explicit
             # allow-list, so a new field it does not name is silently dropped.
             stored = server._store.load()

@@ -686,6 +686,93 @@
   margin: 16px 0 0;
 }
 
+/* ── What the page's shape costs ──────────────────────────
+   Opened by its own button, beside the other two, because it is another
+   way of asking about the code you just wrote rather than something to
+   read before you start. */
+
+.wb-cost {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid #3d5a3f;
+  background: #131a15;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b0c2b4;
+}
+
+.wb-cost-label {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: #23351f;
+  color: #9fd39a;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Holds the step-through panel, which brings its own layout. */
+.wb-viz {
+  margin: 16px 0 0;
+  border: 1px solid #2b3a4d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── The line-by-line walkthrough ─────────────────────────
+   What the code in the box actually did, so finding out does not mean
+   copying the exercise into the main editor and running it there. */
+
+.wb-walkthrough {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #2b3a4d;
+  border-radius: 8px;
+  background: #10161d;
+}
+
+.wb-walkthrough-summary {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #c9d6e2;
+}
+
+.wb-walkthrough-lines {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wb-walkthrough-lines li {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #9fb0c0;
+}
+
+.wb-walkthrough-lines code {
+  display: block;
+  color: #cfe3f5;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.wb-walkthrough-note {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #9fd39a;
+}
+
+.wb-walkthrough-error {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: #e6a1a1;
+}
+
 /* Says why there is already code in the box on an exercise you have done. */
 .wb-restored {
   margin: 12px 0 0;

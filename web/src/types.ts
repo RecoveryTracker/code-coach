@@ -523,6 +523,12 @@ export type WorkbookPage = {
   example: string;
   /** Which section of the book: beginner | practice | intermediate | advanced. */
   tier: string;
+  /**
+   * What this page's shape costs once the numbers get big. Null where
+   * there is nothing honest to say about it yet, and the screen then
+   * shows nothing rather than a guess.
+   */
+  cost: { label: string; note: string } | null;
   exercises: WorkbookExercise[];
 };
 
