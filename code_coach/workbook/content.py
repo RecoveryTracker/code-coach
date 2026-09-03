@@ -38,6 +38,7 @@ from code_coach.workbook.content_js6 import JS_PAGES_6
 from code_coach.workbook.content_js7 import JS_PAGES_7
 from code_coach.workbook.content_js8 import JS_PAGES_8
 from code_coach.workbook.content_ts import TS_PAGES
+from code_coach.workbook.content_ts2 import TS_PAGES_2
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -80,6 +81,14 @@ _TEXTS = (
     "muscle memory",
     "last one",
     "done",
+    "one more time",
+    "keep going",
+    "steady now",
+    "line by line",
+    "nearly there",
+    "still typing",
+    "almost done",
+    "finished",
 )
 
 _P1 = Page(
@@ -122,6 +131,14 @@ _SUMS = (
     ("200 - 99", "200 - 99"),
     ("6 + 11 - 4", "6 + 11 - 4"),
     ("31 - 12 + 6", "31 - 12 + 6"),
+    ("14 + 6", "14 + 6"),
+    ("81 - 27", "81 - 27"),
+    ("5 + 5 + 5 + 5", "5 + 5 + 5 + 5"),
+    ("144 - 44", "144 - 44"),
+    ("23 + 19", "23 + 19"),
+    ("90 - 13 - 7", "90 - 13 - 7"),
+    ("40 + 2 - 8", "40 + 2 - 8"),
+    ("17 + 33", "17 + 33"),
 )
 
 _P2 = Page(
@@ -168,6 +185,14 @@ _P3 = Page(
         _ex("multiply", 10, "Print what is left over when 99 is divided by 10.", "print_expr", expr="99 % 10"),
         _ex("multiply", 11, "Print the answer to 6 times 7 minus 12.", "print_expr", expr="6 * 7 - 12"),
         _ex("multiply", 12, "Print what is left over when 1000 is divided by 3.", "print_expr", expr="1000 % 3"),
+        _ex("multiply", 13, "Print the answer to 11 times 11.", "print_expr", expr="11 * 11"),
+        _ex("multiply", 14, "Print what is left over when 64 is divided by 9.", "print_expr", expr="64 % 9"),
+        _ex("multiply", 15, "Print the answer to 15 times 6.", "print_expr", expr="15 * 6"),
+        _ex("multiply", 16, "Print what is left over when 250 is divided by 8.", "print_expr", expr="250 % 8"),
+        _ex("multiply", 17, "Print the answer to 8 times 9 plus 4.", "print_expr", expr="8 * 9 + 4"),
+        _ex("multiply", 18, "Print what is left over when 77 is divided by 12.", "print_expr", expr="77 % 12"),
+        _ex("multiply", 19, "Print the answer to 20 times 5 minus 30.", "print_expr", expr="20 * 5 - 30"),
+        _ex("multiply", 20, "Print what is left over when 500 is divided by 7.", "print_expr", expr="500 % 7"),
     ),
 )
 
@@ -187,6 +212,14 @@ _ONE_VALUE = (
     ("n", 12, "n * 5 - 2", "n times 5, minus 2"),
     ("size", 9, "size * size", "size times itself"),
     ("n", 47, "n % 10", "what is left over when n is divided by 10"),
+    ("n", 14, "n * 4", "n times 4"),
+    ("total", 63, "total - 18", "total minus 18"),
+    ("width", 11, "width + width + width", "width three times over"),
+    ("n", 25, "n % 7", "what is left over when n is divided by 7"),
+    ("score", 40, "score + 60", "score plus 60"),
+    ("n", 6, "n * n * n", "n cubed"),
+    ("miles", 120, "miles - 45", "miles minus 45"),
+    ("n", 33, "n * 3 + 1", "n times 3, plus 1"),
 )
 
 _P4 = Page(
@@ -230,6 +263,14 @@ _TWO_VALUES = (
     ("hours", 7, "rate", 20, "hours * rate", "hours times rate"),
     ("a", 100, "b", 64, "a - b", "a minus b"),
     ("n", 17, "m", 4, "n % m + m", "the remainder of n divided by m, plus m"),
+    ("a", 9, "b", 4, "a * b + b", "a times b, plus b"),
+    ("rows", 6, "cols", 12, "rows * cols", "rows times cols"),
+    ("a", 55, "b", 11, "a - b - b", "a minus b twice over"),
+    ("n", 40, "d", 9, "n % d", "what is left over when n is divided by d"),
+    ("first", 3, "second", 30, "first * second", "first times second"),
+    ("full", 80, "used", 26, "full - used", "full minus used"),
+    ("a", 15, "b", 15, "a + b + a", "a plus b plus a again"),
+    ("price", 45, "many", 4, "price * many", "price times many"),
 )
 
 _P5 = Page(
@@ -274,6 +315,14 @@ _FIRST_LOOP = (
     (7, "i + 100", "the counter plus 100"),
     (3, "i * 5 + 1", "the counter times 5, plus 1"),
     (6, "i % 3", "what is left over when the counter is divided by 3"),
+    (9, "i", "the counter"),
+    (10, "i + 5", "the counter plus 5"),
+    (4, "i * 4", "the counter times 4"),
+    (6, "i + i", "the counter added to itself"),
+    (8, "i * 3", "the counter times 3"),
+    (5, "i * 20", "the counter times 20"),
+    (7, "i % 2", "what is left over when the counter is divided by 2"),
+    (3, "i * i + 1", "the counter times itself, plus 1"),
 )
 
 _P6 = Page(
@@ -316,6 +365,14 @@ _RANGES = (
     (1, 6, "i * i * i", "the number cubed"),
     (4, 12, "i % 4", "what is left over when the number is divided by 4"),
     (1, 9, "i * 11", "the number times 11"),
+    (2, 7, "i", "the number"),
+    (6, 14, "i", "the number"),
+    (1, 8, "i * 4", "the number times 4"),
+    (3, 11, "i + 20", "the number plus 20"),
+    (10, 16, "i - 9", "the number minus 9"),
+    (1, 7, "i * 6", "the number times 6"),
+    (5, 12, "i % 3", "what is left over when the number is divided by 3"),
+    (2, 9, "i * i - 1", "the number times itself, minus 1"),
 )
 
 _P7 = Page(
@@ -358,6 +415,14 @@ _SUMMING = (
     (1, 9, "i * 10", "each number times 10"),
     (2, 8, "i % 3", "the remainder of each number divided by 3"),
     (1, 50, "i", "each number"),
+    (1, 15, "i", "each number"),
+    (1, 30, "i * 2", "each number doubled"),
+    (3, 12, "i", "each number"),
+    (1, 8, "i * i", "each number times itself"),
+    (1, 25, "i + 2", "each number plus 2"),
+    (4, 16, "i * 5", "each number times 5"),
+    (1, 11, "i % 4", "the remainder of each number divided by 4"),
+    (1, 7, "i * 100", "each number times 100"),
 )
 
 _P8 = Page(
@@ -401,6 +466,14 @@ _FILTERED = (
     (1, 20, "i % 6 == 0", "i", "divides exactly by 6", "the number"),
     (1, 40, "i % 11 == 0", "i", "divides exactly by 11", "the number"),
     (1, 20, "i % 3 == 1", "i", "leaves 1 over when divided by 3", "the number"),
+    (1, 24, "i % 8 == 0", "i", "divides exactly by 8", "the number"),
+    (1, 18, "i % 9 == 0", "i", "divides exactly by 9", "the number"),
+    (1, 16, "i > 12", "i", "is bigger than 12", "the number"),
+    (1, 30, "i % 12 == 0", "i", "divides exactly by 12", "the number"),
+    (1, 14, "i % 2 == 1", "i * 3", "is odd", "the number times 3"),
+    (2, 20, "i % 5 == 2", "i", "leaves 2 over when divided by 5", "the number"),
+    (1, 22, "i % 7 == 0", "i + 1", "divides exactly by 7", "the number plus 1"),
+    (1, 13, "i % 4 == 3", "i", "leaves 3 over when divided by 4", "the number"),
 )
 
 _P9 = Page(
@@ -445,6 +518,14 @@ _COUNTDOWN = (
     (3, 9, "i - 3", "the number minus 3"),
     (1, 7, "i * 3", "the number times 3"),
     (1, 20, "i % 5", "what is left over when the number is divided by 5"),
+    (1, 9, "i", "the number"),
+    (2, 12, "i", "the number"),
+    (1, 15, "i * 2", "the number doubled"),
+    (4, 10, "i - 1", "the number minus 1"),
+    (1, 11, "i * 4", "the number times 4"),
+    (6, 16, "i", "the number"),
+    (1, 6, "i * i * i", "the number cubed"),
+    (1, 14, "i % 3", "what is left over when the number is divided by 3"),
 )
 
 _P10 = Page(
@@ -488,6 +569,14 @@ _NESTED = (
     (4, 3, "i * i + j", "the outer number squared, plus the inner one"),
     (3, 5, "i + j", "the two added together"),
     (4, 4, "i * j", "the two multiplied together"),
+    (5, 3, "i * j", "the two multiplied together"),
+    (2, 7, "i + j", "the two added together"),
+    (4, 5, "i * j", "the two multiplied together"),
+    (3, 6, "i * 100 + j", "the outer number times 100, plus the inner one"),
+    (6, 2, "i * j", "the two multiplied together"),
+    (5, 4, "i + j + 1", "the two added together, plus 1"),
+    (2, 8, "i * j", "the two multiplied together"),
+    (4, 6, "i * j - i", "the two multiplied, minus the outer number"),
 )
 
 _P11 = Page(
@@ -574,4 +663,5 @@ PAGES: tuple[Page, ...] = (
     + JS_PAGES_7
     + JS_PAGES_8
     + TS_PAGES
+    + TS_PAGES_2
 )
