@@ -28,7 +28,7 @@ SHAPES: tuple[Shape, ...] = (
     Shape("dataclass_method", "a dataclass that also does something"),
     Shape("defaultdict_count", "a dict where a missing key starts at zero"),
     Shape("defaultdict_group", "piling things into lists by key"),
-    Shape("dict_get_default", "asking for a key that may not be there"),
+    Shape("enum_named", "a fixed set of choices, each with a name"),
     Shape("format_number", "deciding how a number is printed"),
     Shape("format_row", "columns that line up"),
 )
@@ -147,13 +147,20 @@ def _python(shape: str, a: dict) -> str:
             "",
             *looks,
         )
-    if shape == "dict_get_default":
-        pairs = ", ".join(f"{_q(k)}: {v!r}" for k, v in a["pairs"])
-        looks = [
-            f"print({a['name']}.get({_q(k)}, {a['default']!r}))"
-            for k in a["lookups"]
-        ]
-        return _lines(f"{a['name']} = {{{pairs}}}", *looks)
+    if shape == "enum_named":
+        members = [f"    {n} = {v!r}" for n, v in a["members"]]
+        return _lines(
+            "from enum import Enum",
+            "",
+            "",
+            f"class {a['cls']}(Enum):",
+            *members,
+            "",
+            "",
+            f"print({a['cls']}.{a['show']}.name)",
+            f"print({a['cls']}.{a['show']}.value)",
+            f"print({a['cls']}({a['lookup']!r}).name)",
+        )
     if shape == "format_number":
         shows = ['print(f"{value:' + spec + '}")' for spec in a["specs"]]
         return _lines("value = " + repr(a["value"]), "", *shows)
@@ -225,9 +232,12 @@ def expected_output(shape: str, args: dict, value) -> str:
         # A missing key is not missing for long: reading it makes an empty
         # list, which is the whole point of the page.
         lines = [repr(groups.get(k, [])) for k in a["keys"]]
-    elif shape == "dict_get_default":
-        table = dict(a["pairs"])
-        lines = [str(table.get(k, a["default"])) for k in a["lookups"]]
+    elif shape == "enum_named":
+        held = dict(a["members"])
+        # Only .name and .value, never str(member): how a member prints has
+        # changed between Python versions, and these pages must not.
+        by_value = next(n for n, v in a["members"] if v == a["lookup"])
+        lines = [a["show"], str(held[a["show"]]), by_value]
     elif shape == "format_number":
         lines = [format(a["value"], spec) for spec in a["specs"]]
     elif shape == "format_row":

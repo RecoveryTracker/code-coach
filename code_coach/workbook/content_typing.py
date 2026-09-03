@@ -491,54 +491,54 @@ _P127 = _page(
 )
 
 
-# ── 128. Asking for a key that might not be there ────────────
+# ── 128. A fixed set of choices ──────────────────────────────
 
-_GETS = (
-    ("prices", (("apple", 3), ("pear", 5)), ("apple", "plum"), 0),
-    ("ages", (("ada", 36), ("sam", 41)), ("sam", "kim"), 0),
-    ("stock", (("nails", 120), ("screws", 40)), ("screws", "bolts"), 0),
-    ("scores", (("red", 12), ("blue", 9)), ("red", "blue", "green"), 0),
-    ("counts", (("a", 2), ("b", 7)), ("b", "z"), 0),
-    ("depths", (("well", 30), ("pond", 4)), ("pond", "sea"), 1),
-    ("floors", (("east", 6), ("west", 9)), ("west", "north"), 1),
-    ("sizes", (("small", 2), ("large", 8)), ("large", "huge"), 0),
-    ("miles", (("home", 0), ("work", 14)), ("work", "gym"), 0),
-    ("years", (("bowie", 1977), ("kate", 1985)), ("kate", "brian"), 1900),
-    ("seats", (("front", 4), ("back", 5)), ("back", "roof"), 0),
-    ("keys", (("c", 1), ("g", 8)), ("g", "f"), 0),
+_ENUMS = (
+    ("Colour", (("RED", 1), ("GREEN", 2), ("BLUE", 3)), "RED", 2),
+    ("Suit", (("SPADES", 1), ("HEARTS", 2)), "HEARTS", 1),
+    ("State", (("READY", 1), ("RUNNING", 2), ("DONE", 3)), "RUNNING", 3),
+    ("Size", (("SMALL", 1), ("MEDIUM", 2), ("LARGE", 3)), "LARGE", 1),
+    ("Day", (("MON", 1), ("TUE", 2), ("WED", 3)), "WED", 2),
+    ("Level", (("LOW", 10), ("HIGH", 20)), "LOW", 20),
+    ("Face", (("HEADS", 0), ("TAILS", 1)), "TAILS", 0),
+    ("Speed", (("SLOW", 1), ("FAST", 9)), "FAST", 1),
+    ("Grade", (("PASS", 1), ("FAIL", 0)), "PASS", 0),
+    ("Turn", (("LEFT", -1), ("RIGHT", 1)), "RIGHT", -1),
+    ("Phase", (("START", 1), ("MIDDLE", 2), ("END", 3)), "START", 3),
+    ("Mode", (("READ", 1), ("WRITE", 2), ("APPEND", 3)), "APPEND", 1),
 )
 
 _P128 = _page(
-    "dict-get-default",
+    "enum-named",
     128,
-    "Asking for a key that might not be there",
-    "dict.get with a fallback, instead of a KeyError.",
-    "Square brackets say the key must be there; get says it might not, "
-    "and here is what to use if it is not. The difference matters more "
-    "than it looks - get quietly hides a typo in a key name, which is "
-    "exactly what you want when the key is genuinely optional and exactly "
-    "what you do not want when it is not. Reach for brackets by default "
-    "and get when a missing key is a real possibility.",
-    "dict_get_default",
+    "A fixed set of choices",
+    "Enum: names for the handful of values something is allowed to be.",
+    "When a thing can only be one of a few values, the usual mistake is a "
+    "bare string or a bare number - status == 2, or colour == 'red' - and "
+    "then a typo becomes a bug that runs. An Enum gives each value a name "
+    "that only exists once. Ask a member for .name and you get the name "
+    "as text; ask for .value and you get what it stands for; call the "
+    "class with a value and it hands you back the member. Misspell a "
+    "member and Python stops on that line instead of quietly comparing "
+    "false forever.",
+    "enum_named",
     [
         (
-            "Set "
-            + name
-            + " to a dict of "
-            + ", ".join(f"{k!r}: {v!r}" for k, v in pairs)
-            + ". Print the result of get for "
-            + ", then ".join(repr(k) for k in lookups)
-            + ", each with a fallback of "
-            + repr(default)
+            "Import Enum from enum. Write an Enum "
+            + cls
+            + " with members "
+            + ", ".join(f"{n} = {v!r}" for n, v in members)
+            + ". Print the name of "
+            + show
+            + ", then its value, then the name of the member you get by "
+            "calling "
+            + cls
+            + " with "
+            + repr(lookup)
             + ".",
-            {
-                "name": name,
-                "pairs": pairs,
-                "lookups": lookups,
-                "default": default,
-            },
+            {"cls": cls, "members": members, "show": show, "lookup": lookup},
         )
-        for name, pairs, lookups, default in _GETS
+        for cls, members, show, lookup in _ENUMS
     ],
 )
 
