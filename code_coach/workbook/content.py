@@ -28,6 +28,7 @@ from code_coach.workbook.content_corners import CORNER_PAGES
 from code_coach.workbook.content_craft import CRAFT_PAGES
 from code_coach.workbook.content_deeper import DEEPER_PAGES
 from code_coach.workbook.content_edges import EDGE_PAGES
+from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
 from code_coach.workbook.content_modern import MODERN_PAGES
@@ -550,4 +551,5 @@ PAGES: tuple[Page, ...] = (
     + LIBRARY_PAGES
     + CORNER_PAGES
     + MACHINERY_PAGES
+    + LAST_PAGES
 )
