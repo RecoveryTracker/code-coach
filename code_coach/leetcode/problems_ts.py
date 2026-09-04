@@ -501,7 +501,7 @@ _SLIDING_WINDOW = Pattern(
                 window.set(ch, (window.get(ch) || 0) + 1);
                 if (i >= pattern.length) {
                   const out = text[i - pattern.length];
-                  window.set(out, window.get(out) - 1);
+                  window.set(out, (window.get(out) || 0) - 1);
                   if (window.get(out) === 0) window.delete(out);
                 }
                 if (same()) return true;
@@ -553,8 +553,8 @@ _SLIDING_WINDOW = Pattern(
                     best = text.slice(left, right + 1);
                   }
                   const out = text[left];
-                  window.set(out, window.get(out) - 1);
-                  if (need.has(out) && window.get(out) < need.get(out)) missing++;
+                  window.set(out, (window.get(out) || 0) - 1);
+                  if (need.has(out) && (window.get(out) || 0) < (need.get(out) || 0)) missing++;
                   left++;
                 }
               }

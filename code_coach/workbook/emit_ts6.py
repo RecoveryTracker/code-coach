@@ -168,12 +168,11 @@ def _result_type(a: dict) -> str:
         "}",
         "",
         f"function {a['reader']}(made: Result<number>): string {{",
-        # `=== true` rather than a bare truthiness test. Narrowing a
-        # boolean discriminant by truthiness alone needs strictNullChecks,
-        # and this workbook's tsc runs without --strict, so `if (made.ok)`
-        # leaves `made` un-narrowed and reading `why` below fails to
-        # compile. The explicit comparison narrows in either mode.
-        "  if (made.ok === true) {",
+        # A bare truthiness test, which is how anyone would write it. This
+        # needs strictNullChecks to narrow the union — without it `made`
+        # stays un-narrowed and reading `why` below does not compile. That
+        # is the check that made the runner turn --strict on.
+        "  if (made.ok) {",
         "    return String(made.value);",
         "  }",
         "  return made.why;",

@@ -156,6 +156,14 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
     `--noEmitOnError` so a type error stops the run and gets reported — the
     type checking is the reason to write TypeScript at all, and silently
     running past it would teach the wrong lesson.
+
+    `--strict` for the same reason, one level up. Without it the compiler
+    is a different and much weaker language than the one anybody writes:
+    parameters are implicitly any, null and undefined belong to every type,
+    and — the case that exposed this — a boolean discriminant does not
+    narrow on truthiness, so `if (result.ok)` leaves the union un-narrowed.
+    A workbook that teaches TypeScript in a mode nobody ships would be
+    teaching something adjacent to TypeScript.
     """
     tsc = _find_tsc()
     node = shutil.which("node")
@@ -178,6 +186,7 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
                 "--module", "commonjs",
                 "--skipLibCheck",
                 "--noEmitOnError",
+                "--strict",
             ],
             capture_output=True,
             text=True,

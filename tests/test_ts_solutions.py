@@ -75,6 +75,63 @@ HELPERS = {"lc-linked-list": LIST_HELPERS, "lc-tree-dfs": TREE_HELPERS,
            "lc-tree-bfs": TREE_HELPERS}
 
 
+# ── Where the shared checks need a TypeScript-only nudge ─────
+#
+# The checks are shared with JavaScript deliberately, so that one copy
+# cannot drift from the other. But three of them dereference a value whose
+# declared type is nullable — middleNode returns ListNode | null, invertTree
+# returns TreeNode | null, makeTree returns TreeNode | null — which
+# JavaScript does not mind and strict TypeScript does. The solutions are
+# right; it is the assertion that needs to say "I know this one is there".
+#
+# Rather than fork the checks, each fixup below is applied to the shared
+# text and asserted to match exactly once. Change the JavaScript check and
+# this raises rather than quietly testing something else.
+NULLABLE_FIXUPS: dict[str, tuple[tuple[str, str], ...]] = {
+    "lc-graph": (
+        (
+            "cloneGraph(new GraphNode(1, [new GraphNode(2)])).val",
+            "cloneGraph(new GraphNode(1, [new GraphNode(2)]))!.val",
+        ),
+    ),
+    "lc-linked-list": (
+        (
+            "middleNode(makeList([1, 2, 3, 4, 5])).val",
+            "middleNode(makeList([1, 2, 3, 4, 5]))!.val",
+        ),
+        (
+            "middleNode(makeList([1, 2, 3, 4])).val",
+            "middleNode(makeList([1, 2, 3, 4]))!.val",
+        ),
+    ),
+    "lc-tree-dfs": (
+        (
+            "invertTree(makeTree([2, 1, 3])).left.val",
+            "invertTree(makeTree([2, 1, 3]))!.left!.val",
+        ),
+        (
+            "const lca = makeTree([3, 5, 1, 6, 2, 0, 8]);",
+            "const lca = makeTree([3, 5, 1, 6, 2, 0, 8])!;",
+        ),
+        ("lca.left.right", "lca.left!.right"),
+    ),
+}
+
+
+def _typed_checks(pattern_id: str, checks: str) -> str:
+    """The shared checks, with the nullable dereferences asserted."""
+    for before, after in NULLABLE_FIXUPS.get(pattern_id, ()):
+        found = checks.count(before)
+        if found != 1:
+            raise AssertionError(
+                f"{pattern_id}: expected exactly one {before!r} to fix up "
+                f"for TypeScript, found {found}. The shared JavaScript "
+                f"check has changed and this fixup needs revisiting."
+            )
+        checks = checks.replace(before, after)
+    return checks
+
+
 @unittest.skipUnless(typescript_available(), "needs node and tsc")
 class TypeScriptSolutionTests(unittest.TestCase):
     def _run(self, pattern_id: str) -> None:
@@ -85,7 +142,8 @@ class TypeScriptSolutionTests(unittest.TestCase):
         )
         src = (
             f"{src}\n{HELPERS.get(pattern_id, '')}\n"
-            f"{TYPED_HARNESS}\n{checks}\n{TYPED_REPORT}"
+            f"{TYPED_HARNESS}\n{_typed_checks(pattern_id, checks)}\n"
+            f"{TYPED_REPORT}"
         )
         out, err, code = run_code(src, language="typescript")
         self.assertEqual(code, 0, f"{pattern_id}\n{out[:900]}\n{err[:600]}")
