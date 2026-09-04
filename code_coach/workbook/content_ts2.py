@@ -59,6 +59,14 @@ _INS = (
     ("Live", "stream", "Recorded", "tape", "source_of", "now", "earlier"),
     ("Local", "path", "Remote", "url", "locate", "on disk", "over there"),
     ("Fresh", "picked", "Frozen", "stored", "label", "today", "last year"),
+    ("Hen", "cluck", "Cow", "low", "speak_up", "cluck", "moo"),
+    ("Van", "wheels", "Raft", "poles", "describe_it", "four", "one"),
+    ("Column", "words", "Photo", "pixels", "show_it", "few", "thousands"),
+    ("Chord", "pitch", "Pause", "silence", "play_it", "full", "none"),
+    ("Sheet", "cells", "Footer", "title", "render_out", "many", "bottom"),
+    ("Dossier", "bytes", "Drawer", "children", "tell_of", "small", "a few"),
+    ("Entry_", "body", "Sketch", "outline", "read_out", "written", "drawn"),
+    ("Doing", "active", "Ended", "finished", "stage_of", "under way", "closed"),
 )
 
 _P91 = _page(
@@ -132,6 +140,14 @@ _GUARDS = (
     ("Bulb", "watts", "Candle", "hours", "isBulb", "light_it", (60, 8)),
     ("Rope", "metres", "Chain", "links", "isRope", "reach", (25, 60)),
     ("Drum", "skins", "Flute", "holes", "isDrum", "sound_it", (2, 6)),
+    ("Eel", "swim", "Bat", "fly", "isEel", "move_it", (6, 11)),
+    ("Tram", "wheels", "Glider", "wings", "isTram", "travel_by", (8, 2)),
+    ("Novel", "pages", "Play", "minutes", "isNovel", "take_in", (224, 150)),
+    ("Reel", "beats", "Verse", "lines", "isReel", "perform_it", (140, 12)),
+    ("Mug", "millilitres", "Bowl", "diameter", "isMug", "serve_in", (330, 22)),
+    ("Token", "value", "Voucher", "amount", "isToken", "spend_it", (20, 250)),
+    ("Ladder", "steps", "Slope", "angle", "isLadder", "climb_it", (16, 8)),
+    ("Kite", "gears", "Sled", "loads", "isKite", "ride_it", (3, 5)),
 )
 
 _P92 = _page(
@@ -209,6 +225,14 @@ _UNKNOWNS = (
     ("reachOf", "rust", (11, 22), 8, 0),
     ("scaleOf", "dart", (2, 3, 5), 30, 0),
     ("countIt", "java", (9,), 15, 0),
+    ("reachOut", "morning", (2, 3, 4), 51, 0),
+    ("sizeUp", "evening", (7, 8), 9, 0),
+    ("countUp", "javascript", (2, 2, 2, 2), 200, 0),
+    ("gauge_it", "finn", (3, 6, 9), 11, 0),
+    ("howWide", "ida", (12,), 5, 0),
+    ("extentUp", "kit", (3, 4), 66, 0),
+    ("breadthOf", "deno", (8, 9, 10), 14, 0),
+    ("heightOf", "ruby", (5,), 81, 0),
 )
 
 _P93 = _page(
@@ -267,6 +291,14 @@ _KEYOFS = (
     ("Orders", "Task", "name", "step", "mix", "bake", 3),
     ("Sizes", "Item", "name", "qty", "bolt", "nut", 24),
     ("Lengths", "Note", "name", "words", "first", "second", 9),
+    ("Tallies_", "Reader_", "name", "age", "finn", "ida", 27),
+    ("Counters", "Volume", "title", "pages", "ubik", "valis", 224),
+    ("Figures", "Town", "name", "people", "ripon", "oslo", 709),
+    ("Sums_", "Track_", "title", "seconds", "art", "sons", 207),
+    ("Numbers", "Ore", "name", "number", "tin", "lead", 82),
+    ("Marks_", "Berth", "name", "floor", "cabin", "hold", 2),
+    ("Weights_", "Blade", "name", "weight", "plane", "chisel", 9),
+    ("Points_", "Side", "name", "score", "blues", "whites", 55),
 )
 
 _P94 = _page(
@@ -342,6 +374,14 @@ _CONSTRAINTS = (
     ("taller", "mountain", "hill", (7, 14, 21), (7,)),
     ("heavier", "elephant", "mouse", (100, 200), (100,)),
     ("wider", "horizon", "edge", (6, 12, 18, 24), (6, 12)),
+    ("lengthier", "workbook", "book", (2, 3, 4), (2,)),
+    ("stouter", "typescript", "type", (6, 7, 8, 9), (6, 7)),
+    ("thicker", "javascript", "java", (2, 2, 2), (2,)),
+    ("further", "keyboard", "keys", (3, 5, 7, 9), (3,)),
+    ("higher", "mountain", "hill", (11, 10, 9), (11,)),
+    ("grander", "exercise", "task", (4, 8, 12, 16), (4, 8)),
+    ("richer", "language", "code", (15, 25, 35), (15,)),
+    ("wider_", "horizon", "edge", (5, 10), (5,)),
 )
 
 _P95 = _page(
@@ -401,6 +441,14 @@ _MAPPED = (
     ("Task", "step", "order"),
     ("Item", "code", "qty"),
     ("Note", "heading", "words"),
+    ("Reader_", "name", "age"),
+    ("Volume", "title", "pages"),
+    ("Town", "place", "people"),
+    ("Track_", "track", "seconds"),
+    ("Ore", "element", "number"),
+    ("Berth", "label", "floor"),
+    ("Blade", "kind", "weight"),
+    ("Side", "side", "points"),
 )
 
 _P96 = _page(
@@ -454,6 +502,14 @@ _CONDITIONALS = (
     (9, "dart", 11),
     (55, "java", 5),
     (18, "go", 2),
+    (6, "words", 3),
+    (11, "morning", 6),
+    (8, "evening", 4),
+    (200, "finn", 2),
+    (51, "ida", 9),
+    (4, "kit", 10),
+    (81, "deno", 7),
+    (14, "ruby", 5),
 )
 
 _P97 = _page(
@@ -503,6 +559,14 @@ _ENUMS = (
     ("Step", "Mix", "mix", "Bake", "bake", "Stage"),
     ("Tier", "Free", "free", "Paid", "paid", "Plan"),
     ("Speed", "Slow", "slow", "Fast", "fast", "Rate"),
+    ("Shade_", "Teal", "teal", "Plum", "plum", "Tone"),
+    ("Access_", "Fetch", "fetch", "Store_", "store", "Reach_"),
+    ("Gate_", "Ajar", "ajar", "Barred", "barred", "Standing"),
+    ("Band", "Quiet", "quiet", "Loud", "loud", "Volume_"),
+    ("Ranking", "First", "first", "Final", "final", "Placing"),
+    ("Form_", "Plain", "plain", "Rich", "rich", "Styling"),
+    ("Bearing_", "East", "east", "West", "west", "Heading_"),
+    ("Grade__", "Junior", "junior", "Senior", "senior", "Standing_"),
 )
 
 _P98 = _page(
@@ -577,6 +641,14 @@ _OVERLOADS = (
     ("carve", 2, 9, "rey"),
     ("forge", 10, 5, "finn"),
     ("weave", 1, 8, "nell"),
+    ("shape_up", 6, 3, "gus"),
+    ("frame_it", 8, 4, "hal"),
+    ("mould_it", 5, 11, "ivy"),
+    ("hew", 10, 6, "jan"),
+    ("stamp_out", 7, 5, "kit"),
+    ("spin", 9, 3, "lee"),
+    ("hammer", 4, 8, "mia"),
+    ("etch", 12, 3, "noa"),
 )
 
 _P99 = _page(
@@ -628,6 +700,14 @@ _SATISFIES = (
     ("route", "north", "miles", 120, 30),
     ("team", "reds", "points", 41, 5),
     ("tool", "saw", "weight", 3, 7),
+    ("host", "remote", "port", 5173, 2),
+    ("name", "finn", "age", 27, 3),
+    ("city", "oslo", "people", 709, 50),
+    ("mode", "fast", "level", 4, 3),
+    ("title", "ubik", "pages", 224, 6),
+    ("region", "us", "shards", 16, 5),
+    ("theme", "light", "size", 16, 4),
+    ("label", "second", "order", 2, 7),
 )
 
 _P100 = _page(

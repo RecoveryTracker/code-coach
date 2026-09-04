@@ -60,6 +60,14 @@ _PROPERTIES = (
     ("Cube", (("side", 3), ("count", 2)), "volume", "side * side * side * count"),
     ("Pay", (("rate", 18), ("hours", 40)), "total", "rate * hours"),
     ("Gap", (("start", 7), ("end", 31)), "length", "end - start"),
+    ("Plot", (("width", 9), ("depth", 7)), "area", "width * depth"),
+    ("Field", (("side", 12), ("other", 8)), "perimeter", "2 * (side + other)"),
+    ("Range", (("low", 11), ("high", 47)), "size", "high - low"),
+    ("Board", (("rows", 6), ("cols", 7)), "cells", "rows * cols"),
+    ("Barrel", (("full", 90), ("used", 34)), "left", "full - used"),
+    ("Run", (("miles", 180), ("hours", 4)), "speed", "miles // hours"),
+    ("Wage", (("rate", 22), ("hours", 35)), "total", "rate * hours"),
+    ("Stack", (("bricks", 144), ("rows", 12)), "per_row", "bricks // rows"),
 )
 
 _P141 = _page(
@@ -112,6 +120,14 @@ _STATICS = (
     ("Count", "share", ("n", "d"), "n // d", ((17, 5), (20, 4))),
     ("Money", "total", ("price", "many"), "price * many", ((7, 3), (12, 5))),
     ("Money", "change", ("paid", "cost"), "paid - cost", ((20, 13), (50, 41))),
+    ("Maths", "plus", ("a", "b"), "a + b + 1", ((4, 5), (9, 1))),
+    ("Maths", "scale", ("a", "b"), "a * b * 2", ((2, 5), (3, 3))),
+    ("Convert", "triple", ("n",), "n * 3", ((8,), (14,))),
+    ("Convert", "third", ("n",), "n // 3", ((9,), (20,))),
+    ("Tools", "smallest", ("a", "b"), "min(a, b)", ((4, 9), (12, 3))),
+    ("Tools", "spread", ("a", "b"), "abs(b - a)", ((3, 11), (20, 4))),
+    ("Count", "wrap", ("n", "d"), "n % d", ((23, 6), (41, 5))),
+    ("Money", "each", ("price", "many"), "price // many", ((90, 4), (25, 5))),
 )
 
 _P142 = _page(
@@ -167,6 +183,14 @@ _COUNTERS = (
     ("File", "created", 5, 4),
     ("Task", "started", 0, 8),
     ("Guest", "arrived", 20, 3),
+    ("Gadget", "how_many", 0, 4),
+    ("Drone", "built", 0, 6),
+    ("Pass", "issued", 0, 3),
+    ("Link", "opened", 0, 5),
+    ("Leaf", "count", 0, 7),
+    ("Hand", "dealt", 0, 2),
+    ("Batch", "queued", 25, 4),
+    ("Member", "signed_up", 200, 3),
 )
 
 _P143 = _page(
@@ -222,6 +246,14 @@ _EQUALS = (
     ("Room", (("floor", "int"), ("number", "int")), (3, 12), (2, 12)),
     ("Coin", (("face", "str"), ("worth", "int")), ("heads", 25), ("heads", 25)),
     ("Coin", (("face", "str"), ("worth", "int")), ("heads", 25), ("tails", 25)),
+    ("Coord", (("x", "int"), ("y", "int")), (7, 9), (7, 9)),
+    ("Coord", (("x", "int"), ("y", "int")), (7, 9), (7, 8)),
+    ("Extent", (("width", "int"), ("height", "int")), (64, 48), (64, 48)),
+    ("Extent", (("width", "int"), ("height", "int")), (64, 48), (48, 64)),
+    ("Duo", (("left", "int"), ("right", "int")), (11, 12), (11, 12)),
+    ("Duo", (("left", "int"), ("right", "int")), (11, 12), (12, 11)),
+    ("Note", (("pitch", "str"), ("octave", "int")), ("C", 4), ("C", 4)),
+    ("Note", (("pitch", "str"), ("octave", "int")), ("C", 4), ("G", 4)),
 )
 
 _P144 = _page(
@@ -271,6 +303,14 @@ _ORDERS = (
     ("Task", "order", (("mix", 2), ("bake", 3), ("weigh", 1))),
     ("Team", "points", (("reds", 41), ("blues", 12), ("greens", 30))),
     ("Word", "length", (("sky", 3), ("mountain", 8), ("lake", 4))),
+    ("Runner", "place", (("finn", 3), ("kit", 1), ("ida", 2))),
+    ("Town", "people", (("ripon", 17), ("oslo", 709), ("lima", 998))),
+    ("Album", "tracks", (("low", 11), ("heroes", 10), ("lodger", 13))),
+    ("Track", "seconds", (("warszawa", 386), ("art", 224), ("sons", 207))),
+    ("Metal", "melting", (("tin", 232), ("lead", 327), ("gold", 1064))),
+    ("Crate", "depth", (("small", 5), ("wide", 50), ("tall", 20))),
+    ("Fruit", "count", (("kiwi", 5), ("plum", 21), ("sloe", 9))),
+    ("Note", "octave", (("low", 2), ("mid", 4), ("high", 6))),
 )
 
 _P145 = _page(
@@ -324,6 +364,14 @@ _CUSTOM = (
     ("Empty", "n == 0", "empty", (7, 0, 1)),
     ("Overflow", "n > 255", "overflow", (200, 300, 10)),
     ("BadStep", "n % 5 == 0", "bad step", (3, 10, 7)),
+    ("TooFew", "n < 5", "too few", (9, 2, 40)),
+    ("TooMany", "n > 200", "too many", (80, 400, 150)),
+    ("NotOdd", "n % 2 == 0", "not odd", (7, 8, 11)),
+    ("BelowZero", "n < 0", "below zero", (4, -6, 12)),
+    ("NothingLeft", "n == 0", "nothing left", (5, 0, 14)),
+    ("TooWide", "n > 30", "too wide", (18, 55, 7)),
+    ("NotThirds", "n % 3 != 0", "not a third", (9, 7, 12)),
+    ("PastLimit", "n > 500", "past the limit", (300, 900, 20)),
 )
 
 _P146 = _page(
@@ -381,6 +429,14 @@ _FINALLY = (
     ("77 // n", "ZeroDivisionError", "not possible", "after", (7, 0, 11)),
     ("30 // n", "ZeroDivisionError", "no", "shut", (5, 0, 6)),
     ("48 // n", "ZeroDivisionError", "divide failed", "released", (4, 0, 8)),
+    ("120 // n", "ZeroDivisionError", "cannot divide", "done", (6, 0, 4)),
+    ("45 // n", "ZeroDivisionError", "no good", "finished", (5, 0, 9)),
+    ("169 // n", "ZeroDivisionError", "divide by zero", "next", (13, 0, 1)),
+    ("72 // n", "ZeroDivisionError", "bad divisor", "always", (8, 0, 6)),
+    ("55 // n", "ZeroDivisionError", "cannot", "closed", (5, 0, 11)),
+    ("96 // n", "ZeroDivisionError", "nope", "tidy", (12, 0, 8)),
+    ("32 // n", "ZeroDivisionError", "no divide", "cleanup", (4, 0, 16)),
+    ("63 // n", "ZeroDivisionError", "zero given", "over", (7, 0, 9)),
 )
 
 _P147 = _page(
@@ -440,6 +496,17 @@ _FAMILIES = (
      (12, 150, 1200)),
     ("Miss", "Gone", "n == -1", "n < 0", "gone", "miss", (4, -2, -1)),
     ("Slip", "Fall", "n < -100", "n < -1", "fall", "slip", (2, -5, -200)),
+    ("Problem", "Grave", "n < -20", "n < 0", "grave", "problem", (4, -3, -30)),
+    ("Fault", "Broken", "n > 500", "n > 200", "broken", "fault", (10, 300, 900)),
+    ("BadInput", "Blank", "n == 0", "n < 3", "blank", "bad input", (8, 1, 0)),
+    ("Failure", "Ruin", "n > 1000", "n > 100", "ruin", "failure",
+     (50, 400, 2000)),
+    ("Trouble", "Crisis", "n % 20 == 0", "n % 5 == 0", "crisis", "trouble",
+     (3, 15, 40)),
+    ("Issue", "Stopper", "n < -50", "n < -10", "stopper", "issue",
+     (2, -20, -80)),
+    ("Warn", "Siren", "n == 7", "n % 7 == 0", "siren", "warn", (3, 14, 7)),
+    ("Snag", "Jam", "n > 90", "n > 60", "jam", "snag", (10, 70, 95)),
 )
 
 _P148 = _page(

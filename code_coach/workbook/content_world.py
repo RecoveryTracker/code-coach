@@ -61,6 +61,14 @@ _PATHS = (
     "docs/notes/todo.md",
     "data/raw/readings.csv",
     "data/clean/readings.json",
+    "home/finn/diary.txt",
+    "home/ida/summary.pdf",
+    "work/src/server.py",
+    "work/src/client.py",
+    "music/eno/ambient.mp3",
+    "photos/2024/coast.jpg",
+    "docs/notes/plan.md",
+    "data/raw/counts.csv",
 )
 
 _P159 = _page(
@@ -103,6 +111,14 @@ _BUILT = (
     ("backup", "monday", "dump.sql"),
     ("site", "static", "style.css"),
     ("build", "dist", "app.zip"),
+    ("home", "finn", "diary.txt"),
+    ("home", "ida", "summary.pdf"),
+    ("work", "src", "server.py"),
+    ("var", "cache", "index.db"),
+    ("music", "eno", "ambient.mp3"),
+    ("photos", "2024", "coast.jpg"),
+    ("docs", "notes", "plan.md"),
+    ("build", "out", "bundle.js"),
 )
 
 _P160 = _page(
@@ -146,6 +162,14 @@ _FILES = (
     ("teams.txt", ("reds", "blues")),
     ("tools.txt", ("saw", "axe", "file")),
     ("words.txt", ("sky", "lake")),
+    ("diary.txt", ("monday", "tuesday")),
+    ("jobs.txt", ("sweep up", "read notes")),
+    ("people.txt", ("finn", "ida", "kit")),
+    ("metals.txt", ("tin", "lead", "zinc")),
+    ("nights.txt", ("thu", "fri")),
+    ("towns.txt", ("ripon", "oslo", "lima")),
+    ("trees.txt", ("oak", "ash")),
+    ("tracks.txt", ("art", "sons", "warszawa")),
 )
 
 _P161 = _page(
@@ -193,6 +217,14 @@ _LINE_FILES = (
     ("teams.txt", ("reds", "blues"), "title"),
     ("words.txt", ("sky", "lake", "hill"), "upper"),
     ("BIG.txt", ("ONE", "TWO", "THREE"), "lower"),
+    ("diary.txt", ("monday", "tuesday"), "upper"),
+    ("people.txt", ("finn", "ida"), "upper"),
+    ("SHOUTING.txt", ("QUIET", "PLEASE"), "lower"),
+    ("CAPITALS.txt", ("GOLD", "TIN"), "lower"),
+    ("towns.txt", ("ripon", "oslo", "lima"), "upper"),
+    ("trees.txt", ("oak", "ash"), "title"),
+    ("nights.txt", ("thu", "fri"), "title"),
+    ("BIGGER.txt", ("FOUR", "FIVE", "SIX"), "lower"),
 )
 
 _P162 = _page(
@@ -242,6 +274,14 @@ _DATES = (
     ((1990, 6, 5), "%Y.%m.%d"),
     ((2010, 11, 11), "%Y.%m.%d"),
     ((2026, 12, 25), "%d/%m/%y"),
+    ((2026, 5, 4), "%d/%m/%Y"),
+    ((2026, 2, 28), "%d/%m/%Y"),
+    ((1959, 3, 9), "%d/%m/%Y"),
+    ((1980, 4, 21), "%d-%m-%Y"),
+    ((1999, 12, 31), "%d-%m-%Y"),
+    ((1975, 5, 30), "%Y%m%d"),
+    ((2028, 2, 29), "%m/%d/%Y"),
+    ((2011, 7, 7), "%Y.%m.%d"),
 )
 
 _P163 = _page(
@@ -286,6 +326,14 @@ _DELTAS = (
     ((1985, 8, 16), (1986, 8, 16), 365),
     ((2026, 4, 10), (2026, 5, 10), 1),
     ((2026, 11, 5), (2026, 11, 30), 10),
+    ((2026, 2, 1), (2026, 4, 20), 25),
+    ((2026, 8, 3), (2026, 11, 30), 9),
+    ((2028, 1, 1), (2028, 3, 1), 60),
+    ((2027, 1, 1), (2027, 3, 1), 60),
+    ((2026, 7, 1), (2026, 7, 31), 12),
+    ((1999, 1, 1), (1999, 12, 31), 120),
+    ((1980, 4, 21), (1980, 12, 25), 18),
+    ((2026, 9, 1), (2027, 2, 1), 75),
 )
 
 _P164 = _page(
@@ -332,6 +380,14 @@ _CHAINS = (
     ((21, 22, 23), (24,)),
     ((2, 4, 6), (8, 10)),
     ((99,), (98, 97)),
+    ((5, 6), (7, 8)),
+    ((15, 25, 35), (45,)),
+    ((9,), (10, 11, 12)),
+    ((3, 3), (3, 3)),
+    ((12, 13, 14), (15, 16)),
+    ((500,), (600, 700)),
+    ((2, 6), (4, 8)),
+    ((31, 32), (33, 34, 35)),
 )
 
 _P165 = _page(
@@ -374,6 +430,14 @@ _ACCUMULATES = (
     (3, 6, 9, 12),
     (50, 25, 25),
     (1, 10, 100, 1000),
+    (2, 3, 4, 5),
+    (15, 25, 35),
+    (4, 4, 4, 4),
+    (2, 2, 2, 2, 2),
+    (3, 6, 9, 18),
+    (150, 250, 350),
+    (9, 4, 11),
+    (1, 3, 9, 27, 81),
 )
 
 _P166 = _page(
@@ -414,6 +478,14 @@ _COMBOS = (
     ((3, 6, 9, 12), 2),
     ((11, 22, 33), 3),
     ((1, 2, 3, 4, 5), 2),
+    ((4, 5, 6), 2),
+    ((2, 3, 4, 5), 2),
+    ((7, 8, 9), 2),
+    ((2, 3, 4, 5), 3),
+    ((15, 25, 35), 2),
+    ((2, 3, 4, 5, 6), 4),
+    ((3, 6, 9), 2),
+    ((11, 12, 13, 14), 3),
 )
 
 _P167 = _page(
@@ -457,6 +529,14 @@ _COMMON = (
     (("x", "x", "x", "x", "x", "y", "y", "z"), 3),
     (("north", "north", "south"), 2),
     (("one", "one", "one", "two", "two", "three"), 3),
+    (("owl", "fox", "owl", "elk", "owl", "fox"), 2),
+    (("gold", "gold", "gold", "tin", "tin", "lead"), 2),
+    (("d", "d", "d", "d", "e", "e", "f"), 3),
+    (("thu", "thu", "thu", "fri", "fri", "sat"), 2),
+    (("la", "la", "ti", "ti", "ti", "do"), 2),
+    (("oak", "oak", "oak", "ash"), 2),
+    (("in", "in", "in", "in", "out", "out", "up"), 3),
+    (("four", "four", "four", "five", "five", "six"), 3),
 )
 
 _P168 = _page(

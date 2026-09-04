@@ -59,6 +59,14 @@ _DEFAULTS = (
     ("back", "amount", 1, "n - amount", "the number minus amount", [(50, None), (50, 50)]),
     ("mix", "other", 7, "n * other + n", "the number times other, plus itself", [(2, None), (2, 1)]),
     ("cut", "keep", 10, "n % keep", "the remainder of the number over keep", [(456, None), (456, 100)]),
+    ("stretch", "factor", 3, "n * factor", "the number times factor", [(6, None), (6, 5)]),
+    ("plus", "extra", 25, "n + extra", "the number plus extra", [(4, None), (4, 75)]),
+    ("lower", "by", 2, "n - by", "the number minus by", [(30, None), (30, 25)]),
+    ("raise_to", "exp", 3, "n ** exp", "the number to the power of exp", [(2, None), (2, 5)]),
+    ("wrap", "size", 8, "n % size", "the remainder of the number over size", [(35, None), (35, 6)]),
+    ("bump", "step", 50, "n + step", "the number plus step", [(2, None), (2, 8)]),
+    ("split_by", "people", 5, "n // people", "the number divided by people, rounded down", [(90, None), (90, 4)]),
+    ("widen", "width", 4, "n * width", "the number times width", [(9, None), (9, 7)]),
 )
 
 _P91 = _page(
@@ -109,6 +117,14 @@ _KEYWORDS = (
     ("stack", "rows", "each", "rows * each + 1", "rows times each, plus 1", [(3, 4), (10, 10)]),
     ("split", "whole", "parts", "whole % parts", "the remainder of whole over parts", [(31, 6), (40, 8)]),
     ("total", "x", "y", "x + y + x", "x plus y plus x again", [(2, 3), (10, 1)]),
+    ("room", "width", "height", "width * height", "width times height", [(6, 5), (12, 8)]),
+    ("drop_to", "big", "small", "big - small", "big minus small", [(70, 30), (4, 4)]),
+    ("pairup", "first", "second", "first * 100 + second", "first times 100, plus second", [(2, 5), (8, 3)]),
+    ("divide_up", "total", "people", "total // people", "total divided by people, rounded down", [(200, 7), (9, 9)]),
+    ("leftover", "n", "d", "n % d", "the remainder of n over d", [(29, 4), (150, 8)]),
+    ("plusboth", "a", "b", "a + b + b", "a plus b twice", [(13, 7), (6, 0)]),
+    ("grow_by", "value", "factor", "value * factor", "value times factor", [(9, 8), (15, 15)]),
+    ("floor_area", "w", "h", "w * h", "w times h", [(11, 7), (30, 5)]),
 )
 
 _P92 = _page(
@@ -156,6 +172,14 @@ _STARS = (
     ("biggest", "max(nums)", "the biggest of them", [[1, 2, 3, 4, 5], [42]]),
     ("half", "sum(nums) % 10", "the last digit of their total", [[7, 8], [55, 45]]),
     ("total", "sum(nums)", "them all added up", [[1, 1, 1], [2, 4, 6, 8]]),
+    ("added", "sum(nums)", "them all added up", [[4, 5, 6], [30, 40], [9]]),
+    ("howmany", "len(nums)", "how many there were", [[2, 4, 6, 8], [7], [3, 3, 3]]),
+    ("largest", "max(nums)", "the biggest of them", [[5, 11, 2], [40, 8], [6]]),
+    ("tiniest", "min(nums)", "the smallest of them", [[5, 11, 2], [200, 90], [1]]),
+    ("spread", "max(nums) - min(nums)", "the biggest minus the smallest", [[7, 15, 9], [20, 20]]),
+    ("tripled", "sum(nums) * 3", "three times their total", [[2, 3], [4, 4, 4]]),
+    ("addone", "sum(nums) + 1", "their total plus 1", [[5, 6], [15, 25, 35]]),
+    ("lastdigit", "sum(nums) % 10", "the last digit of their total", [[9, 6], [70, 35]]),
 )
 
 _P93 = _page(
@@ -195,6 +219,14 @@ _LAMBDA_SORTS = (
     ([6, 13, 20, 27], "n % 4", "the remainder when divided by 4"),
     ([88, 45, 12, 91], "n % 10", "their last digit"),
     ([2, 4, 8, 16, 32], "-n", "biggest first"),
+    ([16, 23, 32, 45], "n % 10", "their last digit"),
+    ([9, 2, 7, 4], "-n", "biggest first"),
+    ([14, 8, 26, 5], "n % 5", "the remainder when divided by 5"),
+    ([300, 40, 6], "-n", "biggest first"),
+    ([11, 22, 33, 44], "n % 7", "the remainder when divided by 7"),
+    ([55, 44, 33, 22], "n % 6", "the remainder when divided by 6"),
+    ([6, 7, 8, 9, 10], "-n", "biggest first"),
+    ([19, 5, 31, 12], "n % 3", "the remainder when divided by 3"),
 )
 
 _P94 = _page(
@@ -233,6 +265,14 @@ _MAP_FILTER = (
     ([15, 25, 35, 45], "filter", "n % 3 == 0", "only the ones dividing by 3"),
     ([1, 3, 5], "map", "n * n * n", "each one cubed"),
     ([100, 200, 50, 400], "filter", "n >= 100", "only the ones 100 or more"),
+    ([2, 3, 4, 5], "map", "n * n", "each one squared"),
+    ([1, 2, 3, 4, 5, 6], "filter", "n % 3 == 0", "only the ones dividing by 3"),
+    ([40, 50, 60], "map", "n + 9", "each one plus 9"),
+    ([6, 15, 9, 24], "filter", "n > 12", "only the ones over 12"),
+    ([2, 4, 6], "map", "n * 250", "each one times 250"),
+    ([8, 16, 24, 32], "filter", "n % 16 == 0", "only the ones dividing by 16"),
+    ([12, 11, 10], "map", "n - 9", "each one minus 9"),
+    ([10, 20, 30, 40], "filter", "n >= 30", "only the ones 30 or more"),
 )
 
 _P95 = _page(
@@ -272,6 +312,14 @@ _ANY_ALL = (
     ([3, 6, 10], "all", "n % 3 == 0", "all of them divide by 3"),
     ([100, 1, 50], "any", "n == 1", "any of them are exactly 1"),
     ([5, 5, 5], "all", "n == 5", "all of them are exactly 5"),
+    ([3, 6, 9], "all", "n % 3 == 0", "all of them divide by 3"),
+    ([3, 6, 11], "all", "n % 3 == 0", "all of them divide by 3"),
+    ([5, 7, 12], "any", "n % 4 == 0", "any of them divide by 4"),
+    ([5, 7, 13], "any", "n % 4 == 0", "any of them divide by 4"),
+    ([50, 60, 70], "all", "n >= 50", "all of them are 50 or more"),
+    ([50, 40, 70], "all", "n >= 50", "all of them are 50 or more"),
+    ([2, 8, 30], "any", "n > 25", "any of them are over 25"),
+    ([2, 8, 24], "any", "n > 25", "any of them are over 25"),
 )
 
 _P96 = _page(
@@ -310,6 +358,14 @@ _RECURSIONS = (
     ("steps", "<= 0", "0", "3 + steps(n - 1)", "adds 3 for every step down to 0", [5, 2]),
     ("powers", "<= 0", "1", "3 * powers(n - 1)", "triples once for every step down to 0", [4, 1]),
     ("total", "<= 0", "0", "n + total(n - 2)", "adds every other number down from n", [10, 9]),
+    ("addup", "<= 0", "0", "n + addup(n - 1)", "adds every number from n down to 1", [6, 2]),
+    ("factorial", "<= 1", "1", "n * factorial(n - 1)", "multiplies every number from n down to 1", [8, 2]),
+    ("stepcount", "<= 0", "0", "1 + stepcount(n - 1)", "counts the steps down to 0", [9, 1]),
+    ("fives", "<= 0", "0", "5 + fives(n - 1)", "adds 5 for every step down to 0", [6, 3]),
+    ("fours", "<= 0", "1", "4 * fours(n - 1)", "multiplies by 4 once for every step down to 0", [4, 2]),
+    ("tripleup", "<= 0", "0", "n * 3 + tripleup(n - 1)", "adds triple every number down to 1", [5, 3]),
+    ("oddsum", "<= 0", "0", "n + oddsum(n - 2)", "adds every other number down from n", [9, 7]),
+    ("tens", "<= 0", "0", "10 + tens(n - 1)", "adds 10 for every step down to 0", [7, 4]),
 )
 
 _P97 = _page(
@@ -356,6 +412,14 @@ _TRIES = (
     ("50 // 5", "ZeroDivisionError", "divide by zero"),
     ("8 % 0", "ZeroDivisionError", "no such remainder"),
     ("8 % 5", "ZeroDivisionError", "no such remainder"),
+    ("60 // 0", "ZeroDivisionError", "sixty needs a real divisor"),
+    ("60 // 12", "ZeroDivisionError", "sixty needs a real divisor"),
+    ("5 % 0", "ZeroDivisionError", "no remainder without a divisor"),
+    ("5 % 2", "ZeroDivisionError", "no remainder without a divisor"),
+    ("144 // 0", "ZeroDivisionError", "zero is not a divisor"),
+    ("144 // 12", "ZeroDivisionError", "zero is not a divisor"),
+    ("21 % 0", "ZeroDivisionError", "that remainder cannot be found"),
+    ("21 % 4", "ZeroDivisionError", "that remainder cannot be found"),
 )
 
 _P98 = _page(
@@ -394,6 +458,14 @@ _RAISES = (
     ("step", "n == 0", "a step of zero goes nowhere", "60 // n", "divide 60 by it", [5, 0]),
     ("year", "n < 1900", "before records began", "n - 1900", "years since 1900", [2026, 1850]),
     ("part", "n > 12", "there are only twelve", "n * 30", "days in that many months", [3, 13]),
+    ("positive", "n < 0", "below zero not allowed", "n * 3", "triple it", [7, -2]),
+    ("hours", "n > 24", "more hours than a day", "n * 60", "turn it into minutes", [8, 30]),
+    ("thirds", "n % 3 != 0", "that does not divide by three", "n // 3", "take a third", [9, 8]),
+    ("modest", "n > 1000", "far too big", "n + 1", "add one", [50, 5000]),
+    ("squares", "n < 0", "no negative squares here", "n * n", "square it", [7, -4]),
+    ("portion", "n == 0", "cannot divide by nobody", "60 // n", "share 60 by it", [6, 0]),
+    ("floors", "n > 20", "the building is not that tall", "n * 3", "metres up", [5, 25]),
+    ("atleast", "n < 2", "two is the minimum", "n * 50", "score it", [4, 1]),
 )
 
 _P99 = _page(
@@ -441,6 +513,14 @@ _PICKS = (
     (["north", "up", "east"], "min"),
     (["hello", "hi", "hey"], "max"),
     (["alpha", "be", "gamma", "pi"], "min"),
+    (["elephant", "ant", "otter"], "max"),
+    (["elephant", "ant", "otter"], "min"),
+    (["four", "a", "three"], "max"),
+    (["four", "a", "three"], "min"),
+    (["gold", "tin", "silver"], "max"),
+    (["java", "c", "kotlin"], "min"),
+    (["dd", "e", "fff", "cccc"], "max"),
+    (["la", "ti", "solfa"], "min"),
 )
 
 _P100 = _page(

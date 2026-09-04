@@ -58,6 +58,14 @@ _METHODS = (
     ("song", "seconds", 30, "repeats", 4),
     ("card", "rank", 11, "worth", 10),
     ("team", "players", 11, "squads", 3),
+    ("crate", "depth", 8, "volume", 4),
+    ("barrel", "litres", 90, "tripled", 3),
+    ("rack", "books", 11, "stacked", 5),
+    ("field", "metres", 25, "scaled", 4),
+    ("pallet", "items", 14, "packed", 6),
+    ("stack", "bricks", 144, "rows", 12),
+    ("run", "miles", 60, "returned", 2),
+    ("tab", "pence", 96, "shared", 8),
 )
 
 _P91 = _page(
@@ -118,6 +126,14 @@ _CLASSES = (
     ("Shelf", "levels", "books", (3, 20), "stock"),
     ("Field", "long_side", "short_side", (30, 20), "area"),
     ("Crate", "layers", "boxes", (4, 6), "holds"),
+    ("Plot", "width", "depth", (9, 7), "area"),
+    ("Board", "rows", "cols", (6, 7), "cells"),
+    ("Run", "miles", "laps", (60, 4), "total"),
+    ("Stack", "rows", "bricks", (12, 12), "count"),
+    ("Pallet", "packs", "each", (7, 9), "items"),
+    ("Hall", "length", "width", (20, 15), "floor"),
+    ("Tab", "price", "people", (96, 8), "whole"),
+    ("Page", "lines", "words", (24, 9), "size"),
 )
 
 _P92 = _page(
@@ -176,6 +192,14 @@ _ASYNCS = (
     ("stretch", 8, (2, 5)),
     ("boost", 9, (3, 6)),
     ("lift", 100, (1, 2)),
+    ("gather", 2, (6, 7)),
+    ("readIt", 3, (2, 5)),
+    ("prepare", 4, (8, 9)),
+    ("resolve", 1, (3, 12)),
+    ("widen", 5, (4, 11)),
+    ("quadruple", 2, (13, 14)),
+    ("shrink", 6, (7, 8)),
+    ("settle", 3, (9, 10)),
 )
 
 _P93 = _page(
@@ -227,6 +251,14 @@ _THROWS = (
     ("n % 5 == 0", "bad step", (3, 10, 7)),
     ("n < -5", "far too low", (1, -9, 2)),
     ("n > 1000", "enormous", (10, 2000, 30)),
+    ("n < -20", "far below", (4, -30, 9)),
+    ("n == 7", "seven is out", (3, 7, 11)),
+    ("n > 500", "much too big", (100, 900, 400)),
+    ("n % 2 == 0", "not odd", (7, 8, 13)),
+    ("n < 5", "too few", (9, 2, 40)),
+    ("n > 30", "too wide", (18, 55, 22)),
+    ("n % 3 == 0", "thirds not allowed", (4, 9, 11)),
+    ("n > 999", "past the limit", (50, 1500, 300)),
 )
 
 _P94 = _page(
@@ -273,6 +305,14 @@ _ENTRIES = (
     (("salt", 11), ("pepper", 22)),
     (("front", 4), ("back", 55), ("side", 20)),
     (("do", 1), ("re", 2), ("mi", 3)),
+    (("finn", 82), ("kit", 4), ("ida", 37)),
+    (("gold", 19), ("tin", 7), ("lead", 30)),
+    (("thu", 5), ("fri", 9), ("sat", 4)),
+    (("oak", 12), ("ash", 31)),
+    (("up", 6), ("down", 21), ("across", 2)),
+    (("kiwi", 5), ("plum", 21), ("sloe", 9)),
+    (("saw", 4), ("plane", 7)),
+    (("la", 6), ("ti", 14), ("do", 2)),
 )
 
 _P95 = _page(
@@ -317,6 +357,14 @@ _SORTS = (
     (12, 3, 120),
     (8, 90, 100),
     (15, 2, 150),
+    (20, 3, 100),
+    (9, 80, 1000),
+    (5, 50, 6),
+    (2, 19, 200),
+    (30, 4, 300),
+    (6, 60, 9),
+    (13, 2, 130),
+    (14, 5, 140),
 )
 
 _P96 = _page(
@@ -363,6 +411,14 @@ _JSONS = (
     (("trip", "north"), ("miles", 120)),
     (("task", "mix"), ("order", 2)),
     (("user", "sam"), ("score", 90)),
+    (("name", "finn"), ("age", 27)),
+    (("city", "oslo"), ("people", 709)),
+    (("metal", "tin"), ("number", 50)),
+    (("book", "ubik"), ("pages", 224)),
+    (("song", "art"), ("seconds", 224)),
+    (("team", "blues"), ("points", 12)),
+    (("tool", "plane"), ("weight", 7)),
+    (("word", "moon"), ("length", 4)),
 )
 
 _P97 = _page(
@@ -408,6 +464,14 @@ _CLOSURES = (
     (0, (100, 200)),
     (7, (7, 7)),
     (0, (1, 2, 3, 4)),
+    (0, (6, 7)),
+    (20, (3, 4)),
+    (200, (10, 10)),
+    (0, (15, 25, 35)),
+    (9, (9, 9, 9)),
+    (75, (12, 13)),
+    (2, (2, 2, 2)),
+    (0, (11, 12, 13, 14)),
 )
 
 _P98 = _page(
@@ -454,6 +518,14 @@ _NOTHINGS = (
     ("rey", "note", "depth"),
     ("finn", "code", "width"),
     ("nell", "mark", "length"),
+    ("gus", "middleName", "age"),
+    ("hal", "nickname", "score"),
+    ("ivy", "title", "rank"),
+    ("jan", "suffix", "level"),
+    ("kit", "alias", "count"),
+    ("lee", "handle", "total"),
+    ("mia", "prefix", "size"),
+    ("noa", "label", "weight"),
 )
 
 _P99 = _page(
@@ -503,6 +575,14 @@ _QUESTIONS = (
     ((2, 3, 5, 6), "n % 2 == 0", 5),
     ((4, 8, 9, 16), "n % 4 == 0", 9),
     ((1, 5, 10, 12), "n >= 10", 5),
+    ((2, 4, 5, 8, 10, 12), "n % 2 == 0", 5),
+    ((6, 12, 18, 24), "n > 15", 9),
+    ((3, 7, 9, 12, 13), "n % 2 == 0", 8),
+    ((5, 9, 12, 15), "n % 2 == 1", 6),
+    ((15, 25, 30, 45), "n % 15 == 0", 22),
+    ((2, 3, 4, 200), "n > 100", 7),
+    ((8, 16, 20, 24), "n % 8 == 0", 13),
+    ((5, 10, 11, 20), "n % 5 == 0", 14),
 )
 
 _P100 = _page(

@@ -57,6 +57,14 @@ _ATS = (
     ((3, 6, 9), "object", 0),
     ((12, 24, 36, 48), "symbol", 1),
     ((50, 60, 70), "return", 2),
+    ((15, 25, 35, 45), "workbook", 1),
+    ((8, 9, 10), "typing", 0),
+    ((2, 4, 6, 8, 10), "iterate", 2),
+    ((400, 500, 600), "closure", 1),
+    ((12, 11, 10, 9), "promise", 0),
+    ((13, 26, 39), "generic", 2),
+    ((3, 6, 9, 12), "operator", 3),
+    ((45, 55, 65), "element", 1),
 )
 
 _P131 = _page(
@@ -103,6 +111,14 @@ _IMMUTABLES = (
     ((6, 5, 4, 3), 30),
     ((15, 3, 27), 9),
     ((88, 12, 45), 60),
+    ((4, 2, 3), 88),
+    ((6, 5, 10, 2), 1),
+    ((11, 3, 9), 40),
+    ((8, 4, 6), 15),
+    ((200, 60, 90), 2),
+    ((3, 1), 9),
+    ((12, 11, 10, 9), 5),
+    ((5, 14, 9, 2), 25),
 )
 
 _P132 = _page(
@@ -150,6 +166,14 @@ _CHECKS = (
     ("text", 256, 255.5),
     ("empty", 12, 12.5),
     ("value", 9, 8.5),
+    ("def", 6, 6.5),
+    ("world", 20, 3.5),
+    ("y", 1, 1.25),
+    ("thirteen", 200, 199.9),
+    ("nil", 8, 8.25),
+    ("some", 43, 42.5),
+    ("few", 2, 2.5),
+    ("one", 128, 127.75),
 )
 
 _P133 = _page(
@@ -198,6 +222,14 @@ _BIGINTS = (
     (10**25, 7),
     (555555555555555555555, 9),
     (2**80, 11),
+    (9007199254740994, 3),
+    (18446744073709551615, 12),
+    (98765432109876543210, 2),
+    (2**64, 9),
+    (10**21, 6),
+    (2**71, 7),
+    (777777777777777777777, 13),
+    (2**81, 14),
 )
 
 _P134 = _page(
@@ -245,6 +277,14 @@ _DELEGATES = (
     (7, (14, 21), 28),
     (3, (6, 9, 12), 15),
     (50, (60,), 70),
+    (1, (3, 4), 5),
+    (15, (25, 35), 45),
+    (2, (3, 4, 5), 6),
+    (200, (300,), 400),
+    (6, (7, 8), 9),
+    (1, (10, 9), 8),
+    (3, (5, 7), 9),
+    (12, (23, 34), 45),
 )
 
 _P135 = _page(
@@ -290,6 +330,14 @@ _AWAITS = (
     ("bars", "n - 1", 5),
     ("blips", "n * 4", 4),
     ("waves", "n + 5", 3),
+    ("counters", "n * 6", 3),
+    ("cubesOf", "n * n * n", 4),
+    ("paces", "n + 20", 3),
+    ("drums", "n * 8", 4),
+    ("blinks", "n + 2", 5),
+    ("dashes", "n * 9", 3),
+    ("cells", "n * 1000", 3),
+    ("trebles", "n + n + n", 4),
 )
 
 _P136 = _page(
@@ -338,6 +386,14 @@ _ENTRIES = (
     ((("salt", 11), ("pepper", 22)), 3),
     ((("front", 4), ("back", 55)), 2),
     ((("do", 1), ("re", 2)), 9),
+    ((("finn", 82), ("kit", 4)), 3),
+    ((("gold", 19), ("tin", 7)), 4),
+    ((("thu", 5), ("fri", 9)), 6),
+    ((("oak", 12), ("ash", 31)), 3),
+    ((("up", 6), ("down", 21)), 12),
+    ((("kiwi", 5), ("plum", 21)), 5),
+    ((("saw", 4), ("plane", 7)), 8),
+    ((("la", 6), ("ti", 14)), 11),
 )
 
 _P137 = _page(
@@ -387,6 +443,14 @@ _MATCHES = (
     ("b8 c88 d888", "@"),
     ("e5 f55 g555", "!"),
     ("h2 i22 j222", "&"),
+    ("k3 l33 m333", "#"),
+    ("n7 o77 p777", "*"),
+    ("q2 r22 s222", "?"),
+    ("t6 u66 v666", "-"),
+    ("w9 x99 y999", "+"),
+    ("z4 a44 b444", "="),
+    ("c1 d11 e111", "~"),
+    ("f8 g88 h888", "^"),
 )
 
 _P138 = _page(
@@ -435,6 +499,14 @@ _ORDERS = (
     ("sync one", "sync two", "async one", "async two"),
     ("in", "out", "promised", "timed"),
     ("up", "down", "fast", "slow"),
+    ("earlier", "afterwards", "resolved", "waited"),
+    ("opening", "closing", "tiny task", "big task"),
+    ("three", "four", "immediately", "eventually"),
+    ("enter", "leave", "settled", "postponed"),
+    ("head", "tail", "jumped", "queued up"),
+    ("e", "f", "g", "h"),
+    ("this line", "that line", "the promise", "the timer"),
+    ("left", "right", "quick", "slow"),
 )
 
 _P139 = _page(
@@ -489,6 +561,14 @@ _FINALLIES = (
     ("n % 5 == 0", "fifth", 3, 10, "not a fifth", "a fifth", "cleared"),
     ("n < -5", "far under", 1, -9, "near", "far", "ended"),
     ("n > 1000", "enormous", 10, 2000, "normal", "enormous", "shut"),
+    ("n < -20", "far under", 4, -30, "near enough", "far under", "cleanup"),
+    ("n == 7", "seven", 3, 7, "not seven", "seven found", "tidy"),
+    ("n > 500", "far too big", 100, 900, "sensible", "far too big", "closing"),
+    ("n % 2 == 0", "even", 7, 8, "odd", "even found", "done"),
+    ("n < 5", "too few", 9, 2, "enough", "too few", "finished"),
+    ("n > 30", "too wide", 18, 55, "narrow", "too wide", "released"),
+    ("n % 3 == 0", "a third", 4, 9, "not a third", "a third", "cleared"),
+    ("n > 999", "past the limit", 50, 1500, "within", "past it", "shut"),
 )
 
 _P140 = _page(

@@ -71,7 +71,7 @@ _P57 = _page(
     57,
     "Printing again",
     "More practice on page 1.",
-    _AGAIN + " Twelve lines, and by the end your fingers should be finding "
+    _AGAIN + " Twenty lines, and by the end your fingers should be finding "
     "the quotes without you looking.",
     "print_text",
     [
@@ -89,6 +89,14 @@ _P57 = _page(
             "steady hands",
             "one to go",
             "and out",
+            "back for more",
+            "second helping",
+            "no surprises here",
+            "just the typing",
+            "eyes on the screen",
+            "twenty this time",
+            "halfway down",
+            "and that is that",
         )
     ],
 )
@@ -120,6 +128,14 @@ _P58 = _page(
             ("1000 - 1", "1000 - 1"),
             ("11 * 3 + 4", "11 * 3 + 4"),
             ("60 - 15 * 2", "60 - 15 * 2"),
+            ("31 + 46", "31 + 46"),
+            ("92 - 37", "92 - 37"),
+            ("8 + 11 + 14", "8 + 11 + 14"),
+            ("150 - 40 - 35", "150 - 40 - 35"),
+            ("7 + 4 * 5", "7 + 4 * 5"),
+            ("8 * 7 - 20", "8 * 7 - 20"),
+            ("475 + 525", "475 + 525"),
+            ("90 - 12 * 3", "90 - 12 * 3"),
         )
     ],
 )
@@ -150,6 +166,14 @@ _P59 = _page(
             ("the answer to 7 times 7 times 7", "7 * 7 * 7"),
             ("what is left over when 99 is divided by 25", "99 % 25"),
             ("the answer to 40 times 6 minus 40", "40 * 6 - 40"),
+            ("what is left over when 47 is divided by 6", "47 % 6"),
+            ("what is left over when 84 is divided by 13", "84 % 13"),
+            ("the answer to 16 times 9", "16 * 9"),
+            ("what is left over when 500 is divided by 60", "500 % 60"),
+            ("the answer to 14 times 14", "14 * 14"),
+            ("what is left over when 96 is divided by 12", "96 % 12"),
+            ("the answer to 25 times 8", "25 * 8"),
+            ("what is left over when 1000 is divided by 33", "1000 % 33"),
         )
     ],
 )
@@ -183,6 +207,14 @@ _P60 = _page(
             ("hours", 9, "hours * 60", "hours times 60"),
             ("n", 31, "n + n + n", "n added to itself twice"),
             ("gap", 75, "gap - 100", "gap minus 100"),
+            ("total", 380, "total - 95", "total minus 95"),
+            ("count", 29, "count + 11", "count plus 11"),
+            ("price", 18, "price * 6", "price times 6"),
+            ("n", 95, "n % 9", "what is left over when n is divided by 9"),
+            ("height", 14, "height * height", "height times itself"),
+            ("start", 750, "start - 375", "start minus 375"),
+            ("n", 8, "n * n * n", "n cubed"),
+            ("boxes", 132, "boxes % 11", "what is left over when boxes is divided by 11"),
         )
     ],
 )
@@ -222,6 +254,14 @@ _P61 = _page(
             ("a", 47, "b", 10, "a % b", "what is left over when a is divided by b"),
             ("start", 8, "step", 7, "start + step + step", "start plus two steps"),
             ("n", 100, "m", 3, "n - m * m", "n minus m squared"),
+            ("a", 17, "b", 6, "a * b", "a times b"),
+            ("owed", 65, "sent", 120, "sent - owed", "sent minus owed"),
+            ("x", 9, "y", 13, "x * y + y", "x times y, plus y"),
+            ("rows", 8, "cols", 7, "rows * cols", "rows times cols"),
+            ("a", 77, "b", 12, "a % b", "what is left over when a is divided by b"),
+            ("high", 400, "low", 55, "high - low", "high minus low"),
+            ("legs", 15, "each", 4, "legs * each", "legs times each"),
+            ("n", 200, "m", 7, "n - m * m", "n minus m squared"),
         )
     ],
 )
@@ -255,6 +295,14 @@ _P62 = _page(
             (5, "50 - i", "50 minus the counter"),
             (4, "i * i * i", "the counter cubed"),
             (12, "i * 3", "the counter times 3"),
+            (7, "i", "the counter"),
+            (11, "i", "the counter"),
+            (5, "i * 8", "the counter times 8"),
+            (6, "i + 15", "the counter plus 15"),
+            (4, "i * i", "the counter times itself"),
+            (3, "i * 250", "the counter times 250"),
+            (9, "i * 3 + 2", "the counter times 3, plus 2"),
+            (8, "i % 3", "what is left over when the counter is divided by 3"),
         )
     ],
 )
@@ -288,6 +336,14 @@ _P63 = _page(
             (1, 7, "i + i + i", "the number added to itself twice"),
             (50, 55, "i - 50", "the number minus 50"),
             (3, 12, "i * 9", "the number times 9"),
+            (6, 13, "i", "the number"),
+            (40, 47, "i", "the number"),
+            (1, 9, "i * 7", "the number times 7"),
+            (12, 19, "i - 11", "the number minus 11"),
+            (2, 7, "i * i", "the number times itself"),
+            (60, 66, "i", "the number"),
+            (1, 6, "i * 30", "the number times 30"),
+            (21, 30, "i % 4", "what is left over when the number is divided by 4"),
         )
     ],
 )
@@ -322,6 +378,14 @@ _P64 = _page(
             (1, 9, "i * 11", "each number times 11"),
             (3, 13, "i % 3", "the remainder of each number divided by 3"),
             (1, 100, "i * 2", "each number doubled"),
+            (1, 18, "i", "each number"),
+            (1, 6, "i * i", "each number times itself"),
+            (8, 24, "i", "each number"),
+            (1, 11, "i * 6", "each number times 6"),
+            (1, 5, "i * i * i", "each number cubed"),
+            (15, 35, "i", "each number"),
+            (1, 14, "i + 9", "each number plus 9"),
+            (2, 13, "i * 8", "each number times 8"),
         )
     ],
 )
@@ -356,6 +420,14 @@ _P65 = _page(
             (1, 16, "i % 2 == 0", "i * i", "is even", "the number times itself"),
             (1, 60, "i % 25 == 0", "i", "divides exactly by 25", "the number"),
             (1, 22, "i < 4", "i", "is under 4", "the number"),
+            (1, 45, "i % 11 == 0", "i", "divides exactly by 11", "the number"),
+            (1, 35, "i % 6 == 0", "i", "divides exactly by 6", "the number"),
+            (1, 24, "i % 2 == 0", "i", "is even", "the number"),
+            (10, 60, "i % 17 == 0", "i", "divides exactly by 17", "the number"),
+            (1, 15, "i > 12", "i", "is bigger than 12", "the number"),
+            (1, 40, "i % 12 == 0", "i * 2", "divides exactly by 12", "the number doubled"),
+            (1, 9, "i % 14 == 0", "i", "divides exactly by 14", "the number"),
+            (1, 20, "i % 5 == 3", "i", "leaves 3 over when divided by 5", "the number"),
         )
     ],
 )
@@ -389,6 +461,14 @@ _P66 = _page(
             (5, 11, "i - 5", "the number minus 5"),
             (1, 5, "i * i * i", "the number cubed"),
             (1, 25, "i % 6", "what is left over when the number is divided by 6"),
+            (1, 11, "i", "the number"),
+            (2, 13, "i", "the number"),
+            (0, 9, "i", "the number"),
+            (1, 7, "i * 4", "the number times 4"),
+            (6, 14, "i", "the number"),
+            (1, 5, "i * i", "the number times itself"),
+            (40, 48, "i", "the number"),
+            (1, 8, "i + 60", "the number plus 60"),
         )
     ],
 )
@@ -423,6 +503,14 @@ _P67 = _page(
             (2, 8, "i * j", "the two multiplied together"),
             (5, 4, "i * 10 - j", "the outer number times 10, minus the inner one"),
             (3, 5, "i * j * 2", "the two multiplied, doubled"),
+            (4, 3, "i + j", "the two added together"),
+            (3, 7, "i * j", "the two multiplied together"),
+            (5, 5, "i * j", "the two multiplied together"),
+            (2, 9, "i + j", "the two added together"),
+            (4, 6, "i * 100 + j", "the outer number times 100, plus the inner one"),
+            (6, 3, "i - j", "the outer number minus the inner one"),
+            (2, 6, "i * i + j * j", "each squared, added together"),
+            (5, 2, "i * 20 - j", "the outer number times 20, minus the inner one"),
         )
     ],
 )
@@ -457,6 +545,14 @@ _P68 = _page(
             ("gap", "144 - 44"),
             ("size", "16 * 16"),
             ("share", "97 % 6"),
+            ("count", "38 + 62"),
+            ("spare", "500 - 275"),
+            ("boxes", "15 * 8"),
+            ("over", "90 % 11"),
+            ("area", "13 * 13"),
+            ("weeks", "365 - 313"),
+            ("charge", "35 * 3"),
+            ("share", "2000 % 17"),
         )
     ],
 )
@@ -487,6 +583,14 @@ _P69 = _page(
             'The word is "necessary", with one c.',
             'It failed with "timed out".',
             'Type "exit" to leave.',
+            'The file is called "notes.txt".',
+            'It answered "not found".',
+            'She said "later" and left.',
+            'The setting is "off" by default.',
+            'The column reads "amount".',
+            'Type "help" for a list.',
+            'It ended with "goodbye".',
+            'The flag is "true" here.',
         )
     ],
 )
@@ -521,6 +625,14 @@ _P70 = _page(
             ("depth", 40, "depth < 5", "is under 5", "shallow"),
             ("n", 64, "n % 8 == 0", "divides exactly by 8", "eights"),
             ("n", 63, "n % 8 == 0", "divides exactly by 8", "eights"),
+            ("n", 55, "n > 50", "is more than 50", "high"),
+            ("n", 22, "n > 50", "is more than 50", "high"),
+            ("width", 200, "width >= 200", "is 200 or more", "wide"),
+            ("width", 199, "width >= 200", "is 200 or more", "wide"),
+            ("spare", 0, "spare == 0", "is exactly 0", "all gone"),
+            ("spare", 12, "spare == 0", "is exactly 0", "all gone"),
+            ("n", 36, "n % 6 == 0", "divides exactly by 6", "sixes"),
+            ("n", 35, "n % 6 == 0", "divides exactly by 6", "sixes"),
         )
     ],
 )
@@ -561,6 +673,14 @@ _P71 = _page(
             ("year", 1985, "year >= 2000", "is 2000 or later", "modern", "old"),
             ("n", 45, "n % 2 == 1", "is odd", "odd", "even"),
             ("n", 46, "n % 2 == 1", "is odd", "odd", "even"),
+            ("n", 44, "n > 40", "is more than 40", "over", "under"),
+            ("n", 9, "n > 40", "is more than 40", "over", "under"),
+            ("mark", 61, "mark >= 60", "is 60 or more", "credit", "plain"),
+            ("mark", 59, "mark >= 60", "is 60 or more", "credit", "plain"),
+            ("n", 81, "n % 9 == 0", "divides exactly by 9", "nines", "not nines"),
+            ("n", 82, "n % 9 == 0", "divides exactly by 9", "nines", "not nines"),
+            ("spare", 3, "spare > 0", "is more than 0", "some", "none"),
+            ("spare", 0, "spare > 0", "is more than 0", "some", "none"),
         )
     ],
 )
@@ -595,6 +715,14 @@ _P72 = _page(
             (1, 13, "i % 5", "what is left over when the number is divided by 5"),
             (1, 8, "i * i * i", "the number cubed"),
             (30, 38, "i", "the number"),
+            (1, 6, "i", "the number"),
+            (5, 14, "i", "the number"),
+            (1, 8, "i * 7", "the number times 7"),
+            (1, 4, "i * i", "the number times itself"),
+            (40, 47, "i", "the number"),
+            (1, 10, "i + 30", "the number plus 30"),
+            (3, 11, "i * 25", "the number times 25"),
+            (1, 7, "200 - i", "200 minus the number"),
         )
     ],
 )
@@ -627,6 +755,14 @@ _P73 = _page(
             ([7], "n * 100", "each one times 100"),
             ([12, 24, 36, 48], "n % 10", "the last digit of each one"),
             ([1000, 500], "n - 499", "each one minus 499"),
+            ([17, 28, 39], "n", "each one"),
+            ([13, 17, 19, 23], "n", "each one"),
+            ([200, 350, 500], "n - 200", "each one minus 200"),
+            ([6, 12, 24], "n * 2", "each one doubled"),
+            ([8, 16, 24, 32], "n % 8", "the remainder of each one divided by 8"),
+            ([4, 9], "n * n", "each one times itself"),
+            ([31, 62, 93], "n + 7", "each one plus 7"),
+            ([90, 45, 15], "n * 4", "each one times 4"),
         )
     ],
 )
@@ -661,6 +797,14 @@ _P74 = _page(
             [11, 111],
             [40, 30, 20, 10, 5],
             [2, 4, 6, 8, 10, 12, 14],
+            [19, 31, 44],
+            [1, 3, 9, 27, 81],
+            [200, 200, 200],
+            [6, 12, 18, 24],
+            [88],
+            [23, 45, 67, 89],
+            [7, 7, 7, 7, 7, 7],
+            [125, 375, 500],
         )
     ],
 )
@@ -695,6 +839,14 @@ _P75 = _page(
             ([9, 18, 27], "n % 2 == 1", "are odd"),
             ([1, 10, 100, 1000], "n > 99", "are more than 99"),
             ([6, 12, 18, 24, 30], "n % 12 == 0", "divide exactly by 12"),
+            ([16, 24, 33, 9], "n % 8 == 0", "divide exactly by 8"),
+            ([7, 14, 22, 31], "n > 20", "are more than 20"),
+            ([80, 60, 40, 20], "n % 40 == 0", "divide exactly by 40"),
+            ([4, 5, 6], "n > 90", "are more than 90"),
+            ([9, 18, 27, 36], "n % 18 == 0", "divide exactly by 18"),
+            ([49, 50, 51], "n % 2 == 0", "are even"),
+            ([11, 22, 33, 44], "n % 11 == 0", "divide exactly by 11"),
+            ([3, 7, 12, 19, 28], "n < 13", "are less than 13"),
         )
     ],
 )
@@ -729,6 +881,14 @@ _P76 = _page(
             (1, 8, "i * 11", "the number times 11"),
             (20, 25, "i * 2", "the number doubled"),
             (1, 9, "i + i", "the number added to itself"),
+            (1, 7, "i * 8", "the number times 8"),
+            (3, 9, "i * i", "the number times itself"),
+            (1, 6, "i + 70", "the number plus 70"),
+            (12, 17, "i - 11", "the number minus 11"),
+            (1, 5, "i * 40", "the number times 40"),
+            (4, 10, "i * 2", "the number doubled"),
+            (1, 8, "200 - i", "200 minus the number"),
+            (6, 13, "i % 5", "the remainder of the number divided by 5"),
         )
     ],
 )
@@ -763,6 +923,14 @@ _P77 = _page(
             ("back", "100 - n", "100 minus the number", [1, 99]),
             ("cube", "n * n * n", "the number cubed", [3, 5]),
             ("odd", "n * 2 + 1", "twice the number plus 1", [0, 7, 20]),
+            ("fivex", "n * 5", "the number times 5", [6, 20]),
+            ("take8", "n - 8", "the number minus 8", [30, 8]),
+            ("ninety", "n * 90", "the number times 90", [2, 4]),
+            ("rest3", "n % 3", "the remainder when divided by 3", [10, 81]),
+            ("plus45", "n + 45", "the number plus 45", [5, 955]),
+            ("eleven", "n * 11", "the number times 11", [7, 12]),
+            ("twohalf", "n * 2 + 5", "twice the number plus 5", [4, 40]),
+            ("backfifty", "50 - n", "50 minus the number", [8, 49]),
         )
     ],
 )
@@ -799,6 +967,14 @@ _P78 = _page(
             ("nine", "n * 9", "the number times 9", [5, 11]),
             ("down", "1000 - n", "1000 minus the number", [1, 500]),
             ("sqplus", "n * n + n", "the number squared plus itself", [3, 8]),
+            ("sevenx", "n * 7", "the number times 7", [5, 13]),
+            ("minus3", "n - 3", "the number minus 3", [24, 3]),
+            ("tenx", "n * 10", "the number times 10", [6, 41]),
+            ("rest6", "n % 6", "the remainder when divided by 6", [50, 72]),
+            ("plustwo", "n + 2", "the number plus 2", [1, 888]),
+            ("thricex", "n * 3", "the number times 3", [14, 60]),
+            ("sqless", "n * n - n", "the number squared minus itself", [5, 9]),
+            ("downfive", "500 - n", "500 minus the number", [2, 250]),
         )
     ],
 )
@@ -829,6 +1005,14 @@ _P79 = _page(
             "nearly",
             "last",
             "end",
+            "twenty",
+            "rows",
+            "typing",
+            "go",
+            "keyboard",
+            "letter",
+            "onward",
+            "finish",
         )
     ],
 )
@@ -863,6 +1047,14 @@ _P80 = _page(
             ([15, 25, 35], "n % 5 == 0", "divides by 5", "fives", "no"),
             ([1, 3, 5, 7, 9], "n % 2 == 1", "is odd", "odd", "even"),
             ([50, 49, 51], "n == 50", "is exactly 50", "fifty", "other"),
+            ([3, 8, 11, 16], "n % 2 == 0", "divides by 2", "even", "odd"),
+            ([200, 30, 400, 50], "n >= 200", "is 200 or more", "big", "small"),
+            ([8, 16, 20, 24], "n % 8 == 0", "divides by 8", "eights", "no"),
+            ([2, 4, 6, 8, 10], "n > 5", "is more than 5", "high", "low"),
+            ([12, 18, 24, 25], "n % 6 == 0", "divides by 6", "sixes", "no"),
+            ([7, 0, 7, 0], "n == 0", "is 0", "zero", "not zero"),
+            ([13, 26, 39, 40], "n % 13 == 0", "divides by 13", "yes", "no"),
+            ([9, 90, 900], "n > 200", "is more than 200", "large", "small"),
         )
     ],
 )

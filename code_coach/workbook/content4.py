@@ -55,6 +55,14 @@ _LABELS = (
     ([8, 8, 9], "n == 8", "is exactly 8", "eight", "other"),
     ([21, 22, 23, 24], "n % 2 == 1", "is odd", "odd", "even"),
     ([5, 10, 15, 20, 25], "n > 12", "is more than 12", "over", "under"),
+    ([2, 7, 4, 9], "n % 2 == 0", "divides by 2", "even", "odd"),
+    ([100, 20, 300], "n >= 100", "is 100 or more", "hundreds", "smaller"),
+    ([6, 7, 8, 9], "n > 7", "is more than 7", "over", "under"),
+    ([14, 28, 15], "n % 7 == 0", "divides by 7", "sevens", "not sevens"),
+    ([1, 2, 1, 2], "n == 1", "is exactly 1", "one", "two"),
+    ([33, 44, 55], "n < 40", "is under 40", "low", "high"),
+    ([12, 25, 36, 49], "n % 4 == 0", "divides by 4", "fours", "no"),
+    ([90, 45, 80, 30], "n >= 80", "is 80 or more", "top", "rest"),
 )
 
 _P41 = _page(
@@ -97,6 +105,14 @@ _RUNNING = (
     [1, 2, 3, 4, 5, 6],
     [40, 30, 20, 10],
     [9, 1, 9, 1, 9],
+    [4, 5, 6],
+    [2, 2, 2, 2, 2],
+    [50, 25, 10],
+    [1, 3, 5, 7],
+    [12, 12],
+    [8, 0, 8, 0],
+    [60, 20, 15, 5],
+    [3, 6, 9, 12, 15],
 )
 
 _P42 = _page(
@@ -137,6 +153,14 @@ _STEPS = (
     (1, 20, 6, "i", "the number"),
     (2, 20, 9, "i * 10", "the number times 10"),
     (1, 7, 2, "i * i", "the number times itself"),
+    (1, 12, 5, "i", "the number"),
+    (0, 30, 6, "i", "the number"),
+    (4, 24, 4, "i", "the number"),
+    (1, 11, 3, "i * 3", "the number times 3"),
+    (20, 60, 20, "i", "the number"),
+    (2, 16, 7, "i + 5", "the number plus 5"),
+    (5, 35, 15, "i * 2", "the number doubled"),
+    (1, 10, 8, "i * i", "the number times itself"),
 )
 
 _P43 = _page(
@@ -180,6 +204,14 @@ _TABLES = (
     (8, 7),
     (10, 10),
     (1, 12),
+    (2, 6),
+    (5, 9),
+    (7, 7),
+    (3, 11),
+    (9, 5),
+    (4, 4),
+    (6, 10),
+    (8, 3),
 )
 
 _P44 = _page(
@@ -221,6 +253,14 @@ _GRID_SUMS = (
     [[9, 1], [8, 2], [7, 3]],
     [[25, 25], [25, 25]],
     [[11, 12, 13], [14, 15, 16]],
+    [[2, 3], [5, 7]],
+    [[6, 6, 6]],
+    [[15, 25], [35, 45]],
+    [[1]],
+    [[4, 4], [4, 4], [4, 4]],
+    [[10, 1], [20, 2], [30, 3]],
+    [[50, 50], [1, 99]],
+    [[2, 4, 6], [8, 10, 12]],
 )
 
 _P45 = _page(
@@ -261,6 +301,14 @@ _TWO_ARG = (
     ("area", "a", "b", "a * b", "the two multiplied", [(4, 9), (12, 12)]),
     ("half", "a", "b", "(a + b) % 10", "the last digit of the two added", [(7, 9), (25, 30)]),
     ("mix", "a", "b", "a * 10 + b", "the first times 10, plus the second", [(3, 4), (9, 9)]),
+    ("addup", "a", "b", "a + b + b", "the first plus the second twice", [(2, 3), (10, 5)]),
+    ("gapx", "a", "b", "a - b + 10", "the first minus the second, plus 10", [(8, 2), (30, 25)]),
+    ("tenup", "a", "b", "a * b * 10", "the two multiplied, times 10", [(2, 3), (4, 5)]),
+    ("restx", "a", "b", "a % b + 1", "the remainder of the first over the second, plus 1", [(19, 4), (50, 9)]),
+    ("stack", "a", "b", "a * 100 + b", "the first times 100, plus the second", [(3, 7), (12, 5)]),
+    ("shrink", "a", "b", "a - b * 2", "the first minus twice the second", [(20, 4), (9, 3)]),
+    ("square2", "a", "b", "a * a + b", "the first times itself, plus the second", [(5, 2), (7, 10)]),
+    ("blend", "a", "b", "(a + b) * 2", "the two added, doubled", [(6, 4), (15, 5)]),
 )
 
 _P46 = _page(
@@ -307,6 +355,14 @@ _WORDS = (
     ("fives", "n", "n % 5 == 0", "divides by 5", "yes", "no", [10, 11, 25]),
     ("tiny", "n", "n < 3", "is under 3", "tiny", "not tiny", [1, 3]),
     ("round", "n", "n % 100 == 0", "divides by 100", "round", "awkward", [200, 250]),
+    ("level", "n", "n > 20", "is more than 20", "high", "low", [25, 3]),
+    ("band", "n", "n % 10 == 0", "divides by 10", "round ten", "in between", [40, 44]),
+    ("zone", "n", "n < 0", "is below 0", "below", "above", [-5, 12]),
+    ("marker", "n", "n >= 75", "is 75 or more", "merit", "ordinary", [74, 75, 99]),
+    ("depth", "n", "n > 100", "is over 100", "deep", "shallow", [150, 20]),
+    ("weight", "n", "n % 4 == 0", "divides by 4", "quarters", "no", [16, 18]),
+    ("tally", "n", "n == 1", "is exactly 1", "single", "several", [1, 6]),
+    ("rank", "n", "n <= 3", "is 3 or under", "podium", "the rest", [2, 9]),
 )
 
 _P47 = _page(
@@ -353,6 +409,14 @@ _CHARS = (
     ("finished", 4),
     ("almost", 1),
     ("done", 3),
+    ("morning", 0),
+    ("workbook", 7),
+    ("twenty", 5),
+    ("letters", 2),
+    ("keyboard", 6),
+    ("practice", 3),
+    ("finished", 0),
+    ("typing", 5),
 )
 
 _P48 = _page(

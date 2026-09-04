@@ -9,6 +9,7 @@ const uiPort = Number(process.env.VITE_UI_PORT || "5173");
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: "127.0.0.1",
     port: uiPort,
     proxy: {
       "/api": {

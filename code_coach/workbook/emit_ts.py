@@ -104,6 +104,7 @@ _TAKEN_TYPES = frozenset(
         "History",
         "Storage",
         "Worker",
+        "Report",
         "Notification",
         "Map",
         "Set",

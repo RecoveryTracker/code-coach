@@ -61,6 +61,14 @@ _NAMED = (
     ("Step", "step", (("label", "str"), ("order", "int")), ("mix", 2)),
     ("Coin", "coin", (("face", "str"), ("worth", "int")), ("heads", 25)),
     ("Track", "track", (("artist", "str"), ("year", "int")), ("Bowie", 1977)),
+    ("Coord", "coord", (("x", "int"), ("y", "int")), (7, 9)),
+    ("Extent", "extent", (("width", "int"), ("height", "int")), (64, 48)),
+    ("Duo", "duo", (("left", "int"), ("right", "int")), (11, 12)),
+    ("Track", "track", (("name", "str"), ("seconds", "int")), ("Warszawa", 386)),
+    ("Runner", "runner", (("name", "str"), ("place", "int")), ("kim", 3)),
+    ("Gap", "gap", (("low", "int"), ("high", "int")), (11, 47)),
+    ("Town", "town", (("name", "str"), ("people", "int")), ("Ripon", 17)),
+    ("Note", "note", (("pitch", "str"), ("octave", "int")), ("C", 4)),
 )
 
 _P131 = _page(
@@ -113,6 +121,14 @@ _SETS = (
     ((100, 200), (200, 300, 400)),
     ((0, 1), (1, 2, 3)),
     ((21, 22, 23), (22,)),
+    ((2, 3, 4), (4, 5)),
+    ((6, 7), (7, 8, 9)),
+    ((2, 3, 4, 5), (3, 5)),
+    ((30, 40), (40, 50)),
+    ((9, 10, 11), (11,)),
+    ((3, 6, 9), (2, 3, 4)),
+    ((15, 16, 17), (18, 19)),
+    ((2, 4, 8, 16), (8, 16, 32)),
 )
 
 _P132 = _page(
@@ -157,6 +173,14 @@ _SLICES = (
     ((7, 14, 21, 28, 35), ((None, 2, None), (None, None, -2), (3, None, None))),
     ((0, 1, 2, 3, 4, 5), ((None, None, 2), (None, None, -3), (2, 5, 2))),
     ((6, 5, 4, 3), ((None, None, -1), (None, None, 2), (1, None, None))),
+    ((2, 3, 5, 7, 11, 13), ((None, None, 2), (1, None, 2), (None, None, -1))),
+    ((15, 25, 35, 45, 55), ((None, 3, None), (2, None, None), (None, None, -1))),
+    ((1, 3, 5, 7, 9, 11, 13, 15), ((None, None, 3), (1, 6, 2), (None, None, -2))),
+    ((9, 7, 5, 3, 1), ((None, None, -1), (None, 2, None), (1, 4, None))),
+    ((3, 6, 9, 12), ((None, None, 2), (None, None, -1), (1, None, None))),
+    ((8, 6, 4, 2, 0, -2), ((2, 5, None), (None, None, 2), (None, None, -1))),
+    ((12, 24, 36, 48), ((None, None, -1), (1, 3, None), (None, None, 3))),
+    ((4, 8, 12, 16, 20), ((1, None, 2), (None, -1, None), (None, None, -1))),
 )
 
 _P133 = _page(
@@ -208,6 +232,14 @@ _DICT_COMPS = (
     (("do", "re", "mi"), ("do", "mi")),
     (("lake", "mountain"), ("mountain", "lake")),
     (("wren", "sparrow"), ("sparrow", "wren")),
+    (("owl", "fox", "elk"), ("owl", "elk")),
+    (("plum", "sloe"), ("plum", "sloe")),
+    (("gold", "silver", "tin"), ("silver", "gold")),
+    (("four", "seven"), ("seven", "four")),
+    (("rain", "cloud", "wind"), ("cloud", "wind")),
+    (("hen", "chick"), ("chick", "hen")),
+    (("oak", "ash"), ("oak", "ash")),
+    (("la", "ti", "do"), ("la", "do")),
 )
 
 _P134 = _page(
@@ -251,6 +283,14 @@ _BY_VALUE = (
     ((("do", 1), ("re", 9), ("mi", 5)), False),
     ((("salt", 11), ("pepper", 22), ("sugar", 3)), True),
     ((("bowie", 1977), ("kate", 1985), ("brian", 1970)), False),
+    ((("finn", 82), ("kit", 4), ("ida", 37)), True),
+    ((("gold", 19), ("tin", 7), ("copper", 44)), False),
+    ((("bolts", 240), ("nuts", 60), ("washers", 95)), True),
+    ((("thu", 3), ("fri", 18), ("sat", 9)), False),
+    ((("up", 5), ("down", 21), ("across", 2)), True),
+    ((("oslo", 709), ("ripon", 17), ("lima", 998)), False),
+    ((("kiwi", 5), ("plum", 21), ("sloe", 9)), True),
+    ((("la", 6), ("ti", 14), ("do", 2)), False),
 )
 
 _P135 = _page(
@@ -296,6 +336,14 @@ _GROUPED = (
     ((("salt", (11,)), ("pepper", (22, 8))), ("pepper", "salt")),
     ((("apple", (3, 3)), ("pear", (12,))), ("apple", "pear")),
     ((("left", (7, 8, 9)), ("right", (1,))), ("right", "left")),
+    ((("gold", (5, 6)), ("tin", (12,))), ("gold", "tin")),
+    ((("thu", (2, 3, 4)), ("fri", (5,))), ("fri", "thu")),
+    ((("up", (7, 7)), ("down", (3, 9))), ("up", "down")),
+    ((("finn", (82, 11)), ("kit", (4,))), ("finn", "kit")),
+    ((("c", (2,)), ("d", (3, 4))), ("d", "c")),
+    ((("oak", (1, 1, 1)), ("ash", (6,))), ("oak", "ash")),
+    ((("la", (2, 3)), ("ti", (4, 5))), ("la", "ti")),
+    ((("near", (8, 2)), ("far", (20,))), ("far", "near")),
 )
 
 _P136 = _page(
@@ -339,6 +387,14 @@ _JSON = (
     (("day", "mon"), ("hours", 8)),
     (("metal", "gold"), ("number", 79)),
     (("song", "Alive"), ("seconds", 245)),
+    (("name", "finn"), ("age", 27)),
+    (("city", "Oslo"), ("people", 709)),
+    (("title", "Ubik"), ("pages", 224)),
+    (("artist", "Kate"), ("year", 1985)),
+    (("colour", "teal"), ("count", 30)),
+    (("host", "local"), ("port", 5173)),
+    (("word", "moon"), ("length", 4)),
+    (("metal", "tin"), ("number", 50)),
 )
 
 _P137 = _page(
@@ -384,6 +440,14 @@ _TIDY = (
     ("  Iron Gate ", "Gate", "Bridge", "Iron"),
     (" Night Train  ", "Train", "Bus", "Night"),
     ("  Green Hill ", "Hill", "Valley", "Green"),
+    ("  Bright Star  ", "Star", "Moon", "Bright"),
+    ("  Grace Hopper ", "Grace", "Ada", "Grace"),
+    (" GREEN light  ", "light", "signal", "GREEN"),
+    ("  Oslo Fjord ", "Fjord", "Harbour", "Oslo"),
+    (" Shut The Gate  ", "Gate", "Door", "Shut"),
+    ("  Warm Bread ", "Warm", "Fresh", "Warm"),
+    (" Last Call  ", "Call", "Order", "Last"),
+    ("  Wide River ", "River", "Stream", "Wide"),
 )
 
 _P138 = _page(
@@ -433,6 +497,14 @@ _TERNARY = (
     ((9, 4), "n > 5", "over", "under"),
     ((11, 10), "n % 10 == 0", "round", "ragged"),
     ((2, 30), "n < 10", "digit", "bigger"),
+    ((13, 14), "n % 2 == 0", "even", "odd"),
+    ((5, 25), "n > 20", "big", "small"),
+    ((0, 8), "n == 0", "zero", "something"),
+    ((-7, 4), "n < 0", "below", "above"),
+    ((21, 10), "n % 7 == 0", "sevens", "not sevens"),
+    ((90, 12), "n >= 60", "high", "low"),
+    ((12, 13), "n % 4 == 0", "quarters", "not quarters"),
+    ((3, 33), "n < 10", "digit", "bigger"),
 )
 
 _P139 = _page(
@@ -480,6 +552,14 @@ _ZIPPED = (
     (("kyoto", "oslo"), (1463, 709), ("oslo", "kyoto")),
     (("left", "right"), (7, 1), ("left", "right")),
     (("bowie", "kate"), (1977, 1985), ("kate", "bowie")),
+    (("finn", "kit", "ida"), (82, 4, 37), ("finn", "ida")),
+    (("gold", "tin"), (19, 7), ("tin", "gold")),
+    (("thu", "fri", "sat"), (3, 18, 9), ("sat", "thu")),
+    (("kiwi", "plum"), (5, 21), ("kiwi", "plum")),
+    (("oak", "ash"), (1, 6), ("ash", "oak")),
+    (("up", "down"), (5, 21), ("up", "down")),
+    (("la", "ti", "do"), (6, 14, 2), ("ti", "do")),
+    (("oslo", "ripon"), (709, 17), ("ripon", "oslo")),
 )
 
 _P140 = _page(

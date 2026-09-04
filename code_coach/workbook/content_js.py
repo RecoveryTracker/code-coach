@@ -63,6 +63,14 @@ _TEMPLATES = (
     ("rey", 19, 1),
     ("finn", 27, 4),
     ("nell", 33, 2),
+    ("gus", 31, 2),
+    ("hal", 47, 1),
+    ("ivy", 25, 6),
+    ("jan", 52, 3),
+    ("kit", 40, 1),
+    ("lee", 18, 4),
+    ("mia", 61, 2),
+    ("noa", 34, 9),
 )
 
 _P81 = _page(
@@ -109,6 +117,14 @@ _MAPS = (
     ((3, 6, 9, 12), "n * 3"),
     ((11, 22), "n + 100"),
     ((4, 8, 12, 16), "n - 4"),
+    ((2, 3, 4, 5), "n * 4"),
+    ((6, 7, 8), "n * n"),
+    ((15, 25, 35), "n + 2"),
+    ((4, 5, 6), "n * 25"),
+    ((12, 11, 10), "n - 3"),
+    ((3, 6, 9, 12), "n + 8"),
+    ((2, 4, 6), "n * n * n"),
+    ((5, 10, 15, 20), "n - 5"),
 )
 
 _P82 = _page(
@@ -153,6 +169,14 @@ _FILTERS = (
     ((11, 22, 33, 44), "n % 4 == 0"),
     ((1, 2, 3, 8, 13), "n < 5"),
     ((6, 7, 8, 9, 10), "n % 3 == 1"),
+    ((2, 3, 4, 5, 6, 7), "n % 2 == 0"),
+    ((4, 5, 6, 7, 8), "n > 5"),
+    ((12, 18, 24, 30), "n % 12 == 0"),
+    ((2, 4, 6, 8, 10, 12), "n % 3 == 0"),
+    ((8, 16, 24, 32), "n < 20"),
+    ((11, 13, 14, 17, 20), "n % 2 == 1"),
+    ((300, 40, 500, 60), "n >= 300"),
+    ((1, 8, 27, 64), "n > 20"),
 )
 
 _P83 = _page(
@@ -197,6 +221,14 @@ _REDUCES = (
     ((4, 5), "sum * n", 2),
     ((6, 12, 18), "sum + n", 0),
     ((9, 1, 5), "sum + n", 50),
+    ((2, 4, 6, 8), "sum + n", 0),
+    ((7, 14, 21), "sum + n", 0),
+    ((3, 4, 5), "sum * n", 1),
+    ((2, 4, 6, 8, 10), "sum + n", 200),
+    ((15, 25, 35), "sum + n", 0),
+    ((3, 3, 3), "sum * n", 1),
+    ((11, 12, 13), "sum + n", 0),
+    ((8, 2, 6), "sum + n", 75),
 )
 
 _P84 = _page(
@@ -246,6 +278,14 @@ _DESTRUCTURES = (
     ("price", "people", (45, 3), (7, 7)),
     ("start", "end", (7, 31), (100, 200)),
     ("first", "last", (1, 9), (4, 5)),
+    ("across", "down", (5, 6), (14, 15)),
+    ("depth", "span", (12, 9), (7, 8)),
+    ("least", "most", (4, 21), (2, 3)),
+    ("front", "back", (9, 10), (50, 60)),
+    ("score", "extra", (55, 8), (13, 24)),
+    ("level", "room", (5, 14), (9, 10)),
+    ("miles", "gallons", (240, 6), (80, 20)),
+    ("wide", "tall", (11, 12), (3, 4)),
 )
 
 _P85 = _page(
@@ -307,6 +347,14 @@ _SPREADS = (
     ((21, 22), (23,)),
     ((3, 6), (9, 12)),
     ((9,), (8, 7)),
+    ((3, 4), (5, 6)),
+    ((15, 25), (35,)),
+    ((8,), (9, 10)),
+    ((3, 3), (4, 4)),
+    ((11, 12, 13), (14,)),
+    ((500,), (600, 700)),
+    ((5, 10), (15, 20)),
+    ((31, 32), (33,)),
 )
 
 _P86 = _page(
@@ -354,6 +402,14 @@ _ARROWS = (
     ("scale", "n * 5", 4, "join_up", "a + b", (20, 4)),
     ("shift", "n + 100", 50, "spread_of", "a - b", (4, 9)),
     ("twice", "n + n", 8, "product", "a * b", (12, 3)),
+    ("quad", "n * 4", 6, "plus_one", "a + b + 1", (3, 4)),
+    ("cubed", "n * n * n", 4, "product_of", "a * b", (6, 7)),
+    ("less_five", "n - 5", 20, "take_away", "a - b", (30, 12)),
+    ("times_six", "n * 6", 8, "add_up", "a + b", (25, 35)),
+    ("flip", "-n", 14, "spread_two", "a - b", (11, 5)),
+    ("plus_ten", "n + 10", 55, "area_of", "a * b", (9, 5)),
+    ("less_nine", "n - 9", 18, "raise_to", "a ** b", (3, 4)),
+    ("shift_up", "n + 200", 25, "left_over", "a % b", (23, 6)),
 )
 
 _P87 = _page(
@@ -417,6 +473,14 @@ _DEFAULTS = (
     ("say", "start", "hello", "gus", "hal", "howdy"),
     ("call_out", "word", "hey", "ivy", "jan", "psst"),
     ("address", "title", "dear", "kit", "lee", "esteemed"),
+    ("hello_to", "greeting", "hello", "gus", "hal", "hiya"),
+    ("invite", "word", "welcome", "ivy", "jan", "come in"),
+    ("summon", "label", "dear", "kit", "lee", "esteemed"),
+    ("style_it", "prefix", "ms", "mia", "noa", "prof"),
+    ("shout_to", "shout", "hello", "ola", "pip", "hoy"),
+    ("title_it", "title", "madam", "quin", "rae", "captain"),
+    ("nod_to", "phrase", "hello", "sky", "tam", "ahoy"),
+    ("sign_off", "sign", "note", "uma", "vic", "postscript"),
 )
 
 _P88 = _page(
@@ -480,6 +544,14 @@ _CHAINS = (
     ("gus", "parish", "east", "hal", "unknown", "height", 0),
     ("ivy", "ward", "central", "jan", "missing", "depth", 5),
     ("kit", "zone", "inner", "lee", "none", "width", 0),
+    ("mia", "city", "ripon", "noa", "unknown", "age", 0),
+    ("ola", "town", "lima", "pip", "nowhere", "score", 0),
+    ("quin", "street", "low", "rae", "none", "count", 2),
+    ("sky", "region", "south", "tam", "unset", "rank", 0),
+    ("uma", "county", "essex", "vic", "unknown", "years", 21),
+    ("wren", "village", "oak", "xan", "missing", "total", 0),
+    ("yves", "city", "oslo", "zed", "unknown", "level", 3),
+    ("ash", "district", "east", "bay", "none", "size", 0),
 )
 
 _P89 = _page(
@@ -544,6 +616,14 @@ _COLLECTIONS = (
     ((100, 100, 200), (("gus", 55), ("hal", 44))),
     ((1, 2, 3, 3), (("ivy", 90), ("jan", 11))),
     ((6, 6, 12), (("kit", 77), ("lee", 23))),
+    ((4, 5, 5, 6), (("gus", 31), ("hal", 47))),
+    ((8, 8, 9), (("ivy", 25), ("jan", 52))),
+    ((2, 2, 2, 3), (("kit", 40), ("lee", 18))),
+    ((15, 25, 25, 35), (("mia", 61), ("noa", 34))),
+    ((6, 6, 7, 8), (("ola", 12), ("pip", 88))),
+    ((3, 9, 9, 12), (("quin", 29), ("rae", 43))),
+    ((5, 5, 5), (("sky", 17), ("tam", 66))),
+    ((13, 26, 13), (("uma", 9), ("vic", 74))),
 )
 
 _P90 = _page(

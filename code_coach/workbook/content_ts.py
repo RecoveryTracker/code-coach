@@ -61,6 +61,14 @@ _ANNOTATIONS = (
     ("rey", 19, "note"),
     ("finn", 27, "label"),
     ("nell", 33, "read"),
+    ("gus", 31, "greet_it"),
+    ("hal", 47, "hail_to"),
+    ("ivy", 25, "call_out"),
+    ("jan", 52, "title_it"),
+    ("kit", 40, "state_it"),
+    ("lee", 18, "show_it"),
+    ("mia", 61, "tell_of"),
+    ("noa", 34, "give_it"),
 )
 
 _P81 = _page(
@@ -111,6 +119,14 @@ _INTERFACES = (
     ("Bill", "price", "people", (45, 3), "Currency", "pence"),
     ("Wall", "bricks", "rows", (90, 6), "Style", "flemish"),
     ("Gap", "start", "end", (7, 31), "Unit", "days"),
+    ("Coord", "x", "y", (7, 9), "Caption", "there"),
+    ("Extent", "width", "height", (64, 48), "Naming", "wide"),
+    ("Reach", "low", "high", (11, 47), "Marker", "span"),
+    ("Duo", "left", "right", (11, 12), "Remark", "either"),
+    ("Berth", "floor", "number", (5, 14), "Heading", "cabin"),
+    ("Result", "points", "bonus", (72, 9), "Banding", "merit"),
+    ("Board", "rows", "cols", (6, 7), "Sort_", "oblong"),
+    ("Journey", "miles", "hours", (180, 4), "Track_", "south"),
 )
 
 _P82 = _page(
@@ -173,6 +189,14 @@ _UNIONS = (
     ("note_it", "size", "kind", 2, 9, "rey"),
     ("form", "level", "style", 10, 5, "finn"),
     ("check", "rank", "grade", 1, 8, "nell"),
+    ("render_it", "number", "text", 6, 3, "gus"),
+    ("display", "digits", "letters", 8, 4, "hal"),
+    ("explain", "count", "word", 5, 11, "ivy"),
+    ("hand_over", "value", "name_of", 10, 6, "jan"),
+    ("caption", "amount", "title", 7, 5, "kit"),
+    ("recite", "figure", "phrase", 9, 3, "lee"),
+    ("report", "total", "label", 4, 8, "mia"),
+    ("utter", "sum", "note", 12, 3, "noa"),
 )
 
 _P83 = _page(
@@ -233,6 +257,14 @@ _OPTIONALS = (
     ("Route", "path", "hops", "home", 4, 1),
     ("Task", "title", "priority", "mix", 9, 5),
     ("Item", "code", "qty", "abc", 24, 1),
+    ("Preferences", "host", "port", "remote", 5173, 8765),
+    ("Defaults", "name_of", "size", "index", 80, 20),
+    ("Choices", "mode", "level", "fast", 4, 2),
+    ("Bounds", "target", "depth", "some", 8, 3),
+    ("Layout", "region", "count", "us", 16, 5),
+    ("Account_", "user", "age", "finn", 27, 0),
+    ("Line_", "label", "order", "second", 9, 2),
+    ("Slot_", "kind", "score", "live", 95, 60),
 )
 
 _P84 = _page(
@@ -299,6 +331,14 @@ _TUPLES = (
     ("rey", 19, (5, 10, 15)),
     ("finn", 27, (2, 3, 5, 7)),
     ("nell", 33, (100, 200)),
+    ("gus", 31, (2, 3, 4)),
+    ("hal", 47, (6, 7)),
+    ("ivy", 25, (8, 9, 10, 11)),
+    ("jan", 52, (3, 5)),
+    ("kit", 40, (2, 2, 2)),
+    ("lee", 18, (4, 8, 12)),
+    ("mia", 61, (15, 25)),
+    ("noa", 34, (5, 10, 15, 20)),
 )
 
 _P85 = _page(
@@ -345,6 +385,14 @@ _GENERIC_FNS = (
     ("firstItem", (11, 22), ("hot", "cold")),
     ("began", (0, 1), ("sky", "sea")),
     ("peek", (12, 24, 36), ("one", "two")),
+    ("firstIn", (4, 5, 6), ("c", "d")),
+    ("leadOf", (15, 25), ("gold", "tin")),
+    ("openOf", (11,), ("thu", "fri")),
+    ("beginOf", (8, 9, 10), ("la", "ti")),
+    ("soonest", (300, 400), ("oak", "ash")),
+    ("crownOf", (12, 11), ("in", "out")),
+    ("foremost", (2, 2, 3), ("on", "off")),
+    ("openingOf", (55,), ("east", "west")),
 )
 
 _P86 = _page(
@@ -391,6 +439,14 @@ _GENERIC_CLASSES = (
     ("Tin", "inside", 64, "gold"),
     ("Pack", "contents", 21, "iron"),
     ("Jar", "pour", 3, "salt"),
+    ("Case_", "get", 6, "morning"),
+    ("Keeper", "value", 51, "evening"),
+    ("Sleeve", "unwrap", 8, "words"),
+    ("Pocket", "read_it", 200, "notes"),
+    ("Niche", "take", 2, "finn"),
+    ("Chest", "open_up", 11, "ida"),
+    ("Depot", "fetch", 14, "kit"),
+    ("Sack", "out", 44, "teal"),
 )
 
 _P87 = _page(
@@ -441,6 +497,14 @@ _LITERALS = (
     ("Way", ("north", "south"), (4, 8)),
     ("Step", ("mix", "bake"), (7, 14, 21)),
     ("Tier", ("free", "paid"), (12, 24, 36, 48)),
+    ("Mood", ("calm", "busy"), (2, 3, 4)),
+    ("Grade_", ("low", "high"), (15, 25)),
+    ("Shade", ("teal", "amber", "plum"), (6, 7, 8, 9)),
+    ("Gate", ("open", "shut"), (3, 5)),
+    ("Order_", ("up", "down"), (11,)),
+    ("Form", ("plain", "rich"), (2, 2, 2)),
+    ("Bearing", ("east", "west"), (4, 8, 12)),
+    ("Scale_", ("small", "large"), (300, 400)),
 )
 
 _P88 = _page(
@@ -492,6 +556,14 @@ _UTILITIES = (
     ("Task", "name", "order", "owner", "mix", "bake", 2),
     ("Item", "name", "qty", "code", "bolt", "nut", 24),
     ("Note", "name", "length", "author", "first", "second", 9),
+    ("Reader_", "name_of", "age", "email", "finn", "ida", 27),
+    ("Volume", "title", "pages", "isbn", "ubik", "valis", 224),
+    ("Town", "name_of", "people", "country", "ripon", "oslo", 17),
+    ("Track_", "title", "seconds", "album", "art", "sons", 224),
+    ("Ore", "name_of", "number", "symbol", "tin", "lead", 50),
+    ("Berth", "name_of", "floor", "wing", "cabin", "hold", 5),
+    ("Blade", "name_of", "weight", "brand", "plane", "chisel", 7),
+    ("Side", "name_of", "points", "league", "blues", "whites", 12),
 )
 
 _P89 = _page(
@@ -566,6 +638,14 @@ _DISCRIMINATED = (
     ("Sound", "beep", "tone", "hertz", "seconds", 8, "value_of", (4, 7)),
     ("Room", "single", "double", "beds", "guests", 2, "capacity", (5, 6)),
     ("Draw", "line", "box", "length", "sides", 4, "extent", (6, 8)),
+    ("Figure", "round", "oblong", "radius", "side", 5, "area_of", (4, 6)),
+    ("Signal", "press", "swipe", "count", "amount", 3, "gauge", (5, 7)),
+    ("Twig", "tip", "fork", "depth", "width", 4, "extent_of", (6, 8)),
+    ("Tile", "blank", "filled", "row", "col", 6, "weight_of", (3, 9)),
+    ("Hop", "stride", "leap", "paces", "height", 7, "cost_of", (7, 4)),
+    ("Chore", "brief", "long", "seconds", "minutes", 90, "span_of", (8, 3)),
+    ("Weight_", "slight", "vast", "kilos", "tonnes", 500, "mass_of", (9, 5)),
+    ("Way_", "level", "steep", "metres", "climb", 3, "toil", (2, 6)),
 )
 
 _P90 = _page(

@@ -62,6 +62,14 @@ _MUTABLE = (
     [1, 2, 3, 4],
     [100, 200],
     [6, 5, 4],
+    [3, 4],
+    [2, 4, 6],
+    [11],
+    [9, 1],
+    [5, 5, 5],
+    [4, 3, 2],
+    [1, 3, 5, 7],
+    [30, 40],
 )
 
 _P111 = _page(
@@ -104,6 +112,14 @@ _IDENTITY = (
     ("None", "None", True, True),
     ("[1, 2, 3]", "[1, 2, 3]", True, False),
     ("5", "5", True, True),
+    ("[4, 5]", "[4, 5]", True, False),
+    ("[4, 5]", "[5, 4]", False, False),
+    ("1000", "1000", True, True),
+    ('"code"', '"code"', True, True),
+    ("[[1]]", "[[1]]", True, False),
+    ("(3, 4)", "(3, 4)", True, True),
+    ("[9, 9]", "[9, 9]", True, False),
+    ("-5", "-5", True, True),
 )
 
 _P112 = _page(
@@ -153,6 +169,14 @@ _COPIES = (
     ([2, 4], 6),
     ([1, 1, 1], 1),
     ([8, 9], 10),
+    ([3, 4], 5),
+    ([8], 9),
+    ([2, 3, 4], 5),
+    ([6], 2),
+    ([9, 9], 9),
+    ([11], 12),
+    ([7, 8, 9], 10),
+    ([40, 50], 60),
 )
 
 _P113 = _page(
@@ -193,6 +217,14 @@ _GENERATORS = (
     (6, "100 - i", "100 minus each number"),
     (3, "i * i + 1", "each number squared, plus 1"),
     (9, "i * 5", "each number times 5"),
+    (6, "i", "each number"),
+    (5, "i * i", "each number squared"),
+    (4, "i * 4", "each number times 4"),
+    (3, "i * 250", "each number times 250"),
+    (8, "i", "each number"),
+    (6, "i + 30", "each number plus 30"),
+    (7, "i % 4", "the remainder of each divided by 4"),
+    (5, "200 - i", "200 minus each number"),
 )
 
 _P114 = _page(
@@ -227,6 +259,14 @@ _P114 = _page(
                 "backwards",
                 "plusone",
                 "fives",
+                "upto",
+                "sqagain",
+                "fours",
+                "quarters",
+                "eights",
+                "plusthirty",
+                "quarterrest",
+                "downtwohundred",
             ),
         )
     ],
@@ -248,6 +288,14 @@ _ENDLESS = (
     (5, "i * 7", "each number times 7"),
     (3, "1000 - i", "1000 minus each number"),
     (6, "i * 10", "each number times 10"),
+    (4, "i", "each number"),
+    (6, "i * i", "each number squared"),
+    (5, "i * 6", "each number times 6"),
+    (3, "i * 25", "each number times 25"),
+    (7, "i + 200", "each number plus 200"),
+    (4, "i * i * i", "each number cubed"),
+    (5, "i % 3", "the remainder of each divided by 3"),
+    (6, "500 - i", "500 minus each number"),
 )
 
 _P115 = _page(
@@ -282,6 +330,14 @@ _P115 = _page(
                 "sevens",
                 "downfrom",
                 "tens",
+                "fourth",
+                "sqforever",
+                "sixes",
+                "twentyfives",
+                "plustwohundred",
+                "cubed",
+                "thirdrest",
+                "downfivehundred",
             ),
         )
     ],
@@ -303,6 +359,14 @@ _CONTEXTS = (
     ("Cage", "unlatched", "feeding", "latched"),
     ("Book", "opened", "reading", "shut"),
     ("Line", "connected", "talking", "hung up"),
+    ("Gate", "swinging open", "crossing the field", "swinging shut"),
+    ("Valve", "opened", "letting it through", "closed"),
+    ("Guard", "on duty", "the quiet hours", "off duty"),
+    ("Kettle", "switched on", "waiting", "switched off"),
+    ("Window", "raised", "airing the room", "lowered"),
+    ("Ledger", "opened", "writing the entry", "closed"),
+    ("Stage", "lights up", "the scene", "lights down"),
+    ("Radio", "tuned in", "listening", "tuned out"),
 )
 
 _P116 = _page(
@@ -349,6 +413,14 @@ _DECORATORS = (
     ("less", "n - 5", "the number minus 5", "func(n) * 3", "triples the result", [10, 25]),
     ("mod", "n % 6", "the remainder over 6", "func(n) + 60", "adds 60 to the result", [20, 11]),
     ("twice", "n + n", "the number added to itself", "func(n) - n", "takes the number off the result", [9, 4]),
+    ("fourx", "n * 4", "the number times 4", "func(n) + 2", "adds 2 to the result", [3, 11]),
+    ("addfive", "n + 5", "the number plus 5", "func(n) * 5", "times the result by 5", [2, 20]),
+    ("sixth", "n // 6", "the number divided by six", "func(n) + 40", "adds 40 to the result", [36, 50]),
+    ("quad", "n * n", "the number squared", "func(n) - 3", "takes 3 off the result", [5, 8]),
+    ("minusten", "n - 10", "the number minus 10", "func(n) * 2", "doubles the result", [30, 12]),
+    ("sevens", "n * 7", "the number times 7", "func(n) % 9", "the remainder of the result over 9", [4, 10]),
+    ("plustwo", "n + 2", "the number plus 2", "func(n) * func(n)", "squares the result", [4, 7]),
+    ("thirds", "n % 3", "the remainder over 3", "func(n) + 90", "adds 90 to the result", [22, 14]),
 )
 
 _P117 = _page(
@@ -392,6 +464,14 @@ _CLOSURES = (
     ([11, 22], 2, "n * m", "n times m"),
     ([6, 60], 5, "n % m", "the remainder of n over m"),
     ([8, 80], 4, "n + m * 2", "n plus twice m"),
+    ([3, 12], 6, "n * m", "n times m"),
+    ([2, 200], 9, "n + m", "n plus m"),
+    ([4, 40], 5, "n * m + n", "n times m, plus n"),
+    ([20, 30], 7, "n - m", "n minus m"),
+    ([6, 60], 3, "n * m * m", "n times m twice"),
+    ([9, 90], 11, "n + m + n", "n plus m plus n"),
+    ([5, 7], 12, "n * m", "n times m"),
+    ([7, 70], 4, "n % m", "the remainder of n over m"),
 )
 
 _P118 = _page(
@@ -432,6 +512,14 @@ _COUNTS = (
     (["hi", "hi", "bye"], ["bye", "hi"]),
     (["1", "2", "1", "2", "1"], ["1", "2"]),
     (["north", "south", "north", "east", "north"], ["north", "east"]),
+    (["c", "d", "c"], ["c", "d"]),
+    (["green", "gold", "green", "green"], ["green", "gold"]),
+    (["z"], ["z"]),
+    (["four", "five", "five", "six", "six", "six"], ["six", "four"]),
+    (["cow", "hen", "cow"], ["cow", "hen"]),
+    (["in", "in", "in", "out"], ["in", "out"]),
+    (["b", "b", "b", "b"], ["b"]),
+    (["on", "off", "on", "off"], ["on", "off"]),
 )
 
 _P119 = _page(
@@ -472,6 +560,14 @@ _TUPLE_SORTS = (
     ["pi", "be", "alpha", "gamma"],
     ["z", "yy", "xx", "w"],
     ["sun", "moon", "star", "sky"],
+    ["plum", "kiwi", "damson", "sloe"],
+    ["four", "five", "ten", "seven"],
+    ["dd", "e", "ff", "g"],
+    ["gold", "tin", "iron", "lead"],
+    ["la", "ti", "so", "fa"],
+    ["java", "c", "ruby", "perl"],
+    ["ram", "ewe", "sow", "mare"],
+    ["north", "up", "down", "east"],
 )
 
 _P120 = _page(

@@ -65,6 +65,14 @@ _FORMATS = (
     ("score", 87.5, ".1f", "to 1 decimal place"),
     ("ratio", 1.618034, ".4f", "to 4 decimal places"),
     ("cost", 20.0, ".2f", "to 2 decimal places"),
+    ("euler", 2.718281828, ".3f", "to 3 decimal places"),
+    ("gravity", 9.80665, ".2f", "to 2 decimal places"),
+    ("mile", 1.609344, ".3f", "to 3 decimal places"),
+    ("sevenths", 5.0 / 7, ".4f", "to 4 decimal places"),
+    ("bill", 47.371, ".2f", "to 2 decimal places"),
+    ("huge", 12345.6789, ".0f", "with no decimal places"),
+    ("small", 0.004567, ".3f", "to 3 decimal places"),
+    ("ninths", 8.0 / 9, ".1f", "to 1 decimal place"),
 )
 
 _P81 = _page(
@@ -103,6 +111,14 @@ _COMPREHENSIONS = (
     (1, 8, "i * 11", "each number times 11"),
     (1, 3, "i * i + 1", "each number squared, plus 1"),
     (5, 12, "i * 5", "each number times 5"),
+    (1, 7, "i", "each number"),
+    (1, 5, "i * i", "each number squared"),
+    (1, 8, "i * 3", "each number times 3"),
+    (4, 10, "i", "each number"),
+    (1, 6, "i * 50", "each number times 50"),
+    (1, 9, "i + 20", "each number plus 20"),
+    (1, 4, "i * i * i", "each number cubed"),
+    (20, 26, "i - 20", "each number minus 20"),
 )
 
 _P82 = _page(
@@ -141,6 +157,14 @@ _FILTERED = (
     (1, 18, "i * 2", "i % 6 == 0", "divide by 6"),
     (1, 12, "i", "i > 100", "are more than 100"),
     (1, 16, "i", "i % 5 == 0", "divide by 5"),
+    (1, 24, "i", "i % 4 == 0", "divide by 4"),
+    (1, 22, "i", "i % 2 == 1", "are odd"),
+    (1, 45, "i", "i % 15 == 0", "divide by 15"),
+    (1, 12, "i * i", "i % 3 == 0", "divide by 3"),
+    (1, 14, "i", "i > 10", "are more than 10"),
+    (1, 35, "i", "i % 11 == 0", "divide by 11"),
+    (1, 10, "i * 4", "i < 4", "are under 4"),
+    (1, 16, "i", "i % 6 == 2", "leave 2 over when divided by 6"),
 )
 
 _P83 = _page(
@@ -180,6 +204,14 @@ _GETS = (
     ((("x", 7),), "y", 100),
     ((("start", 1), ("end", 99)), "end", 50),
     ((("start", 1), ("end", 99)), "middle", 50),
+    ((("dog", 4), ("cow", 2)), "dog", 0),
+    ((("dog", 4), ("cow", 2)), "pig", 0),
+    ((("gold", 1), ("silver", 2)), "silver", -1),
+    ((("gold", 1), ("silver", 2)), "bronze", -1),
+    ((("june", 6), ("july", 7), ("may", 5)), "may", 88),
+    ((("june", 6), ("july", 7), ("may", 5)), "april", 88),
+    ((("tea", 2), ("coffee", 6)), "coffee", 0),
+    ((("tea", 2), ("coffee", 6)), "juice", 0),
 )
 
 _P84 = _page(
@@ -220,6 +252,14 @@ _ITEMS = (
     (("first", 1), ("second", 2), ("third", 3)),
     (("apple", 3), ("pear", 8)),
     (("start", 0), ("end", 99)),
+    (("dog", 4), ("cow", 2)),
+    (("gold", 1), ("silver", 2), ("bronze", 3)),
+    (("four", 4), ("five", 5)),
+    (("tea", 2), ("coffee", 6), ("water", 0)),
+    (("june", 6), ("december", 12)),
+    (("solo", 9),),
+    (("low", 1), ("mid", 50), ("high", 99)),
+    (("p", 11), ("q", 22)),
 )
 
 _P85 = _page(
@@ -259,6 +299,14 @@ _DUPES = (
     [42, 17, 42],
     [6, 5, 4, 3, 2, 1],
     [12, 12, 11, 13, 11, 14],
+    [8, 2, 8, 5, 2],
+    [3, 3, 3],
+    [4, 5, 6, 7],
+    [30, 40, 30, 50, 40],
+    [15],
+    [9, 8, 7, 9, 8, 7],
+    [200, 100, 200, 100, 75],
+    [1, 1, 2, 3, 2, 4],
 )
 
 _P86 = _page(
@@ -298,6 +346,14 @@ _UNPACKS = (
     (("a", "b"), (99, 1)),
     (("day", "month", "year"), (1, 9, 2026)),
     (("left", "right"), (3, 3)),
+    (("p", "q"), (4, 5)),
+    (("lo", "hi"), (12, 90)),
+    (("red", "green", "blue"), (10, 20, 30)),
+    (("top", "bottom"), (0, 200)),
+    (("x", "y", "z"), (2, 4, 6)),
+    (("rows", "cols"), (8, 12)),
+    (("hour", "minute"), (9, 45)),
+    (("a", "b", "c"), (100, 200, 300)),
 )
 
 _P87 = _page(
@@ -335,6 +391,14 @@ _ENUMERATES = (
     ["alpha", "beta", "gamma"],
     ["up", "down", "left", "right"],
     ["start", "middle", "end"],
+    ["gold", "silver", "bronze"],
+    ["four", "five"],
+    ["w", "x", "y", "z"],
+    ["thursday", "friday", "saturday"],
+    ["only"],
+    ["spring", "summer", "autumn", "winter"],
+    ["tea", "coffee"],
+    ["la", "ti", "do"],
 )
 
 _P88 = _page(
@@ -372,6 +436,14 @@ _ZIPS = (
     ([50, 40, 30], [5, 4, 3], "x - y", "the first minus the second"),
     ([4, 5, 6], [4, 5, 6], "x + y", "the two added"),
     ([11, 22, 33], [10, 20, 30], "x - y", "the first minus the second"),
+    ([4, 5, 6], [40, 50, 60], "x + y", "the two added"),
+    ([7, 8], [3, 4], "x * y", "the two multiplied"),
+    ([90, 80, 70], [9, 8, 7], "x - y", "the first minus the second"),
+    ([3, 6, 9, 12], [2, 2, 2, 2], "x + y", "the two added"),
+    ([19, 23, 29], [5, 5, 5], "x % y", "the remainder of the first over the second"),
+    ([500, 250], [100, 50], "x - y", "the first minus the second"),
+    ([2, 2, 2], [4, 5, 6], "x * y", "the two multiplied"),
+    ([15, 25, 35], [4, 6, 8], "x + y", "the two added"),
 )
 
 _P89 = _page(
@@ -410,6 +482,14 @@ _SORTS = (
     ["north", "up", "east"],
     ["hello", "hi", "hey"],
     ["alpha", "be", "gamma", "pi"],
+    ["elephant", "ant", "otter"],
+    ["four", "a", "three"],
+    ["zz", "y", "xxx"],
+    ["gold", "tin", "silver"],
+    ["la", "ti", "solfa"],
+    ["java", "c", "kotlin"],
+    ["brief", "considerably longer", "middling"],
+    ["dd", "e", "fff", "cccc"],
 )
 
 _P90 = _page(

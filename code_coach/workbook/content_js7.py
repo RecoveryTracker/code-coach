@@ -59,6 +59,14 @@ _RIGHTS = (
     ("in", "out"),
     ("left", "right"),
     ("p", "q", "r"),
+    ("d", "e", "f"),
+    ("u", "v", "w"),
+    ("three", "four"),
+    ("la", "ti", "do"),
+    ("gold", "tin"),
+    ("l", "i", "s", "t"),
+    ("front", "back"),
+    ("near", "far"),
 )
 
 _P141 = _page(
@@ -101,6 +109,14 @@ _BREAKS = (
     (3, 5, "left"),
     (5, 15, "past it"),
     (4, 10, "away"),
+    (5, 7, "wrapped up"),
+    (6, 10, "all done"),
+    (4, 5, "broken out"),
+    (7, 20, "that is enough"),
+    (3, 7, "stepped out"),
+    (5, 11, "leaving now"),
+    (6, 14, "quit early"),
+    (4, 9, "no further"),
 )
 
 _P142 = _page(
@@ -149,6 +165,14 @@ _DESCRIPTORS = (
     ("rey", "seal", 30, 3),
     ("finn", "hidden", 21, 12),
     ("nell", "inner", 9, 90),
+    ("gus", "secret", 51, 77),
+    ("hal", "token", 9, 18),
+    ("ivy", "code", 4, 16),
+    ("jan", "key", 23, 46),
+    ("kit", "id", 11, 110),
+    ("lee", "stamp", 66, 6),
+    ("mia", "ref", 14, 28),
+    ("noa", "slot", 72, 36),
 )
 
 _P143 = _page(
@@ -205,6 +229,14 @@ _PROTOS = (
     ("move", "travelling", "mode", "bus"),
     ("tick", "counting", "unit", "seconds"),
     ("apply_it", "changed", "kind", "blur"),
+    ("hail", "good day", "name", "finn"),
+    ("call", "moo", "breed", "friesian"),
+    ("outline", "square", "colour", "teal"),
+    ("state", "resting", "task", "waiting"),
+    ("locate", "in memory", "path", "cache"),
+    ("crank", "clatter", "fuel", "diesel"),
+    ("scan", "characters", "source", "stream"),
+    ("emit", "printed", "target", "console"),
 )
 
 _P144 = _page(
@@ -261,6 +293,14 @@ _TYPES = (
     ("/x/", "object"),
     ("NaN", "number"),
     ("new Map()", "object"),
+    ("null", "object"),
+    ("[]", "object"),
+    ("0.5", "number"),
+    ("false", "boolean"),
+    ("new Set()", "object"),
+    ("(function () {})", "function"),
+    ("5n", "bigint"),
+    ("Symbol.iterator", "symbol"),
 )
 
 _P145 = _page(
@@ -306,6 +346,14 @@ _RADIXES = (
     (170, "aa"),
     (63, "3f"),
     (4095, "fff"),
+    (511, "1ff"),
+    (32, "20"),
+    (15, "f"),
+    (250, "fa"),
+    (4096, "1000"),
+    (85, "55"),
+    (192, "c0"),
+    (1023, "3ff"),
 )
 
 _P146 = _page(
@@ -351,6 +399,14 @@ _URLS = (
     ("k&l", "http://test.example.me/run?case=one&loud=yes", "case"),
     ("y z", "https://mail.example.info/box?folder=in&page=1", "folder"),
     ("c&d", "https://news.example.tv/story?id=99&full=true", "full"),
+    ("d e&f", "https://example.com/page?x=3&y=4", "x"),
+    ("three four", "https://example.org/list?a=7&b=8", "a"),
+    ("p=q&r", "http://localhost:5173/api?lang=js&page=5", "page"),
+    ("good day", "https://docs.example.com/seek?q=arrays&n=20", "n"),
+    ("s&t", "https://shop.example.net/bag?id=77&qty=3", "qty"),
+    ("c?d", "https://api.example.io/v3?key=xyz&fmt=csv", "key"),
+    ("u v", "http://blog.example.uk/notes?tag=js&sort=old", "sort"),
+    ("w&x&y", "https://files.example.co/dir?dir=down&show=few", "dir"),
 )
 
 _P147 = _page(
@@ -398,6 +454,14 @@ _SPARSE = (
     (3, 9, 7),
     (6, 18, 2),
     (12, 36, 4),
+    (2, 6, 3),
+    (6, 18, 4),
+    (15, 45, 2),
+    (9, 27, 5),
+    (3, 9, 6),
+    (5, 15, 3),
+    (200, 600, 2),
+    (14, 42, 3),
 )
 
 _P148 = _page(
@@ -445,6 +509,14 @@ _ARGUMENTS = (
     ("readOld", "readNew", "asJoined", (12, 24, 36, 48)),
     ("sawOld", "sawNew", "asOne", (5, 10, 15)),
     ("heldOld", "heldNew", "asString", (9, 8)),
+    ("tallyOldWay", "tallyNewWay", "joinUp", (2, 3, 4)),
+    ("countedOld", "countedNew", "listOut", (7, 8)),
+    ("widthOld", "widthNew", "showEach", (15, 25, 35)),
+    ("sumOld", "sumNew", "asWords", (6, 7, 8, 9)),
+    ("spanOld", "spanNew", "spellIt", (3, 5)),
+    ("markOld", "markNew", "drawAll", (12, 24, 36)),
+    ("seenOld", "seenNew", "writeAll", (2, 2, 2)),
+    ("keptOld", "keptNew", "asRow", (300, 400)),
 )
 
 _P149 = _page(
@@ -499,6 +571,14 @@ _COERCIONS = (
     ("30", 10, 6),
     ("64", 4, 11),
     ("12", 7, 20),
+    ("6", 3, 2),
+    ("11", 4, 6),
+    ("50", 3, 1),
+    ("8", 5, 10),
+    ("200", 2, 3),
+    ("9", 4, 8),
+    ("25", 6, 4),
+    ("14", 7, 5),
 )
 
 _P150 = _page(

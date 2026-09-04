@@ -47,7 +47,8 @@ def _seq(items) -> str:
 
 # Twelve different counts: the only thing that varies on this page is
 # how far the loop runs, so a repeated count is a repeated exercise.
-_LOOPS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+_LOOPS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+          19, 20, 21)
 
 _P121 = _page(
     "js-var-let",
@@ -92,6 +93,14 @@ _HOISTS = (
     ("low", "high", 1, 99),
     ("near", "far", 20, 40),
     ("in_first", "in_second", 13, 26),
+    ("sooner", "afterwards", 3, 6),
+    ("front", "rear", 4, 8),
+    ("three", "four", 9, 18),
+    ("upper", "lower", 5, 15),
+    ("prior", "post", 7, 21),
+    ("nose", "tail", 12, 24),
+    ("inner", "outer", 14, 28),
+    ("opening", "closing", 10, 30),
 )
 
 _P122 = _page(
@@ -151,6 +160,14 @@ _PEOPLE = (
     ("order", (("mix", 2), ("bake", 3), ("weigh", 1))),
     ("length", (("sky", 3), ("mountain", 8), ("lake", 4))),
     ("miles", (("north", 120), ("south", 40), ("east", 75))),
+    ("score", (("finn", 82), ("kit", 4), ("ida", 37))),
+    ("points", (("whites", 23), ("ambers", 55), ("violets", 9))),
+    ("pages", (("ubik", 261), ("valis", 190), ("maze", 224))),
+    ("people", (("ripon", 17), ("oslo", 709), ("lima", 998))),
+    ("seconds", (("art", 224), ("sons", 207), ("warszawa", 386))),
+    ("melting", (("tin", 232), ("lead", 327), ("gold", 1064))),
+    ("depth", (("shallow", 2), ("middle", 40), ("deep", 15))),
+    ("count", (("kiwi", 21), ("plum", 5), ("sloe", 13))),
 )
 
 _P123 = _page(
@@ -201,6 +218,14 @@ _GROUPINGS = (
     (("gold", "grey", "hill", "hawk"), "g"),
     (("lake", "lily", "moth", "mole"), "l"),
     (("tea", "toad", "urn", "user"), "t"),
+    (("fox", "fig", "owl", "oak"), "f"),
+    (("hen", "hog", "ibex", "imp"), "h"),
+    (("jade", "jet", "kelp", "kite"), "j"),
+    (("newt", "nest", "otter", "oak"), "n"),
+    (("rye", "reed", "sage", "sorrel"), "r"),
+    (("vine", "vole", "wasp", "willow"), "v"),
+    (("acorn", "ash", "birch", "bramble"), "b"),
+    (("dove", "deer", "elm", "elder"), "e"),
 )
 
 _P124 = _page(
@@ -249,6 +274,14 @@ _RESTS = (
     ((("level", "info"), ("target", "file"), ("rotate", "daily")), "keep", "seven"),
     ((("engine", "v8"), ("gc", "auto"), ("heap", "large")), "threads", "one"),
     ((("scheme", "https"), ("depth", "one"), ("agent", "bot")), "timeout", "thirty"),
+    ((("host", "remote"), ("port", "5173"), ("mode", "fast")), "trace", "off"),
+    ((("name", "finn"), ("city", "oslo"), ("role", "ops")), "squad", "none"),
+    ((("theme", "light"), ("font", "sans"), ("size", "small")), "accent", "teal"),
+    ((("lang", "fr"), ("units", "imperial"), ("zone", "cet")), "region", "us"),
+    ((("sort", "date"), ("order", "down"), ("limit", "five")), "filter", "some"),
+    ((("shell", "zsh"), ("editor", "emacs"), ("pager", "more")), "prompt", "rich"),
+    ((("codec", "ascii"), ("newline", "crlf"), ("bom", "yes")), "locale", "en"),
+    ((("cache", "off"), ("retries", "one"), ("delay", "two")), "backoff", "linear"),
 )
 
 _P125 = _page(
@@ -302,6 +335,14 @@ _TAGGED = (
     ("print_it", "word ", " length ", "", "sky", 3, "&", " ; ", "+"),
     ("give", "trip ", " miles ", ".", "north", 120, "^", " , ", ";"),
     ("form", "task ", " order ", "", "mix", 2, "!", " = ", ","),
+    ("holler", "greet ", " aged ", "!", "finn", 27, "|", " :: ", ","),
+    ("frame", "who ", " year ", ".", "ida", 44, "/", " -- ", ";"),
+    ("stamp_it", "person ", " count ", "?", "kit", 15, "*", " => ", "+"),
+    ("render", "town ", " people ", "", "ripon", 17, "-", " | ", ","),
+    ("badge", "metal ", " melts ", "", "tin", 232, "+", " : ", "-"),
+    ("caption", "book ", " pages ", ".", "ubik", 224, "~", " >> ", ","),
+    ("banner", "track ", " seconds ", "", "art", 224, "=", " ~ ", "/"),
+    ("shout_it", "side ", " points ", "!", "blues", 12, "#", " -> ", ","),
 )
 
 _P126 = _page(
@@ -373,6 +414,14 @@ _SYMBOLS = (
     ("stamp", "rey", 30),
     ("hidden", "finn", 21),
     ("inner", "nell", 9),
+    ("badge", "gus", 11),
+    ("ticket", "hal", 63),
+    ("private", "ivy", 4),
+    ("label", "jan", 27),
+    ("pointer", "kit", 9),
+    ("seal", "lee", 72),
+    ("keyed", "mia", 16),
+    ("bucket", "noa", 48),
 )
 
 _P127 = _page(
@@ -420,6 +469,14 @@ _WEAKS = (
     ("Widget", "serial", 88),
     ("Room", "capacity", 30),
     ("Batch", "count", 24),
+    ("Ledger", "balance", 75),
+    ("Link", "token", 9),
+    ("Runner", "score", 82),
+    ("Entry", "version", 5),
+    ("Leaf", "depth", 16),
+    ("Pass", "seat", 27),
+    ("Basket", "total", 480),
+    ("Page", "size", 2048),
 )
 
 _P128 = _page(
@@ -472,6 +529,14 @@ _PROXIES = (
     ("depth", 12, "breadth", "not set"),
     ("rows", 8, "cols", "unspecified"),
     ("start", 1, "end", "open"),
+    ("present", 9, "absent", "not there"),
+    ("host", 5173, "scheme", "unset"),
+    ("label", 2, "caption", "no caption"),
+    ("depth", 55, "shade", "unknown"),
+    ("tally", 12, "sum", "none"),
+    ("points", 82, "place", "unplaced"),
+    ("across", 40, "down", "not given"),
+    ("year", 1985, "day", "unknown"),
 )
 
 _P129 = _page(
@@ -529,6 +594,14 @@ _FREEZES = (
     ("tier", "free", "paid", ("basic", "extra")),
     ("shell", "bash", "zsh", ("run", "stop")),
     ("codec", "utf8", "ascii", ("in", "out")),
+    ("mode", "fast", "slow", ("c", "d")),
+    ("level", "warn", "error", ("three", "four")),
+    ("theme", "sepia", "mono", ("green", "amber")),
+    ("state", "locked", "free", ("m", "n")),
+    ("kind", "audio", "video", ("r", "s")),
+    ("sort", "size", "kind", ("first", "last")),
+    ("host", "staging", "live", ("test", "real")),
+    ("format", "yaml", "toml", ("top", "foot")),
 )
 
 _P130 = _page(

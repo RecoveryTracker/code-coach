@@ -59,6 +59,14 @@ _SLICES = (
     ((12, 24, 36, 48), 0, 3, 2),
     ((7, 14, 21, 28, 35), 2, 5, 2),
     ((3, 6, 9, 12), 1, 4, 3),
+    ((2, 4, 6, 8, 10), 1, 3, 2),
+    ((15, 25, 35, 45), 1, 3, 1),
+    ((6, 7, 8, 9, 10), 2, 4, 2),
+    ((5, 6, 7, 8), 0, 2, 1),
+    ((13, 26, 39, 52, 65), 1, 4, 3),
+    ((3, 6, 9, 12), 1, 3, 2),
+    ((11, 10, 9, 8, 7), 0, 3, 2),
+    ((500, 600, 700, 800), 2, 4, 1),
 )
 
 _P101 = _page(
@@ -110,6 +118,14 @@ _GENERATORS = (
     ("less", "n - 1", 5),
     ("sevens", "n * 7", 3),
     ("halves", "n * 50", 4),
+    ("countOn", "n * 4", 4),
+    ("cubesOf", "n * n * n", 4),
+    ("twenties", "n * 20", 3),
+    ("plusTwo", "n + 2", 5),
+    ("quads", "n * 4", 4),
+    ("thousands", "n * 1000", 3),
+    ("tripled", "n + n + n", 4),
+    ("nines", "n * 9", 3),
 )
 
 _P102 = _page(
@@ -159,6 +175,14 @@ _ACCESSORS = (
     ("Song", "seconds", 30, 12, 5),
     ("Card", "rank", 11, 4, 7),
     ("Team", "players", 11, 9, 2),
+    ("Crate", "depth", 8, 12, 3),
+    ("Barrel", "litres", 90, 30, 4),
+    ("Rack", "books", 11, 6, 5),
+    ("Field", "metres", 25, 9, 2),
+    ("Pallet", "items", 14, 4, 7),
+    ("Stack", "bricks", 144, 20, 3),
+    ("Run", "miles", 60, 35, 5),
+    ("Tab", "pence", 96, 13, 4),
 )
 
 _P103 = _page(
@@ -222,6 +246,14 @@ _STATICS = (
     ("File", "made", "howMany", 4),
     ("Task", "started", "total", 8),
     ("Guest", "arrived", "count", 3),
+    ("Gadget", "made", "howMany", 4),
+    ("Drone", "built", "total", 6),
+    ("Pass", "issued", "count", 3),
+    ("Link", "opened", "howMany", 5),
+    ("Leaf", "created", "total", 7),
+    ("Hand", "dealt", "count", 2),
+    ("Batch", "queued", "howMany", 4),
+    ("Member", "signedUp", "total", 3),
 )
 
 _P104 = _page(
@@ -272,6 +304,14 @@ _EXTENDS = (
     ("Vehicle", "Bus", "move", "travels", "- with seats", ("van", "coach")),
     ("Timer", "Alarm", "tick", "counts time", "- and rings", ("t1", "t2")),
     ("Filter", "Blur", "apply", "changes it", "- softly", ("f1", "f2")),
+    ("Animal", "Cow", "speak", "makes a sound", "- moo", ("hen", "bess")),
+    ("Shape", "Square", "describe", "has edges", "- four", ("dot", "box")),
+    ("Worker", "Smith", "report", "is working", "- hammering", ("kim", "lee")),
+    ("Store", "Tape", "where", "keeps things", "- on tape", ("ram", "reel")),
+    ("Engine", "Diesel", "start", "turns over", "- clatter", ("three", "four")),
+    ("Reader", "Json", "read", "reads bytes", "- and braces", ("txt", "obj")),
+    ("Sender", "Post", "send", "sends it", "- by van", ("p", "q")),
+    ("Player", "Drum", "play", "makes music", "- thud", ("mo", "ned")),
 )
 
 _P105 = _page(
@@ -339,6 +379,14 @@ _ITERABLES = (
     ("Fives", "n * 5", 4, 3),
     ("Less", "n - 1", 5, 2),
     ("Sevens", "n * 7", 3, 2),
+    ("Counting", "n", 5, 2),
+    ("Quads", "n * 4", 4, 3),
+    ("Cubed", "n * n * n", 4, 2),
+    ("Twenties", "n * 20", 3, 2),
+    ("Paces", "n + 2", 5, 3),
+    ("Nines", "n * 9", 4, 2),
+    ("Thousands", "n * 1000", 3, 2),
+    ("Trebles", "n + n + n", 4, 3),
 )
 
 _P106 = _page(
@@ -399,6 +447,14 @@ _REGEXES = (
     ("saw/3", "tool", "weight", "/", "kg"),
     ("sky+3", "word", "length", r"\+", "len"),
     ("north+120", "trip", "miles", r"\+", "far"),
+    ("finn:27", "name", "age", ":", "??"),
+    ("ida:44", "who", "years", ":", "##"),
+    ("ripon=17", "city", "people", "=", "many"),
+    ("lima=998", "place", "count", "=", "some"),
+    ("tin-50", "metal", "number", "-", "NN"),
+    ("ubik#224", "book", "pages", "#", "lots"),
+    ("blues/12", "team", "points", "/", "pts"),
+    ("moon+4", "word", "length", r"\+", "len"),
 )
 
 _P107 = _page(
@@ -457,6 +513,14 @@ _PARSES = (
     ("24fps", 0.6, 0.3),
     ("64kb", 4.4, 2.2),
     ("90deg", 0.8, 0.15),
+    ("36px", 0.5, 0.25),
+    ("48cm", 1.2, 2.4),
+    ("9kg", 0.4, 0.8),
+    ("75%", 0.9, 0.3),
+    ("20mm", 3.5, 1.75),
+    ("90s", 0.2, 0.9),
+    ("14em", 2.2, 1.1),
+    ("250ms", 0.6, 0.15),
 )
 
 _P108 = _page(
@@ -504,6 +568,14 @@ _TRUTHY = (
     ("{}", "null", '" "', "0"),
     ("[0]", "NaN", "-1", '""'),
     ("1", "undefined", "[]", "0"),
+    ("0", "null", '" "', "[0]"),
+    ('""', "1", "NaN", "{}"),
+    ("undefined", "[]", "-1", '"0"'),
+    ("NaN", "{}", "0", '" "'),
+    ("[0]", "undefined", '""', "1"),
+    ('" "', "0", "[]", "null"),
+    ("1", "NaN", '"0"', "-1"),
+    ("{}", "[0]", "undefined", '""'),
 )
 
 _P109 = _page(
@@ -546,6 +618,14 @@ _BINDS = (
     ("grid", "rows", 8, "height", 30),
     ("batch", "items", 24, "size", 6),
     ("room", "floor", 4, "level", 1),
+    ("tally", "total", 8, "show", 55),
+    ("crate", "depth", 15, "size", 60),
+    ("barrel", "litres", 90, "level", 9),
+    ("rack", "books", 12, "count", 30),
+    ("tab", "pence", 96, "amount", 250),
+    ("run", "miles", 180, "distance", 4),
+    ("squad", "players", 15, "howMany", 7),
+    ("track", "seconds", 386, "length", 90),
 )
 
 _P110 = _page(

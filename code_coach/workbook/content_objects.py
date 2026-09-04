@@ -61,6 +61,14 @@ _INITS = (
     ("File", (("name", "notes"), ("size", 1024)), ["name", "size"]),
     ("Colour", (("name", "red"), ("code", 255)), ["code"]),
     ("Room", (("number", 12), ("beds", 2)), ["number", "beds"]),
+    ("Cat", (("name", "mog"), ("lives", 9)), ["name", "lives"]),
+    ("Album", (("title", "kid a"), ("tracks", 10)), ["title", "tracks"]),
+    ("Seat", (("row", 12), ("number", 4)), ["row", "number"]),
+    ("Player", (("name", "sam"), ("shirt", 10)), ["shirt"]),
+    ("Crate", (("depth", 5), ("width", 8)), ["width", "depth"]),
+    ("Track", (("name", "two"), ("seconds", 185)), ["seconds"]),
+    ("Town", (("name", "ripon"), ("people", 17000)), ["name", "people"]),
+    ("Coin", (("metal", "copper"), ("value", 2)), ["value", "metal"]),
 )
 
 _P101 = _page(
@@ -103,6 +111,14 @@ _TWOS = (
     ("Room", ["number", "beds"], [12, 2], [13, 1], [(0, "beds"), (1, "beds")]),
     ("Colour", ["name", "code"], ["red", 255], ["blue", 16], [(0, "code"), (1, "code")]),
     ("Book", ["title", "pages"], ["dune", 412], ["ubik", 224], [(1, "title"), (0, "pages")]),
+    ("Cat", ["name", "lives"], ["mog", 9], ["tom", 4], [(0, "name"), (1, "lives")]),
+    ("Seat", ["row", "number"], [1, 5], [12, 3], [(0, "row"), (1, "row")]),
+    ("Player", ["name", "shirt"], ["sam", 10], ["lee", 7], [(1, "name"), (0, "shirt")]),
+    ("Crate", ["depth", "width"], [5, 8], [50, 80], [(0, "depth"), (1, "width")]),
+    ("Coin", ["metal", "value"], ["copper", 2], ["silver", 50], [(1, "metal"), (0, "value")]),
+    ("Track", ["name", "secs"], ["two", 185], ["three", 240], [(0, "secs"), (1, "secs")]),
+    ("Town", ["name", "people"], ["ripon", 17], ["thirsk", 9], [(0, "people"), (1, "name")]),
+    ("Album", ["title", "tracks"], ["kid a", 10], ["ok", 12], [(1, "title"), (1, "tracks")]),
 )
 
 _P102 = _page(
@@ -154,6 +170,14 @@ _METHODS = (
     ("Basket", (("apples", 7), ("pears", 5)), "total", "apples + pears", "the total fruit"),
     ("Clock", (("minutes", 135),), "spare", "minutes % 60", "the spare minutes"),
     ("Line", (("length", 9),), "half", "length // 2", "half its length"),
+    ("Triangle", (("base", 6), ("height", 4)), "area", "base * height // 2", "its area"),
+    ("Shelf", (("books", 24),), "stacks", "books // 6", "how many stacks of six"),
+    ("Coord", (("x", 7), ("y", 9)), "total", "x + y", "x plus y"),
+    ("Purse", (("pence", 275),), "pounds", "pence // 100", "whole pounds"),
+    ("Field", (("w", 20), ("h", 15)), "perimeter", "w * 2 + h * 2", "its perimeter"),
+    ("Journey", (("minutes", 200),), "spare", "minutes % 60", "the spare minutes"),
+    ("Tin", (("depth", 4),), "volume", "depth * depth * depth", "its volume"),
+    ("Gap", (("hi", 90), ("lo", 25)), "size", "hi - lo", "hi minus lo"),
 )
 
 _P103 = _page(
@@ -196,6 +220,14 @@ _METHOD_ARGS = (
     ("Tank", (("litres", 60),), "use", "n", "litres - n", "the litres minus n", [15, 60]),
     ("Step", (("size", 3),), "times", "n", "size * n + size", "size times n, plus size", [4, 1]),
     ("Cash", (("pounds", 200),), "split", "n", "pounds // n", "the pounds divided by n", [5, 8]),
+    ("Tally", (("count", 20),), "plus", "n", "count + n", "the count plus n", [7, 80]),
+    ("Crate", (("size", 6),), "expand", "n", "size * n", "the size times n", [3, 9]),
+    ("Purse", (("pence", 500),), "spend", "n", "pence - n", "the pence minus n", [125, 500]),
+    ("Shelf", (("books", 30),), "stacks", "n", "books // n", "the books divided by n", [5, 6]),
+    ("Field", (("width", 18),), "strips", "n", "width % n", "the remainder over n", [5, 4]),
+    ("Journey", (("minutes", 45),), "later", "n", "minutes + n", "the minutes plus n", [15, 75]),
+    ("Rope", (("metres", 24),), "cut", "n", "metres // n", "the metres divided by n", [3, 8]),
+    ("Stair", (("rise", 7),), "flights", "n", "rise * n + rise", "rise times n, plus rise", [5, 2]),
 )
 
 _P104 = _page(
@@ -246,6 +278,14 @@ _REPRS = (
     ("Vec", (("x", -1), ("y", 4))),
     ("Slot", (("index", 12), ("count", 3))),
     ("Gap", (("start", 5), ("end", 11))),
+    ("Coord", (("x", 5), ("y", 6))),
+    ("Coord", (("x", 70), ("y", 80))),
+    ("Duo", (("a", 3), ("b", 11))),
+    ("Extent", (("w", 640), ("h", 480))),
+    ("Seat", (("row", 12), ("number", 4))),
+    ("Span", (("lo", 10), ("hi", 60))),
+    ("Tile", (("row", 6), ("col", 9))),
+    ("Result", (("home", 2), ("away", 2))),
 )
 
 _P105 = _page(
@@ -287,6 +327,14 @@ _DATACLASSES = (
     ("Room", (("number", "int", 12), ("beds", "int", 2))),
     ("Colour", (("name", "str", "red"), ("code", "int", 255))),
     ("Range", (("lo", "int", 0), ("hi", "int", 99))),
+    ("Coord", (("x", "int", 5), ("y", "int", 6))),
+    ("Player", (("name", "str", "sam"), ("shirt", "int", 10))),
+    ("Crate", (("depth", "int", 5), ("width", "int", 8))),
+    ("Coin", (("metal", "str", "copper"), ("value", "int", 2))),
+    ("Track", (("name", "str", "two"), ("seconds", "int", 185))),
+    ("Tile", (("row", "int", 6), ("col", "int", 9))),
+    ("Album", (("title", "str", "kid a"), ("tracks", "int", 10))),
+    ("Result", (("home", "int", 2), ("away", "int", 2))),
 )
 
 _P106 = _page(
@@ -329,6 +377,14 @@ _SHARED = (
     ("File", ("system", "ntfs"), "name", ["a", "b"]),
     ("Coin", ("currency", "gbp"), "value", [1, 50]),
     ("Tree", ("kingdom", "plant"), "height", [5, 20]),
+    ("Cat", ("kind", "cat"), "name", ["mog", "tom"]),
+    ("Triangle", ("sides", 3), "base", [6, 12]),
+    ("Player", ("sport", "football"), "name", ["sam", "lee"]),
+    ("Hexagon", ("sides", 6), "side", [4, 9]),
+    ("Coin", ("currency", "gbp"), "value", [2, 20]),
+    ("Seat", ("carriage", "a"), "row", [1, 12]),
+    ("Track", ("format", "flac"), "name", ["two", "three"]),
+    ("Crate", ("material", "wood"), "depth", [5, 50]),
 )
 
 _P107 = _page(
@@ -375,6 +431,14 @@ _INHERITS = (
     ("Place", "City", "name", "leeds", "describe", "a place called "),
     ("Tool", "Hammer", "name", "big", "label", "tool: "),
     ("Message", "Email", "text", "hello", "show", "message: "),
+    ("Animal", "Cat", "name", "mog", "describe", "an animal called "),
+    ("Shape", "Circle", "name", "ring", "label", "a shape called "),
+    ("Person", "Teacher", "name", "kim", "greet", "good morning, "),
+    ("Vehicle", "Bus", "model", "routemaster", "describe", "a vehicle: "),
+    ("Item", "Album", "title", "kid a", "label", "item: "),
+    ("Place", "Town", "name", "ripon", "describe", "a place called "),
+    ("Tool", "Saw", "name", "sharp", "label", "tool: "),
+    ("Event", "Match", "title", "final", "show", "event: "),
 )
 
 _P108 = _page(
@@ -423,6 +487,14 @@ _OVERRIDES = (
     ("Payment", "Card", "method", "unknown", "card"),
     ("Message", "Email", "channel", "none", "email"),
     ("Store", "Cache", "speed", "normal", "fast"),
+    ("Animal", "Cow", "sound", "...", "moo"),
+    ("Animal", "Duck", "sound", "...", "quack"),
+    ("Shape", "Triangle", "sides", "unknown", "three"),
+    ("Person", "Teacher", "role", "person", "teacher"),
+    ("Vehicle", "Bike", "wheels", "some", "two"),
+    ("Greeter", "Stranger", "greet", "hello", "good day"),
+    ("Item", "Album", "kind", "thing", "album"),
+    ("Place", "Town", "kind", "place", "town"),
 )
 
 _P109 = _page(
@@ -469,6 +541,14 @@ _SUPERS = (
     ("Tool", "Drill", "name", "speed", ["big", 3000]),
     ("Message", "Email", "text", "subject", ["hello", "hi"]),
     ("Node", "Leaf", "tag", "depth", ["root", 7]),
+    ("Animal", "Cat", "name", "lives", ["mog", 9]),
+    ("Shape", "Circle", "name", "radius", ["ring", 7]),
+    ("Person", "Teacher", "name", "subject", ["kim", "maths"]),
+    ("Vehicle", "Bus", "model", "seats", ["routemaster", 62]),
+    ("Item", "Album", "title", "tracks", ["kid a", 10]),
+    ("Place", "Town", "name", "people", ["ripon", 17000]),
+    ("Tool", "Saw", "name", "teeth", ["sharp", 24]),
+    ("Event", "Match", "title", "minutes", ["final", 90]),
 )
 
 _P110 = _page(

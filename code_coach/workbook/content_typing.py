@@ -99,6 +99,26 @@ _HINTED = (
         ((3, 4), (8, 5)),
     ),
     ("thrice", (("n", "int"),), "int", "n * 3", ((4,), (11,))),
+    ("plus", (("a", "int"), ("b", "int")), "int", "a + b + 1", ((4, 5), (9, 1))),
+    ("scale", (("a", "int"), ("b", "int")), "int", "a * b * 2", ((2, 5), (3, 3))),
+    (
+        "gap_of",
+        (("first", "int"), ("second", "int")),
+        "int",
+        "second - first",
+        ((3, 10), (8, 2)),
+    ),
+    ("triple", (("n", "int"),), "int", "n * 3", ((8,), (14,))),
+    ("cube_of", (("n", "int"),), "int", "n * n * n", ((4,), (7,))),
+    (
+        "average",
+        (("a", "int"), ("b", "int")),
+        "int",
+        "(a + b) // 2",
+        ((10, 20), (7, 8)),
+    ),
+    ("tenths", (("n", "int"),), "int", "n // 10", ((95,), (7,))),
+    ("wrap", (("n", "int"), ("m", "int")), "int", "n % m", ((17, 5), (40, 6))),
 )
 
 _P121 = _page(
@@ -198,6 +218,49 @@ _LIST_HINTED = (
     ),
     ("last", "numbers", "int", "int", "numbers[-1]", ([1, 2, 3], [8, 4])),
     ("second", "numbers", "int", "int", "numbers[1]", ([5, 6, 7], [1, 2, 3])),
+    (
+        "added_up",
+        "numbers",
+        "int",
+        "int",
+        "sum(numbers)",
+        ([4, 5, 6], [30, 40]),
+    ),
+    ("counted", "numbers", "int", "int", "len(numbers)", ([1, 2], [9, 9, 9])),
+    ("highest", "numbers", "int", "int", "max(numbers)", ([2, 11, 5], [8, 3])),
+    ("lowest", "numbers", "int", "int", "min(numbers)", ([2, 11, 5], [8, 3])),
+    (
+        "doubled_up",
+        "numbers",
+        "int",
+        "int",
+        "sum(numbers) * 2",
+        ([1, 2, 3], [10, 5]),
+    ),
+    (
+        "first_of",
+        "numbers",
+        "int",
+        "int",
+        "numbers[0]",
+        ([7, 8, 9], [40, 1]),
+    ),
+    (
+        "last_of",
+        "numbers",
+        "int",
+        "int",
+        "numbers[-1]",
+        ([7, 8, 9], [40, 1]),
+    ),
+    (
+        "middle_sum",
+        "numbers",
+        "int",
+        "int",
+        "sum(numbers) % 100",
+        ([60, 70], [5, 5, 5]),
+    ),
 )
 
 _P122 = _page(
@@ -256,6 +319,14 @@ _OPTIONAL = (
     ("pick", "choice", "default", (None, "left")),
     ("host_of", "host", "localhost", ("example", None)),
     ("word_or", "word", "blank", (None, "sky", None)),
+    ("place_of", "place", "somewhere", ("oslo", None)),
+    ("hail", "who", "stranger", (None, "kim")),
+    ("book_or", "book", "no book", ("dune", None, "ubik")),
+    ("byname", "given", "no one", (None, "finn")),
+    ("shade_of", "shade", "colourless", ("teal", None, "grey")),
+    ("side_of", "side", "neither", ("blues", None)),
+    ("note_or", "note", "silence", (None, "middle c")),
+    ("maker_of", "maker", "unattributed", ("bowie", None, "kate")),
 )
 
 _P123 = _page(
@@ -312,6 +383,14 @@ _DATACLASSES = (
     ("Step", "step", (("label", "str"), ("order", "int")), ("mix", 2)),
     ("Room", "room", (("floor", "int"), ("number", "int")), (3, 12)),
     ("Track", "track", (("artist", "str"), ("year", "int")), ("Bowie", 1977)),
+    ("Coord", "coord", (("x", "int"), ("y", "int")), (7, 9)),
+    ("Extent", "extent", (("width", "int"), ("height", "int")), (64, 48)),
+    ("Album", "album", (("title", "str"), ("tracks", "int")), ("Low", 11)),
+    ("Track", "track", (("name", "str"), ("seconds", "int")), ("Warszawa", 386)),
+    ("Note", "note", (("pitch", "str"), ("octave", "int")), ("C", 4)),
+    ("Runner", "runner", (("name", "str"), ("place", "int")), ("kim", 3)),
+    ("Span", "span", (("low", "int"), ("high", "int")), (11, 47)),
+    ("Town", "town", (("name", "str"), ("people", "int")), ("Ripon", 17)),
 )
 
 _P124 = _page(
@@ -369,6 +448,21 @@ _DATACLASS_METHODS = (
      "bricks // rows"),
     ("Bill", (("price", "int", 45), ("people", "int", 3)), "share",
      "price // people"),
+    ("Plot", (("width", "int", 9), ("depth", "int", 7)), "area",
+     "width * depth"),
+    ("Square", (("side", "int", 8), ("count", "int", 3)), "perimeter",
+     "4 * side * count"),
+    ("Gap", (("low", "int", 12), ("high", "int", 40)), "size", "high - low"),
+    ("Duo", (("first", "int", 15), ("second", "int", 6)), "total",
+     "first + second"),
+    ("Block", (("side", "int", 4), ("layers", "int", 3)), "volume",
+     "side * side * layers"),
+    ("Result", (("points", "int", 72), ("bonus", "int", 9)), "final",
+     "points + bonus"),
+    ("Share", (("whole", "int", 91), ("parts", "int", 7)), "each",
+     "whole // parts"),
+    ("Barrel", (("full", "int", 90), ("used", "int", 34)), "left",
+     "full - used"),
 )
 
 _P125 = _page(
@@ -416,6 +510,14 @@ _DD_COUNT = (
     (("north", "south", "north"), ("north", "east")),
     (("do", "re", "mi", "do", "re", "do"), ("do", "re", "fa")),
     (("salt", "pepper", "salt"), ("salt", "sugar")),
+    (("owl", "fox", "owl"), ("owl", "fox", "elk")),
+    (("gold", "gold", "gold", "tin"), ("gold", "tin", "iron")),
+    (("d", "e", "f", "d"), ("d", "f", "y")),
+    (("cow", "hen", "cow", "cow"), ("cow", "hen", "ewe")),
+    (("four", "five", "five"), ("five", "four", "ten")),
+    (("p", "q", "p", "q", "p"), ("p", "q", "r")),
+    (("thu", "fri", "thu"), ("thu", "sat")),
+    (("kiwi", "plum", "kiwi", "sloe"), ("kiwi", "sloe", "date")),
 )
 
 _P126 = _page(
@@ -461,6 +563,14 @@ _DD_GROUP = (
     (("gold", "grey", "hill"), ("g", "h", "j")),
     (("lake", "lily", "moth"), ("l", "m", "k")),
     (("tea", "toad", "urn"), ("t", "u", "v")),
+    (("bat", "bee", "cod"), ("b", "c", "d")),
+    (("hen", "hog", "ibex", "imp"), ("h", "i", "j")),
+    (("jade", "jet", "kelp"), ("j", "k", "l")),
+    (("newt", "nest", "otter"), ("n", "o", "q")),
+    (("rye", "reed", "sage"), ("r", "s", "t")),
+    (("vine", "vole", "wasp"), ("v", "w", "x")),
+    (("acorn", "ash", "birch"), ("a", "b", "z")),
+    (("fern", "fig", "gorse"), ("f", "g", "h")),
 )
 
 _P127 = _page(
@@ -506,6 +616,14 @@ _ENUMS = (
     ("Turn", (("LEFT", -1), ("RIGHT", 1)), "RIGHT", -1),
     ("Phase", (("START", 1), ("MIDDLE", 2), ("END", 3)), "START", 3),
     ("Mode", (("READ", 1), ("WRITE", 2), ("APPEND", 3)), "APPEND", 1),
+    ("Metal", (("GOLD", 1), ("SILVER", 2), ("TIN", 3)), "GOLD", 2),
+    ("Rank", (("LOW", 1), ("MID", 2), ("TOP", 3)), "MID", 3),
+    ("Season", (("SPRING", 1), ("SUMMER", 2)), "SUMMER", 1),
+    ("Signal", (("STOP", 0), ("GO", 1)), "GO", 0),
+    ("Weight", (("LIGHT", 5), ("HEAVY", 50)), "LIGHT", 50),
+    ("Door", (("SHUT", 0), ("AJAR", 1), ("OPEN", 2)), "OPEN", 1),
+    ("Tone", (("SOFT", 1), ("LOUD", 9)), "LOUD", 1),
+    ("Step", (("FIRST", 1), ("NEXT", 2), ("LAST", 3)), "LAST", 1),
 )
 
 _P128 = _page(
@@ -558,6 +676,14 @@ _FORMATS = (
     (12, ("+", "+04")),
     (98.6, (".1f", ".0f")),
     (1234, (">8", "08")),
+    (7654321, (",", ">14,")),
+    (63, ("6", "06")),
+    (2.71828, (".3f", ".5f")),
+    (9876.5432, (",.2f", ".1f")),
+    (9, ("04", "<5")),
+    (0.75, (".0%", ".2%")),
+    (555, (",", "07")),
+    (4321, (">10", "010")),
 )
 
 _P129 = _page(
@@ -604,6 +730,14 @@ _ROWS = (
     ((("front", 4), ("back", 55)), 7, 4),
     ((("bowie", 1977), ("kate", 1985), ("brian", 1970)), 8, 6),
     ((("salt", 1), ("pepper", 22), ("sugar", 333)), 9, 5),
+    ((("kiwi", 5), ("plum", 21), ("sloe", 9)), 8, 4),
+    ((("bolts", 240), ("nuts", 60)), 10, 5),
+    ((("finn", 82), ("kit", 4), ("ida", 37)), 6, 4),
+    ((("gold", 19), ("tin", 7), ("copper", 211)), 8, 5),
+    ((("thu", 3), ("fri", 18)), 5, 3),
+    ((("oslo", 709), ("ripon", 17)), 8, 6),
+    ((("la", 6), ("ti", 7), ("do", 8)), 4, 2),
+    ((("front", 9), ("middle", 44), ("back", 130)), 9, 5),
 )
 
 _P130 = _page(

@@ -58,6 +58,14 @@ _PRIVATES = (
     ("Store", "stock", "receive", 80, 12),
     ("Timer", "seconds", "extend", 30, 90),
     ("Track", "metres", "run_on", 400, 200),
+    ("Ledger", "balance", "add", 75, 30),
+    ("Crate", "total", "put", 14, 6),
+    ("Barrel", "litres", "pour", 90, 25),
+    ("Result", "points", "award", 72, 9),
+    ("Rack", "books", "stack", 12, 4),
+    ("Gauge", "reading", "advance", 150, 20),
+    ("Purse", "pence", "deposit", 500, 75),
+    ("Pallet", "items", "include", 36, 9),
 )
 
 _P151 = _page(
@@ -122,6 +130,14 @@ _FLOATS = (
     (0.17, 0.8, 0.97),
     (0.25, 0.42, 0.67),
     (0.32, 0.59, 0.91),
+    (0.03, 0.26, 0.29),
+    (0.04, 0.07, 0.11),
+    (0.05, 0.07, 0.12),
+    (0.06, 0.11, 0.17),
+    (0.07, 0.08, 0.15),
+    (0.08, 0.09, 0.17),
+    (0.09, 0.2, 0.29),
+    (0.1, 0.11, 0.21),
 )
 
 _P152 = _page(
@@ -169,6 +185,14 @@ _RAWS = (
     (r"G:\backup\old", "s\nt", 3),
     (r"C:\docs\note", "w\tx", 3),
     (r"H:\cache\tmp", "y\\z", 3),
+    (r"C:\Users\notes", "c\td", 3),
+    (r"D:\temp\draft", "q\nr", 3),
+    (r"E:\work\summary", "s\tt", 3),
+    (r"\\host\public", "c\\d", 3),
+    (r"C:\bin\deno", "3\t4", 3),
+    (r"F:\data\clean", "o\np", 3),
+    (r"C:\logs\web", "e\tf", 3),
+    (r"G:\media\reel", "i\\j", 3),
 )
 
 _P153 = _page(
@@ -219,6 +243,14 @@ _SEALS = (
     ("trip", "north", "miles", 120, 130, "route"),
     ("task", "mix", "order", 2, 3, "owner"),
     ("user", "sam", "score", 90, 95, "rank"),
+    ("name", "finn", "age", 27, 28, "extra"),
+    ("title", "ubik", "pages", 224, 300, "isbn"),
+    ("city", "oslo", "people", 709, 800, "region"),
+    ("metal", "tin", "number", 50, 51, "symbol"),
+    ("song", "art", "seconds", 224, 230, "album"),
+    ("team", "blues", "points", 12, 15, "league"),
+    ("tool", "plane", "weight", 7, 8, "brand"),
+    ("word", "moon", "length", 4, 7, "origin"),
 )
 
 _P154 = _page(
@@ -275,7 +307,8 @@ _P154 = _page(
 
 # ── 155. Answers remembered in a Map ─────────────────────────
 
-_MEMOS = (10, 12, 15, 8, 20, 11, 14, 9, 16, 13, 18, 7)
+_MEMOS = (10, 12, 15, 8, 20, 11, 14, 9, 16, 13, 18, 7, 17, 19, 21, 22,
+          23, 24, 25, 26)
 
 _P155 = _page(
     "js-memo-map",
@@ -320,6 +353,14 @@ _CURRIES = (
     ("join_up", "a + b", "plusOne", 1, 41, (9, 9)),
     ("grow", "a * b", "byTen", 10, 12, (5, 5)),
     ("cut", "a - b", "fromHundred", 100, 45, (60, 20)),
+    ("plus", "a + b", "addSeven", 7, 4, (3, 11)),
+    ("multiply", "a * b", "quadruple", 4, 9, (5, 6)),
+    ("raise", "a ** b", "threeTo", 3, 4, (2, 3)),
+    ("less", "a - b", "fromTwenty", 20, 6, (30, 9)),
+    ("stretch", "a * b", "bySix", 6, 8, (7, 3)),
+    ("bump", "a + b", "plusFifty", 50, 6, (2, 3)),
+    ("wrap_at", "a % b", "modNine", 9, 5, (23, 7)),
+    ("trim", "a - b", "fromEighty", 80, 25, (40, 15)),
 )
 
 _P156 = _page(
@@ -390,6 +431,14 @@ _FILLS = (
     (4, 8, (12, 24, 36, 48), 6, 0, 3),
     (3, 4, (100, 200, 300), 50, 1, 2),
     (6, 2, (1, 3, 5, 7, 9, 11), 0, 2, 6),
+    (5, 0, (2, 3, 4, 5, 6), 8, 1, 3),
+    (4, 1, (7, 8, 9, 10), 0, 0, 2),
+    (6, 7, (2, 2, 2, 2, 2, 2), 3, 2, 4),
+    (5, 2, (15, 25, 35, 45, 55), 6, 0, 3),
+    (4, 9, (3, 6, 9, 12), 5, 1, 3),
+    (7, 0, (1, 2, 3, 4, 5, 6, 7), 9, 3, 6),
+    (5, 5, (12, 11, 10, 9, 8), 4, 1, 5),
+    (4, 3, (13, 26, 39, 52), 55, 0, 1),
 )
 
 _P157 = _page(
@@ -450,6 +499,14 @@ _PRIMITIVES = (
     ("Power", "watts", 750, "W"),
     ("Depth", "metres", 30, "m"),
     ("Load", "kilos", 80, "kg"),
+    ("Cash", "pence", 480, "p"),
+    ("Span", "metres", 25, "m"),
+    ("Mass", "grams", 750, "g"),
+    ("Wait", "seconds", 120, "s"),
+    ("Turn", "degrees", 90, " deg"),
+    ("File", "bytes", 2048, "B"),
+    ("Pace", "knots", 24, "kn"),
+    ("Warmth", "celsius", 18, "C"),
 )
 
 _P158 = _page(
@@ -500,6 +557,14 @@ _DEEPS = (
     ("start", 0, "end", 31),
     ("left", 11, "right", 22),
     ("points", 41, "bonus", 7),
+    ("p", 3, "q", 4),
+    ("c", 7, "d", 8),
+    ("tally", 15, "total", 30),
+    ("across", 5, "down", 6),
+    ("third", 9, "fourth", 10),
+    ("least", 2, "most", 11),
+    ("rows", 6, "cols", 7),
+    ("miles", 60, "hours", 3),
 )
 
 _P159 = _page(
@@ -560,6 +625,14 @@ _CHAINS = (
     ("Trail", "mark", "print_it", ("start", "middle", "end"), " > "),
     ("Stack", "put", "flatten", ("first", "second"), "|"),
     ("Note", "line_of", "write_out", ("top", "bottom"), "\\n"),
+    ("Maker", "add", "build", ("d", "e", "f"), "-"),
+    ("Route", "step", "render", ("home", "finn", "diary"), "/"),
+    ("Filter", "where", "text", ("id", "town", "year"), " and "),
+    ("Row", "part", "join_up", ("three", "four"), " "),
+    ("Method", "then_do", "read", ("measure", "stir", "roast"), " then "),
+    ("Way", "via", "show", ("south", "west"), " to "),
+    ("Ring", "link", "out", ("p", "q", "r"), "+"),
+    ("Tune", "bar", "play", ("la", "ti", "do"), " "),
 )
 
 _P160 = _page(

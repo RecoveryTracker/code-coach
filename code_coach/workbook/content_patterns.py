@@ -71,6 +71,14 @@ _SEARCHES = (
     ("iron and gold", r"g\w+"),
     ("north by south", r"s\w+"),
     ("salt and pepper", r"p\w+"),
+    ("invoice 8842 paid", r"\d+"),
+    ("desk 3 is free", r"\d+"),
+    ("count: 9017 items", r"\d+"),
+    ("dial 999 today", r"\d+"),
+    ("grace wrote 1959", r"\d+"),
+    ("side 02 playing", r"\d+"),
+    ("morning light", r"l\w+"),
+    ("the brown dog", r"b\w+"),
 )
 
 _P149 = _page(
@@ -115,6 +123,14 @@ _GROUPS = (
     ("gold/79", r"(\w+)/(\d+)"),
     ("track#9", r"(\w+)#(\d+)"),
     ("room#404", r"(\w+)#(\d+)"),
+    ("finn:27", r"(\w+):(\d+)"),
+    ("ida:44", r"(\w+):(\d+)"),
+    ("ripon=17", r"(\w+)=(\d+)"),
+    ("lima=998", r"(\w+)=(\d+)"),
+    ("eno 1975", r"(\w+) (\d+)"),
+    ("byrne 1980", r"(\w+) (\d+)"),
+    ("depth-55", r"(\w+)-(\d+)"),
+    ("copper/29", r"(\w+)/(\d+)"),
 )
 
 _P150 = _page(
@@ -159,6 +175,14 @@ _FINDALLS = (
     ("bat bet bit", r"b.t"),
     ("aa ab ac", r"a\w"),
     ("do re mi", r"\w\w"),
+    ("d4 e55 f666", r"\d+"),
+    ("p6 q60 r600", r"\d+"),
+    ("four 4 five 5 six 6", r"\d+"),
+    ("lanes 3 and 33", r"\d+"),
+    ("port 22 and 8080", r"\d+"),
+    ("gold tin lead", r"\w+"),
+    ("hat hot hut", r"h.t"),
+    ("la ti do", r"\w\w"),
 )
 
 _P151 = _page(
@@ -201,6 +225,14 @@ _SUBS = (
     ("tabs\tand\tgaps", r"\s+", " "),
     ("keep-the-dashes", r"-", " "),
     ("dots.between.words", r"\.", " "),
+    ("four 4 five 5", r"\d", "#"),
+    ("d4 e5 f6", r"\d", "*"),
+    ("dial 999 8080", r"\d+", "NUMBER"),
+    ("desk 3 floor 9", r"\d+", "N"),
+    ("gold tin lead", r"tin", "zinc"),
+    ("hat hot hut", r"h.t", "cap"),
+    ("wide    open    spaces", r"\s+", " "),
+    ("keep_the_bars", r"_", " "),
 )
 
 _P152 = _page(
@@ -246,6 +278,14 @@ _NESTED = (
     ("add_up", ((100,), 200, (300, (400,)))),
     ("deep_sum", ((2, 4), (6, (8, 10)))),
     ("deep_sum", (0, (1, (2, (3, (4,)))))),
+    ("total", (6, (7, 8), (9, (10,)))),
+    ("total", ((5, 6), (7, 8))),
+    ("add_up", (4, 5, (6,))),
+    ("add_up", ((9, (8, (7, (6,)))),)),
+    ("deep_sum", (50, (60, 70), 80)),
+    ("deep_sum", (((4,), (5,)), 6)),
+    ("total", (3, (3, (3, (3,))))),
+    ("add_up", ((11,), 22, (33, (44,)))),
 )
 
 _P153 = _page(
@@ -295,6 +335,14 @@ _MEMOS = (
     (6, 21),
     (15, 23),
     (5, 26),
+    (17, 27),
+    (18, 28),
+    (4, 29),
+    (19, 14),
+    (3, 13),
+    (20, 12),
+    (2, 11),
+    (21, 10),
 )
 
 _P154 = _page(
@@ -340,6 +388,14 @@ _CACHED = (
     (29, 40),
     (19, 39),
     (18, 41),
+    (31, 42),
+    (32, 43),
+    (33, 44),
+    (34, 45),
+    (35, 46),
+    (36, 47),
+    (37, 48),
+    (38, 49),
 )
 
 _P155 = _page(
@@ -384,6 +440,14 @@ _KWARGS = (
     ("listing", (("word", "sky"), ("length", 3))),
     ("details", (("host", "example"), ("port", 8080))),
     ("details", (("song", "alive"), ("seconds", 245))),
+    ("describe", (("name", "finn"), ("age", 27))),
+    ("describe", (("city", "oslo"), ("people", 709))),
+    ("show", (("title", "ubik"), ("pages", 224))),
+    ("show", (("artist", "kate"), ("year", 1985))),
+    ("report", (("colour", "teal"), ("count", 30))),
+    ("record", (("team", "blues"), ("score", 12))),
+    ("listing", (("word", "moon"), ("length", 4))),
+    ("details", (("host", "local"), ("port", 5173))),
 )
 
 _P156 = _page(
@@ -430,6 +494,14 @@ _BASES = (
     (170, 8),
     (63, 8),
     (256, 16),
+    (12, 8),
+    (48, 8),
+    (99, 8),
+    (5, 8),
+    (192, 8),
+    (33, 8),
+    (240, 8),
+    (511, 16),
 )
 
 _P157 = _page(
@@ -474,6 +546,14 @@ _REDUCES = (
     ((7, 2, 3), "a * b"),
     ((12, 4, 2), "a - b"),
     ((6, 11, 4, 8), "a if a > b else b"),
+    ((2, 3, 5), "a * b"),
+    ((4, 5, 6), "a * b"),
+    ((2, 4, 6, 8), "a + b"),
+    ((15, 25, 35), "a + b"),
+    ((8, 2, 11, 4), "a if a > b else b"),
+    ((8, 2, 11, 4), "a if a < b else b"),
+    ((3, 3, 3, 3), "a * b"),
+    ((200, 30, 5), "a - b"),
 )
 
 _P158 = _page(

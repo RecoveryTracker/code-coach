@@ -53,6 +53,14 @@ _SENTENCES = (
     "practice makes it easy",
     "up down left right",
     "last one now",
+    "four five six",
+    "good morning",
+    "over and over again",
+    "e f g h",
+    "twenty on a page",
+    "the words are split apart",
+    "black white grey",
+    "evening",
 )
 
 _P49 = _page(
@@ -93,6 +101,14 @@ _COUNT_SENTENCES = (
     "how many words is this",
     "seven",
     "a b c d e f g",
+    "four five six",
+    "good morning",
+    "the slow brown dog sleeps",
+    "b",
+    "workbook page",
+    "how long is this line of words",
+    "in out",
+    "one two three four five six seven",
 )
 
 _P50 = _page(
@@ -132,6 +148,14 @@ _JOINS = (
     (["a", "b", "c", "d"], ""),
     (["first", "second", "third"], " then "),
     (["end", "of", "the", "list"], "."),
+    (["four", "five", "six"], " "),
+    (["d", "e", "f"], "-"),
+    (["good", "morning"], " "),
+    (["black", "white", "grey"], ", "),
+    (["2026", "12", "25"], "/"),
+    (["north", "south"], " to "),
+    (["p", "q"], "="),
+    (["in", "out", "up", "down"], " "),
 )
 
 _P51 = _page(
@@ -179,6 +203,14 @@ _TABLES = (
     ((("north", 0), ("south", 180)), ["south", "north"]),
     ((("apple", 3), ("pear", 8), ("plum", 5)), ["pear"]),
     ((("start", 1), ("end", 99)), ["start", "end", "start"]),
+    ((("dog", 4), ("cow", 2)), ["dog"]),
+    ((("dog", 4), ("cow", 2)), ["cow"]),
+    ((("gold", 1), ("silver", 2), ("bronze", 3)), ["silver"]),
+    ((("four", 4), ("five", 5), ("six", 6)), ["four", "six"]),
+    ((("tea", 2), ("coffee", 6)), ["coffee", "tea"]),
+    ((("near", 5), ("far", 500)), ["far"]),
+    ((("p", 11), ("q", 22), ("r", 33)), ["r", "p"]),
+    ((("june", 6), ("december", 12)), ["december"]),
 )
 
 _P52 = _page(
@@ -223,6 +255,14 @@ _BUILDS = (
     (5, "i * 3", "it times 3", [2, 5]),
     (10, "i % 4", "the remainder when divided by 4", [9]),
     (6, "i * i", "its square", [1, 2, 3]),
+    (4, "i * i", "its square", [2]),
+    (6, "i * i", "its square", [4, 6]),
+    (9, "i * i", "its square", [8]),
+    (5, "i * 2", "double it", [3]),
+    (7, "i * 2", "double it", [6, 1]),
+    (3, "i * 10", "it times 10", [2]),
+    (11, "i * i", "its square", [10, 5]),
+    (8, "i + 100", "it plus 100", [7]),
 )
 
 _P53 = _page(
@@ -267,6 +307,14 @@ _CONTAINS = (
     ("hello world", "ow", "yes", "no"),
     ("repetition", "pet", "found", "missing"),
     ("repetition", "pit", "found", "missing"),
+    ("morning", "morn", "yes", "no"),
+    ("morning", "mourn", "yes", "no"),
+    ("workbook", "work", "found", "missing"),
+    ("workbook", "worm", "found", "missing"),
+    ("finished", "fin", "yes", "no"),
+    ("finished", "fun", "yes", "no"),
+    ("coffee", "ffee", "in there", "not in there"),
+    ("coffee", "free", "in there", "not in there"),
 )
 
 _P54 = _page(
@@ -310,6 +358,14 @@ _SLICES = (
     ("characters", 4, 10),
     ("workbook", 2, 6),
     ("finished", 0, 6),
+    ("morning", 0, 4),
+    ("morning", 3, 7),
+    ("workbook", 0, 8),
+    ("finished", 2, 6),
+    ("finished", 4, 8),
+    ("coffee", 0, 3),
+    ("characters", 5, 9),
+    ("hello", 0, 2),
 )
 
 _P55 = _page(
@@ -352,6 +408,14 @@ _FINDS = (
     ("finished", "shed"),
     ("morning", "ing"),
     ("coffee", "ff"),
+    ("morning", "ning"),
+    ("morning", "mor"),
+    ("finished", "fin"),
+    ("coffee", "fee"),
+    ("workbook", "kb"),
+    ("characters", "ters"),
+    ("good morning", "morning"),
+    ("good morning", "d"),
 )
 
 _P56 = _page(
