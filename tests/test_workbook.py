@@ -217,6 +217,28 @@ class ReferenceRunTests(unittest.TestCase):
                 with self.subTest(exercise=e.id):
                     self._run("javascript", e)
 
+    def test_every_typescript_only_exercise_compiles(self) -> None:
+        """TypeScript's own pages, every exercise rather than one per shape.
+
+        The shape-level test below rests on "within a shape only the numbers
+        change". For TypeScript that is not true: the rows carry type and
+        function names, and a top-level name shares a namespace with the DOM
+        globals. An interface named after a global merges with it instead of
+        shadowing it, so the object is reported as missing members it never
+        heard of.
+
+        That is not hypothetical. A row naming an interface Report compiled
+        fine as the first exercise of its shape and failed as the eighteenth,
+        and it was found by hand because nothing here was looking. This costs
+        a few minutes and would have caught it.
+        """
+        for p in pages("typescript"):
+            if p.number <= 80:
+                continue        # the shared tiers, covered per shape below
+            for e in p.exercises:
+                with self.subTest(exercise=e.id):
+                    self._run("typescript", e)
+
     def test_every_shape_compiles_and_runs_in_every_language(self) -> None:
         """One per shape rather than all of them: within a shape only the
         numbers change, and each of these is another compile."""
@@ -258,6 +280,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_js8 import SHAPE_IDS as JS8
         from code_coach.workbook.emit_ts import SHAPE_IDS as TS
         from code_coach.workbook.emit_ts2 import SHAPE_IDS as TS2
+        from code_coach.workbook.emit_ts3 import SHAPE_IDS as TS3
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -292,6 +315,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JS8)
             | set(TS)
             | set(TS2)
+            | set(TS3)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
