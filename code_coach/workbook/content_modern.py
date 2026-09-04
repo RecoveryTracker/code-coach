@@ -62,6 +62,14 @@ _MATCHES = (
     ("suit", ((1, "spades"), (2, "hearts")), "unknown", (2, 1, 4)),
     ("speed", ((0, "stopped"), (1, "crawling")), "moving", (0, 1, 60)),
     ("count", ((0, "none"), (1, "one")), "several", (0, 1, 12)),
+    ("explain", ((0, "none"), (2, "pair")), "more", (0, 2, 6)),
+    ("call_it", ((3, "treble"), (4, "quad")), "plenty", (3, 4, 11)),
+    ("width_of", ((30, "thirty"), (40, "forty")), "other", (30, 40, 55)),
+    ("shade", ((1, "teal"), (2, "plum"), (3, "amber")), "unnamed", (1, 3, 8)),
+    ("night", ((5, "friday"), (4, "thursday")), "other day", (5, 4, 2)),
+    ("piece", ((2, "twopence"), (10, "tenpence")), "note", (2, 10, 20)),
+    ("level", ((0, "cellar"), (2, "second")), "elsewhere", (0, 2, 9)),
+    ("switch_", ((0, "shut"), (1, "open")), "jammed", (1, 0, 3)),
 )
 
 _P169 = _page(
@@ -117,6 +125,14 @@ _WALRUS = (
     ((4, 8, 12, 16), "quarter", "n // 4", 2),
     ((11, 22, 33), "squared", "n * n", 500),
     ((6, 12, 18, 24), "third", "n // 3", 5),
+    ((2, 4, 6, 8, 10, 12), "doubled", "n * 2", 12),
+    ((2, 3, 4, 5, 6), "squared", "n * n", 16),
+    ((15, 25, 35), "half", "n // 2", 10),
+    ((4, 8, 12, 16), "tripled", "n * 3", 30),
+    ((6, 12, 18, 24), "less", "n - 5", 10),
+    ((3, 5, 7, 9), "cubed", "n * n * n", 100),
+    ((8, 16, 24), "plus", "n + 20", 30),
+    ((200, 400, 600), "tenth", "n // 10", 30),
 )
 
 _P170 = _page(
@@ -165,6 +181,14 @@ _PARTIALS = (
     ("cut", "off", "n", "n % off", (7, 10), ("mod_seven", "mod_ten"), 43),
     ("grow", "rate", "n", "n * rate", (3, 4), ("triple", "quadruple"), 11),
     ("drop", "amount", "n", "n - amount", (2, 8), ("minus_two", "minus_eight"), 30),
+    ("stretch", "factor", "n", "factor * n", (4, 5), ("four_x", "five_x"), 9),
+    ("raise_by", "base", "n", "base + n", (20, 200), ("plus_twenty", "plus_two_hundred"), 6),
+    ("index_to", "exp", "n", "n ** exp", (2, 4), ("squared_", "fourth"), 3),
+    ("lower_by", "by", "n", "n - by", (3, 7), ("less_three", "less_seven"), 25),
+    ("share_by", "parts", "n", "n // parts", (3, 6), ("third_", "sixth_"), 60),
+    ("copy_it", "times", "n", "n * times", (7, 12), ("seven_x", "twelve_x"), 4),
+    ("under", "top", "n", "top - n", (200, 80), ("from_two_hundred", "from_eighty"), 35),
+    ("wrap_by", "off", "n", "n % off", (5, 9), ("mod_five", "mod_nine"), 58),
 )
 
 _P171 = _page(
@@ -232,6 +256,14 @@ _GETTERS = (
     ((("wren", 5), ("ant", 9), ("moth", 2)), 0),
     ((("north", 6), ("south", 19), ("east", 1)), 0),
     ((("salt", 11), ("pepper", 22), ("sugar", 3)), 0),
+    ((("finn", 82), ("kit", 4), ("ida", 37)), 1),
+    ((("teal", 15), ("plum", 7), ("amber", 33)), 1),
+    ((("bolts", 240), ("nuts", 60), ("washers", 95)), 1),
+    ((("thu", 3), ("fri", 18), ("sat", 9)), 1),
+    ((("tin", 50), ("lead", 82), ("zinc", 30)), 1),
+    ((("zulu", 4), ("bravo", 8), ("mike", 6)), 0),
+    ((("yak", 7), ("ant", 3), ("newt", 5)), 0),
+    ((("west", 12), ("east", 25), ("north", 2)), 0),
 )
 
 _P172 = _page(
@@ -276,6 +308,14 @@ _DEQUES = (
     ((8, 16, 24), 32, 4),
     ((15, 25), 35, 5),
     ((9, 8, 7), 6, 10),
+    ((2, 3, 4), 5, 0),
+    ((15, 25), 35, 6),
+    ((9,), 10, 7),
+    ((3, 6, 9), 12, 0),
+    ((150, 250), 350, 75),
+    ((2, 2, 2), 3, 0),
+    ((6, 7, 8), 10, 5),
+    ((12, 24), 36, 2),
 )
 
 _P173 = _page(
@@ -322,6 +362,14 @@ _GRIDS = (
     (((5, 10), (15, 20)),),
     (((9, 8, 7), (6, 5, 4)),),
     (((100, 200), (300, 400), (500, 600)),),
+    (((2, 3, 4), (5, 6, 7)),),
+    (((5, 6), (7, 8)),),
+    (((2, 3), (4, 5), (6, 7)),),
+    (((15, 25, 35), (45, 55, 65)),),
+    (((2, 3, 4, 5), (6, 7, 8, 9)),),
+    (((11, 12), (13, 14), (15, 16)),),
+    (((3, 6, 9), (12, 15, 18)),),
+    (((150, 250), (350, 450), (550, 650)),),
 )
 
 _P174 = _page(
@@ -364,6 +412,14 @@ _MERGES = (
     ((("do", 1), ("re", 2)), (("re", 22), ("mi", 3))),
     ((("front", 4),), (("back", 5),)),
     ((("apple", 3), ("pear", 12)), (("fig", 7),)),
+    ((("c", 3), ("d", 4)), (("d", 40), ("e", 50))),
+    ((("p", 7), ("q", 8)), (("q", 80), ("r", 90))),
+    ((("teal", 3), ("plum", 4)), (("plum", 11), ("amber", 5))),
+    ((("four", 4),), (("five", 5), ("six", 6))),
+    ((("thu", 4), ("fri", 5)), (("fri", 50),)),
+    ((("tin", 50),), (("lead", 82), ("tin", 500))),
+    ((("d", 4), ("e", 5), ("f", 6)), (("f", 66),)),
+    ((("up", 1), ("down", 2)), (("left", 3), ("right", 4))),
 )
 
 _P175 = _page(
@@ -408,6 +464,14 @@ _MAINS = (
     "at the top",
     "entry point",
     "away",
+    "under way",
+    "kicked off",
+    "and away",
+    "main reached",
+    "good morning",
+    "commence",
+    "onward",
+    "the work begins",
 )
 
 _P176 = _page(
@@ -451,6 +515,14 @@ _ITERS = (
     ("Ticker", 5, 5),
     ("Ticker", 20, 10),
     ("Countdown", 2, 1),
+    ("Countdown", 4, 1),
+    ("Countdown", 6, 1),
+    ("Backwards", 5, 1),
+    ("Evens", 12, 2),
+    ("Evens", 6, 2),
+    ("Steps", 15, 3),
+    ("Steps", 16, 4),
+    ("Down", 9, 3),
 )
 
 _P177 = _page(
@@ -507,6 +579,18 @@ _HASHES = (
      (("kyoto", 1463), ("kyoto", 1463))),
     ("Size", (("width", "int"), ("height", "int")),
      ((2, 3), (2, 3), (2, 3), (9, 9))),
+    ("Coord", (("x", "int"), ("y", "int")), ((2, 3), (2, 3), (4, 5))),
+    ("Coord", (("x", "int"), ("y", "int")), ((1, 0), (0, 1), (1, 1))),
+    ("Duo", (("left", "int"), ("right", "int")), ((7, 8), (7, 8), (7, 8))),
+    ("Extent", (("width", "int"), ("height", "int")), ((64, 48), (48, 64))),
+    ("Note", (("pitch", "str"), ("octave", "int")),
+     (("C", 4), ("C", 4), ("G", 4))),
+    ("Berth", (("floor", "int"), ("number", "int")),
+     ((5, 14), (5, 14), (4, 14), (4, 14))),
+    ("Token", (("face", "str"), ("worth", "int")),
+     (("front", 20), ("back", 20))),
+    ("Stage", (("label", "str"), ("order", "int")),
+     (("stir", 3), ("stir", 3), ("roast", 4))),
 )
 
 _P178 = _page(

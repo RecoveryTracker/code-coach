@@ -61,6 +61,14 @@ _ASSERTS = (
     ("total", ("a", "b"), "a + b", ((10, 20), 30), 31, "total should be 30"),
     ("cube", ("n",), "n * n * n", ((3,), 27), 9, "cube(3) should be 27"),
     ("gap", ("a", "b"), "a - b", ((9, 4), 5), 6, "gap(9, 4) should be 5"),
+    ("quad", ("n",), "n * 4", ((3,), 12), 13, "quad(3) should be 12"),
+    ("cubed", ("n",), "n * n * n", ((2,), 8), 9, "cubed(2) should be 8"),
+    ("plus", ("a", "b"), "a + b", ((4, 5), 9), 10, "plus(4, 5) should be 9"),
+    ("product", ("a", "b"), "a * b", ((6, 7), 42), 40, "product(6, 7) should be 42"),
+    ("third", ("n",), "n // 3", ((10,), 3), 4, "third(10) should be 3"),
+    ("wrap", ("n", "d"), "n % d", ((23, 6), 5), 4, "wrap(23, 6) should be 5"),
+    ("fivex", ("n",), "n * 5", ((6,), 30), 25, "fivex(6) should be 30"),
+    ("more", ("n",), "n + 1", ((11,), 12), 13, "more(11) should be 12"),
 )
 
 _P179 = _page(
@@ -126,6 +134,14 @@ _TESTS = (
     ("bigger", ("a", "b"), "a if a > b else b", (((4, 9), 9), ((12, 3), 12), ((5, 5), 5))),
     ("thrice", ("n",), "n * 3", (((5,), 15), ((0,), 0), ((-2,), -6))),
     ("less", ("n",), "n - 1", (((10,), 9), ((1,), 0), ((0,), -1))),
+    ("plus", ("a", "b"), "a + b", (((4, 5), 9), ((0, 7), 7), ((-2, 2), 0))),
+    ("product", ("a", "b"), "a * b", (((6, 7), 42), ((9, 0), 0), ((1, 4), 4))),
+    ("quad", ("n",), "n * 4", (((3,), 12), ((0,), 0), ((-2,), -8))),
+    ("cubed", ("n",), "n * n * n", (((2,), 8), ((1,), 1), ((3,), 27))),
+    ("third", ("n",), "n // 3", (((10,), 3), ((9,), 3), ((0,), 0))),
+    ("wrap", ("n", "d"), "n % d", (((23, 6), 5), ((24, 6), 0), ((8, 5), 3))),
+    ("spread", ("a", "b"), "a - b", (((11, 4), 7), ((4, 11), -7), ((6, 6), 0))),
+    ("smaller", ("a", "b"), "a if a < b else b", (((4, 9), 4), ((12, 3), 3), ((5, 5), 5))),
 )
 
 _P180 = _page(
@@ -198,6 +214,21 @@ _REPRS = (
      "{self.bricks} in {self.rows}"),
     ("Bill", (("price", "int"), ("people", "int")), (45, 3),
      "{self.price} split {self.people}"),
+    ("Coord", (("x", "int"), ("y", "int")), (7, 9), "({self.x}, {self.y})"),
+    ("Extent", (("width", "int"), ("height", "int")), (64, 48),
+     "{self.width} by {self.height}"),
+    ("Reach", (("low", "int"), ("high", "int")), (11, 47),
+     "{self.low}..{self.high}"),
+    ("Duo", (("left", "int"), ("right", "int")), (11, 12),
+     "{self.left} and {self.right}"),
+    ("Berth", (("floor", "int"), ("number", "int")), (5, 14),
+     "floor {self.floor} berth {self.number}"),
+    ("Result", (("points", "int"), ("bonus", "int")), (72, 9),
+     "{self.points} plus {self.bonus}"),
+    ("Board", (("rows", "int"), ("cols", "int")), (6, 7),
+     "{self.rows}x{self.cols}"),
+    ("Journey", (("miles", "int"), ("hours", "int")), (180, 4),
+     "{self.miles} in {self.hours}"),
 )
 
 _P181 = _page(
@@ -251,6 +282,14 @@ _DEEPS = (
     ((3, 6, 9), 12),
     ((11, 22), 33),
     ((1,), 2),
+    ((3, 4), 5),
+    ((8,), 12),
+    ((2, 3, 4), 5),
+    ((15, 25), 35),
+    ((9, 9), 9),
+    ((6,), 7),
+    ((5, 10, 15), 20),
+    ((3, 6), 9),
 )
 
 _P182 = _page(
@@ -297,6 +336,14 @@ _YIELDS = (
     ((11,), (22, 33)),
     ((1, 1), (2, 2)),
     ((9, 8), (7,)),
+    ((2, 3), (4,)),
+    ((4,), (5, 6)),
+    ((15, 25), (35, 45)),
+    ((8,), (9,)),
+    ((2, 3, 4), (5,)),
+    ((11, 12), (13, 14, 15)),
+    ((7,), (8, 9)),
+    ((300,), (400, 500)),
 )
 
 _P183 = _page(
@@ -342,6 +389,14 @@ _GROUPS = (
     ("gold", "grey", "hill", "hawk"),
     ("lake", "lily", "moth", "mole"),
     ("tea", "toad", "urn", "user"),
+    ("owl", "oak", "fox", "fig", "elk"),
+    ("hen", "hog", "ibex", "imp", "jay"),
+    ("jade", "jet", "kelp", "kite"),
+    ("newt", "nest", "otter", "oak"),
+    ("rye", "reed", "sage", "sorrel"),
+    ("vine", "vole", "wasp", "willow"),
+    ("acorn", "ash", "birch", "bramble"),
+    ("dove", "deer", "elm", "elder"),
 )
 
 _P184 = _page(
@@ -384,6 +439,14 @@ _FROZEN = (
     ("Rack", ("in", "out"), 10),
     ("Drawer", ("front", "back"), 11),
     ("Chest", ("old", "new"), 12),
+    ("Tin", ("c", "d"), 13),
+    ("Pallet", ("third", "fourth"), 14),
+    ("Sack", ("teal", "plum"), 15),
+    ("Pouch", ("three", "four"), 16),
+    ("Hopper", ("near", "far"), 17),
+    ("Ledge", ("over", "under"), 18),
+    ("Bundle", ("east", "west"), 19),
+    ("Barrow", ("thu", "fri"), 20),
 )
 
 _P185 = _page(
@@ -442,6 +505,14 @@ _BYTES = (
     "crème",
     "señor",
     "fiancée",
+    "hôtel",
+    "Köln",
+    "garçon",
+    "mañana",
+    "Málaga",
+    "smörgås",
+    "tête",
+    "año",
 )
 
 _P186 = _page(
@@ -485,6 +556,14 @@ _STRICTS = (
     ((3, 6), (30,)),
     ((1, 2, 3, 4), (10, 20, 30)),
     ((8, 9), (80, 90, 100)),
+    ((2, 3, 4), (20, 30)),
+    ((2, 3), (20, 30, 40)),
+    ((6, 7, 8, 9), (60, 70)),
+    ((2,), (20, 30)),
+    ((11, 12), (110,)),
+    ((2, 3, 4), (20,)),
+    ((5, 6), (50, 60, 70)),
+    ((9,), (90, 100, 110)),
 )
 
 _P187 = _page(
@@ -533,6 +612,14 @@ _CHAINS = (
     ("NumberError", "not a number", ("999", "lots")),
     ("EntryError", "bad entry", ("21", "twentyone!")),
     ("DataError", "bad data", ("8", "eight")),
+    ("OptionError", "bad count", ("15", "xyz")),
+    ("FlagError", "not a total", ("9", "several")),
+    ("FormError", "expected a number", ("200", "twenty")),
+    ("ScanError", "cannot read it", ("55", "y")),
+    ("SlotError", "bad figure", ("6", "six")),
+    ("FetchError", "not a numeral", ("77", "seventy")),
+    ("CountProblem", "unparsable", ("4", "four")),
+    ("BadOption", "wanted digits", ("80", "eighty")),
 )
 
 _P188 = _page(

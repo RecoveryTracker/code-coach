@@ -62,6 +62,14 @@ _SETS = (
     ("gold", "grey", "hill"),
     ("lake", "lily", "moth"),
     ("tea", "toad", "urn"),
+    ("owl", "oak", "fox"),
+    ("hen", "hog", "ibex"),
+    ("jade", "jet", "kelp"),
+    ("newt", "nest", "otter"),
+    ("rye", "reed", "sage"),
+    ("vine", "vole", "wasp"),
+    ("acorn", "ash", "birch"),
+    ("dove", "deer", "elm"),
 )
 
 _P239 = _page(
@@ -107,6 +115,14 @@ _COUNTERS = (
     ("cccdd", "ddeee"),
     ("letter", "better"),
     ("aaa", "aab"),
+    ("aabbcc", "abccd"),
+    ("morning", "evening"),
+    ("aaac", "accc"),
+    ("tennessee", "tenacious"),
+    ("abcabcabc", "abcabc"),
+    ("ppqq", "qqrr"),
+    ("sandal", "scandal"),
+    ("ccdd", "ddee"),
 )
 
 _P240 = _page(
@@ -152,6 +168,14 @@ _TYPED = (
     ("Trip", "miles", "north", 120, ("fast", "slow")),
     ("Task", "order", "mix", 2, ("todo", "done")),
     ("User", "score", "sam", 90, ("admin", "guest")),
+    ("Runner", "score", "finn", 82, ("fetch", "store")),
+    ("Town", "people", "ripon", 17, ("east", "west")),
+    ("Volume", "pages", "ubik", 224, ("proof", "print")),
+    ("Track_", "seconds", "art", 224, ("start", "stop")),
+    ("Ore", "melting", "tin", 232, ("cold", "molten")),
+    ("Berth", "floor", "cabin", 5, ("free", "taken")),
+    ("Blade", "weight", "plane", 7, ("keen", "dull")),
+    ("Side", "points", "blues", 12, ("first", "second")),
 )
 
 _P241 = _page(
@@ -216,6 +240,14 @@ _CACHED = (
     ("Run", "distance", (5, 15, 25)),
     ("Bill", "owed", (45, 55)),
     ("Log", "size", (1, 1, 1, 1, 1)),
+    ("Sheet_", "total", (2, 3, 4)),
+    ("Column", "sum_of", (15, 25, 35)),
+    ("Book_", "balance", (6, 6, 6, 6)),
+    ("Notice", "amount", (8, 16)),
+    ("Crate", "price", (4, 14, 9)),
+    ("Panel", "score", (11, 10, 9)),
+    ("Tier", "height", (3, 6, 9, 12)),
+    ("Round_", "count", (12, 24, 36)),
 )
 
 _P242 = _page(
@@ -266,6 +298,14 @@ _B64 = (
     "base sixty four",
     "a longer piece of text",
     "encode me",
+    "morning",
+    "code coach workbook",
+    "grace hopper",
+    "typescript",
+    "exercise",
+    "the slow dog",
+    "ripon",
+    "digest",
 )
 
 _P243 = _page(
@@ -310,6 +350,14 @@ _TIMES = (
     ((2026, 4, 10, 13), 5),
     ((2024, 2, 29, 11), 3),
     ((2026, 12, 25, 8), -7),
+    ((2026, 5, 4, 14), 9),
+    ((2026, 2, 28, 6), 5),
+    ((2026, 7, 20, 17), -8),
+    ((1999, 12, 31, 22), 1),
+    ((1959, 3, 9, 8), 10),
+    ((2026, 10, 15, 11), -5),
+    ((2028, 2, 29, 16), 2),
+    ((1980, 4, 21, 19), 8),
 )
 
 _P244 = _page(
@@ -357,6 +405,14 @@ _GROUPS = (
     ("collected", "bad format", "absent id", "format", "id"),
     ("several", "invalid", "unknown", "invalid", "unknown"),
     ("group", "bad data", "no record", "data", "record"),
+    ("two faults", "bad figure", "absent key", "figure", "key"),
+    ("both broke", "not numeric", "no such row", "numeric", "row"),
+    ("errors here", "past the end", "unknown column", "end", "column"),
+    ("bother", "bad entry", "vanished", "entry", "vanished"),
+    ("breakages", "wrong shape", "no record", "shape", "record"),
+    ("snags", "too few", "not present", "few", "present"),
+    ("faults here", "unparsable", "removed", "unparsable", "removed"),
+    ("defects", "blank value", "missing label", "blank", "label"),
 )
 
 _P245 = _page(
@@ -415,6 +471,14 @@ _SUBCLASSES = (
     ("Filter", ("Blur", "Sharpen")),
     ("Task", ("Build", "Deploy")),
     ("Check", ("Fast", "Deep")),
+    ("Adapter", ("Gamma", "Delta")),
+    ("Parser", ("Yaml", "Toml")),
+    ("Figure", ("Ring", "Oblong")),
+    ("Scanner", ("Tabs", "Commas")),
+    ("Printer", ("Screen_", "Paper")),
+    ("Test_", ("Length_", "Shape_")),
+    ("Order_", ("Begin", "Halt")),
+    ("Encoder", ("Ascii", "Unicode")),
 )
 
 _P246 = _page(
@@ -466,6 +530,14 @@ _SIGNATURES = (
     ("sort_by", ("items", "key='name'", "reverse=0"), "key"),
     ("wrap_it", ("text", "width=70", "indent=0"), "text"),
     ("fetch", ("url", "timeout=30", "tries=2"), "url"),
+    ("hail", ("name", "greeting='morning'", "times=2"), "greeting"),
+    ("post", ("to", "subject='blank'", "copies=1"), "to"),
+    ("sketch", ("shape", "colour='teal'", "width=2"), "shape"),
+    ("read_it", ("path", "mode='rb'", "buffering=8"), "path"),
+    ("stretch", ("value", "factor=3", "offset=1"), "value"),
+    ("summarise", ("rows", "title='summary'", "limit=25"), "title"),
+    ("dial", ("host", "port=5173", "retries=4"), "host"),
+    ("emit", ("text", "end='t'", "flush=1"), "text"),
 )
 
 _P247 = _page(
@@ -513,6 +585,14 @@ _PICKLES = (
     ("north", (120, 40)),
     ("mix", (2, 3, 1)),
     ("alive", (245, 173)),
+    ("finn", (2, 3, 4)),
+    ("kit", (15, 25)),
+    ("ida", (9,)),
+    ("ripon", (17, 709)),
+    ("tin", (50, 82)),
+    ("ubik", (224, 261)),
+    ("blues", (12, 55, 33)),
+    ("plane", (7, 2, 4)),
 )
 
 _P248 = _page(

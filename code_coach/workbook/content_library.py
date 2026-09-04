@@ -61,6 +61,14 @@ _LOGS = (
     ("import done", "two rows skipped", "read a row"),
     ("listening", "port was busy", "accepted socket"),
     ("shutting down", "work still pending", "closed a handle"),
+    ("booted", "memory is filling", "tick completed"),
+    ("linked up", "trying again", "frame sent"),
+    ("settings read", "no such key, using default", "line parsed"),
+    ("ready to serve", "reply was slow", "request answered"),
+    ("task queued", "queue is deep", "queue inspected"),
+    ("archive opened", "archive is big", "chunk read"),
+    ("signed in", "key is stale", "session checked"),
+    ("copy started", "space running low", "file copied"),
 )
 
 _P229 = _page(
@@ -109,6 +117,14 @@ _ARGS = (
     ("rows", 20, "50", "format", "csv"),
     ("timeout", 30, "60", "scheme", "https"),
     ("skip", 0, "3", "target", "all"),
+    ("tally", 2, "9", "title", "none"),
+    ("depth", 20, "64", "caption", "plain"),
+    ("port", 5173, "8765", "host", "127.0.0.1"),
+    ("attempts", 4, "11", "mode", "fast"),
+    ("threads", 3, "12", "queue", "spare"),
+    ("levels", 2, "6", "style", "rich"),
+    ("cap", 200, "500", "sort", "date"),
+    ("columns", 100, "160", "align", "right"),
 )
 
 _P230 = _page(
@@ -171,6 +187,14 @@ _SLOTS = (
     ("Trip", ("miles", "hours"), (120, 3), "stops", "no such attribute"),
     ("Score", ("points", "bonus"), (40, 7), "penalty", "refused"),
     ("Tank", ("full", "used"), (60, 22), "spare", "not allowed"),
+    ("Coord", ("x", "y"), (7, 9), "z", "no such attribute"),
+    ("Extent", ("width", "height"), (64, 48), "depth", "refused"),
+    ("Duo", ("left", "right"), (11, 12), "centre", "not allowed"),
+    ("Token", ("face", "worth"), ("front", 20), "metal", "no such attribute"),
+    ("Berth", ("floor", "number"), (5, 14), "deck", "refused"),
+    ("Reach", ("low", "high"), (11, 47), "step", "not allowed"),
+    ("Leaf", ("value", "next_id"), (7, 8), "parent_id", "refused"),
+    ("Board", ("rows", "cols"), (6, 7), "layers", "not allowed"),
 )
 
 _P231 = _page(
@@ -230,6 +254,14 @@ _DISPATCH = (
     ("give", "quantity", "label", 6, "six", 7.75, "no match"),
     ("read", "figure", "word", 15, "fifteen", 5.25, "unhandled"),
     ("check", "number", "text", 33, "thirty", 1.25, "something else"),
+    ("explain", "number", "word", 6, "morning", 2.75, "something else"),
+    ("display", "int of", "text", 51, "evening", 1.75, "no idea"),
+    ("caption", "counted", "spelled", 8, "eight", 0.75, "unknown"),
+    ("mark_it", "digit", "letter", 4, "four", 3.75, "other"),
+    ("call_it", "whole", "string", 200, "two hundred", 9.75, "not sure"),
+    ("recite", "value", "phrase", 2, "two", 4.75, "who knows"),
+    ("state_it", "amount", "note", 14, "fourteen", 6.75, "anything else"),
+    ("utter", "count", "name", 11, "eleven", 8.75, "unknown"),
 )
 
 _P232 = _page(
@@ -292,6 +324,14 @@ _ATTRS = (
     ("Team", "points", (("reds", 41), ("blues", 12), ("greens", 30))),
     ("Word", "length", (("sky", 3), ("mountain", 8), ("lake", 4))),
     ("Trip", "miles", (("north", 120), ("south", 40), ("east", 75))),
+    ("Runner", "score", (("finn", 82), ("kit", 4), ("ida", 37))),
+    ("Town", "people", (("ripon", 17), ("oslo", 709), ("lima", 998))),
+    ("Volume", "pages", (("ubik", 224), ("valis", 261), ("maze", 190))),
+    ("Track_", "seconds", (("art", 224), ("sons", 207), ("warszawa", 386))),
+    ("Ore", "melting", (("tin", 232), ("lead", 327), ("gold", 1064))),
+    ("Berth", "floor", (("cabin", 5), ("hold", 2), ("deck", 1))),
+    ("Blade", "weight", (("plane", 7), ("chisel", 2), ("saw", 4))),
+    ("Fruit_", "count", (("kiwi", 5), ("plum", 21), ("sloe", 9))),
 )
 
 _P233 = _page(
@@ -344,6 +384,14 @@ _STATS = (
     (1, 3, 3, 5, 8),
     (6, 6, 9, 15),
     (11, 11, 11, 22, 33),
+    (3, 5, 5, 5, 6, 8, 11),
+    (2, 3, 3, 4, 9),
+    (15, 25, 25, 40),
+    (6, 6, 6, 10, 14),
+    (4, 4, 7, 11, 11, 11),
+    (2, 2, 3, 7),
+    (8, 8, 9, 12, 15),
+    (5, 5, 5, 9, 13),
 )
 
 _P234 = _page(
@@ -389,6 +437,14 @@ _FRACTIONS = (
     (31, 39),
     (7, 41),
     (14, 41),
+    (23, 41),
+    (27, 42),
+    (14, 43),
+    (31, 43),
+    (15, 44),
+    (30, 44),
+    (13, 45),
+    (29, 45),
 )
 
 
@@ -447,6 +503,14 @@ _HASHES = (
     ("kyoto", 10),
     ("2026", 6),
     ("fingerprint", 12),
+    ("morning", 8),
+    ("passphrase", 8),
+    ("code coach workbook", 10),
+    ("grace hopper", 12),
+    ("the slow brown dog", 8),
+    ("exercise", 10),
+    ("typescript", 6),
+    ("digest", 12),
 )
 
 _P236 = _page(
@@ -493,6 +557,14 @@ _URLS = (
     "https://cdn.example.com/assets/logo.png",
     "https://shop.example.com/cart/checkout",
     "http://blog.example.org/posts/first",
+    "https://example.com/pages/two",
+    "http://localhost:5173/api/progress",
+    "https://github.com/nodejs/node",
+    "https://docs.python.org/3/library/decimal.html",
+    "http://127.0.0.1:8765/health",
+    "https://news.site.org/2027/01/report",
+    "ftp://files.example.net/pub/archive",
+    "https://api.example.com/v3/records",
 )
 
 _P237 = _page(
@@ -536,6 +608,14 @@ _WRAPS = (
     ("printing a list uses repr and not str", 14),
     ("one small method and the built-ins start cooperating", 22),
     ("check whether Python already ships the thing", 17),
+    ("the slow brown dog sleeps under the wide oak", 20),
+    ("a test that never fails is not testing anything at all", 24),
+    ("reading the data proves nothing, running it proves something", 22),
+    ("a date is a value and not three numbers in a row", 18),
+    ("say what you checked and how you checked it", 20),
+    ("the guard is there because the data can lie", 16),
+    ("write the error someone woken at night can act on", 26),
+    ("every page of twenty is nineteen more than one", 18),
 )
 
 _P238 = _page(

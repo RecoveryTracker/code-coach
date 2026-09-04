@@ -57,6 +57,14 @@ _NAMED = (
     ("saw/3", "tool", "weight", "/"),
     ("sky|3", "word", "length", r"\|"),
     ("north|120", "trip", "miles", r"\|"),
+    ("finn:27", "name", "age", ":"),
+    ("ida:44", "who", "years", ":"),
+    ("ripon=17", "city", "people", "="),
+    ("lima=998", "place", "count", "="),
+    ("tin-50", "metal", "number", "-"),
+    ("ubik#224", "book", "pages", "#"),
+    ("blues/12", "team", "points", "/"),
+    ("moon|4", "word", "length", r"\|"),
 )
 
 _P279 = _page(
@@ -106,6 +114,14 @@ _LOOKAHEADS = (
     ("90 seconds and 6 rounds", "seconds"),
     ("25 litres and 11 gallons", "litres"),
     ("40 words and 3 lines", "words"),
+    ("70 dollars and 30 pounds", "dollars"),
+    ("45 miles and 9 hours", "miles"),
+    ("21 apples and 6 pears", "apples"),
+    ("14 metres and 5 feet", "metres"),
+    ("250 grams and 8 ounces", "grams"),
+    ("90 minutes and 2 hours", "minutes"),
+    ("36 pages and 4 chapters", "pages"),
+    ("55 pence and 3 pounds", "pence"),
 )
 
 _P280 = _page(
@@ -151,6 +167,14 @@ _PARSES = (
     ("2024.02.29", "%Y.%m.%d", "%d/%m/%Y"),
     ("2010.11.11", "%Y.%m.%d", "%Y-%m-%d"),
     ("05/11/2026", "%d/%m/%Y", "%Y%m%d"),
+    ("2026-05-04", "%Y-%m-%d", "%d/%m/%Y"),
+    ("2026-02-28", "%Y-%m-%d", "%d/%m/%Y"),
+    ("04/05/2026", "%d/%m/%Y", "%Y-%m-%d"),
+    ("09/03/1959", "%d/%m/%Y", "%Y-%m-%d"),
+    ("1980-04-21", "%Y-%m-%d", "%d-%m-%Y"),
+    ("20281225", "%Y%m%d", "%d/%m/%Y"),
+    ("07-04-2026", "%m-%d-%Y", "%Y-%m-%d"),
+    ("2028.02.29", "%Y.%m.%d", "%d/%m/%Y"),
 )
 
 _P281 = _page(
@@ -197,6 +221,14 @@ _CALENDARS = (
     (2026, 6, 15, 2100),
     (1977, 1, 14, 1976),
     (1985, 8, 16, 1984),
+    (2026, 5, 4, 2028),
+    (2026, 3, 14, 2028),
+    (2028, 2, 29, 2028),
+    (2027, 2, 28, 2027),
+    (2026, 7, 1, 2100),
+    (2026, 10, 31, 1800),
+    (2400, 2, 15, 2400),
+    (1800, 2, 15, 1800),
 )
 
 _P282 = _page(
@@ -257,6 +289,14 @@ _QUANTIZE = (
     "2.025",
     "8.605",
     "1.445",
+    "3.225",
+    "4.665",
+    "0.045",
+    "6.885",
+    "1.605",
+    "8.225",
+    "5.445",
+    "7.865",
 )
 
 _P283 = _page(
@@ -309,6 +349,14 @@ _ENCODES = (
     ((2010, 11, 11), "code", "eleven", "unknown type"),
     ((1990, 6, 5), "place", "oslo", "not serialisable"),
     ((2026, 4, 10), "task", "review", "cannot encode that"),
+    ((2026, 5, 4), "name", "finn", "cannot encode that"),
+    ((2026, 2, 28), "who", "ida", "unknown type"),
+    ((1959, 3, 9), "artist", "eno", "cannot encode that"),
+    ((1980, 4, 21), "singer", "byrne", "unknown type"),
+    ((1999, 12, 31), "label", "turnover", "not serialisable"),
+    ((1975, 5, 30), "event", "opening", "cannot encode that"),
+    ((2028, 2, 29), "note", "leap day", "unknown type"),
+    ((2026, 10, 15), "city", "ripon", "not serialisable"),
 )
 
 _P284 = _page(
@@ -360,6 +408,14 @@ _WRITES = (
     (("trip", "north"), ("miles", 120)),
     (("task", "mix"), ("order", 2)),
     (("user", "sam"), ("age", 41)),
+    (("name", "finn"), ("score", 82)),
+    (("town", "oslo"), ("people", 709)),
+    (("metal", "tin"), ("melting", 232)),
+    (("book", "ubik"), ("pages", 224)),
+    (("track", "art"), ("seconds", 224)),
+    (("side", "blues"), ("points", 12)),
+    (("blade", "plane"), ("weight", 7)),
+    (("berth", "cabin"), ("floor", 5)),
 )
 
 _P285 = _page(
@@ -406,6 +462,14 @@ _MOREPATHS = (
     ("site/static/style.css", ".scss", "site"),
     ("build/dist/app.zip", ".tar", "build"),
     ("backup/monday/dump.sql", ".gz", "backup"),
+    ("home/finn/diary.txt", ".md", "home"),
+    ("home/ida/summary.pdf", ".txt", "home"),
+    ("work/src/server.py", ".pyi", "work"),
+    ("var/cache/index.db", ".old", "var"),
+    ("music/eno/ambient.mp3", ".flac", "music"),
+    ("photos/2024/coast.jpg", ".png", "photos"),
+    ("docs/notes/plan.md", ".pdf", "docs"),
+    ("data/raw/counts.csv", ".json", "data"),
 )
 
 _P286 = _page(
@@ -452,6 +516,14 @@ _MORE_ITER = (
     (5, 5, 5, "salt", (1, 0, 1, 1), (2, 3, 4, 5), "n % 2 == 1"),
     (1000, 500, 3, "iron", (1, 1, 0, 0), (6, 12, 18), "n > 10"),
     (3, 4, 4, "left", (0, 1, 1, 0), (1, 4, 9, 16), "n < 5"),
+    (20, 6, 4, "efgh", (1, 0, 1, 0), (2, 3, 4, 5), "n % 2"),
+    (1, 4, 5, "world", (1, 1, 0, 0, 1), (2, 3, 4, 5, 6), "n > 3"),
+    (200, 20, 3, "def", (0, 1, 1), (15, 20, 25), "n % 5 == 0"),
+    (2, 2, 6, "coding", (1, 0, 1, 0, 1, 0), (3, 5, 7, 8), "n % 2 == 0"),
+    (8, 8, 4, "node", (1, 1, 0, 1), (2, 4, 6, 9), "n % 2"),
+    (60, 30, 3, "teal", (0, 1, 0), (6, 12, 18), "n > 9"),
+    (3, 3, 5, "south", (1, 0, 0, 1, 1), (2, 3, 4, 5, 6), "n < 4"),
+    (1, 200, 4, "lead", (1, 1, 1, 0), (14, 18, 21), "n % 7 == 0"),
 )
 
 _P287 = _page(
@@ -514,6 +586,14 @@ _KWONLY = (
     ("Wall", "bricks", "rows", 1, 90, 6, "rows must be named"),
     ("Gap", "start", "end", 0, 7, 31, "end must be named"),
     ("Pair", "left", "right", 0, 7, 8, "right must be named"),
+    ("Coord", "x", "y", 0, 7, 9, "y must be named"),
+    ("Extent", "width", "height", 1, 64, 48, "height must be named"),
+    ("Reach", "low", "high", 0, 11, 47, "high must be named"),
+    ("Result", "points", "bonus", 0, 72, 9, "bonus must be named"),
+    ("Berth", "floor", "number", 1, 5, 14, "number must be named"),
+    ("Journey", "miles", "hours", 1, 180, 4, "hours must be named"),
+    ("Board", "rows", "cols", 1, 6, 7, "cols must be named"),
+    ("Barrel", "full", "used", 0, 90, 34, "used must be named"),
 )
 
 _P288 = _page(

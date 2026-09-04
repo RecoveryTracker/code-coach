@@ -64,6 +64,14 @@ _FLOATS = (
     (0.6, 8.7, 9.3),
     (0.8, 5.6, 6.4),
     (1.1, 3.7, 4.8),
+    (0.1, 1.1, 1.2),
+    (0.2, 1.4, 1.6),
+    (0.3, 1.1, 1.4),
+    (0.4, 1.3, 1.7),
+    (0.6, 1.1, 1.7),
+    (0.7, 1.4, 2.1),
+    (0.8, 1.1, 1.9),
+    (0.9, 2.3, 3.2),
 )
 
 _P189 = _page(
@@ -112,6 +120,14 @@ _DECIMALS = (
     ("0.60", "8.70", "9.30"),
     ("12.34", "0.66", "13.00"),
     ("0.80", "5.60", "6.40"),
+    ("0.30", "0.40", "0.70"),
+    ("2.20", "3.30", "5.50"),
+    ("0.20", "0.90", "1.10"),
+    ("29.99", "0.01", "30.00"),
+    ("0.50", "0.70", "1.20"),
+    ("3.60", "1.40", "5.00"),
+    ("7.77", "0.23", "8.00"),
+    ("5.10", "3.40", "8.50"),
 )
 
 _P190 = _page(
@@ -160,6 +176,14 @@ _MATHS = (
     (100.9, 1000),
     (0.001, 64),
     (-0.5, 7),
+    (4.6, 36),
+    (3.2, 121),
+    (8.8, 4),
+    (-2.5, 400),
+    (0.9, 169),
+    (6.4, 900),
+    (15.02, 225),
+    (-7.1, 9),
 )
 
 _P191 = _page(
@@ -204,6 +228,14 @@ _RANDOMS = (
     (314, 10, 5),
     (8, 8, 4),
     (2, 52, 5),
+    (3, 6, 4),
+    (52, 10, 5),
+    (11, 100, 4),
+    (2027, 6, 5),
+    (1, 20, 6),
+    (88, 50, 3),
+    (17, 6, 5),
+    (9, 12, 4),
 )
 
 _P192 = _page(
@@ -253,6 +285,14 @@ _CSVS = (
     (("room", "floor"), ("attic", 4), ("hall", 1)),
     (("song", "seconds"), ("alive", 245), ("kooks", 173)),
     (("colour", "count"), ("red", 12), ("blue", 9)),
+    (("name", "score"), ("finn", 82), ("kit", 4)),
+    (("town", "people"), ("ripon", 17), ("oslo", 709)),
+    (("metal", "melting"), ("tin", 232), ("lead", 327)),
+    (("book", "pages"), ("ubik", 224), ("valis", 261)),
+    (("night", "hours"), ("thu", 9), ("fri", 5)),
+    (("side", "points"), ("blues", 12), ("whites", 55)),
+    (("fruit", "count"), ("kiwi", 5), ("plum", 21)),
+    (("blade", "weight"), ("plane", 7), ("chisel", 2)),
 )
 
 _P193 = _page(
@@ -302,6 +342,14 @@ _ABCS = (
     ("Engine", "Petrol", "start", "vroom", "base refused"),
     ("Payment", "Card", "charge", "charged", "no bare Payment"),
     ("Report", "Summary", "render", "rendered", "abstract"),
+    ("Figure", "Ring", "area_of", "round", "cannot build the base"),
+    ("Creature", "Cow", "speak", "moo", "base refused"),
+    ("Vault", "Tape", "save", "saved", "no bare Vault"),
+    ("Scanner", "LineScanner", "read_it", "text", "abstract"),
+    ("Poster", "Letter", "send", "sent", "cannot build Poster"),
+    ("Hand", "Smith", "work", "forging", "base refused"),
+    ("Spring", "River", "fetch", "water", "no bare Spring"),
+    ("Printer", "Screen_", "write_out", "written", "abstract"),
 )
 
 _P194 = _page(
@@ -364,6 +412,14 @@ _PROTOCOLS = (
     ("Signer", "sign", "Ink", "Digital", ("ink", "digital")),
     ("Cooker", "cook", "Bake", "Fry", ("baked", "fried")),
     ("Timer", "when", "Now", "Later", ("now", "later")),
+    ("Caller", "call_out", "Hen", "Cow", ("cluck", "moo")),
+    ("Titled", "title_of", "Volume", "Track_", ("ubik", "art")),
+    ("Welcomer", "welcome", "German", "Spanish", ("hallo", "hola")),
+    ("Ranker", "place_of", "Third", "Fourth", ("third", "fourth")),
+    ("Drawer_", "draw_it", "Plain", "Rich", ("plain", "marked up")),
+    ("Fetcher", "fetch_it", "Tape", "Cache", ("from tape", "from cache")),
+    ("Weigher", "weight_of", "Light", "Heavy", ("light", "heavy")),
+    ("Mover_", "move_it", "Crawl", "Sprint", ("crawling", "sprinting")),
 )
 
 _P195 = _page(
@@ -427,6 +483,14 @@ _CTXS = (
     ("stage", "lights up", "the play", "lights down"),
     ("tunnel", "in", "through", "out"),
     ("kettle", "on", "boiling", "off"),
+    ("valve", "open it", "flowing", "shut it"),
+    ("link", "connect", "sending", "disconnect"),
+    ("clock", "wind", "ticking", "stop"),
+    ("gate", "swing open", "through", "swing shut"),
+    ("shift", "clock on", "the work", "clock off"),
+    ("guard", "post", "the watch", "stand down"),
+    ("ledger", "open book", "writing", "close book"),
+    ("kiln", "fire up", "firing", "cool down"),
 )
 
 _P196 = _page(
@@ -480,6 +544,14 @@ _TWO_WAYS = (
     ((("sky", 3), ("sea", 3), ("sun", 9)),),
     ((("one", 1), ("two", 2), ("six", 2)),),
     ((("alpha", 7), ("beta", 7), ("gamma", 7)),),
+    ((("finn", 82), ("kit", 82), ("ida", 37)),),
+    ((("teal", 15), ("plum", 15), ("amber", 33)),),
+    ((("thu", 9), ("fri", 9), ("sat", 4)),),
+    ((("tin", 50), ("lead", 50), ("zinc", 30)),),
+    ((("kiwi", 5), ("plum", 21), ("sloe", 5)),),
+    ((("up", 7), ("down", 7), ("across", 2)),),
+    ((("la", 6), ("ti", 11), ("do", 6)),),
+    ((("plane", 7), ("chisel", 2), ("saw", 7)),),
 )
 
 _P197 = _page(
@@ -524,6 +596,14 @@ _MROS = (
     ("Engine", "Petrol", "Electric", "Hybrid"),
     ("Reader", "Text", "Binary", "Universal"),
     ("Sender", "Email", "Sms", "Notifier"),
+    ("Root", "Upper", "Lower", "Middle"),
+    ("Creature", "Diver", "Glider", "Puffin"),
+    ("Object_", "Teal", "Plum", "Mixed_"),
+    ("Figure", "Curved", "Straight", "Arc"),
+    ("Vault", "Warm", "Cold", "Tiered"),
+    ("Leaf", "Titled", "Weighed", "Entry_"),
+    ("Hand", "Quick", "Steady", "Skilled"),
+    ("Spring", "Near", "Distant", "Blended"),
 )
 
 _P198 = _page(

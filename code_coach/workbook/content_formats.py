@@ -59,6 +59,14 @@ _DIFFS = (
     ("cat sat on mat", "cat sat on rug", "amt", ("mat", "man", "mad")),
     ("morning noon night", "morning noon dusk", "nite", ("night", "nite", "nine")),
     ("left right centre", "left right middle", "centr", ("centre", "center", "cent")),
+    ("the slow brown dog", "the slow red dog", "brwn", ("brown", "brawn", "born")),
+    ("good morning all", "good morning sam", "mornng", ("morning", "morning star", "moaning")),
+    ("four five six", "four five seven", "fiev", ("five", "hive", "file")),
+    ("teal plum amber", "teal plum gold", "plmu", ("plum", "plume", "plus")),
+    ("east by west", "east by north", "wets", ("west", "wets", "welt")),
+    ("shut the gate", "shut the door", "gaet", ("gate", "gaze", "late")),
+    ("tin and lead", "tin and zinc", "led", ("lead", "led", "led on")),
+    ("third fourth fifth", "third fourth last", "forth", ("fourth", "forth", "front")),
 )
 
 _P269 = _page(
@@ -112,6 +120,14 @@ _GRAPHS = (
     ((("film", ("edit",)), ("edit", ("footage",))), "footage", "film"),
     ((("release", ("sign",)), ("sign", ("compile",))), "compile", "release"),
     ((("meal", ("pasta",)), ("pasta", ("eggs", "flour"))), "flour", "meal"),
+    ((("stew", ("stock",)), ("stock", ("bones", "water"))), "bones", "stew"),
+    ((("tool", ("steel",)), ("steel", ("iron",))), "iron", "tool"),
+    ((("ship", ("hull",)), ("hull", ("plate",))), "plate", "ship"),
+    ((("supper", ("gravy",)), ("gravy", ("juices", "flour"))), "juices", "supper"),
+    ((("chart", ("counts",)), ("counts", ("survey",))), "survey", "chart"),
+    ((("barn", ("frame",)), ("frame", ("timber",))), "timber", "barn"),
+    ((("brew", ("malt",)), ("malt", ("barley", "water"))), "barley", "brew"),
+    ((("album", ("tracks",)), ("tracks", ("takes",))), "takes", "album"),
 )
 
 _P270 = _page(
@@ -159,6 +175,14 @@ _HEAPS = (
     (15, 3, 27, 9),
     (88, 12, 45, 30),
     (4, 16, 8, 2),
+    (14, 5, 19, 7),
+    (12, 3, 9, 5),
+    (8, 8, 4, 2),
+    (200, 60, 90, 30),
+    (3, 6, 9, 12),
+    (11, 10, 9, 8),
+    (2, 4, 6, 8, 10),
+    (51, 8, 90, 14),
 )
 
 _P271 = _page(
@@ -202,6 +226,14 @@ _ZIPS = (
     ("text.zip", (("sky.txt", "blue"), ("sea.txt", "green"))),
     ("book.zip", (("one.md", "chapter one"), ("two.md", "chapter two"))),
     ("mix.zip", (("red.txt", "warm"), ("blue.txt", "cool"))),
+    ("crate.zip", (("three.txt", "morning"), ("four.txt", "evening"))),
+    ("sack.zip", (("c.txt", "third"), ("d.txt", "fourth"))),
+    ("diary.zip", (("thu.txt", "review"), ("fri.txt", "release"))),
+    ("counts.zip", (("east.csv", "totals"), ("west.csv", "spares"))),
+    ("page.zip", (("home.html", "front"), ("main.css", "styles"))),
+    ("trace.zip", (("web.log", "ready"), ("api.log", "listening"))),
+    ("guide.zip", (("start.md", "begin here"), ("next.md", "and next"))),
+    ("keys2.zip", (("cert.txt", "public"), ("hint.txt", "not secret"))),
 )
 
 _P272 = _page(
@@ -248,6 +280,14 @@ _GZIPS = (
     "a b a b a b a b a b a b a b a b",
     "the quick fox the quick fox the quick fox",
     "line one line one line one line one",
+    "morning morning morning morning",
+    "the same words again and again and again",
+    "bbbbbbbbbbbbbbbbbbbbbbbb",
+    "three four three four three four three",
+    "squeeze me squeeze me squeeze me",
+    "east west east west east west",
+    "teal plum amber teal plum amber teal",
+    "counts counts counts counts counts",
 )
 
 _P273 = _page(
@@ -295,6 +335,14 @@ _INIS = (
     ("queue", "name", "main", "depth", 500),
     ("auth", "realm", "internal", "expiry", 3600),
     ("store", "region", "eu-west", "shards", 12),
+    ("server", "host", "127.0.0.1", "port", 5173),
+    ("database", "name", "entries", "timeout", 60),
+    ("app", "mode", "debug", "workers", 8),
+    ("cache", "path", "scratch", "size", 512),
+    ("mail", "sender", "postbox", "retries", 5),
+    ("log", "level", "warn", "keep", 14),
+    ("api", "version", "v3", "limit", 250),
+    ("ui", "theme", "light", "width", 120),
 )
 
 _P274 = _page(
@@ -357,6 +405,14 @@ _REDIRECTS = (
     ("saved", "displayed"),
     ("caught", "free"),
     ("buffered", "flushed"),
+    ("taken aside", "back in the open"),
+    ("into the sink", "onto the page"),
+    ("unseen line", "seen line"),
+    ("gathered", "spoken"),
+    ("waiting still", "waiting no more"),
+    ("kept", "let go"),
+    ("tucked away", "out in front"),
+    ("hushed", "clear"),
 )
 
 _P275 = _page(
@@ -403,6 +459,14 @@ _TEMPLATES = (
     ("$room is on $floor", "room", "attic", "floor", 4),
     ("$tool weighs $weight", "tool", "saw", "weight", 3),
     ("$trip is $miles long", "trip", "north", "miles", 120),
+    ("Hello $name, you are $age", "name", "finn", "age", 27),
+    ("$name lives in $city", "name", "ida", "city", 0),
+    ("$who scored $points", "who", "kit", "points", 82),
+    ("$item costs $pence", "item", "kiwi", "pence", 55),
+    ("$word has $count letters", "word", "moon", "count", 4),
+    ("$metal melts at $degrees", "metal", "tin", "degrees", 232),
+    ("$song runs $seconds", "song", "art", "seconds", 224),
+    ("$team has $points", "team", "blues", "points", 12),
 )
 
 _P276 = _page(
@@ -461,6 +525,14 @@ _NORMALS = (
     "señor",
     "fiancée",
     "Málaga",
+    "hôtel",
+    "Köln",
+    "garçon",
+    "mañana",
+    "smörgås",
+    "tête",
+    "año",
+    "Angström",
 )
 
 _P277 = _page(
@@ -505,6 +577,14 @@ _MIXED = (
     ("Band", "NARROW", "WIDE", "Sort", "ASC", "asc", "DESC", "desc"),
     ("Load", "LIGHT", "HEAVY", "Zone", "INNER", "inner", "OUTER", "outer"),
     ("Cost", "CHEAP", "DEAR", "Form", "SHORT", "short", "LONG", "long"),
+    ("Depth_", "SHALLOW", "DEEP", "Access", "FETCH", "fetch", "STORE", "store"),
+    ("Placing", "FIRST", "LAST", "Shade", "TEAL", "teal", "PLUM", "plum"),
+    ("Pace", "CRAWL", "SPRINT", "Night", "THU", "thu", "FRI", "fri"),
+    ("Weight_", "LIGHT", "HEAVY", "Gate", "AJAR", "ajar", "BARRED", "barred"),
+    ("Standing", "JUNIOR", "SENIOR", "Bearing", "EAST", "east", "WEST", "west"),
+    ("Plan", "TRIAL", "FULL", "Coin", "FRONT", "front", "BACK", "back"),
+    ("Stage_", "EARLY", "LATE", "Styling", "PLAIN", "plain", "RICH", "rich"),
+    ("Volume_", "QUIET", "LOUD", "Order__", "UP", "up", "DOWN", "down"),
 )
 
 _P278 = _page(

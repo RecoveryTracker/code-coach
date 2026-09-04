@@ -58,6 +58,14 @@ _DESCRIPTORS = (
     ("AtLeastOne", "Grid", "rows", 1, 8, 0, "needs at least one row"),
     ("Positive", "Score", "points", 0, 40, -4, "must be positive"),
     ("NotBelow", "Stock", "units", 0, 25, -1, "cannot be negative"),
+    ("Positive", "Crate", "count", 0, 8, -2, "must be positive"),
+    ("NotBelow", "Pallet", "items", 0, 6, -4, "cannot be negative"),
+    ("AtLeastOne", "Run", "size", 1, 14, 0, "needs at least one"),
+    ("Positive", "Barrel", "litres", 0, 90, -9, "must be positive"),
+    ("Sensible", "Berth", "floor", 0, 5, -2, "no floors below zero"),
+    ("AtLeastOne", "Side", "players", 1, 15, 0, "a side needs players"),
+    ("Positive", "Purse", "pence", 0, 500, -60, "must be positive"),
+    ("NotBelow", "Rack", "books", 0, 12, -5, "cannot be negative"),
 )
 
 _P249 = _page(
@@ -126,6 +134,14 @@ _CHAINS = (
     ((("depth", "one"), ("style", "plain")), (("style", "rich"),), "depth"),
     ((("cache", "on"), ("retries", "three")), (("retries", "one"),), "cache"),
     ((("format", "csv"), ("header", "yes")), (("header", "no"),), "format"),
+    ((("colour", "teal"), ("size", "small")), (("size", "huge"),), "colour"),
+    ((("mode", "fast"), ("level", "warn")), (("level", "error"),), "mode"),
+    ((("host", "remote"), ("port", "5173")), (("port", "8765"),), "host"),
+    ((("theme", "light"), ("font", "serif")), (("font", "sans"),), "theme"),
+    ((("sort", "date"), ("order", "down")), (("order", "up"),), "sort"),
+    ((("shell", "zsh"), ("editor", "nano")), (("editor", "emacs"),), "shell"),
+    ((("region", "us"), ("tier", "paid")), (("tier", "free"),), "region"),
+    ((("lang", "fr"), ("units", "imperial")), (("units", "metric"),), "lang"),
 )
 
 _P250 = _page(
@@ -179,6 +195,14 @@ _STACKS = (
     ("left", "right"),
     ("start", "middle", "end"),
     ("open", "read", "close"),
+    ("d", "e", "f"),
+    ("three", "four"),
+    ("teal", "plum", "amber"),
+    ("fourth", "fifth", "sixth"),
+    ("over", "under"),
+    ("p", "q", "r"),
+    ("east", "west"),
+    ("la", "ti", "do"),
 )
 
 _P251 = _page(
@@ -225,6 +249,14 @@ _GLOBS = (
     (("sky.jpg", "sea.jpg", "notes.txt"), "*.jpg"),
     (("run.sh", "stop.sh", "readme.md"), "*.sh"),
     (("a.yaml", "b.yaml", "c.toml"), "*.yaml"),
+    (("four.txt", "five.txt", "six.md"), "*.txt"),
+    (("c.py", "d.py", "plan.md"), "*.py"),
+    (("counts.csv", "totals.csv", "notes.txt"), "*.csv"),
+    (("server.py", "client.py", "setup.toml"), "*.py"),
+    (("third.log", "fourth.log", "prefs.ini"), "*.log"),
+    (("delta.json", "gamma.json", "sigma.xml"), "*.json"),
+    (("east.md", "west.md", "chart.png"), "*.md"),
+    (("teal.css", "plum.css", "page.html"), "*.css"),
 )
 
 _P252 = _page(
@@ -273,6 +305,14 @@ _ENVIRONS = (
     ("LOCALE", "en_GB", "CURRENCY", "GBP"),
     ("WORKERS", "4", "QUEUE", "main"),
     ("API_VERSION", "v2", "API_KEY", "missing"),
+    ("APP_STAGE", "live", "APP_ABSENT", "default"),
+    ("LOG_FORMAT", "json", "LOG_PATH", "none"),
+    ("DB_PORT", "5432", "DB_SECRET", "unset"),
+    ("UI_PORT", "5173", "UI_TIMEOUT", "60"),
+    ("ZONE", "us-east", "RACK", "unknown"),
+    ("ACCENT", "teal", "CONTRAST", "normal"),
+    ("TEMP_DIR", "scratch", "TEMP_SIZE", "0"),
+    ("USER_TEAM", "core", "USER_SHIFT", "none"),
 )
 
 _P253 = _page(
@@ -328,6 +368,14 @@ _PRODUCTS = (
     ((2, 5, 10), 12, 2),
     ((4, 4, 4), 8, 4),
     ((11, 3), 7, 2),
+    ((2, 3, 4, 5), 6, 2),
+    ((3, 4, 6), 7, 3),
+    ((2, 2, 8), 5, 2),
+    ((15, 15), 9, 2),
+    ((4, 4, 4), 8, 3),
+    ((3, 3, 3, 3), 11, 2),
+    ((6, 5), 7, 2),
+    ((2, 10, 3), 10, 4),
 )
 
 _P254 = _page(
@@ -374,6 +422,14 @@ _BATCHES = (
     ((1, 2, 3, 4, 5, 6, 7, 8), 4, ((6, 2), (2, 8))),
     ((11, 22, 33), 3, ((8, 2), (2, 5))),
     ((3, 6, 9, 12, 15), 2, ((11, 2), (2, 10))),
+    ((2, 3, 4, 5, 6), 2, ((3, 4), (4, 3))),
+    ((2, 3, 4, 5, 6, 7), 3, ((3, 5), (6, 2))),
+    ((15, 25, 35, 45), 2, ((11, 2), (4, 3))),
+    ((4, 5, 6), 2, ((3, 6), (5, 2))),
+    ((2, 3, 4, 5, 6, 7, 8), 3, ((4, 3), (2, 7))),
+    ((6, 7, 8, 9), 3, ((8, 2), (2, 8))),
+    ((2, 2, 2, 2, 2), 2, ((10, 2), (2, 10))),
+    ((3, 6, 9, 12, 15), 4, ((5, 3), (3, 5))),
 )
 
 _P255 = _page(
@@ -420,6 +476,14 @@ _DEFAULTS = (
     ("Wall", "bricks", "rows", 1, 90, 6),
     ("Gap", "start", "end", 0, 7, 31),
     ("Pair", "left", "right", 0, 7, 8),
+    ("Coord", "x", "y", 0, 7, 9),
+    ("Extent", "width", "height", 1, 64, 48),
+    ("Reach", "low", "high", 0, 11, 47),
+    ("Result", "points", "bonus", 0, 72, 9),
+    ("Berth", "floor", "number", 1, 5, 14),
+    ("Journey", "miles", "hours", 1, 180, 4),
+    ("Board", "rows", "cols", 1, 6, 7),
+    ("Barrel", "full", "used", 0, 90, 34),
 )
 
 _P256 = _page(
@@ -481,6 +545,14 @@ _SENDS = (
     ((6, 6), "done"),
     ((50, 25, 25), "complete"),
     ((1, 2, 3, 4), "finished"),
+    ((5, 6), "closed"),
+    ((15, 25, 35), "done"),
+    ((2, 2, 2), "finished"),
+    ((8,), "stopped"),
+    ((300, 400), "sealed"),
+    ((9, 9, 9, 9), "over"),
+    ((3, 6, 12), "ended"),
+    ((11, 3), "shut"),
 )
 
 _P257 = _page(
@@ -530,6 +602,14 @@ _FOLDS = (
     ("SPASS", "spass", "Spaß"),
     ("MASSE", "masse", "Maße"),
     ("BUSSE", "busse", "Buße"),
+    ("MASS", "mass", "Maß"),
+    ("STRASSEN", "strassen", "Straßen"),
+    ("GIESSEN", "giessen", "Gießen"),
+    ("SCHLIESSEN", "schliessen", "schließen"),
+    ("AUSSEN", "aussen", "außen"),
+    ("REISSEN", "reissen", "reißen"),
+    ("BLOSS", "bloss", "bloß"),
+    ("SCHOSS", "schoss", "Schoß"),
 )
 
 _P258 = _page(

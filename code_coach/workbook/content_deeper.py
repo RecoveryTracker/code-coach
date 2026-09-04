@@ -60,6 +60,14 @@ _ROUNDS = (
     ((5.5, None), (6.5, None), (0.5, None), (2.225, 2)),
     ((13.5, None), (14.5, None), (1.5, None), (4.155, 2)),
     ((0.5, None), (99.5, None), (98.5, None), (1.265, 2)),
+    ((15.5, None), (16.5, None), (17.5, None), (0.625, 2)),
+    ((20.5, None), (21.5, None), (22.5, None), (1.625, 2)),
+    ((0.5, None), (30.5, None), (31.5, None), (2.625, 2)),
+    ((40.5, None), (41.5, None), (1.5, None), (3.125, 2)),
+    ((50.5, None), (2.5, None), (51.5, None), (3.625, 2)),
+    ((60.5, None), (61.5, None), (62.5, None), (4.125, 2)),
+    ((3.5, None), (70.5, None), (71.5, None), (4.625, 2)),
+    ((80.5, None), (81.5, None), (4.5, None), (5.125, 2)),
 )
 
 _P219 = _page(
@@ -105,6 +113,14 @@ _DIVMODS = (
     (250, 16, "fa", "11111010"),
     (81, 9, "51", "1010001"),
     (13, 5, "d", "1101"),
+    (23, 4, "1b", "1100"),
+    (35, 6, "2f", "10101"),
+    (140, 9, "8c", "1001"),
+    (11, 3, "b", "111"),
+    (57, 8, "39", "111001"),
+    (9, 9, "9f", "1011"),
+    (222, 10, "de", "1110"),
+    (128, 16, "80", "10000000"),
 )
 
 _P220 = _page(
@@ -153,6 +169,14 @@ _SORTS = (
     (6, 5, 4, 3, 2),
     (15, 3, 27, 9),
     (88, 12, 45),
+    (4, 2, 3),
+    (6, 5, 11, 2),
+    (12, 3, 9),
+    (8, 8, 4),
+    (200, 60, 90),
+    (3, 1),
+    (11, 10, 9, 8),
+    (5, 14, 9, 2),
 )
 
 _P221 = _page(
@@ -197,6 +221,14 @@ _SCOPES = (
     ("times", (6, 6), 6),
     ("steps", (11, 22), 2),
     ("goes", (1, 1, 1, 1), 1),
+    ("count", (5, 6), 3),
+    ("tally", (2, 3, 4), 4),
+    ("total", (15, 25), 2),
+    ("hits", (9,), 5),
+    ("runs", (3, 3, 3), 3),
+    ("score", (11, 12), 6),
+    ("seen", (200,), 2),
+    ("marks", (7, 8, 9), 3),
 )
 
 _P222 = _page(
@@ -249,6 +281,14 @@ _VIEWS = (
     ((("front", 4), ("back", 55)), ("side", 20)),
     ((("one", 1), ("two", 2)), ("six", 6)),
     ((("salt", 11), ("pepper", 22)), ("sugar", 3)),
+    ((("kiwi", 4), ("plum", 6)), ("sloe", 8)),
+    ((("finn", 27), ("ida", 44)), ("kit", 15)),
+    ((("teal", 15), ("plum", 7)), ("amber", 33)),
+    ((("thu", 9), ("fri", 5)), ("sat", 4)),
+    ((("tin", 50), ("lead", 82)), ("zinc", 30)),
+    ((("la", 6), ("ti", 7)), ("do", 8)),
+    ((("up", 7), ("down", 21)), ("across", 2)),
+    ((("plane", 7), ("chisel", 2)), ("saw", 4)),
 )
 
 _P223 = _page(
@@ -298,6 +338,14 @@ _AFFIXES = (
     ("web_entry.html", "web_", ".html"),
     ("doc_output.md", "doc_", ".md"),
     ("app_params.json", "app_", ".json"),
+    ("test_engine.py", "test_", ".py"),
+    ("test_state.py", "test_", ".py"),
+    ("tmp_map.txt", "tmp_", ".txt"),
+    ("old_dump.log", "old_", ".log"),
+    ("dev_defaults.ini", "dev_", ".ini"),
+    ("raw_rows.csv", "raw_", ".csv"),
+    ("new_notes.md", "new_", ".md"),
+    ("bin_number.dat", "bin_", ".dat"),
 )
 
 _P224 = _page(
@@ -347,6 +395,14 @@ _SUPPRESS = (
     ((("front", 4), ("back", 5)), "roof", "no chance", "out"),
     ((("one", 1),), "nine", "unseen", "over"),
     ((("salt", 11), ("pepper", 22)), "sugar", "missed", "past it"),
+    ((("kiwi", 4), ("plum", 6)), "sloe", "never reached", "carried on"),
+    ((("finn", 27), ("ida", 44)), "kit", "skipped", "still going"),
+    ((("teal", 15),), "amber", "not printed", "done"),
+    ((("thu", 9), ("fri", 5)), "mon", "no", "after the block"),
+    ((("tin", 50),), "lead", "unreachable", "finished"),
+    ((("la", 6), ("ti", 7)), "so", "nope", "next"),
+    ((("up", 7),), "across", "never", "onwards"),
+    ((("plane", 7), ("chisel", 2)), "lathe", "skipped", "end"),
 )
 
 _P225 = _page(
@@ -402,6 +458,14 @@ _TABLES = (
     ("days", "hours", (("mon", 8), ("tue", 6))),
     ("words", "length", (("sky", 3), ("lake", 4))),
     ("trips", "miles", (("north", 120), ("south", 40))),
+    ("people", "age", (("finn", 27), ("ida", 44))),
+    ("towns", "people", (("ripon", 17), ("oslo", 709))),
+    ("metals", "melting", (("tin", 232), ("lead", 327))),
+    ("books", "pages", (("ubik", 224), ("valis", 261))),
+    ("tracks", "seconds", (("art", 224), ("sons", 207))),
+    ("sides", "points", (("blues", 12), ("whites", 55))),
+    ("blades", "weight", (("plane", 7), ("chisel", 2))),
+    ("berths", "floor", (("cabin", 5), ("hold", 2))),
 )
 
 _P226 = _page(
@@ -452,6 +516,14 @@ _PATTERNS = (
     ("sort_it", "cube", "edge", 3, (1, 1), 77, "no clue"),
     ("scan", "star", "points", 5, (2, 4), 66, "unknown"),
     ("pick", "wheel", "spokes", 16, (3, 6), 88, "not known"),
+    ("explain", "ring", "r", 6, (2, 3), 51, "unknown"),
+    ("call_it", "oblong", "side", 5, (4, 5), 88, "no idea"),
+    ("form_of", "crate", "width", 12, (6, 7), 9, "unknown"),
+    ("recite", "edge", "length", 15, (8, 9), 1, "nothing"),
+    ("sort_of", "speck", "size", 2, (10, 11), 66, "unknown"),
+    ("caption", "hoop", "radius", 9, (3, 4), 12, "no match"),
+    ("render", "plate", "across", 25, (5, 6), 44, "unknown"),
+    ("scan_it", "span", "width", 7, (7, 8), 22, "none"),
 )
 
 _P227 = _page(
@@ -519,6 +591,14 @@ _BOXES = (
     ("Tin", "inside", 64, "gold"),
     ("Pack", "contents", 21, "iron"),
     ("Jar", "pour", 3, "salt"),
+    ("Case_", "get", 6, "morning"),
+    ("Keeper", "item_of", 51, "evening"),
+    ("Sleeve", "unwrap", 8, "words"),
+    ("Pocket", "value_of", 200, "notes"),
+    ("Niche", "read", 2, "finn"),
+    ("Chest", "open_up", 11, "ida"),
+    ("Depot", "fetch", 14, "kit"),
+    ("Sack", "take", 44, "teal"),
 )
 
 _P228 = _page(

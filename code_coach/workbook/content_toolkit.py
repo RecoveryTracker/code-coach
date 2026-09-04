@@ -61,6 +61,14 @@ _PRODUCTS = (
     ((2,), ("do", "re", "mi")),
     ((9, 10), ("left", "right")),
     ((3, 6), ("hot", "cold")),
+    ((3, 4), ("c", "d")),
+    ((4, 5, 6), ("p", "q")),
+    ((1,), ("teal", "plum", "amber")),
+    ((7, 8), ("in", "out")),
+    ((3, 4), ("thu", "fri", "sat")),
+    ((9,), ("over", "under")),
+    ((15, 25), ("near", "far")),
+    ((5, 6), ("tin", "lead")),
 )
 
 _P209 = _page(
@@ -104,6 +112,14 @@ _LONGEST = (
     ((3, 6), (30,), 0),
     ((1, 2, 3, 4), (10, 20, 30), -1),
     ((8, 9), (80, 90, 100), 0),
+    ((2, 3, 4), (20, 30), 0),
+    ((2, 3), (20, 30, 40), 0),
+    ((6, 7, 8, 9), (60, 70), 0),
+    ((2,), (20, 30), -1),
+    ((11, 12), (110,), -1),
+    ((2, 3, 4), (20,), 0),
+    ((5, 6), (50, 60, 70), 88),
+    ((9,), (90, 100, 110), 88),
 )
 
 _P210 = _page(
@@ -150,6 +166,14 @@ _CYCLES = (
     (("north", "south", "east", "west"), 9),
     (("yes", "no"), 4),
     (("one", "two", "three"), 5),
+    (("teal", "plum", "amber"), 8),
+    (("in", "out"), 7),
+    (("thu", "fri", "sat"), 7),
+    (("la", "ti", "do"), 5),
+    (("over", "under"), 5),
+    (("tin", "lead"), 3),
+    (("p", "q", "r", "s"), 7),
+    (("near", "far"), 9),
 )
 
 _P211 = _page(
@@ -194,6 +218,14 @@ _TAKES = (
     ((1, 3, 5, 2, 7), "n % 2 == 1"),
     ((7, 14, 21, 5, 28), "n % 7 == 0"),
     ((0, 0, 1, 0), "n == 0"),
+    ((2, 3, 4, 11, 2, 3), "n < 5"),
+    ((4, 8, 12, 15, 20), "n % 4 == 0"),
+    ((2, 2, 2, 7, 2), "n == 2"),
+    ((15, 25, 8, 35), "n >= 10"),
+    ((5, 10, 15, 8, 20), "n % 5 == 0"),
+    ((2, 3, 4, 5, 200), "n < 100"),
+    ((9, 9, 9, 2, 9), "n == 9"),
+    ((200, 180, 160, 9, 140), "n > 100"),
 )
 
 _P212 = _page(
@@ -240,6 +272,14 @@ _PAIRS = (
     (50, 45, 35, 20),
     (7, 14, 28, 56),
     (1, 10, 100, 1000),
+    (2, 5, 11, 20),
+    (1, 6, 16, 31),
+    (3, 6, 12, 24, 48),
+    (11, 13, 16, 20),
+    (200, 180, 140, 80),
+    (2, 3, 5, 8, 12),
+    (4, 8, 16, 32),
+    (6, 6, 12, 24),
 )
 
 _P213 = _page(
@@ -283,6 +323,14 @@ _TOOLS_DATA = (
     ("Tank", (("full", "int"), ("used", "int")), (60, 22), 100),
     ("Wall", (("bricks", "int"), ("rows", "int")), (90, 6), 45),
     ("Bill", (("price", "int"), ("people", "int")), (45, 3), 90),
+    ("Coord", (("x", "int"), ("y", "int")), (7, 9), 15),
+    ("Extent", (("width", "int"), ("height", "int")), (64, 48), 30),
+    ("Reach", (("low", "int"), ("high", "int")), (11, 47), 0),
+    ("Duo", (("left", "int"), ("right", "int")), (11, 12), 80),
+    ("Berth", (("floor", "int"), ("number", "int")), (5, 14), 6),
+    ("Result", (("points", "int"), ("bonus", "int")), (72, 9), 88),
+    ("Board", (("rows", "int"), ("cols", "int")), (6, 7), 2),
+    ("Journey", (("miles", "int"), ("hours", "int")), (180, 4), 250),
 )
 
 _P214 = _page(
@@ -339,6 +387,14 @@ _ORDERED = (
     ("Team", "points", "name", (12, "blues"), (41, "reds")),
     ("Word", "length", "text", (3, "sky"), (8, "mountain")),
     ("Trip", "miles", "name", (40, "short one"), (120, "long one")),
+    ("Token", "worth", "face", (4, "front"), (11, "back")),
+    ("Runner", "score", "name", (37, "ida"), (82, "finn")),
+    ("Volume", "pages", "title", (224, "ubik"), (261, "valis")),
+    ("Town", "people", "name", (17, "ripon"), (709, "oslo")),
+    ("Track_", "seconds", "title", (207, "sons"), (386, "warszawa")),
+    ("Ore", "melting", "name", (232, "tin"), (327, "lead")),
+    ("Berth", "floor", "name", (2, "hold"), (5, "cabin")),
+    ("Blade", "weight", "name", (2, "chisel"), (9, "plane")),
 )
 
 _P215 = _page(
@@ -409,6 +465,14 @@ _AUTOS = (
     ("Suit", ("SPADES", "HEARTS", "CLUBS"), "label"),
     ("Turn", ("LEFT", "AHEAD", "RIGHT"), "shown"),
     ("Step", ("WEIGH", "MIX", "BAKE"), "label"),
+    ("Shade", ("TEAL", "PLUM", "AMBER"), "label"),
+    ("Gate", ("SHUT", "AJAR", "OPEN"), "label"),
+    ("Weight", ("LIGHT", "MIDDLING", "HEAVY"), "shown"),
+    ("Night", ("THU", "FRI", "SAT"), "shown"),
+    ("Placing", ("FIRST", "SECOND", "THIRD"), "label"),
+    ("Stage", ("WEIGH", "STIR", "ROAST"), "label"),
+    ("Access", ("FETCH", "STORE", "APPEND"), "shown"),
+    ("Pace", ("CRAWL", "WALK", "SPRINT"), "label"),
 )
 
 _P216 = _page(
@@ -463,6 +527,14 @@ _GENERICS = (
     ("first_item", (11, 22), ("hot", "cold")),
     ("began", (0, 1), ("sky", "sea")),
     ("peek", (12, 24, 36), ("one", "two")),
+    ("first_in", (4, 5, 6), ("c", "d")),
+    ("lead_of", (15, 25), ("gold", "tin")),
+    ("open_of", (11,), ("thu", "fri")),
+    ("begin_of", (8, 9, 10), ("la", "ti")),
+    ("soonest", (300, 400), ("oak", "ash")),
+    ("crown_of", (12, 11), ("in", "out")),
+    ("foremost", (2, 2, 3), ("on", "off")),
+    ("opening_of", (55,), ("east", "west")),
 )
 
 _P217 = _page(
@@ -512,6 +584,14 @@ _POOLS = (
     ("n * 3", (7, 8), 2),
     ("n // 10", (100, 250, 375), 3),
     ("n + 1", (0, 41, 99), 2),
+    ("n * n", (2, 3, 4, 5), 3),
+    ("n * 4", (6, 7, 8), 2),
+    ("n + 200", (2, 3, 4), 3),
+    ("n // 3", (15, 25, 35, 45), 4),
+    ("n * 20", (2, 4, 6), 2),
+    ("n - 2", (11, 10, 9), 3),
+    ("n % 7", (12, 13, 14, 15), 4),
+    ("n * 5", (8, 9), 2),
 )
 
 _P218 = _page(

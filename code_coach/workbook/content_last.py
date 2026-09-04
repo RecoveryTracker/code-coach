@@ -62,6 +62,14 @@ _METAS = (
     ("Log", ("Blur", "Sharpen")),
     ("Record", ("Build", "Deploy")),
     ("Sheet", ("Fast", "Deep")),
+    ("Ledger", ("Gamma", "Delta")),
+    ("Directory", ("Yaml", "Toml")),
+    ("Gatherer", ("Ring", "Oblong")),
+    ("Register", ("Tabs", "Commas")),
+    ("Roster", ("Screen_", "Paper")),
+    ("Volume", ("Depth", "Shape_")),
+    ("Series", ("Begin", "Halt")),
+    ("Chart", ("Ascii", "Unicode")),
 )
 
 _P259 = _page(
@@ -114,6 +122,14 @@ _WEAKS = (
     "Socket",
     "Record",
     "Token",
+    "Parcel",
+    "Leaf",
+    "Gadget",
+    "Sheet_",
+    "Link",
+    "Cache_",
+    "Grip",
+    "Row_",
 )
 
 _P260 = _page(
@@ -158,6 +174,14 @@ _STRUCTS = (
     (">hhh", (10, 20, 30)),
     ("<ih", (256, 1)),
     ("<hhhh", (1, 1, 1, 1)),
+    ("<hh", (11, 13)),
+    ("<ii", (3, 4)),
+    ("<hhh", (4, 5, 6)),
+    (">hh", (11, 13)),
+    ("<bb", (7, 8)),
+    ("<i", (131586,)),
+    (">i", (131586,)),
+    ("<hi", (6, 200)),
 )
 
 _P261 = _page(
@@ -203,6 +227,14 @@ _UUIDS = (
     "test.example.dev",
     "blog.example.uk",
     "files.example.co",
+    "example.org",
+    "nodejs.org",
+    "code.workbook",
+    "127.0.0.1",
+    "api.example.net",
+    "docs.example.org",
+    "shop.example.io",
+    "mail.example.uk",
 )
 
 _P262 = _page(
@@ -246,6 +278,14 @@ _BADS = (
     "3a",
     "--",
     "ten",
+    "def",
+    "morning",
+    "thirteen",
+    "two",
+    "2.6.1",
+    "n/k",
+    "null",
+    "several",
 )
 
 _P263 = _page(
@@ -290,6 +330,14 @@ _WARNINGS = (
     ("this is untested", "UserWarning"),
     ("will be removed", "DeprecationWarning"),
     ("consider the default", "UserWarning"),
+    ("this one is dated", "DeprecationWarning"),
+    ("reach for the newer call", "DeprecationWarning"),
+    ("that could be slow", "UserWarning"),
+    ("check the units", "UserWarning"),
+    ("leaving in v4", "DeprecationWarning"),
+    ("not advised", "UserWarning"),
+    ("renamed in the spring", "DeprecationWarning"),
+    ("precision may suffer", "UserWarning"),
 )
 
 _P264 = _page(
@@ -337,6 +385,14 @@ _COPIES = (
     ("sky.txt", "sea.txt", "lines"),
     ("run.sh", "run.old", "script"),
     ("draft.md", "final.md", "text"),
+    ("three.txt", "four.txt", "morning"),
+    ("third.md", "fourth.md", "plan"),
+    ("counts.csv", "counts.bak", "totals"),
+    ("server.py", "server.old", "source"),
+    ("c.log", "d.log", "records"),
+    ("near.json", "far.json", "figures"),
+    ("east.txt", "west.txt", "phrases"),
+    ("teal.css", "plum.css", "rules"),
 )
 
 _P265 = _page(
@@ -385,6 +441,14 @@ _CMPS = (
     ("vvvvv", "ww", "x"),
     ("yyy", "z", "aa"),
     ("bbbb", "c", "dd"),
+    ("fffff", "g", "hh"),
+    ("iiii", "jj", "k"),
+    ("lllll", "m", "nn"),
+    ("seven", "of", "p"),
+    ("qqqq", "rrr", "ss"),
+    ("ttttt", "uu", "v"),
+    ("www", "x", "yy"),
+    ("zzzz", "a", "bb"),
 )
 
 _P266 = _page(
@@ -429,6 +493,14 @@ _CALLERS = (
     (("Salt", "PEPPER", "sugar"), "pepper", "p", "b"),
     (("Left", "RIGHT", "up"), "running", "n", "m"),
     (("Fast", "SLOW", "mid"), "address", "d", "t"),
+    (("Finn", "IDA", "Kit"), "sandal", "a", "-"),
+    (("TEAL", "Plum", "amber"), "morning", "n", "N"),
+    (("THU", "Fri", "sat"), "letters", "t", "7"),
+    (("Tin", "LEAD", "zinc"), "tennessee", "e", "z"),
+    (("East", "WEST", "north"), "toffee", "f", "p"),
+    (("La", "TI", "do"), "balloons", "l", "1"),
+    (("Plane", "SAW", "chisel"), "attention", "n", "N"),
+    (("Oak", "ASH", "elm"), "assess", "s", "k"),
 )
 
 _P267 = _page(
@@ -478,6 +550,14 @@ _FLAGS = (
     ("Entry", "note", "raw", ("x", "y")),
     ("Token", "issued", "value", ("v1", "v2")),
     ("Config", "prod", "secret", ("s1", "s2")),
+    ("Reader_", "finn", "token", ("secret3", "secret4")),
+    ("Ledger", "ida", "password", ("hunter4", "hunter5")),
+    ("Caller", "kit", "key", ("ghi789", "jkl012")),
+    ("Link", "lee", "cookie", ("ccc", "ddd")),
+    ("Signin", "mia", "hash", ("333", "444")),
+    ("Leaf", "beta", "cache", ("hot", "chill")),
+    ("Batch", "deploy", "log_path", ("/tmp/c", "/tmp/d")),
+    ("Row_", "second", "trace_id", ("t-3", "t-4")),
 )
 
 _P268 = _page(
