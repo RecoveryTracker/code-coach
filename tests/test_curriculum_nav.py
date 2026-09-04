@@ -46,12 +46,34 @@ class NavigateStep(unittest.TestCase):
         self.assertEqual(p.curriculum_class, FIRST_CLASS)
         self.assertEqual(p.curriculum_lesson, 2)
 
-    def test_class_delta_resets_lesson_to_one(self):
+    def test_class_delta_keeps_the_lesson_you_were_on(self):
+        """Changing class keeps the lesson, and used to reset it to 1.
+
+        Reported from use: working a pattern from memory, switching to the
+        next pattern, and being dropped back into typing along. Changing
+        class is changing the subject, not restarting it — so lesson 2 of
+        one class lands on lesson 2 of the next. Stepping past the *end* of
+        a class is a different move and still arrives at lesson 1, which
+        the crossing tests below cover.
+        """
         p = StudentProgress()
         goto_position(p, class_id=FIRST_CLASS, lesson_number=2)
         navigate_step(p, class_delta=1)
         self.assertEqual(p.curriculum_class, SECOND_CLASS)
-        self.assertEqual(p.curriculum_lesson, 1)
+        self.assertEqual(p.curriculum_lesson, 2)
+
+    def test_class_delta_clamps_a_lesson_the_new_class_lacks(self):
+        """Classes have different lesson counts, so keeping the number has
+        to survive a class that is shorter than the one you left."""
+        p = StudentProgress()
+        goto_position(p, class_id=FIRST_CLASS, lesson_number=1)
+        first_len = len(get_class(FIRST_CLASS).lessons)
+        second_len = len(get_class(SECOND_CLASS).lessons)
+        p.curriculum_lesson = first_len
+        navigate_step(p, class_delta=1)
+        self.assertEqual(p.curriculum_class, SECOND_CLASS)
+        self.assertLessEqual(p.curriculum_lesson, second_len)
+        self.assertGreaterEqual(p.curriculum_lesson, 1)
 
     def test_class_delta_clamps_at_first(self):
         p = StudentProgress()

@@ -177,7 +177,17 @@ def navigate_step(
 
     if class_delta:
         ci = max(0, min(len(class_ids) - 1, ci + class_delta))
-        return goto_position(progress, class_id=class_ids[ci], lesson_number=1)
+        # Stay on the lesson you were on. Jumping between whole classes is
+        # changing the subject, not restarting it: someone working from
+        # memory on one pattern wants the next pattern from memory too.
+        # goto_position clamps, so a shorter class lands on its last lesson.
+        # Stepping *past* a lesson end is different and still rolls into
+        # lesson 1 of the next class, further down.
+        return goto_position(
+            progress,
+            class_id=class_ids[ci],
+            lesson_number=int(progress.curriculum_lesson or 1),
+        )
 
     lesson_n = int(progress.curriculum_lesson or 1)
     lessons = cls.lessons

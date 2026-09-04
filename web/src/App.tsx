@@ -1309,7 +1309,15 @@ export default function App() {
           onLessonDelta={(d) => void jumpTo({ lesson_delta: d })}
           onExerciseDelta={onExerciseDelta}
           onSelectClass={(id) =>
-            void jumpTo({ class_id: id, lesson_number: 1 })
+            // Keep the lesson you are on rather than dropping to 1. Picking
+            // a different pattern while working from memory should give you
+            // that pattern from memory, not throw you back to typing along.
+            // goto_position clamps, so a class with fewer lessons lands on
+            // its last one instead of erroring.
+            void jumpTo({
+              class_id: id,
+              lesson_number: session?.lesson_number ?? 1,
+            })
           }
           onSelectLesson={(n) => void jumpTo({ lesson_number: n })}
           onContinue={advanceExercise}
