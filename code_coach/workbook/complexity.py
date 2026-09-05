@@ -163,13 +163,32 @@ _add(
     "Doubling the size quadruples the work, which is why nested loops are "
     "the first thing to look at when a program is slow.",
     "for_nested",
-    "times_table",
     "grid_print",
     "grid_sum",
+)
+
+_add(
+    "O(n)",
+    "Linear, despite the name. This page prints one times table — a single "
+    "loop over one row — so the work follows the length of that row. It is "
+    "the page that puts a loop inside a loop, further on, that costs the "
+    "square. Worth separating the two: a nested loop is quadratic, and a "
+    "table is not automatically nested.",
+    "times_table",
 )
 
 
 def for_shape(shape: str) -> Cost | None:
     """The cost note for a shape, or None when there is nothing honest to
-    say about it yet. Callers show no panel rather than a guess."""
-    return NOTES.get(shape)
+    say about it yet. Callers show no panel rather than a guess.
+
+    The intermediate and advanced shapes live in `complexity_more`, split
+    off for size alone. Imported here rather than at the top because that
+    module imports Cost from this one.
+    """
+    found = NOTES.get(shape)
+    if found is not None:
+        return found
+    from code_coach.workbook import complexity_more
+
+    return complexity_more.for_shape(shape)
