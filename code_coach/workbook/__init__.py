@@ -147,8 +147,14 @@ def expected_output(shape: str, args: dict) -> str:
         emit_algo4,
         emit_nodes,
         emit_graph,
+        emit_c,
+        emit_rust,
     )
 
+    if emit_rust.handles(shape):
+        return emit_rust.expected_output(shape, args, _value)
+    if emit_c.handles(shape):
+        return emit_c.expected_output(shape, args, _value)
     if emit_graph.handles(shape):
         return emit_graph.expected_output(shape, args, _value)
     if emit_nodes.handles(shape):

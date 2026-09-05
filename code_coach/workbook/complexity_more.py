@@ -1202,3 +1202,184 @@ _add(
     "this trick turns up so far from anything that looks like searching.",
     "predicate_search",
 )
+
+
+# ── C ────────────────────────────────────────────────────────
+#
+# The letters mean the same thing here, but the constant hidden behind
+# them is not the same constant. C does the work you wrote and nothing
+# else, which is why a linear pass in C and a linear pass elsewhere can
+# differ by a factor nobody writes down.
+
+_add(
+    "O(n)",
+    "One pass to fill and one to add up. The allocation itself is not the "
+    "cost people expect: malloc is roughly constant, and asking for one "
+    "block of n ints is very much cheaper than asking n times for one, "
+    "because each call has to find space and record that it did.",
+    "c_malloc",
+)
+
+_add(
+    "O(1)",
+    "sizeof is answered by the compiler, not at run time. There is no loop "
+    "in it and no cost to it, which is exactly why it cannot help once the "
+    "array has decayed to a pointer: nothing at compile time knows how many "
+    "elements the pointer is pointing at. The total afterwards is the only "
+    "linear part.",
+    "c_sizeof",
+)
+
+_add(
+    "O(n)",
+    "calloc has to zero what it hands back, so unlike malloc it does work "
+    "proportional to the size, though the operating system often has zeroed "
+    "pages ready and it comes out faster than a loop would. memcpy is "
+    "linear in bytes and about as fast as bytes can be moved.",
+    "c_calloc",
+)
+
+_add(
+    "O(n)",
+    "One pass to decide what to keep. The allocation is sized for the worst "
+    "case rather than the answer, which costs memory and saves counting the "
+    "matches first: the alternative is two passes, one to count and one to "
+    "fill. Both are linear, and which is better depends on whether memory "
+    "or time is the thing you are short of.",
+    "c_out_param",
+)
+
+_add(
+    "O(n)",
+    "One pass to build, one to walk, one to free, all linear. The free is "
+    "the part that does not exist in other languages and it is not optional: "
+    "every node came from its own malloc and has to be handed back "
+    "individually, which is why freeing a chain is a loop rather than a "
+    "single call.",
+    "c_list_node",
+    "c_list_ops",
+)
+
+_add(
+    "O(n)",
+    "Every node visited once to build, once to measure, once to add up, "
+    "once to free. Depth is not the same as node count: a balanced tree of "
+    "n nodes is log n deep, and one that has degenerated into a chain is n "
+    "deep, which is where the recursion here would run out of stack first.",
+    "c_tree_node",
+)
+
+_add(
+    "O(n log n)",
+    "The sort itself, plus one comparator call per comparison, and that "
+    "call is not free: it goes through a function pointer, so the compiler "
+    "cannot inline it the way a template or a closure would be inlined. "
+    "That is most of why the same sort in C++ is usually faster than qsort "
+    "despite doing the same number of comparisons.",
+    "c_qsort",
+)
+
+
+# ── Rust ─────────────────────────────────────────────────────
+#
+# Most of what is interesting in Rust is not the time, it is what the
+# time buys you. These notes say when a thing is free and when it only
+# looks free.
+
+_add(
+    "O(n)",
+    "find and position both stop at the first match, so the worst case is "
+    "the whole sequence and the usual case is less. Option itself costs "
+    "nothing at run time: it is a compile-time shape, and for a reference "
+    "it does not even cost the extra byte, because there is no such thing "
+    "as a null reference to confuse None with.",
+    "rust_option",
+)
+
+_add(
+    "O(n)",
+    "One pass, however many steps are chained onto it. map and filter build "
+    "no intermediate collection, so a chain of five of them is still a "
+    "single walk, and the compiler routinely turns it into the same loop "
+    "you would have written. collect is where memory is finally allocated, "
+    "which is why it is the step to be careful with.",
+    "rust_iter",
+)
+
+_add(
+    "O(1)",
+    "Constant per character, so linear over the text. The point of entry is "
+    "that it is one lookup rather than three: contains_key, then get, then "
+    "insert, is the same answer for three times the hashing. or_insert "
+    "returns a reference into the map, which is why the star is there.",
+    "rust_entry",
+)
+
+_add(
+    "O(1)",
+    "push and pop are constant, amortised for push because the Vec doubles "
+    "when it fills rather than growing by one. Doubling is what makes n "
+    "pushes cost n rather than n squared. clear is constant for numbers and "
+    "linear for anything with a destructor to run.",
+    "rust_vec_ops",
+)
+
+_add(
+    "O(1)",
+    "Both ends constant, which is the whole reason to reach for this rather "
+    "than a Vec. Taking from the front of a Vec is linear because everything "
+    "behind it shifts down, so a breadth-first walk written on a Vec is "
+    "quadratic and looks perfectly reasonable.",
+    "rust_deque",
+)
+
+_add(
+    "O(n)",
+    "clone copies every element, so it is linear and it is the one call on "
+    "these pages that is worth avoiding. A borrow is constant and copies "
+    "nothing, which is why the function takes a reference. Rust makes the "
+    "expensive one loud on purpose: you have to write clone, it never "
+    "happens quietly.",
+    "rust_clone",
+)
+
+_add(
+    "O(1)",
+    "Rc::clone copies a pointer and adds one to a counter, so it is "
+    "constant no matter how large the value is, and it is not the same "
+    "operation as clone above despite the name. borrow and borrow_mut are "
+    "constant too, but they are checked at run time rather than compile "
+    "time, and borrowing mutably twice at once panics instead of failing "
+    "to build.",
+    "rust_rc_refcell",
+)
+
+_add(
+    "O(n)",
+    "Every node once for the depth and once for the total. The wrapper adds "
+    "no walking: Option is free, Rc is a pointer, and borrow is a counter "
+    "check. What it adds is noise at the point of use, which is why the "
+    "same tree in Python is four lines shorter and why Rust knows it can "
+    "never be freed while something is still looking at it.",
+    "rust_tree",
+)
+
+_add(
+    "O(n log n)",
+    "The sort dominates and dedup is a single linear pass afterwards, which "
+    "is why dedup only removes every repeat if the sort came first. sort is "
+    "stable and sort_unstable is faster when you do not need that. The "
+    "comparator is a closure, so it inlines, unlike the function pointer C "
+    "has to pass.",
+    "rust_sort",
+)
+
+_add(
+    "O(n)",
+    "Linear in bytes for building, linear in characters for walking. Those "
+    "are two different numbers: chars decodes UTF-8 as it goes, so it costs "
+    "more than indexing would, and indexing by byte is not offered because "
+    "it could land in the middle of a character. push_str is amortised "
+    "constant, the same doubling as a Vec.",
+    "rust_string",
+)
