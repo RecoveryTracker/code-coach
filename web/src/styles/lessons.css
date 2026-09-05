@@ -299,7 +299,11 @@
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .lessons-list {
+  /* Scoped to the Lessons component. The Workbook reuses .lessons-list
+     inside .lessons-wrap, and turning that one sideways put a
+     three-hundred-page picker in a horizontal strip with the names cut off
+     mid-word. Its own narrow rules are further down. */
+  .lessons > .lessons-list {
     flex-direction: row;
     overflow-x: auto;
     padding: 8px;
@@ -407,10 +411,27 @@
 
 /* Below this the two columns are each too narrow to read, so the picker goes
    above the reading rather than beside it. */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .lessons-wrap {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  /* That `auto` row is the page picker, and the workbook's picker is over
+     three hundred pages long — so it grew to fill the window and pushed the
+     exercise off the bottom, which made the whole screen unusable at
+     anything less than full width. Cap it and let it scroll by itself. */
+  .lessons-wrap > .lessons-list {
+    max-height: 32vh;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border, #232c38);
+  }
+
+  /* The reading column keeps 28px of side padding at full width, which is
+     most of a narrow screen. */
+  .lessons-wrap > .lessons-open {
+    padding: 16px 14px 48px;
   }
 }
 
@@ -596,6 +617,11 @@
 
 .wb-actions {
   display: flex;
+  /* Wrap, or the row is simply cut off. There are eight controls here and
+     at 780px wide the last 182 pixels of them were unreachable — measured,
+     not guessed. Nothing scrolls this row, so without wrapping the buttons
+     past the edge cannot be pressed at all. */
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin: 12px 0 0;
