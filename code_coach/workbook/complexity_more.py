@@ -1383,3 +1383,179 @@ _add(
     "constant, the same doubling as a Vec.",
     "rust_string",
 )
+
+
+# ── Dart ─────────────────────────────────────────────────────
+
+_add(
+    "O(n)",
+    "The search is linear and the null handling costs nothing at all. int? "
+    "is not a box around an int: nullability is a compile-time fact, "
+    "checked and then erased, so ?? and ??= are a branch and nothing more. "
+    "What they buy is that the branch cannot be forgotten.",
+    "dart_null",
+)
+
+_add(
+    "O(1)",
+    "Constant to read and write, because a Dart Map hashes the key. keys "
+    "is a lazy view rather than a copy, so asking for it costs nothing and "
+    "walking it costs the length — but toList does copy, and the sort "
+    "afterwards is the n log n on this page.",
+    "dart_map",
+)
+
+_add(
+    "O(1)",
+    "contains on a Set is constant where the same question of a List is a "
+    "scan. Building the Set from a List is linear and pays for itself the "
+    "moment you ask more than a couple of questions. Sorting what comes "
+    "out is n log n and is there because a Set has no order to rely on.",
+    "dart_set",
+    "cpp_set",
+)
+
+_add(
+    "O(n)",
+    "Linear either way, one element produced per position. filled makes n "
+    "copies of one value; generate calls the function once per index. "
+    "Neither grows afterwards unless asked, which is why a literal list "
+    "here has to go through toList before anything is added to it.",
+    "dart_list_make",
+)
+
+_add(
+    "O(n)",
+    "add and removeLast are constant, amortised for add because the list "
+    "grows in jumps. removeAt and insert are linear: everything after the "
+    "position moves along by one. Inserting at the front of a long list in "
+    "a loop is the quadratic mistake this page exists to make visible.",
+    "dart_list_ops",
+)
+
+_add(
+    "O(n)",
+    "One pass, and the interesting part is when. map and where are lazy: "
+    "they return an Iterable that has done nothing yet, and the work "
+    "happens at toList or at the loop that consumes it. reduce is not "
+    "lazy, and on an empty list it throws rather than returning a zero, "
+    "which is why fold exists.",
+    "dart_iter",
+)
+
+_add(
+    "O(n log n)",
+    "The sort, with the comparison called once per comparison. sort "
+    "returns void and reorders in place, so the cost is in the list you "
+    "already had rather than a new one — and that is also why the cascade "
+    "is needed to get the list back as an expression.",
+    "dart_sort",
+    "cpp_sort",
+)
+
+_add(
+    "O(n)",
+    "Linear in what comes out. The multiply operator builds the whole "
+    "result, so a short unit times a large number is expensive in exactly "
+    "the way it looks cheap. split allocates the parts, join walks them "
+    "again, and substring copies because strings do not change.",
+    "dart_string",
+)
+
+_add(
+    "O(n)",
+    "One node made per value and one pass to walk it. The nullable link is "
+    "free at run time: ListNode? and ListNode are the same pointer, and "
+    "the difference is entirely in what the compiler will let you write "
+    "without a check. Building backwards through the list is what lets "
+    "each node be made already pointing at the rest.",
+    "dart_node",
+)
+
+_add(
+    "O(n)",
+    "Every node once for depth and once for the total. Depth is not the "
+    "node count: balanced it is log n, and a tree that has degenerated "
+    "into a chain is n, which is the case that overflows the stack. "
+    "Accepting TreeNode? rather than TreeNode is what removes the null "
+    "check from every call site and puts it in one place.",
+    "dart_tree",
+)
+
+
+# ── C++ ──────────────────────────────────────────────────────
+
+_add(
+    "O(1)",
+    "push_back and pop_back are constant, amortised for push_back because "
+    "capacity doubles rather than growing by one. empty, size, front and "
+    "back are all constant. None of the four checks anything: front on an "
+    "empty vector is undefined behaviour, which is worse than a crash "
+    "because it may not be one.",
+    "cpp_vector",
+)
+
+_add(
+    "O(1)",
+    "Constant on average, linear in the worst case when hashes collide. "
+    "count is the safe question; operator[] on a missing key inserts a "
+    "default and returns it, so a read written with brackets is a write, "
+    "and a map that mysteriously grows while being searched is this bug.",
+    "cpp_map",
+)
+
+_add(
+    "O(n)",
+    "Walking with an explicit iterator is the same linear pass a range-for "
+    "compiles into. find is linear and returns end on a miss, which costs "
+    "nothing to compare. Subtracting two iterators is constant here because "
+    "a vector has random access; on a list it would not compile.",
+    "cpp_iterators",
+)
+
+_add(
+    "O(1)",
+    "Every operation on both adapters is constant. Neither is a container "
+    "in its own right: each wraps one and hides everything except the "
+    "operations that make sense, which is why there is no way to walk "
+    "either. pop returns void so that removing an element cannot throw "
+    "part way through handing it back.",
+    "cpp_adapters",
+)
+
+_add(
+    "O(n)",
+    "One pass each. max_element and min_element hand back iterators rather "
+    "than values, and return end on an empty range, so the star is not "
+    "optional and neither is checking. accumulate takes its starting value "
+    "and that value fixes the arithmetic type: pass 0 over doubles and the "
+    "sum is done in integers.",
+    "cpp_algorithms",
+)
+
+_add(
+    "O(n)",
+    "substr copies, so it is linear in the piece taken and allocates. find "
+    "is linear and returns npos, which is the largest size_t rather than "
+    "-1 — comparing it against a signed number does the wrong thing "
+    "silently. Building with += is amortised constant per character.",
+    "cpp_string",
+)
+
+_add(
+    "O(n)",
+    "One new per node, one pass to walk, one to delete. new and delete are "
+    "the same duty malloc and free were, with a constructor attached. The "
+    "delete loop still has to save the next pointer first: after delete "
+    "the node is gone and so is the way onward.",
+    "cpp_node",
+)
+
+_add(
+    "O(n)",
+    "Every node once. The free has to run bottom up, and that is the whole "
+    "content of freeTree: delete the node before recursing and the "
+    "pointers to its children have gone with it, so the children leak and "
+    "nothing reports it.",
+    "cpp_tree",
+)

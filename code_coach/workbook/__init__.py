@@ -151,8 +151,14 @@ def expected_output(shape: str, args: dict) -> str:
         emit_rust,
         emit_ts7,
         emit_js9,
+        emit_dart2,
+        emit_cpp2,
     )
 
+    if emit_dart2.handles(shape):
+        return emit_dart2.expected_output(shape, args, _value)
+    if emit_cpp2.handles(shape):
+        return emit_cpp2.expected_output(shape, args, _value)
     if emit_js9.handles(shape):
         return emit_js9.expected_output(shape, args, _value)
     if emit_ts7.handles(shape):
