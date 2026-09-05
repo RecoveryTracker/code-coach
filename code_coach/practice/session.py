@@ -307,6 +307,47 @@ def _review_due(progress: StudentProgress) -> list[dict[str, Any]]:
     return due
 
 
+def _workbook_summary(progress: StudentProgress) -> dict[str, Any]:
+    """What the workbook looks like from the outside, per language.
+
+    Only languages you have actually answered something in are reported —
+    a row of zeroes for every language the workbook offers would bury the
+    one you are working in. Pages started is counted from the answers kept
+    rather than from the ticks, because a page you are partway through is
+    still a page you are on.
+    """
+    from code_coach.workbook import pages as workbook_pages
+
+    out: dict[str, dict[str, int]] = {}
+    languages = set(progress.workbook_done) | set(progress.workbook_answers)
+    for language in sorted(languages):
+        offered = workbook_pages(language)
+        if not offered:
+            continue
+        done = set(progress.workbook_for(language))
+        touched = set(progress.workbook_answers_for(language))
+        seen_ids = done | touched
+        pages_started = sum(
+            1 for page in offered
+            if any(e.id in seen_ids for e in page.exercises)
+        )
+        pages_finished = sum(
+            1 for page in offered
+            if page.exercises and all(e.id in done for e in page.exercises)
+        )
+        total = sum(len(page.exercises) for page in offered)
+        if not (done or touched):
+            continue
+        out[language] = {
+            "done": len(done),
+            "total": total,
+            "pages_started": pages_started,
+            "pages_done": pages_finished,
+            "pages_total": len(offered),
+        }
+    return out
+
+
 def progress_summary(progress: StudentProgress) -> dict[str, Any]:
     skills = list_skills()
     by_skill: dict[str, dict[str, int]] = {}
@@ -348,6 +389,8 @@ def progress_summary(progress: StudentProgress) -> dict[str, Any]:
         "dictation_lines": dict(progress.dictation_lines),
         # Light spaced repetition: skills practiced before, but not recently
         "review_due": _review_due(progress),
+        # The workbook, which had no representation here at all until now
+        "workbook": _workbook_summary(progress),
     }
 
 

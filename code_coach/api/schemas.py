@@ -209,6 +209,9 @@ class ProgressResponse(BaseModel):
     dictation_lines: dict[str, int] = {}
     # Skills practiced before but not recently (light spaced repetition)
     review_due: list[ReviewDueItem] = []
+    # Per-language workbook standing: exercises right, pages started and
+    # finished, against what the workbook offers in that language.
+    workbook: dict[str, dict[str, int]] = {}
 
 
 class PracticeSession(BaseModel):

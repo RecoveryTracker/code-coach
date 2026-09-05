@@ -338,6 +338,16 @@ export type ProgressInfo = {
   dictation_lines?: Record<string, number>;
   /** Skills practiced before but not recently (light spaced repetition). */
   review_due?: ReviewDueItem[];
+  /** Per-language workbook standing. Only languages you have worked in. */
+  workbook?: Record<string, WorkbookStanding>;
+};
+
+export type WorkbookStanding = {
+  done: number;
+  total: number;
+  pages_started: number;
+  pages_done: number;
+  pages_total: number;
 };
 
 export type PracticeSession = {

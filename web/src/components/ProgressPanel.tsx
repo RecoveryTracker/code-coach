@@ -32,6 +32,7 @@ export function ProgressPanel({
   const [confirming, setConfirming] = useState(false);
   const skills = Object.entries(progress.by_skill ?? {});
   const lines = progress.dictation_lines ?? {};
+  const workbook = Object.entries(progress.workbook ?? {});
   const due = progress.review_due ?? [];
   const classes = session.curriculum ?? [];
   const className = (id: string) =>
@@ -104,6 +105,41 @@ export function ProgressPanel({
               );
             })}
           </section>
+
+          {workbook.length > 0 ? (
+            <section>
+              <div className="progress-section-title">Workbook</div>
+              {workbook.map(([language, w]) => {
+                // Against the exercises, not the pages: a page is twenty of
+                // them and finishing four is real progress worth seeing.
+                const pct =
+                  w.total > 0 ? Math.round((100 * w.done) / w.total) : 0;
+                return (
+                  <div key={language} className="progress-skill">
+                    <span className="progress-skill-name">{language}</span>
+                    <div className="progress-bar">
+                      <div
+                        className="progress-bar-fill"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="progress-skill-stat">
+                      {w.done}/{w.total}
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="progress-note">
+                {workbook
+                  .map(
+                    ([language, w]) =>
+                      `${language}: ${w.pages_started} of ${w.pages_total} pages started` +
+                      (w.pages_done > 0 ? `, ${w.pages_done} finished` : ""),
+                  )
+                  .join(" · ")}
+              </p>
+            </section>
+          ) : null}
 
           <section>
             <div className="progress-section-title">Type-along lines</div>
