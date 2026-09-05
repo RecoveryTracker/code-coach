@@ -888,3 +888,178 @@ _add(
     "fixed number of cases — it does not grow with any data.",
     "match_structure",
 )
+
+
+# ── The harder variants ──────────────────────────────────────
+
+_add(
+    "O(rows × cols)",
+    "Every cell is visited once — once by the outer sweep looking for a "
+    "start, and once by the spread that claims it. The seen set is what "
+    "guarantees the second of those happens only once, and without it the "
+    "walk would go round in circles forever rather than merely slowly.",
+    "algo_grid_flood",
+)
+
+_add(
+    "O(n)",
+    "Linear, and this is the page where that is hardest to believe. There "
+    "is a while loop inside a for loop, and the deque can hold most of the "
+    "list — but each position is pushed exactly once and popped at most "
+    "once, so across the whole run there are at most n of each. Taking max "
+    "of every window instead is the width times the length.",
+    "algo_window_max",
+)
+
+_add(
+    "O(n log n)",
+    "The sort dominates; the greedy pass afterwards is linear. That is the "
+    "usual shape of a greedy algorithm — almost all the cost is putting "
+    "things in the order that makes the choice obvious.",
+    "algo_intervals_pick",
+)
+
+_add(
+    "O(n × m)",
+    "One cell per pair of positions, so the two lengths multiplied — and "
+    "the page prints that number beside the answer. Memory is the same "
+    "unless you keep only the row before, which is the standard trick once "
+    "the strings get long. This is the cost of every two-sequence problem "
+    "of this shape.",
+    "algo_lcs",
+)
+
+_add(
+    "O(n log s)",
+    "Logarithmic in the range of possible answers, times a linear check "
+    "each time — where s is the span between the largest single item and "
+    "the total. What is being halved is not the data but the answers, and "
+    "the feasibility check is the linear part. Trying every capacity in "
+    "turn would be s passes rather than log s.",
+    "algo_search_answer",
+)
+
+_add(
+    "O(log n)",
+    "Logarithmic per value that arrives, so n log n over the whole stream "
+    "— each push and rebalance is a handful of heap operations. Reading "
+    "the middle itself is constant, because it is sitting at the front of "
+    "one or both heaps. Sorting after every arrival would be n log n each "
+    "time rather than once.",
+    "algo_two_heaps",
+)
+
+_add(
+    "O(α(n))",
+    "Very nearly constant per operation. With the flattening on the way up, "
+    "the cost is the inverse Ackermann function of n, which is under five "
+    "for any number of items that will ever exist — so treat it as "
+    "constant and know that the name is doing something. Without the "
+    "flattening the chains grow and it degrades to linear.",
+    "algo_union_find",
+)
+
+_add(
+    "O(len(prefix))",
+    "The length of the prefix, not the number of words — that is the whole "
+    "reason to build one. Counting what is underneath then costs the size "
+    "of that subtree. Building the trie is the total length of every word, "
+    "paid once, and afterwards no query ever looks at a word that does not "
+    "match.",
+    "algo_trie",
+)
+
+_add(
+    "O(rows × cols)",
+    "One pass to build, then four lookups for any rectangle however large — "
+    "the same trade as the one-dimensional running total, one dimension up. "
+    "Ask about one rectangle and building the table was wasted; ask about "
+    "thousands and it is the only way.",
+    "algo_prefix_matrix",
+)
+
+_add(
+    "O((n + e) log n)",
+    "Each edge can push a place onto the heap, and each heap operation is "
+    "logarithmic — so the edges dominate on a well-connected graph. The "
+    "difference from a plain breadth-first walk is exactly that log: a "
+    "queue hands back whatever arrived first, and a heap has to work out "
+    "what is cheapest.",
+    "algo_dijkstra",
+)
+
+
+# ── SQL ──────────────────────────────────────────────────────
+#
+# The letters mean something different here, and saying so is the useful
+# part: you are not writing the loop, you are describing the answer and
+# letting the planner choose. What follows is what it will choose.
+
+_add(
+    "O(n)",
+    "A full scan — every row read, where n is the rows in the table. "
+    "Naming fewer columns does not change how many rows are read, though it "
+    "does change how much is carried back. There is no index that helps "
+    "here, because nothing is being looked up.",
+    "sql_select",
+)
+
+_add(
+    "O(n)",
+    "A scan, unless the column has an index. That is the whole art of it: "
+    "on an indexed column this becomes a lookup rather than a walk, and on "
+    "an unindexed one the database has no choice but to read every row and "
+    "test it. The query text is identical either way, which is why slow "
+    "queries so often look fine.",
+    "sql_where",
+)
+
+_add(
+    "O(n log n)",
+    "A sort, which is usually the most expensive thing in a simple query. "
+    "If an index already holds the column in order the planner can read it "
+    "in order instead and pay nothing — that is what people mean when they "
+    "say an index can satisfy an ORDER BY.",
+    "sql_order",
+    "sql_distinct_in",
+)
+
+_add(
+    "O(n log n)",
+    "The limit does not save you the sort. The database still has to work "
+    "out which rows are first, and that means ordering all of them — a "
+    "top-ten of a million rows is a million-row sort unless an index "
+    "provides the order. What LIMIT saves is what is sent back.",
+    "sql_limit",
+)
+
+_add(
+    "O(n)",
+    "One pass, carrying a single running answer — the same shape as the "
+    "totals you wrote by hand on page 297, done by the engine. COUNT(*) on "
+    "a large table can still be slow for exactly that reason: it really "
+    "does look at every row.",
+    "sql_aggregate",
+)
+
+_add(
+    "O(n log n)",
+    "Grouping means gathering equal values together, and the two ways to "
+    "do that are sorting or hashing — so it costs about what a sort costs, "
+    "or about what building a dict costs. HAVING is free by comparison: it "
+    "filters groups, and there are far fewer of those than rows.",
+    "sql_group",
+    "sql_having",
+)
+
+_add(
+    "O(n × m)",
+    "In the worst case, every row against every row — which is what "
+    "happens if the join column has no index and the planner falls back to "
+    "comparing everything. With an index it is n lookups instead, which is "
+    "the difference between a query that returns and one that does not. "
+    "Forgetting the ON clause entirely gives you the full product, on "
+    "purpose and by definition.",
+    "sql_join",
+    "sql_left_join",
+)
