@@ -550,8 +550,11 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_algo,
         emit_algo2,
         emit_algo3,
+        emit_sql,
     )
 
+    if emit_sql.handles(shape):
+        return emit_sql.solution(language, shape, args)
     if emit_algo3.handles(shape):
         return emit_algo3.solution(language, shape, args)
     if emit_algo2.handles(shape):
@@ -643,8 +646,13 @@ def solution(language: str, shape: str, args: dict) -> str | None:
 
 
 def supports(language: str) -> bool:
-    """Whether the workbook runs in this language at all."""
-    return language in _EMITTERS
+    """Whether the workbook runs in this language at all.
+
+    SQL is not in _EMITTERS because it shares no shapes with the others —
+    it does not print, so none of the printing shapes can be written in it.
+    Its pages come from emit_sql, which is asked before that table.
+    """
+    return language in _EMITTERS or language == "sql"
 
 
 def all_shape_ids() -> tuple[str, ...]:
@@ -691,6 +699,7 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_algo,
         emit_algo2,
         emit_algo3,
+        emit_sql,
     )
 
     return (
@@ -737,4 +746,5 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_algo.SHAPE_IDS
         + emit_algo2.SHAPE_IDS
         + emit_algo3.SHAPE_IDS
+        + emit_sql.SHAPE_IDS
     )

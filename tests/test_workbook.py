@@ -287,6 +287,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_algo import SHAPE_IDS as ALGO
         from code_coach.workbook.emit_algo2 import SHAPE_IDS as ALGO2
         from code_coach.workbook.emit_algo3 import SHAPE_IDS as ALGO3
+        from code_coach.workbook.emit_sql import SHAPE_IDS as SQL_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -328,6 +329,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(ALGO)
             | set(ALGO2)
             | set(ALGO3)
+            | set(SQL_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -462,15 +464,18 @@ class EndpointTests(unittest.TestCase):
         self.assertTrue(first["prompt"])
         self.assertTrue(first["answer"])
 
-    def test_it_says_so_for_a_language_it_cannot_serve(self) -> None:
-        """SQL has no print statement and no loop. An empty page with a reason
-        beats a page of exercises that cannot be written."""
+    def test_sql_is_served_its_own_pages(self) -> None:
+        """SQL was refused, because it has no print and no loop and so can
+        write none of the shared shapes. It now has its own pages, where the
+        answer is the rows a query returns."""
         from code_coach.api import server
 
         served = server.workbook("sql")
-        self.assertFalse(served["has_workbook"])
-        self.assertEqual(served["pages"], [])
-        self.assertFalse(has_workbook("sql"))
+        self.assertTrue(served["has_workbook"])
+        self.assertTrue(served["pages"])
+        for served_page in served["pages"]:
+            with self.subTest(page=served_page["id"]):
+                self.assertTrue(served_page["id"].startswith("sql-"))
 
     def test_a_right_answer_passes_and_is_remembered(self) -> None:
         import tempfile
@@ -672,12 +677,19 @@ class LanguageReachTests(unittest.TestCase):
         self,
     ) -> None:
         """Beginner and practice are written for several languages; only the
-        eight collection pages are ever dropped, and only by C."""
+        eight collection pages are ever dropped, and only by C.
+
+        "Shared" means written for more than one language. SQL's pages are
+        tiered beginner too — that is the right label in the sidebar, since
+        they are its first ten — but they belong to SQL alone and are not
+        part of what the other languages should be offered.
+        """
         for language in self.EVERY_PAGE:
             shared = [
                 p
                 for p in pages()
                 if p.tier in ("beginner", "practice")
+                and len(p.languages) != 1
             ]
             offered = [p for p in pages(language) if p.tier in ("beginner", "practice")]
             with self.subTest(language=language):
@@ -730,9 +742,19 @@ class LanguageReachTests(unittest.TestCase):
         list, or a page is offered to somebody who cannot answer it."""
         self.assertEqual(set(self.DEEP), set(LANGUAGES))
 
-    def test_sql_is_left_out_and_says_so(self) -> None:
-        self.assertFalse(has_workbook("sql"))
+    def test_sql_has_its_own_pages_and_shares_none(self) -> None:
+        """SQL used to be left out, because it has no print and no loop and
+        so cannot write any of the shared shapes. It now has ten pages of
+        its own — queries checked against the rows they return — and it
+        still shares nothing with the others, which is the part worth
+        holding: every page it is offered is a SQL page."""
+        self.assertTrue(has_workbook("sql"))
         self.assertNotIn("sql", self.DEEP)
+        offered = pages("sql")
+        self.assertTrue(offered)
+        for p in offered:
+            with self.subTest(page=p.id):
+                self.assertEqual(p.languages, ("sql",))
 
     def test_a_language_is_never_offered_a_page_it_cannot_answer(self) -> None:
         """The real check: every page a language is shown must have a
@@ -744,8 +766,11 @@ class LanguageReachTests(unittest.TestCase):
                         self.assertIsNotNone(e.answer(language))
 
     def test_the_early_pages_are_open_to_everyone(self) -> None:
+        """Page numbers are per-language, so this is about the shared pages
+        rather than about the number: SQL numbers its own ten from 1, the
+        way JavaScript numbers its own from 81."""
         for p in pages():
-            if p.number > 11:
+            if p.number > 11 or len(p.languages) == 1:
                 continue
             with self.subTest(page=p.id):
                 self.assertEqual(p.languages, ())
@@ -758,7 +783,8 @@ class LanguageReachTests(unittest.TestCase):
                 continue
             with self.subTest(page=p.id):
                 self.assertTrue(p.languages)
-                self.assertTrue(set(p.languages) <= set(self.DEEP))
+                self.assertTrue(
+                    set(p.languages) <= set(self.DEEP) | {"sql"})
 
     def test_no_two_languages_are_told_to_print_different_things(self) -> None:
         """The rule the multi-language pages rest on. An exercise has one

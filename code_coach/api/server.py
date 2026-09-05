@@ -802,6 +802,21 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
         raise HTTPException(
             status_code=404, detail=f"Unknown exercise {body.exercise_id}"
         )
+    # A page the language is not offered has no reference answer in it, so
+    # there is nothing to mark against. This used to be covered by the
+    # has_workbook gate above — every language either had the whole shared
+    # tier or nothing at all — and stopped being true when SQL arrived with
+    # pages of its own and none of anyone else's.
+    # Asking whether a reference exists, rather than reading the page's
+    # language list: an empty list means "every language the workbook
+    # covers", which stopped meaning "every language with these shapes" the
+    # moment SQL arrived sharing none of them. The reference is the rule
+    # that cannot drift, and it is the same one pages() uses.
+    if found.answer(language) is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{body.page_id} has no {language} answer",
+        )
 
     stdout, stderr, exit_code = run_code(body.code, language=language)
     expect = found.expect

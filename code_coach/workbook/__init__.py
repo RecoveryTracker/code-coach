@@ -143,8 +143,11 @@ def expected_output(shape: str, args: dict) -> str:
         emit_algo,
         emit_algo2,
         emit_algo3,
+        emit_sql,
     )
 
+    if emit_sql.handles(shape):
+        return emit_sql.expected_output(shape, args, _value)
     if emit_algo3.handles(shape):
         return emit_algo3.expected_output(shape, args, _value)
     if emit_algo2.handles(shape):
@@ -308,7 +311,13 @@ def pages(language: str | None = None) -> tuple[Page, ...]:
     # still need something that prints a line.
     if not has_workbook(language):
         return ()
-    return tuple(p for p in PAGES if p.applies_to(language))
+    offered = (p for p in PAGES if p.applies_to(language))
+    # An empty `languages` means every language the workbook covers, which
+    # was the same thing as "every language with the printing shapes" until
+    # SQL arrived. SQL shares no shapes with the others — it does not print
+    # — so those pages have no answer in it and must not be offered. Asking
+    # whether a reference exists is the rule that cannot drift.
+    return tuple(p for p in offered if p.exercises[0].answer(language))
 
 
 def page(page_id: str) -> Page | None:

@@ -46,6 +46,7 @@ from code_coach.workbook.content_ts6 import TS_PAGES_6
 from code_coach.workbook.content_algo import ALGO_PAGES
 from code_coach.workbook.content_algo2 import ALGO_PAGES_2
 from code_coach.workbook.content_algo3 import ALGO_PAGES_3
+from code_coach.workbook.content_sql import SQL_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -678,4 +679,5 @@ PAGES: tuple[Page, ...] = (
     + ALGO_PAGES
     + ALGO_PAGES_2
     + ALGO_PAGES_3
+    + SQL_PAGES
 )
