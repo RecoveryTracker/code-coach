@@ -52,6 +52,8 @@ from code_coach.workbook.content_nodes import NODE_PAGES
 from code_coach.workbook.content_graph import GRAPH_PAGES
 from code_coach.workbook.content_c import C_PAGES
 from code_coach.workbook.content_rust import RUST_PAGES
+from code_coach.workbook.content_ts7 import TS7_PAGES
+from code_coach.workbook.content_js9 import JS9_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -690,4 +692,6 @@ PAGES: tuple[Page, ...] = (
     + GRAPH_PAGES
     + C_PAGES
     + RUST_PAGES
+    + TS7_PAGES
+    + JS9_PAGES
 )

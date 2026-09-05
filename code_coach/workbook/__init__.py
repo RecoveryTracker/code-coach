@@ -149,8 +149,14 @@ def expected_output(shape: str, args: dict) -> str:
         emit_graph,
         emit_c,
         emit_rust,
+        emit_ts7,
+        emit_js9,
     )
 
+    if emit_js9.handles(shape):
+        return emit_js9.expected_output(shape, args, _value)
+    if emit_ts7.handles(shape):
+        return emit_ts7.expected_output(shape, args, _value)
     if emit_rust.handles(shape):
         return emit_rust.expected_output(shape, args, _value)
     if emit_c.handles(shape):

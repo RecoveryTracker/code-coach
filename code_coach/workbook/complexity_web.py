@@ -444,3 +444,112 @@ _add(
     "just as it would without the annotation.",
     "ts_readonly_array",
 )
+
+
+# ── The TypeScript library ───────────────────────────────────
+#
+# The types are erased before any of this runs, so every cost below is a
+# JavaScript cost. What TypeScript changes is which of these calls the
+# compiler will let you write without handling the case where nothing
+# comes back.
+
+_add(
+    "O(1)",
+    "Constant to set, get and check, because a Map hashes the key rather "
+    "than searching for it. size is constant too, kept as the Map changes "
+    "rather than counted on demand. The undefined that get can return is "
+    "not a cost, it is a fact about the data, and strict is what stops it "
+    "being ignored.",
+    "ts_map",
+)
+
+_add(
+    "O(n)",
+    "One pass over the characters, constant per character, so linear in the "
+    "text. The sort at the end to make the output stable is the expensive "
+    "part at n log n, and it is presentation rather than counting. Without "
+    "the ?? 0 this would not be slower, it would be wrong: undefined plus "
+    "one is NaN.",
+    "ts_map_count",
+    "js_map_views",
+)
+
+_add(
+    "O(1)",
+    "has on a Set is constant where includes on an array is a scan, and "
+    "that single difference is what turns a quadratic loop into a linear "
+    "one. Building the Set from an array is linear, so it pays for itself "
+    "the moment you ask more than a couple of questions of it.",
+    "ts_set",
+)
+
+_add(
+    "O(n)",
+    "Linear, and the spread is the part worth knowing about: Math.max takes "
+    "arguments rather than an array, so spreading a very large array does "
+    "not merely cost n, it becomes n arguments and overflows the stack "
+    "somewhere around a hundred thousand. A reduce has no such limit.",
+    "ts_math",
+    "js_math",
+)
+
+_add(
+    "O(n)",
+    "Linear either way. new Array(n) is constant on its own because it only "
+    "sets a length, and the fill is what walks it — which is also why map "
+    "on an unfilled one returns holes rather than values. Array.from with a "
+    "function does both in one pass.",
+    "ts_array_make",
+)
+
+_add(
+    "O(1)",
+    "push and pop are constant, amortised for push because the array grows "
+    "in jumps rather than one at a time. shift and unshift are linear: "
+    "every remaining element moves along by one. A queue built on shift is "
+    "quadratic and looks entirely reasonable, which is why the deque "
+    "exists in every language that has one.",
+    "ts_array_mutate",
+    "js_array_ends",
+)
+
+_add(
+    "O(n log n)",
+    "The sort, and the comparator runs once per comparison. The default "
+    "with no comparator is not cheaper, it is wrong: it converts every "
+    "element to a string first, which is its own linear cost and gives an "
+    "order nobody wanted. reverse is linear and in place.",
+    "ts_array_order",
+    "js_array_order",
+)
+
+_add(
+    "O(n)",
+    "One pass over the entries. keys, values and entries are iterators "
+    "rather than arrays, so making one is constant and walking it is "
+    "linear; spreading one into an array is where the memory goes. A Map "
+    "walks in insertion order, which is a guarantee a plain object only "
+    "partly makes.",
+    "ts_iterate",
+)
+
+_add(
+    "O(n)",
+    "Linear in what comes out rather than what goes in. repeat costs the "
+    "length of the result, so a short unit repeated a great many times is "
+    "still expensive. split allocates an array of pieces, join walks them "
+    "again, and slice is linear in the slice because strings are immutable "
+    "and it has to build a new one.",
+    "ts_string",
+    "js_string_build",
+)
+
+_add(
+    "O(1)",
+    "Both operators are constant and neither is the point. ?? falls back "
+    "only on null and undefined; || falls back on everything falsy, and "
+    "zero is falsy. So they agree on every value except the ones a counter "
+    "actually produces, which is why the bug survives testing and then "
+    "appears the first time a real count is zero.",
+    "ts_nullish",
+)
