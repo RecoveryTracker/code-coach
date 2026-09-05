@@ -553,8 +553,11 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_sql,
         emit_algo4,
         emit_nodes,
+        emit_graph,
     )
 
+    if emit_graph.handles(shape):
+        return emit_graph.solution(language, shape, args)
     if emit_nodes.handles(shape):
         return emit_nodes.solution(language, shape, args)
     if emit_algo4.handles(shape):
@@ -708,6 +711,7 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_sql,
         emit_algo4,
         emit_nodes,
+        emit_graph,
     )
 
     return (
@@ -757,4 +761,5 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_sql.SHAPE_IDS
         + emit_algo4.SHAPE_IDS
         + emit_nodes.SHAPE_IDS
+        + emit_graph.SHAPE_IDS
     )

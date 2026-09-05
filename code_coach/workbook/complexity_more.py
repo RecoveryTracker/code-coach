@@ -1164,3 +1164,41 @@ _add(
     "text.",
     "node_toolkit",
 )
+
+
+# ── The last four constructs ─────────────────────────────────
+
+_add(
+    "O(n + e)",
+    "Nodes plus edges, because a walk looks at every node once and every "
+    "edge twice, once from each end. That is the honest way to write it: "
+    "quoting only n hides the fact that a graph with the same number of "
+    "nodes can have almost none or almost all of the possible edges, and "
+    "the walk costs accordingly. Cloning costs the same again, and the map "
+    "from old node to new is what keeps a cycle from turning it into an "
+    "infinite descent.",
+    "graph_nodes",
+)
+
+_add(
+    "O(n)",
+    "Linear, and that is the surprise. remove takes a value rather than a "
+    "position, so it has to scan until it finds one — removing in a loop "
+    "is quadratic without looking it, which is why peeling leaves is "
+    "written to touch only the neighbours of the node going away. The set "
+    "versions are the opposite: remove and discard on a set are constant, "
+    "because a hash knows where to look.",
+    "value_remove",
+)
+
+_add(
+    "O(log n)",
+    "Logarithmic in the size of the range, and nothing to do with how much "
+    "data there is, because there is no data. The range of possible "
+    "answers halves on every question, so a thousand versions cost ten "
+    "questions and a million cost twenty. What binary search needs is not "
+    "a sorted list but a question whose answer is False up to a point and "
+    "True after it, which is a much weaker thing to require and is why "
+    "this trick turns up so far from anything that looks like searching.",
+    "predicate_search",
+)

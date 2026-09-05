@@ -301,6 +301,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_sql import SHAPE_IDS as SQL_SHAPES
         from code_coach.workbook.emit_algo4 import SHAPE_IDS as ALGO4
         from code_coach.workbook.emit_nodes import SHAPE_IDS as NODES
+        from code_coach.workbook.emit_graph import SHAPE_IDS as GRAPHS
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -345,6 +346,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(SQL_SHAPES)
             | set(ALGO4)
             | set(NODES)
+            | set(GRAPHS)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)

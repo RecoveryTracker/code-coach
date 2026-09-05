@@ -146,8 +146,11 @@ def expected_output(shape: str, args: dict) -> str:
         emit_sql,
         emit_algo4,
         emit_nodes,
+        emit_graph,
     )
 
+    if emit_graph.handles(shape):
+        return emit_graph.expected_output(shape, args, _value)
     if emit_nodes.handles(shape):
         return emit_nodes.expected_output(shape, args, _value)
     if emit_algo4.handles(shape):
