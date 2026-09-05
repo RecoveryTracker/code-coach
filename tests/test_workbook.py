@@ -304,6 +304,8 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_graph import SHAPE_IDS as GRAPHS
         from code_coach.workbook.emit_c import SHAPE_IDS as C_SHAPES
         from code_coach.workbook.emit_rust import SHAPE_IDS as RUST_SHAPES
+        from code_coach.workbook.emit_ts7 import SHAPE_IDS as TS7_SHAPES
+        from code_coach.workbook.emit_js9 import SHAPE_IDS as JS9_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -351,6 +353,8 @@ class ReferenceRunTests(unittest.TestCase):
             | set(GRAPHS)
             | set(C_SHAPES)
             | set(RUST_SHAPES)
+            | set(TS7_SHAPES)
+            | set(JS9_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -761,7 +765,12 @@ class LanguageReachTests(unittest.TestCase):
                 "str-find",
             },
         )
-        self.assertEqual(len(pages("c")), len(shared) - len(dropped))
+        # Count the shared pages C receives, not every page it has.
+        # The docstring above already says single-language pages are
+        # a separate matter, and this line quietly assumed C had none
+        # of its own until the C tier landed and it read 80 != 72.
+        shared_for_c = [p for p in pages("c") if len(p.languages) != 1]
+        self.assertEqual(len(shared_for_c), len(shared) - len(dropped))
 
     def test_the_languages_that_get_it_are_the_ones_that_can_run_it(self) -> None:
         """The list on the pages and the list of runners have to be the same
