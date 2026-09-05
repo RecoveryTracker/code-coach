@@ -178,6 +178,8 @@ _add(
 )
 
 
+
+
 def for_shape(shape: str) -> Cost | None:
     """The cost note for a shape, or None when there is nothing honest to
     say about it yet. Callers show no panel rather than a guess.
@@ -189,6 +191,6 @@ def for_shape(shape: str) -> Cost | None:
     found = NOTES.get(shape)
     if found is not None:
         return found
-    from code_coach.workbook import complexity_more
+    from code_coach.workbook import complexity_more, complexity_web
 
-    return complexity_more.for_shape(shape)
+    return complexity_more.for_shape(shape) or complexity_web.for_shape(shape)

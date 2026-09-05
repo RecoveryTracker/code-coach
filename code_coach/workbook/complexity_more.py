@@ -437,6 +437,17 @@ _add(
 )
 
 
+_add(
+    "O(n)",
+    "Linear in the number of classes in the hierarchy, which is the thing "
+    "being walked — not in any data. Python works the order out once when "
+    "the class is created and keeps it, so reading __mro__ is just walking "
+    "a list that already exists. A deep hierarchy costs more to walk and, "
+    "more to the point, more to reason about.",
+    "mro_order",
+)
+
+
 # ── The algorithm tier ───────────────────────────────────────
 #
 # These get their own notes rather than sharing one. The point of those
@@ -669,4 +680,211 @@ _add(
     "shape of most interval problems — sorting is what turns a tangle of "
     "cases into one comparison against the last thing you kept.",
     "algo_merge_spans",
+)
+
+
+# ── The remainder of the Python intermediate pages ───────────
+#
+# Classified the same way: the emitted program's loop structure was
+# measured, counting only loops that walk data rather than a literal tuple
+# of demonstration values.
+
+_add(
+    "O(1)",
+    "Constant. Defining a class, a protocol, a dataclass or a dunder is "
+    "machinery rather than calculation — it happens once and does the same "
+    "work regardless of any size. What the dunder makes possible may cost "
+    "something later; declaring it does not.",
+    "hash_dunder",
+    "repr_vs_str",
+    "call_dunder",
+    "getitem_len",
+    "property_setter",
+    "total_ordering",
+    "abstract_base",
+    "protocol_shape",
+    "frozen_dataclass",
+    "dataclass_tools",
+    "dataclass_order",
+    "enum_auto",
+    "typevar_generic",
+    "generic_class",
+    "typed_dict",
+    "cached_property",
+    "init_subclass",
+    "singledispatch_use",
+    "name_main",
+    "nonlocal_global",
+    "signature_use",
+)
+
+_add(
+    "O(1)",
+    "Constant. Arithmetic on a fixed number of values — rounding, dividing "
+    "with a remainder, building a fraction, comparing floats. These pages "
+    "are about what the answer *is* rather than how long it takes to get, "
+    "and the time is the same whatever the numbers are.",
+    "float_trap",
+    "decimal_money",
+    "math_basics",
+    "round_bankers",
+    "divmod_base",
+    "fraction_use",
+    "random_seed",
+)
+
+_add(
+    "O(1)",
+    "Constant. Raising with a cause, suppressing an expected error, or "
+    "grouping several — building the exception and unwinding to the handler "
+    "is a fixed amount of work.",
+    "raise_from",
+    "suppress_use",
+    "exception_group",
+    "test_function",
+)
+
+_add(
+    "O(1)",
+    "Constant. Building an aware datetime, parsing a URL, or configuring a "
+    "logger is a fixed piece of setup. Note that logging's real cost is the "
+    "writing — a call that is filtered out before it formats anything is "
+    "very cheap, which is why the level check comes first.",
+    "aware_datetime",
+    "urlparse_use",
+    "logging_use",
+    "argparse_use",
+)
+
+_add(
+    "O(1)",
+    "Constant per operation, and that is exactly why a deque exists. "
+    "Appending or popping at either end is a fixed cost, where a list has "
+    "to shift every item along to remove from the front — which makes the "
+    "obvious queue quadratic and the deque linear.",
+    "deque_use",
+)
+
+_add(
+    "O(log n)",
+    "Logarithmic per push and per pop, where n is how many are in the heap. "
+    "Only the smallest is cheap to reach — that is the trade. A heap does "
+    "not keep everything in order, it keeps just enough order that the "
+    "front is always right, and that is why it costs log n rather than n.",
+    "heapq_use",
+    "heapq_real",
+)
+
+_add(
+    "O(n)",
+    "Linear in the number of items. One pass, comparing each against the "
+    "best so far — and handing it a key changes what is compared, not how "
+    "many comparisons there are. Sorting to take the largest would be "
+    "n log n for an answer one pass already had.",
+    "min_max_key",
+    "statistics_use",
+    "counter_math",
+)
+
+_add(
+    "O(n)",
+    "Linear in the number of items. Walking two sequences at once, taking a "
+    "slice of an endless one, or stopping partway all visit each item they "
+    "reach exactly once — and the ones that stop early do less, never more.",
+    "zip_longest_use",
+    "islice_cycle",
+    "takewhile_drop",
+    "dict_views",
+    "dict_merge",
+)
+
+_add(
+    "O(n)",
+    "Linear in the length of the text. Wrapping and formatting into columns "
+    "look at every character to decide where the breaks go, and build new "
+    "text as they go.",
+    "textwrap_use",
+    "format_row",
+)
+
+_add(
+    "O(n)",
+    "Linear in the size of the data. Encoding to bytes, pickling and "
+    "unpickling all walk every value once on the way out and every byte "
+    "once on the way back.",
+    "bytes_use",
+    "pickle_round",
+)
+
+_add(
+    "O(n)",
+    "Linear in the size of the structure, because a deep copy visits every "
+    "value in it — that is what makes it different from the shallow one, "
+    "which copies the top level and shares everything underneath.",
+    "deepcopy_use",
+)
+
+_add(
+    "O(n)",
+    "Linear in the number of tasks, and the wall clock is a different "
+    "question entirely. Gathering ten things that each wait a second takes "
+    "about a second, not ten — the work is linear, the waiting overlaps. "
+    "That is the whole reason to use it.",
+    "async_basic",
+    "async_gather",
+    "threadpool_map",
+)
+
+_add(
+    "O(n + e)",
+    "Linear in the items plus the dependencies between them. Each is "
+    "readied once and each rule is looked at once, when the thing before it "
+    "is done — the same cost as doing the topological sort by hand, which "
+    "is what this is.",
+    "graphlib_use",
+)
+
+_add(
+    "O(n log n)",
+    "Sorting dominates, and on this page it is required rather than "
+    "incidental: groupby only groups items that are already next to each "
+    "other, so the sort is what makes the grouping correct rather than just "
+    "tidy. Forgetting it is the classic bug with this function.",
+    "groupby_use",
+)
+
+_add(
+    "O(n log n)",
+    "Sorting. Roughly log n comparisons per item — a thousand items is "
+    "around ten thousand comparisons rather than a million. sort in place "
+    "and sorted into a new list cost the same time; the difference is the "
+    "copy, which is n in memory.",
+    "sort_vs_sorted",
+    "attrgetter_use",
+)
+
+_add(
+    "O(n²)",
+    "Quadratic. A comprehension inside a comprehension runs the inner one "
+    "in full for every item of the outer, so the work is the two lengths "
+    "multiplied — 3 by 3 is nine, 100 by 100 is ten thousand. Writing it on "
+    "one line makes it shorter, not cheaper.",
+    "nested_comp",
+)
+
+_add(
+    "O(n log n)",
+    "The database does the work, and what it costs depends on the query. A "
+    "lookup on an indexed column is logarithmic, a scan of the table is "
+    "linear, and a sort or a join is usually n log n. The point of the page "
+    "is that this is not your loop any more — it is the query planner's.",
+    "sqlite_memory",
+)
+
+_add(
+    "O(1)",
+    "Constant. Matching a value against a set of patterns tests them in "
+    "order until one fits, which is a fixed number of comparisons for a "
+    "fixed number of cases — it does not grow with any data.",
+    "match_structure",
 )

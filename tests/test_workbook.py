@@ -333,6 +333,119 @@ class ReferenceRunTests(unittest.TestCase):
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
 
 
+class ComplexityNoteTests(unittest.TestCase):
+    """A complexity note is a claim about the code, so check it against it.
+
+    The label cannot be derived from source in general — sorted() has no
+    visible loop, recursion has none either, and an amortised while inside
+    a for is still linear. But a flat contradiction is detectable: O(1) on
+    a program that walks its data, or O(n) on one with nested data loops.
+
+    This exists because a wrong note shipped. times_table was labelled O(n²)
+    from the day the notes were written, grouped with the genuinely nested
+    shapes, while emitting a single loop over one row. Nobody reading the
+    list noticed; comparing the claim against the program did.
+    """
+
+    #: Shapes whose note explains why the shape of the code misleads —
+    #: amortised passes, library calls that iterate internally, and
+    #: structures whose cost is per operation rather than per collection.
+    EXPLAINED = frozenset({
+        "algo_window_grow", "algo_tree_bfs", "algo_monotonic",
+        "combinations_use", "product_use", "generator_send",
+        "js_generator", "js_iterator", "js_yield_star", "js_labelled_break",
+        "sqlite_memory", "heapq_use", "heapq_real", "bisect_use",
+        "deque_use", "js_map_set", "js_weakmap", "js_memo_map",
+        "js_at", "js_sparse", "js_freeze", "js_seal", "js_proxy",
+    })
+
+    @staticmethod
+    def _fixed_iterable(node) -> bool:
+        """A literal tuple, list, or range of constants.
+
+        A loop over `(3, -1)` or `range(5)` is a couple of demonstration
+        calls, not a pass over data, and counting it as one would make
+        every page look linear.
+        """
+        import ast as _ast
+
+        if isinstance(node, (_ast.Tuple, _ast.List)):
+            return True
+        return (
+            isinstance(node, _ast.Call)
+            and isinstance(node.func, _ast.Name)
+            and node.func.id == "range"
+            and all(isinstance(a, _ast.Constant) for a in node.args)
+        )
+
+    @classmethod
+    def _data_loop_depth(cls, node, d: int = 0) -> int:
+        import ast as _ast
+
+        best = d
+        for child in _ast.iter_child_nodes(node):
+            step = 0
+            if isinstance(child, (_ast.For, _ast.AsyncFor)):
+                step = 0 if cls._fixed_iterable(child.iter) else 1
+            elif isinstance(child, _ast.While):
+                step = 1
+            elif isinstance(child, (_ast.ListComp, _ast.SetComp,
+                                    _ast.DictComp, _ast.GeneratorExp)):
+                step = sum(
+                    0 if cls._fixed_iterable(g.iter) else 1
+                    for g in child.generators
+                )
+            best = max(best, cls._data_loop_depth(child, d + step))
+        return best
+
+    def test_every_page_has_a_complexity_note(self) -> None:
+        """The panel is either there for every page or it is a gap the
+        student notices. A shape with nothing honest to say may be left
+        out, but nothing is currently in that position."""
+        from code_coach.workbook.complexity import for_shape
+
+        for language in ("python", "javascript", "typescript"):
+            for p in pages(language):
+                with self.subTest(language=language, page=p.number):
+                    self.assertIsNotNone(
+                        for_shape(p.exercises[0].shape),
+                        f"page {p.number} ({p.id}) has no complexity note",
+                    )
+
+    def test_no_note_contradicts_the_code_it_describes(self) -> None:
+        import ast as _ast
+
+        from code_coach.workbook.complexity import for_shape
+
+        seen = set()
+        for p in pages("python"):
+            shape = p.exercises[0].shape
+            if shape in seen or shape in self.EXPLAINED:
+                continue
+            seen.add(shape)
+            note = for_shape(shape)
+            if note is None:
+                continue
+            try:
+                tree = _ast.parse(p.exercises[0].answer("python"))
+            except SyntaxError:
+                continue
+            depth = self._data_loop_depth(tree)
+            with self.subTest(page=p.number, shape=shape):
+                if note.label == "O(1)":
+                    self.assertEqual(
+                        depth, 0,
+                        f"{shape} is called constant but walks its data")
+                elif note.label == "O(n)":
+                    self.assertLess(
+                        depth, 2,
+                        f"{shape} is called linear but nests data loops")
+                elif note.label.startswith("O(n²)"):
+                    self.assertGreaterEqual(
+                        depth, 2,
+                        f"{shape} is called quadratic with no nested loop")
+
+
 class EndpointTests(unittest.TestCase):
     def _request(self, **kwargs):
         from code_coach.api.schemas import WorkbookCheckRequest
