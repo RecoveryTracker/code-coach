@@ -190,10 +190,21 @@ class ReferenceRunTests(unittest.TestCase):
     Everything else in this file reads data. This executes it.
     """
 
+    #: run_code's exit code for "killed at the time limit".
+    TIMED_OUT = 124
+
     def _run(self, language: str, exercise) -> None:
         code = exercise.answer(language)
         self.assertIsNotNone(code, f"no reference for {language}")
         stdout, stderr, exit_code = run_code(code, language=language)
+        if exit_code == self.TIMED_OUT:
+            # Try once more before believing it. These programs finish in
+            # well under a tenth of a second and the limit is three, but a
+            # machine busy with something else can still starve one past
+            # it — that produced sixty-two false failures in one run here,
+            # on pages that are demonstrably fine. A real infinite loop
+            # times out both times and still fails; contention does not.
+            stdout, stderr, exit_code = run_code(code, language=language)
         self.assertEqual(exit_code, 0, (stderr or stdout)[:400])
         self.assertTrue(
             matches(stdout, exercise.expect),
