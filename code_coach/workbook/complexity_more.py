@@ -1063,3 +1063,104 @@ _add(
     "sql_join",
     "sql_left_join",
 )
+
+
+# ── Node objects ─────────────────────────────────────────────
+#
+# Almost everything here is linear, and saying so is not the useful part.
+# The useful part is what linear costs on a chain that it does not cost on
+# a list: there is no index, so reaching the middle means walking to it,
+# and that is why so many of these answers send two pointers instead of
+# doing arithmetic.
+
+_add(
+    "O(n)",
+    "One node made per value, each linked to the one before. Building is "
+    "linear and so is every walk afterwards, but a chain gives up the one "
+    "thing a list has: there is no way to jump to position five without "
+    "passing one through four. Every cost on these pages follows from "
+    "that.",
+    "node_build",
+    "node_walk",
+)
+
+_add(
+    "O(n)",
+    "One pass, three pointers, and no new nodes — the memory is constant, "
+    "which is the reason to do it this way rather than reading the values "
+    "into a list and building a new chain. That would also be linear time "
+    "and would cost linear space to match.",
+    "node_reverse",
+)
+
+_add(
+    "O(n + m)",
+    "Both chains, each node looked at once. Nothing here is re-read, "
+    "because every comparison advances one side or the other and neither "
+    "side ever goes backwards. The dummy head costs one node and saves the "
+    "empty-list check on every append.",
+    "node_dummy",
+)
+
+_add(
+    "O(n)",
+    "Still one pass, even though two pointers are moving: the fast one "
+    "covers the chain once at double speed while the slow one covers half. "
+    "Linear either way, and constant memory. The alternative is to walk "
+    "the chain to measure it and walk again to the position you worked "
+    "out, which is two passes for the same answer.",
+    "node_two_pointers",
+)
+
+_add(
+    "O(n)",
+    "One pass. Removing a node is constant work once you are standing on "
+    "the one before it, which is the whole reason the loop looks at "
+    "node.next rather than node — you cannot unlink a node you are already "
+    "standing on.",
+    "node_remove",
+)
+
+_add(
+    "O(n)",
+    "Every value becomes a node once. Depth then costs another full visit, "
+    "because a tree will not tell you how deep it is without looking at "
+    "all of it. Depth is not the same as the number of nodes: a balanced "
+    "tree of n nodes is log n deep, and a tree that has degenerated into a "
+    "chain is n deep, which is what turns a fast structure into a slow one.",
+    "tree_build",
+)
+
+_add(
+    "O(n)",
+    "Every node visited exactly once, whichever of the three orders you "
+    "pick — the order changes what comes out, never how much work it is. "
+    "Memory is the depth rather than the node count, because that is how "
+    "many calls are stacked up at the deepest point.",
+    "tree_walk",
+)
+
+_add(
+    "O(n)",
+    "Linear despite the nesting, and the nesting is what makes it look "
+    "otherwise: there is a for loop inside a while loop. It is not "
+    "quadratic because the inner loop does not run n times per row — it "
+    "runs once per node in that row, and every node is in exactly one "
+    "row. Each node enters the queue once and leaves once, so the inner "
+    "loop bodies add up to n across the whole walk. Memory is the widest "
+    "row rather than the whole tree, which for a balanced tree is about "
+    "half the nodes — level order costs the most memory of the "
+    "traversals, not the least. Reversing a row is linear in that row, "
+    "so the zigzag adds nothing to the total.",
+    "tree_levels",
+)
+
+_add(
+    "O(n)",
+    "heapify is the surprise: turning a list into a heap is linear, not n "
+    "log n, even though pushing the items one at a time would be n log n. "
+    "The popping afterwards costs log n each. isdigit and isalnum are "
+    "constant per character, so the scans around them are linear in the "
+    "text.",
+    "node_toolkit",
+)

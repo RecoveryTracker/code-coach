@@ -300,6 +300,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_algo3 import SHAPE_IDS as ALGO3
         from code_coach.workbook.emit_sql import SHAPE_IDS as SQL_SHAPES
         from code_coach.workbook.emit_algo4 import SHAPE_IDS as ALGO4
+        from code_coach.workbook.emit_nodes import SHAPE_IDS as NODES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -343,6 +344,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(ALGO3)
             | set(SQL_SHAPES)
             | set(ALGO4)
+            | set(NODES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
@@ -369,6 +371,9 @@ class ComplexityNoteTests(unittest.TestCase):
         "algo_window_grow", "algo_tree_bfs", "algo_monotonic",
         "algo_window_max", "algo_grid_flood", "algo_union_find",
         "algo_trie", "algo_dijkstra", "algo_two_heaps",
+        # A for loop inside a while loop, linear all the same because
+        # each node is in exactly one row. The note says so at length.
+        "tree_levels",
         "combinations_use", "product_use", "generator_send",
         "js_generator", "js_iterator", "js_yield_star", "js_labelled_break",
         "sqlite_memory", "heapq_use", "heapq_real", "bisect_use",
