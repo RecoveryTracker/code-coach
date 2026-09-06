@@ -57,6 +57,8 @@ from code_coach.workbook.content_js9 import JS9_PAGES
 from code_coach.workbook.content_dart2 import DART2_PAGES
 from code_coach.workbook.content_cpp2 import CPP2_PAGES
 from code_coach.workbook.content_sql2 import SQL2_PAGES
+from code_coach.workbook.content_webnodes import WEBNODE_PAGES
+from code_coach.workbook.content_topup import TOPUP_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -700,6 +702,8 @@ _BASE_PAGES = (
     + DART2_PAGES
     + CPP2_PAGES
     + SQL2_PAGES
+    + WEBNODE_PAGES
+    + TOPUP_PAGES
 )
 
 # Review pages are built from the pages above rather than written out, so

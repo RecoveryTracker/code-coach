@@ -1653,3 +1653,66 @@ _add(
     "sql_window",
     "sql_running",
 )
+
+
+# ── Node objects on the web, and the last few calls ──────────
+
+_add(
+    "O(n)",
+    "One node made per value and one walk to read them back. Building "
+    "backwards through the array is what lets each node be created already "
+    "pointing at the rest, so it is one pass rather than two. The types "
+    "cost nothing at run time: TypeScript erases them, and the JavaScript "
+    "on the facing page is the same program with the proofs deleted.",
+    "web_list_node",
+)
+
+_add(
+    "O(n + m)",
+    "Reversing is one pass and no allocation, which is the reason to do it "
+    "in place rather than read the values into an array. Merging looks at "
+    "each node of both chains once, because every comparison advances one "
+    "side and neither ever goes back. The dummy costs one node and removes "
+    "the empty-list check from every append.",
+    "web_list_ops",
+)
+
+_add(
+    "O(n)",
+    "realloc is linear when it has to move and constant when it can extend "
+    "in place, and you do not get to know which — so growing one element at "
+    "a time is quadratic in the worst case and fine in the best, which is "
+    "why the usual answer is to double. memcmp and atoi are both linear in "
+    "what they read.",
+    "c_more",
+)
+
+_add(
+    "O(n)",
+    "insert in the middle is linear, because everything after it shifts "
+    "along, and that is the cost push_back does not have. clear is linear "
+    "for anything with a destructor and constant for plain numbers, but it "
+    "keeps the capacity either way, so the memory is still held after the "
+    "size reads zero. append and compare are linear in the string.",
+    "cpp_more",
+)
+
+_add(
+    "O(n)",
+    "The walk is linear and take makes it shorter, because the chain is "
+    "lazy and stops when asked. get is constant and hands back an Option "
+    "rather than panicking, which is the whole difference from indexing. "
+    "The clone is the expensive line on the page and it is there only "
+    "because into_iter consumes what it walks.",
+    "rust_more",
+)
+
+_add(
+    "O(1)",
+    "The lookup is constant and ! costs nothing at all — it is a claim "
+    "rather than a check, compiled to the same code as no claim, and the "
+    "run-time cost only arrives when it turns out to be wrong. take is "
+    "lazy, so it costs what it yields rather than what it walked, and "
+    "List.from copies and is linear.",
+    "dart_more",
+)

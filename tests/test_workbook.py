@@ -320,6 +320,8 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_js9 import SHAPE_IDS as JS9_SHAPES
         from code_coach.workbook.emit_cpp2 import SHAPE_IDS as CPP2_SHAPES
         from code_coach.workbook.emit_sql2 import SHAPE_IDS as SQL2_SHAPES
+        from code_coach.workbook.emit_webnodes import SHAPE_IDS as WEB_SHAPES
+        from code_coach.workbook.emit_topup import SHAPE_IDS as TOPUP_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -371,6 +373,10 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JS9_SHAPES)
             | set(CPP2_SHAPES)
             | set(SQL2_SHAPES)
+            | set(WEB_SHAPES)
+            # dart_more is dart's, but the other three in this block
+            # are not, and the roster is what dart does not have.
+            | (set(TOPUP_SHAPES) - {"dart_more"})
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
