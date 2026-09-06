@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing import langlore2, langlore3, langlore4
+from code_coach.typing import snippets2
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -371,6 +372,86 @@ THEMES: tuple[Theme, ...] = (
         "assembly", "Assembly Lore",
         "What every other language on this list turns into.",
         passages=langlore4.ASSEMBLY,
+    ),
+    Theme(
+        "gocode", "Go Code",
+        "Bare colon-equals, tabs, and if err != nil.",
+        passages=snippets2.BY_LANGUAGE["go"],
+    ),
+    Theme(
+        "phpcode", "PHP Code",
+        "Sigils, arrows and the strict comparison.",
+        passages=snippets2.BY_LANGUAGE["php"],
+    ),
+    Theme(
+        "luacode", "Lua Code",
+        "local, then, end, and the two-dot concatenation.",
+        passages=snippets2.BY_LANGUAGE["lua"],
+    ),
+    Theme(
+        "zigcode", "Zig Code",
+        "Pipes round the loop value, and dot-brace everywhere.",
+        passages=snippets2.BY_LANGUAGE["zig"],
+    ),
+    Theme(
+        "javacode", "Java Code",
+        "Angle brackets, and four keywords before anything runs.",
+        passages=snippets2.BY_LANGUAGE["java"],
+    ),
+    Theme(
+        "kotlincode", "Kotlin Code",
+        "val, it, and the safe call.",
+        passages=snippets2.BY_LANGUAGE["kotlin"],
+    ),
+    Theme(
+        "rubycode", "Ruby Code",
+        "Blocks, symbols, and question marks on the end.",
+        passages=snippets2.BY_LANGUAGE["ruby"],
+    ),
+    Theme(
+        "csharpcode", "C# Code",
+        "LINQ, async, and the interpolated string.",
+        passages=snippets2.BY_LANGUAGE["csharp"],
+    ),
+    Theme(
+        "swiftcode", "Swift Code",
+        "guard let, dollar zero, and backslash interpolation.",
+        passages=snippets2.BY_LANGUAGE["swift"],
+    ),
+    Theme(
+        "scalacode", "Scala Code",
+        "Underscores as arguments, and match as an expression.",
+        passages=snippets2.BY_LANGUAGE["scala"],
+    ),
+    Theme(
+        "haskellcode", "Haskell Code",
+        "Arrows, sections, and the dollar sign.",
+        passages=snippets2.BY_LANGUAGE["haskell"],
+    ),
+    Theme(
+        "ocamlcode", "OCaml Code",
+        "Pipes forwards, and match with vertical bars.",
+        passages=snippets2.BY_LANGUAGE["ocaml"],
+    ),
+    Theme(
+        "elixircode", "Elixir Code",
+        "The pipe operator and the tagged tuple.",
+        passages=snippets2.BY_LANGUAGE["elixir"],
+    ),
+    Theme(
+        "lispcode", "Lisp Code",
+        "Parentheses, and the shape they make.",
+        passages=snippets2.BY_LANGUAGE["lisp"],
+    ),
+    Theme(
+        "odincode", "Odin Code",
+        "Double colon, and errors returned beside the value.",
+        passages=snippets2.BY_LANGUAGE["odin"],
+    ),
+    Theme(
+        "assemblycode", "Assembly Code",
+        "mov, cmp, jne, syscall.",
+        passages=snippets2.BY_LANGUAGE["assembly"],
     ),
     # Which language's code you're typing. Picking Code for the keys and then
     # one of these is how you drill the punctuation of the language you're

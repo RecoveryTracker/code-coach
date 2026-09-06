@@ -93,11 +93,34 @@ def load_code(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+#: Toolchains installed for this app rather than system-wide, because
+#: this machine has no package manager and putting four more compilers on
+#: the system PATH is not a thing a learning app should do to you. PATH is
+#: still asked first, so a real system install always wins.
+_LOCAL_TOOLCHAINS = Path.home() / "toolchains"
+
+
+def _tool(name: str, *candidates: str) -> str | None:
+    """The path to a toolchain binary: PATH first, then our own directory."""
+    found = shutil.which(name)
+    if found:
+        return found
+    for rel in candidates:
+        here = _LOCAL_TOOLCHAINS / rel
+        if here.exists():
+            return str(here)
+    return None
+
+
 def _interpreter_for(path: Path) -> list[str] | None:
     """The command that runs this file, or None if we can't run its kind.
 
     Dart is found on PATH; `shutil.which` resolves the .bat shim that the
     Flutter SDK installs on Windows.
+
+    Go and Zig are compiled, but both have a `run` subcommand that builds
+    and executes in one step, so they belong here rather than with the
+    compilers below: there is no separate binary to clean up.
     """
     suffix = path.suffix.lower()
     if suffix == ".py":
@@ -108,6 +131,23 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix in (".js", ".mjs"):
         node = shutil.which("node")
         return [node, str(path)] if node else None
+    if suffix == ".go":
+        go = _tool("go", "go/bin/go.exe", "go/bin/go")
+        return [go, "run", str(path)] if go else None
+    if suffix == ".php":
+        php = _tool("php", "php/php.exe", "php/php")
+        return [php, str(path)] if php else None
+    if suffix == ".lua":
+        lua = _tool("lua", "lua/bin/lua.exe", "lua/bin/lua")
+        return [lua, str(path)] if lua else None
+    if suffix == ".zig":
+        zig = _tool(
+            "zig",
+            "zig-x86_64-windows-0.16.0/zig.exe",
+            "zig/zig.exe",
+            "zig/zig",
+        )
+        return [zig, "run", str(path)] if zig else None
     return [sys.executable, str(path)]
 
 
@@ -458,11 +498,16 @@ _SUFFIXES = {
     "cpp": ".cpp",
     "rust": ".rs",
     "python": ".py",
+    "go": ".go",
+    "php": ".php",
+    "lua": ".lua",
+    "zig": ".zig",
 }
 
 # Languages that compile before they run get a longer clock — the wait is the
-# toolchain, not the student's loop.
-_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust", "typescript"}
+# toolchain, not the student's loop. Go and Zig build on every run, and Zig
+# in particular is slow the first time it sees a standard library.
+_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust", "typescript", "go", "zig"}
 
 
 def run_code(

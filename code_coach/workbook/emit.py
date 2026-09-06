@@ -28,6 +28,10 @@ from typing import Callable
 # Languages the workbook runs in. SQL is left out on purpose: it has no
 # statement that prints a line and no loop, so every shape here would have to
 # be faked, and a faked exercise teaches the fake.
+# The languages the workbook is offered in. A name is here only when this
+# machine can run it, because every page is checked by executing its
+# reference answer — see emit_newlang.RUNNABLE for the four that were added
+# with their toolchains, and UNVERIFIED for the twelve written but dark.
 LANGUAGES: tuple[str, ...] = (
     "python",
     "javascript",
@@ -36,6 +40,10 @@ LANGUAGES: tuple[str, ...] = (
     "c",
     "cpp",
     "rust",
+    "go",
+    "php",
+    "lua",
+    "zig",
 )
 
 NL = "\n"
@@ -562,12 +570,15 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_cpp2,
         emit_sql2,
         emit_webnodes,
+        emit_newlang,
         emit_topup,
         emit_rust3,
     )
 
     if emit_dart2.handles(shape):
         return emit_dart2.solution(language, shape, args)
+    if emit_newlang.handles(shape) and language in emit_newlang.RUNNABLE:
+        return emit_newlang.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
     if emit_rust3.handles(shape):
@@ -690,8 +701,19 @@ def supports(language: str) -> bool:
     SQL is not in _EMITTERS because it shares no shapes with the others —
     it does not print, so none of the printing shapes can be written in it.
     Its pages come from emit_sql, which is asked before that table.
+
+    The four newest languages are the same case for the opposite reason:
+    they share exactly one shape and none of the rest, so they have their
+    own emitter and would otherwise be reported as unsupported while
+    happily answering the page they do have.
     """
-    return language in _EMITTERS or language == "sql"
+    from code_coach.workbook import emit_newlang
+
+    return (
+        language in _EMITTERS
+        or language == "sql"
+        or language in emit_newlang.RUNNABLE
+    )
 
 
 def all_shape_ids() -> tuple[str, ...]:
