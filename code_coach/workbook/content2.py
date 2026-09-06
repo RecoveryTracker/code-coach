@@ -15,6 +15,7 @@ done, hold many values, then name a piece of work so you can reuse it.
 from __future__ import annotations
 
 from code_coach.workbook import Exercise, Page
+from code_coach.workbook.wording import negated
 
 # Everywhere the workbook runs. These pages started as Python, JavaScript and
 # Dart, because a list and a string are genuinely different objects in C and
@@ -290,7 +291,7 @@ _P16 = _page(
             "either-or",
             i + 1,
             f'Put {value} in {name}. Print "{yes}" if {name} {cond_text}, '
-            f'and "{no}" if it does not.',
+            f'and "{no}" if it {negated(cond_text)}.',
             "if_else_print",
             name=name,
             value=value,

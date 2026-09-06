@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from code_coach.workbook import Exercise, Page
 from code_coach.workbook.content2 import WORKBOOK_LANGUAGES
+from code_coach.workbook.wording import negated
 
 NOT_C = ("python", "javascript", "typescript", "dart", "cpp", "rust")
 
@@ -651,7 +652,7 @@ _P71 = _page(
     [
         (
             f'Put {value} in {name}. Print "{yes}" if {name} {cond_text}, '
-            f'and "{no}" if it does not.',
+            f'and "{no}" if it {negated(cond_text)}.',
             {
                 "name": name,
                 "value": value,
@@ -1031,7 +1032,7 @@ _P80 = _page(
     [
         (
             f"Put the numbers {_list(items)} in a list. For each one print "
-            f'"{yes}" if it {described}, and "{no}" if it does not.',
+            f'"{yes}" if it {described}, and "{no}" if it {negated(described)}.',
             {"items": items, "cond": cond, "yes": yes, "no": no},
         )
         for items, cond, described, yes, no in (

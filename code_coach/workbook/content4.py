@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from code_coach.workbook import Exercise, Page
 from code_coach.workbook.content2 import WORKBOOK_LANGUAGES
+from code_coach.workbook.wording import negated
 
 
 # Positional-only up to the shape, so a shape argument can share a name
@@ -78,7 +79,7 @@ _P41 = _page(
             "label-each",
             i + 1,
             f'Put the numbers {_list(items)} in a list. For each one print '
-            f'"{yes}" if it {described}, and "{no}" if it does not.',
+            f'"{yes}" if it {described}, and "{no}" if it {negated(described)}.',
             "label_each",
             items=items,
             cond=cond,
@@ -379,7 +380,8 @@ _P47 = _page(
             "func-word",
             i + 1,
             f'Write a function called {name} that takes a number and returns '
-            f'"{yes}" if it {described} and "{no}" if it does not. Print the '
+            f'"{yes}" if it {described} and "{no}" if it {negated(described)}. '
+            f'Print the '
             f"result of calling it with " + ", then ".join(str(v) for v in calls) + ".",
             "func_word",
             name=name,
