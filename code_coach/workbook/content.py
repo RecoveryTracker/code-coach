@@ -59,6 +59,7 @@ from code_coach.workbook.content_cpp2 import CPP2_PAGES
 from code_coach.workbook.content_sql2 import SQL2_PAGES
 from code_coach.workbook.content_webnodes import WEBNODE_PAGES
 from code_coach.workbook.content_topup import TOPUP_PAGES
+from code_coach.workbook.content_rust3 import RUST3_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -704,6 +705,7 @@ _BASE_PAGES = (
     + SQL2_PAGES
     + WEBNODE_PAGES
     + TOPUP_PAGES
+    + RUST3_PAGES
 )
 
 # Review pages are built from the pages above rather than written out, so

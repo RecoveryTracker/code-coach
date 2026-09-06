@@ -53,34 +53,45 @@ def _chunks(items: list, size: int) -> list[list]:
     return out
 
 
-def _pick(sources: list[Page]) -> list[tuple[Page, Exercise]]:
+def _pick(sources: list[Page], series: int = 1) -> list[tuple[Page, Exercise]]:
     """Twenty exercises, spread across the span rather than taken in bulk.
 
     One from each page first, so every page in the span is represented,
     then round again for the remainder. Which exercise moves along with
     each pass, so a second visit to a page is not the same numbers.
+
+    `series` shifts the whole selection, which is what makes a second set
+    of review pages worth having: the same spans, different exercises. One
+    exercise does not use everything its page teaches, so a single pass
+    over a page reaches about six constructs in ten.
     """
     picked: list[tuple[Page, Exercise]] = []
     lap = 0
+    shift = (series - 1) * 11
     while len(picked) < PER_PAGE:
         for page in sources:
             if len(picked) >= PER_PAGE:
                 break
-            at = (lap * 7 + sources.index(page) * 3) % len(page.exercises)
+            at = (shift + lap * 7 + sources.index(page) * 3) % len(page.exercises)
             picked.append((page, page.exercises[at]))
         lap += 1
     return picked
 
 
+#: What each pass is called, so two pages over the same span do not
+#: arrive with the same name.
+_TITLES = {1: "Review", 2: "Second look"}
+
+
 def _review_page(number: int, index: int, sources: list[Page],
-                 language: str) -> Page:
+                 language: str, series: int = 1) -> Page:
     first, last = sources[0].number, sources[-1].number
-    page_id = f"review-{language}-{index:02d}"
-    rows = _pick(sources)
+    page_id = f"review-{language}-{series}-{index:02d}"
+    rows = _pick(sources, series)
     return Page(
         id=page_id,
         number=number,
-        name=f"Review: pages {first} to {last}",
+        name=f"{_TITLES[series]}: pages {first} to {last}",
         teaches=(
             f"Twenty exercises drawn back from pages {first} to {last}, "
             f"mixed rather than grouped. If a page here has gone cold, that "
@@ -119,8 +130,17 @@ def review_pages(base: tuple[Page, ...], language: str = "python",
     )
     if not theirs:
         return ()
+    chunks = _chunks(theirs, SPAN)
     start = max(p.number for p in theirs) + 1
+    # One pass, not two. A second set over the same spans was built and
+    # measured: it moved the constructs revisited from fifty-nine per cent
+    # to sixty-two, for twice the pages. That is because a page is one
+    # shape, so its twenty exercises largely use the same constructs and a
+    # different one from the same page reaches nearly the same vocabulary.
+    # What is still unrevisited sits in shape variants rather than in
+    # different arguments, so more passes will not reach it. Three points
+    # for three hundred and sixty exercises is padding.
     return tuple(
         _review_page(start + i, i + 1, chunk, language)
-        for i, chunk in enumerate(_chunks(theirs, SPAN))
+        for i, chunk in enumerate(chunks)
     )

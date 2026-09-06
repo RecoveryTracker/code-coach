@@ -1716,3 +1716,34 @@ _add(
     "List.from copies and is linear.",
     "dart_more",
 )
+
+
+# ── The rest of Rust ─────────────────────────────────────────
+
+_add(
+    "O(n)",
+    "One pass for each question asked. enumerate costs nothing: it counts "
+    "as it goes rather than looking anything up. windows makes no copies "
+    "either, because each pair is a view into the original, which is why "
+    "it can hand out overlapping ones without the memory doubling.",
+    "rust_iter_more",
+)
+
+_add(
+    "O(1)",
+    "Constant per operation on average. or_insert_with is the reason the "
+    "function is passed rather than the value: or_insert would build the "
+    "empty Vec on every repeat and drop it, so the allocation happens n "
+    "times to be used once. get_mut is the same cost as get and differs "
+    "only in what the borrow checker will let you do with the answer.",
+    "rust_map_more",
+)
+
+_add(
+    "O(n)",
+    "Linear in the characters. filter_map is a single pass, not a filter "
+    "followed by a map, so the intermediate collection never exists. parse "
+    "is linear in the text and saturating_sub is a single instruction — "
+    "the saturating part is a compare, not a branch you pay for.",
+    "rust_text_more",
+)
