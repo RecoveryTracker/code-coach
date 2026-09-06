@@ -70,6 +70,11 @@ const TIERS: { id: string; name: string; blurb: string }[] = [
     blurb: "Built on all of it, plus real language features.",
   },
   { id: "advanced", name: "Advanced", blurb: "Later." },
+  {
+    id: "review",
+    name: "Review",
+    blurb: "Earlier pages, mixed and brought back.",
+  },
 ];
 
 export default function Workbook({ language }: Props) {
