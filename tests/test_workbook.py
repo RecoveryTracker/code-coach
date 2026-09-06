@@ -813,9 +813,32 @@ class LanguageReachTests(unittest.TestCase):
         self.assertEqual(len(shared_for_c), len(shared) - len(dropped))
 
     def test_the_languages_that_get_it_are_the_ones_that_can_run_it(self) -> None:
-        """The list on the pages and the list of runners have to be the same
-        list, or a page is offered to somebody who cannot answer it."""
-        self.assertEqual(set(self.DEEP), set(LANGUAGES))
+        """No page is offered to a language the engine cannot run.
+
+        This used to compare the workbook's language list against DEEP,
+        which worked while those were the same seven languages. They are
+        not any more: eight more arrived with a single page each, so DEEP
+        now means the languages with a whole book and LANGUAGES means the
+        languages offered anything at all.
+
+        The rule underneath was never about that list. It is that a
+        language given a page can execute it, so the runner map is what to
+        ask, and asking it needs no editing when a ninth arrives.
+        """
+        from code_coach.engine import _SUFFIXES
+
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                self.assertIn(
+                    language, _SUFFIXES,
+                    f"{language} is offered pages the engine cannot run")
+
+    def test_the_deep_languages_all_have_more_than_one_page(self) -> None:
+        """DEEP is now a claim about depth rather than about existing, so
+        it should be false the moment one of them stops being deep."""
+        for language in self.DEEP:
+            with self.subTest(language=language):
+                self.assertGreater(len(pages(language)), 1)
 
     def test_sql_has_its_own_pages_and_shares_none(self) -> None:
         """SQL used to be left out, because it has no print and no loop and

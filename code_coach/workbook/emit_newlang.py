@@ -34,13 +34,15 @@ from __future__ import annotations
 
 #: Languages whose toolchain is present and whose answers are executed by
 #: the suite. Everything else in this file is written but not offered.
-RUNNABLE: tuple[str, ...] = ("go", "php", "lua", "zig", "ruby")
+RUNNABLE: tuple[str, ...] = (
+    "go", "php", "lua", "zig", "ruby", "java", "csharp", "odin",
+)
 
 #: Written, checked by eye, never executed here. Moving a name into
 #: RUNNABLE is a claim that the suite can now prove it.
 UNVERIFIED: tuple[str, ...] = (
-    "java", "kotlin", "csharp", "swift", "scala",
-    "haskell", "ocaml", "elixir", "lisp", "odin", "assembly",
+    "kotlin", "swift", "scala", "haskell", "ocaml", "elixir",
+    "lisp", "assembly",
 )
 
 LANGUAGES: tuple[str, ...] = RUNNABLE + UNVERIFIED

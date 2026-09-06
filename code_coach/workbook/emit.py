@@ -45,6 +45,9 @@ LANGUAGES: tuple[str, ...] = (
     "lua",
     "zig",
     "ruby",
+    "java",
+    "csharp",
+    "odin",
 )
 
 NL = "\n"

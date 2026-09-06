@@ -140,6 +140,20 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix == ".lua":
         lua = _tool("lua", "lua/bin/lua.exe", "lua/bin/lua")
         return [lua, str(path)] if lua else None
+    if suffix == ".java":
+        # Java 21's source launcher compiles in memory and does not mind
+        # that the temp file is not named after the class.
+        java = _tool("java", "jdk-21.0.12.1+1/bin/java.exe", "jdk/bin/java.exe")
+        return [java, str(path)] if java else None
+    if suffix == ".cs":
+        # .NET 10 runs a single .cs file directly. The first ever run
+        # initialises the SDK and takes minutes; every run after is under
+        # a second, including for a file it has not seen.
+        dotnet = _tool("dotnet", "dotnet/dotnet.exe", "dotnet/dotnet")
+        return [dotnet, "run", str(path)] if dotnet else None
+    if suffix == ".odin":
+        odin = _tool("odin", "odin/dist/odin.exe", "odin/odin.exe")
+        return [odin, "run", str(path), "-file"] if odin else None
     if suffix == ".rb":
         ruby = _tool(
             "ruby",
@@ -511,12 +525,18 @@ _SUFFIXES = {
     "lua": ".lua",
     "zig": ".zig",
     "ruby": ".rb",
+    "java": ".java",
+    "csharp": ".cs",
+    "odin": ".odin",
 }
 
 # Languages that compile before they run get a longer clock — the wait is the
 # toolchain, not the student's loop. Go and Zig build on every run, and Zig
 # in particular is slow the first time it sees a standard library.
-_SLOW_LANGUAGES = {"dart", "c", "cpp", "rust", "typescript", "go", "zig"}
+_SLOW_LANGUAGES = {
+    "dart", "c", "cpp", "rust", "typescript", "go", "zig",
+    "java", "csharp", "odin",
+}
 
 
 def run_code(
