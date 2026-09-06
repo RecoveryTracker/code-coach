@@ -16,6 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
+from code_coach.typing import langlore2, langlore3, langlore4
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -290,6 +291,86 @@ THEMES: tuple[Theme, ...] = (
         "rust", "Rust Lore",
         "Ownership, borrowing, and errors you cannot forget to handle.",
         passages=langlore.RUST,
+    ),
+    Theme(
+        "go", "Go Lore",
+        "Compile fast, ship one binary, and write out every error.",
+        passages=langlore2.GO,
+    ),
+    Theme(
+        "java", "Java Lore",
+        "The JVM, and thirty years of running everywhere.",
+        passages=langlore2.JAVA,
+    ),
+    Theme(
+        "kotlin", "Kotlin Lore",
+        "Null in the type system, and the JVM made comfortable.",
+        passages=langlore2.KOTLIN,
+    ),
+    Theme(
+        "ruby", "Ruby Lore",
+        "Written for programmer happiness, and it shows.",
+        passages=langlore2.RUBY,
+    ),
+    Theme(
+        "php", "PHP Lore",
+        "It ran the early web, and the modern one is a different language.",
+        passages=langlore2.PHP,
+    ),
+    Theme(
+        "lua", "Lua Lore",
+        "One data structure, small enough to embed anywhere.",
+        passages=langlore2.LUA,
+    ),
+    Theme(
+        "haskell", "Haskell Lore",
+        "Lazy, pure, and where half your favourite features came from.",
+        passages=langlore3.HASKELL,
+    ),
+    Theme(
+        "ocaml", "OCaml Lore",
+        "ML with a module system worth the trip.",
+        passages=langlore3.OCAML,
+    ),
+    Theme(
+        "scala", "Scala Lore",
+        "Objects and functions in one language, for better and worse.",
+        passages=langlore3.SCALA,
+    ),
+    Theme(
+        "elixir", "Elixir Lore",
+        "Millions of processes, and a supervisor to restart them.",
+        passages=langlore3.ELIXIR,
+    ),
+    Theme(
+        "lisp", "Lisp Lore",
+        "Code as data since 1958, and the parentheses are the point.",
+        passages=langlore3.LISP,
+    ),
+    Theme(
+        "csharp", "C# Lore",
+        "Where async and await were invented.",
+        passages=langlore4.CSHARP,
+    ),
+    Theme(
+        "swift", "Swift Lore",
+        "Optionals, value types, and reference counting.",
+        passages=langlore4.SWIFT,
+    ),
+    Theme(
+        "zig", "Zig Lore",
+        "No hidden control flow, no hidden allocations.",
+        passages=langlore4.ZIG,
+    ),
+    Theme(
+        "odin", "Odin Lore",
+        "Data-oriented, allocator-aware, and aimed at games.",
+        passages=langlore4.ODIN,
+    ),
+    Theme(
+        "assembly", "Assembly Lore",
+        "What every other language on this list turns into.",
+        passages=langlore4.ASSEMBLY,
     ),
     # Which language's code you're typing. Picking Code for the keys and then
     # one of these is how you drill the punctuation of the language you're
