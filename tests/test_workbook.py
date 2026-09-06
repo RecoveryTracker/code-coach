@@ -454,32 +454,37 @@ class ComplexityNoteTests(unittest.TestCase):
         from code_coach.workbook.complexity import for_shape
 
         seen = set()
+        # Every shape on the page against an exercise that actually uses
+        # it, rather than the page's first exercise. Review pages mix
+        # shapes, so reading exercises[0] there would check one exercise
+        # in twenty and call the whole page covered.
         for p in pages("python"):
-            shape = p.exercises[0].shape
-            if shape in seen or shape in self.EXPLAINED:
-                continue
-            seen.add(shape)
-            note = for_shape(shape)
-            if note is None:
-                continue
-            try:
-                tree = _ast.parse(p.exercises[0].answer("python"))
-            except SyntaxError:
-                continue
-            depth = self._data_loop_depth(tree)
-            with self.subTest(page=p.number, shape=shape):
-                if note.label == "O(1)":
-                    self.assertEqual(
-                        depth, 0,
-                        f"{shape} is called constant but walks its data")
-                elif note.label == "O(n)":
-                    self.assertLess(
-                        depth, 2,
-                        f"{shape} is called linear but nests data loops")
-                elif note.label.startswith("O(n²)"):
-                    self.assertGreaterEqual(
-                        depth, 2,
-                        f"{shape} is called quadratic with no nested loop")
+            for ex in p.exercises:
+                shape = ex.shape
+                if shape in seen or shape in self.EXPLAINED:
+                    continue
+                seen.add(shape)
+                note = for_shape(shape)
+                if note is None:
+                    continue
+                try:
+                    tree = _ast.parse(ex.answer("python"))
+                except SyntaxError:
+                    continue
+                depth = self._data_loop_depth(tree)
+                with self.subTest(page=p.number, shape=shape):
+                    if note.label == "O(1)":
+                        self.assertEqual(
+                            depth, 0,
+                            f"{shape} is called constant but walks its data")
+                    elif note.label == "O(n)":
+                        self.assertLess(
+                            depth, 2,
+                            f"{shape} is called linear but nests data loops")
+                    elif note.label.startswith("O(n²)"):
+                        self.assertGreaterEqual(
+                            depth, 2,
+                            f"{shape} is called quadratic with no nested loop")
 
 
 class EndpointTests(unittest.TestCase):

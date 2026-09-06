@@ -644,7 +644,7 @@ _FIRST: tuple[Page, ...] = (
 # The practice pages sit at the end rather than beside the ones they drill
 # because the teaching examples refer to each other by number, and
 # interleaving would make every one of those references wrong.
-PAGES: tuple[Page, ...] = (
+_BASE_PAGES = (
     _FIRST
     + MORE_PAGES
     + MORE_PAGES_3
@@ -701,3 +701,10 @@ PAGES: tuple[Page, ...] = (
     + CPP2_PAGES
     + SQL2_PAGES
 )
+
+# Review pages are built from the pages above rather than written out, so
+# they are appended after the tuple exists. They are the only pages that
+# mix shapes, and they add no exercise that has not already run.
+from code_coach.workbook.content_review import review_pages  # noqa: E402
+
+PAGES = _BASE_PAGES + review_pages(_BASE_PAGES)

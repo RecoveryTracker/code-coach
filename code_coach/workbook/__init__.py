@@ -374,13 +374,27 @@ def has_workbook(language: str) -> bool:
 def _cost_of(page: Page) -> dict | None:
     """The page's complexity note, ready to serve.
 
-    A page is one shape all the way through, so the cost is the shape's.
+    Almost every page is one shape all the way through, so the cost is the
+    shape's. Review pages are the exception: they mix shapes on purpose,
+    and quoting the first one's cost as the page's would be wrong about
+    nineteen of the twenty exercises. Those get a note saying so instead.
     Pages whose shape has no note yet return None.
     """
     from code_coach.workbook.complexity import for_shape
 
     if not page.exercises:
         return None
+    shapes = {e.shape for e in page.exercises}
+    if len(shapes) > 1:
+        return {
+            "label": "mixed",
+            "note": (
+                "This page revisits several earlier pages, so there is no "
+                "single cost to quote. Each exercise carries the cost of "
+                "the page it came from, and working out which is which is "
+                "worth more here than being told."
+            ),
+        }
     found = for_shape(page.exercises[0].shape)
     if found is None:
         return None

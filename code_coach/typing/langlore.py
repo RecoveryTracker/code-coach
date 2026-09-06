@@ -44,7 +44,10 @@ ZEN = (
 )
 
 PYTHON: tuple[Passage, ...] = tuple(
-    _p(line, "the Zen of Python, PEP 20") for line in ZEN
+    # The author is named in the line the reader sees, not only in the
+    # docstring above. The licence this ships under asks for attribution,
+    # and attribution nobody is shown is not attribution.
+    _p(line, "Tim Peters, the Zen of Python (PEP 20)") for line in ZEN
 ) + (
     _p(
         "Python uses indentation for blocks because the indentation was going "
