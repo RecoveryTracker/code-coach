@@ -76,7 +76,7 @@ def _print_ints(name: str, count: str) -> tuple[str, ...]:
     )
 
 
-# ── 342. malloc and free ─────────────────────────────────────
+# ── 81. malloc and free ─────────────────────────────────────
 
 
 def _malloc(a: dict) -> str:
@@ -100,7 +100,7 @@ def _malloc(a: dict) -> str:
     )
 
 
-# ── 343. Counting without a length ───────────────────────────
+# ── 82. Counting without a length ───────────────────────────
 
 
 def _sizeof(a: dict) -> str:
@@ -126,7 +126,7 @@ def _sizeof(a: dict) -> str:
     )
 
 
-# ── 344. calloc and memcpy ───────────────────────────────────
+# ── 83. calloc and memcpy ───────────────────────────────────
 
 
 def _calloc(a: dict) -> str:
@@ -150,7 +150,7 @@ def _calloc(a: dict) -> str:
     )
 
 
-# ── 345. The out-parameter ───────────────────────────────────
+# ── 84. The out-parameter ───────────────────────────────────
 
 
 def _out_param(a: dict) -> str:
@@ -180,7 +180,7 @@ def _out_param(a: dict) -> str:
     )
 
 
-# ── 346-347. Chains ──────────────────────────────────────────
+# ── 85-86. Chains ──────────────────────────────────────────
 
 _LIST_NODE = (
     "struct ListNode {",
@@ -324,7 +324,7 @@ def _list_ops(a: dict) -> str:
     )
 
 
-# ── 348. Trees ───────────────────────────────────────────────
+# ── 87. Trees ───────────────────────────────────────────────
 
 _TREE_NODE = (
     "struct TreeNode {",
@@ -393,7 +393,7 @@ def _tree_node(a: dict) -> str:
     )
 
 
-# ── 349. qsort ───────────────────────────────────────────────
+# ── 88. qsort ───────────────────────────────────────────────
 
 
 def _qsort(a: dict) -> str:
@@ -462,7 +462,7 @@ def expected_output(shape: str, args: dict, value) -> str:
     """Worked out in Python, never by reading the C back.
 
     Nothing here prints a size in bytes, so nothing here depends on the
-    compiler. The one place a byte size could leak in is page 343, where
+    compiler. The one place a byte size could leak in is page 82, where
     the decayed count is compared rather than printed, and the guard keeps
     the data away from the length where that comparison could be true by
     accident.

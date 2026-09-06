@@ -38,7 +38,7 @@ def _page(page_id, number, name, teaches, example, shape, rows) -> Page:
             for i, (prompt, args) in enumerate(rows)
         ),
         languages=CPP_ONLY,
-        tier="advanced",
+        tier="intermediate",
     )
 
 

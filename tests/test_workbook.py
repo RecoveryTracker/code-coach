@@ -748,14 +748,25 @@ class LanguageReachTests(unittest.TestCase):
 
     def test_an_intermediate_page_belongs_to_exactly_one_language(self) -> None:
         """It was Python only, because one language is what buys the depth.
-        Python now has that depth, so JavaScript has started its own book.
+        Python now has that depth, and so does every other language here.
 
         The rule that stays is one language per page. A shared intermediate
         page would have to print identical output in every language that got
         it, and escaping exactly that constraint is what the single-language
         tier is for.
+
+        This used to name the three languages that had reached the tier and
+        assert the page belonged to one of them. That list went stale the
+        moment a fourth arrived, which is the same way the C page count went
+        stale. What the rule actually says is that the page belongs to one
+        language the workbook covers, so that is what is asserted, and it
+        needs no editing when a sixth language gets there.
         """
-        allowed = {"python", "javascript", "typescript"}
+        # DEEP, not EVERY_PAGE. EVERY_PAGE is the languages that receive
+        # every shared page, which excludes C for a reason that has nothing
+        # to do with this rule. DEEP is every language with a workbook, and
+        # another test holds it against the real language list.
+        allowed = set(self.DEEP) | {"sql"}
         for p in pages():
             if p.tier != "intermediate":
                 continue

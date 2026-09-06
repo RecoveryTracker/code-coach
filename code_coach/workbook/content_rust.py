@@ -1,4 +1,4 @@
-"""Pages 350-359: Rust, starting with the type it is built around.
+"""Pages 81-90: Rust, starting with the type it is built around.
 
 Sixteen hundred Rust answers in this workbook and not one of them contained
 the word Option. None called .iter(). None mentioned Rc or RefCell, which
@@ -37,7 +37,7 @@ def _page(page_id, number, name, teaches, example, shape, rows) -> Page:
             for i, (prompt, args) in enumerate(rows)
         ),
         languages=RUST_ONLY,
-        tier="advanced",
+        tier="intermediate",
     )
 
 
@@ -49,7 +49,7 @@ def _wordlist(items) -> str:
     return ", ".join(f'"{w}"' for w in items)
 
 
-# ── 350. Option ──────────────────────────────────────────────
+# ── 81. Option ──────────────────────────────────────────────
 #
 # Both branches turn up on this page on purpose: some rows find nothing,
 # so None is a thing you have watched happen rather than read about.
@@ -71,7 +71,7 @@ _IF_LETS = (
 )
 
 OPTION_PAGE = _page(
-    "rust-option", 350, "The type that might be nothing",
+    "rust-option", 81, "The type that might be nothing",
     "Rust has no null. A search returns Option, which is either Some with "
     "the value inside or None, and the compiler will not let you use the "
     "value without saying what happens when there is not one. match spells "
@@ -99,7 +99,7 @@ OPTION_PAGE = _page(
 )
 
 
-# ── 351. Iterators ───────────────────────────────────────────
+# ── 82. Iterators ───────────────────────────────────────────
 
 _ITERS = (
     ((3, 1, 4, 1, 5), "sum", 0), ((2, 7, 1, 8), "sum", 0),
@@ -124,7 +124,7 @@ _ITER_WORDS = {
 }
 
 ITER_PAGE = _page(
-    "rust-iter", 351, "A chain of steps over a sequence",
+    "rust-iter", 82, "A chain of steps over a sequence",
     "iter borrows the sequence and hands you each item; map and filter "
     "describe what to do without doing it yet; sum, count and collect are "
     "what finally make it run. Nothing happens until one of those, which "
@@ -142,7 +142,7 @@ ITER_PAGE = _page(
 )
 
 
-# ── 352. entry and or_insert ─────────────────────────────────
+# ── 83. entry and or_insert ─────────────────────────────────
 
 _TEXTS = (
     "banana", "mississippi", "letter", "success", "coffee", "balloon",
@@ -152,7 +152,7 @@ _TEXTS = (
 )
 
 ENTRY_PAGE = _page(
-    "rust-entry", 352, "Counting without checking first",
+    "rust-entry", 83, "Counting without checking first",
     "entry hands you the slot for a key whether or not anything is there, "
     "and or_insert fills it in if it was empty. That is the whole counting "
     "idiom: no looking up to see whether the key exists, no second lookup "
@@ -170,7 +170,7 @@ ENTRY_PAGE = _page(
 )
 
 
-# ── 353. Vec calls ───────────────────────────────────────────
+# ── 84. Vec calls ───────────────────────────────────────────
 
 _POPS = (
     ((3, 1, 4, 1, 5), 2), ((2, 7, 1, 8), 1), ((9, 4, 6, 2), 3),
@@ -186,7 +186,7 @@ _EMPTIES = (
 )
 
 VEC_PAGE = _page(
-    "rust-vec-ops", 353, "The calls a Vec answers to",
+    "rust-vec-ops", 84, "The calls a Vec answers to",
     "pop takes the last one and hands it back as an Option, because there "
     "might not be one. is_empty says what len == 0 says and says it better. "
     "clear keeps the memory and throws away the contents.",
@@ -207,7 +207,7 @@ VEC_PAGE = _page(
 )
 
 
-# ── 354. VecDeque ────────────────────────────────────────────
+# ── 85. VecDeque ────────────────────────────────────────────
 
 _DEQUES = (
     ((3, 1, 4, 1, 5), 2), ((2, 7, 1, 8), 3), ((9, 4, 6), 1),
@@ -220,7 +220,7 @@ _DEQUES = (
 )
 
 DEQUE_PAGE = _page(
-    "rust-deque", 354, "A queue with two ends",
+    "rust-deque", 85, "A queue with two ends",
     "A Vec is fast at the back and slow at the front, so taking from the "
     "front of one is linear every time. VecDeque is the one to reach for "
     "when a breadth-first walk needs to push at one end and take from the "
@@ -237,7 +237,7 @@ DEQUE_PAGE = _page(
 )
 
 
-# ── 355. Ownership and clone ─────────────────────────────────
+# ── 86. Ownership and clone ─────────────────────────────────
 
 _CLONES = (
     (3, 1, 4), (2, 7, 1, 8), (9, 4, 6), (5, 5, 3, 1), (1, 2, 3, 4),
@@ -247,7 +247,7 @@ _CLONES = (
 )
 
 CLONE_PAGE = _page(
-    "rust-clone", 355, "Who owns it, and what copying costs",
+    "rust-clone", 86, "Who owns it, and what copying costs",
     "Passing a Vec by value moves it, and the name you passed is no longer "
     "usable. Passing a reference borrows it instead, which is what the "
     "ampersand is doing and why the function takes one. clone is the "
@@ -266,7 +266,7 @@ CLONE_PAGE = _page(
 )
 
 
-# ── 356. Rc and RefCell ──────────────────────────────────────
+# ── 87. Rc and RefCell ──────────────────────────────────────
 
 _SHARED = (
     ((3, 1, 4), 9), ((2, 7, 1), 5), ((9, 4, 6), 2), ((5, 5, 3), 8),
@@ -277,7 +277,7 @@ _SHARED = (
 )
 
 RC_PAGE = _page(
-    "rust-rc-refcell", 356, "Shared, and mutable anyway",
+    "rust-rc-refcell", 87, "Shared, and mutable anyway",
     "Rc lets two names own the same value by counting how many there are. "
     "That alone gives you sharing without mutation, because Rc hands out "
     "read-only access. RefCell is the other half: it moves the borrow "
@@ -296,7 +296,7 @@ RC_PAGE = _page(
 )
 
 
-# ── 357. The tree Rust has to write ──────────────────────────
+# ── 88. The tree Rust has to write ──────────────────────────
 
 _TREES = (
     (3, 9, 20, 15, 7), (5, 3, 8, 1, 4, 7, 9), (1, 2, 3, 4),
@@ -309,7 +309,7 @@ _TREES = (
 )
 
 TREE_PAGE = _page(
-    "rust-tree", 357, "A tree the way Rust has to write one",
+    "rust-tree", 88, "A tree the way Rust has to write one",
     "Option<Rc<RefCell<TreeNode>>> is every one of the last three pages at "
     "once, and it is exactly what the tree problems in the bank hand you. "
     "Option because a child might not be there, Rc because a parent and a "
@@ -329,7 +329,7 @@ TREE_PAGE = _page(
 )
 
 
-# ── 358. Sorting ─────────────────────────────────────────────
+# ── 89. Sorting ─────────────────────────────────────────────
 
 _NUMBER_SORTS = (
     (5, 1, 4, 1, 2), (3, 9, 1, 3, 6), (8, 2, 7, 2), (6, 3, 9, 3, 5),
@@ -351,7 +351,7 @@ _WORD_SORTS = (
 )
 
 SORT_PAGE = _page(
-    "rust-sort", 358, "Sorting, and sorting by something",
+    "rust-sort", 89, "Sorting, and sorting by something",
     "sort orders in place and dedup removes neighbouring repeats, which "
     "means dedup only removes all of them if you sorted first. sort_by "
     "takes a comparison returning Ordering, and then chains with it, "
@@ -373,7 +373,7 @@ SORT_PAGE = _page(
 )
 
 
-# ── 359. String and str ──────────────────────────────────────
+# ── 90. String and str ──────────────────────────────────────
 
 _BUILDS = (
     ("red", "green", "blue"), ("one", "two", "three"),
@@ -389,7 +389,7 @@ _UPPERS = (
 )
 
 STRING_PAGE = _page(
-    "rust-string", 359, "String and the str it borrows",
+    "rust-string", 90, "String and the str it borrows",
     "String owns its bytes and can grow; a str is a borrowed view of some "
     "and cannot. Literals are the second kind, which is why push_str takes "
     "one and why building up an answer means starting from String::new. "

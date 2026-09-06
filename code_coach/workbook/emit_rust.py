@@ -56,7 +56,7 @@ def _strs(items) -> str:
     return ", ".join(f'"{s}"' for s in items)
 
 
-# ── 350. Option ──────────────────────────────────────────────
+# ── 81. Option ──────────────────────────────────────────────
 
 
 def _option(a: dict) -> str:
@@ -93,7 +93,7 @@ def _option(a: dict) -> str:
     )
 
 
-# ── 351. Iterators ───────────────────────────────────────────
+# ── 82. Iterators ───────────────────────────────────────────
 
 
 def _iter(a: dict) -> str:
@@ -123,7 +123,7 @@ def _iter(a: dict) -> str:
     )
 
 
-# ── 352. entry and or_insert ─────────────────────────────────
+# ── 83. entry and or_insert ─────────────────────────────────
 
 
 def _entry(a: dict) -> str:
@@ -146,7 +146,7 @@ def _entry(a: dict) -> str:
     )
 
 
-# ── 353. Vec calls ───────────────────────────────────────────
+# ── 84. Vec calls ───────────────────────────────────────────
 
 
 def _vec_ops(a: dict) -> str:
@@ -177,7 +177,7 @@ def _vec_ops(a: dict) -> str:
     )
 
 
-# ── 354. VecDeque ────────────────────────────────────────────
+# ── 85. VecDeque ────────────────────────────────────────────
 
 
 def _deque(a: dict) -> str:
@@ -201,7 +201,7 @@ def _deque(a: dict) -> str:
     )
 
 
-# ── 355. Ownership and clone ─────────────────────────────────
+# ── 86. Ownership and clone ─────────────────────────────────
 
 
 def _clone(a: dict) -> str:
@@ -222,7 +222,7 @@ def _clone(a: dict) -> str:
     )
 
 
-# ── 356. Rc and RefCell ──────────────────────────────────────
+# ── 87. Rc and RefCell ──────────────────────────────────────
 
 
 def _rc_refcell(a: dict) -> str:
@@ -243,7 +243,7 @@ def _rc_refcell(a: dict) -> str:
     )
 
 
-# ── 357. The tree Rust has to write ──────────────────────────
+# ── 88. The tree Rust has to write ──────────────────────────
 
 _TREE_DEFS = (
     "use std::cell::RefCell;",
@@ -313,7 +313,7 @@ def _tree(a: dict) -> str:
     )
 
 
-# ── 358. Sorting ─────────────────────────────────────────────
+# ── 89. Sorting ─────────────────────────────────────────────
 
 
 def _sort(a: dict) -> str:
@@ -338,7 +338,7 @@ def _sort(a: dict) -> str:
     )
 
 
-# ── 359. String and str ──────────────────────────────────────
+# ── 90. String and str ──────────────────────────────────────
 
 
 def _string(a: dict) -> str:

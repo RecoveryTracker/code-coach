@@ -33,7 +33,7 @@ def _page(page_id, number, name, teaches, example, shape, rows) -> Page:
             for i, (prompt, args) in enumerate(rows)
         ),
         languages=JS_ONLY,
-        tier="advanced",
+        tier="intermediate",
     )
 
 

@@ -1,4 +1,4 @@
-"""Pages 342-349: C, and the memory it never asked for.
+"""Pages 81-88: C, and the memory it never asked for.
 
 The C solutions in the bank call malloc fifty times, sizeof fifty times and
 free forty times. The seventy-two C pages before these called none of them.
@@ -37,7 +37,7 @@ def _page(page_id, number, name, teaches, example, shape, rows) -> Page:
             for i, (prompt, args) in enumerate(rows)
         ),
         languages=C_ONLY,
-        tier="advanced",
+        tier="intermediate",
     )
 
 
@@ -49,7 +49,7 @@ def _words(items) -> str:
     return ", ".join(f'"{w}"' for w in items)
 
 
-# ── 342. malloc and free ─────────────────────────────────────
+# ── 81. malloc and free ─────────────────────────────────────
 
 _ALLOCS = (
     (5, 2, 3), (4, 1, 2), (6, 0, 5), (3, 10, -2), (7, 1, 1),
@@ -59,7 +59,7 @@ _ALLOCS = (
 )
 
 MALLOC_PAGE = _page(
-    "c-malloc", 342, "Asking for memory and giving it back",
+    "c-malloc", 81, "Asking for memory and giving it back",
     "malloc takes a number of bytes, not a number of items, which is why "
     "it is always written as a count times sizeof something. It hands back "
     "a pointer or NULL, and every one of them has to reach a free.",
@@ -74,7 +74,7 @@ MALLOC_PAGE = _page(
 )
 
 
-# ── 343. Counting without a length ───────────────────────────
+# ── 82. Counting without a length ───────────────────────────
 
 _ARRAYS = (
     (4, 8, 15, 16, 23), (3, 1, 4, 1, 5), (2, 7, 1, 8), (9, 4, 6),
@@ -85,7 +85,7 @@ _ARRAYS = (
 )
 
 SIZEOF_PAGE = _page(
-    "c-sizeof", 343, "How many, when nothing records how many",
+    "c-sizeof", 82, "How many, when nothing records how many",
     "An array in C does not know its length. sizeof the array over sizeof "
     "one element gives it, but only where the array still is one: pass it "
     "to a function and it decays to a pointer, sizeof answers about the "
@@ -104,7 +104,7 @@ SIZEOF_PAGE = _page(
 )
 
 
-# ── 344. calloc and memcpy ───────────────────────────────────
+# ── 83. calloc and memcpy ───────────────────────────────────
 
 _COPIES = (
     (3, 1, 4, 1, 5), (2, 7, 1, 8), (9, 4, 6), (5, 5, 3, 1),
@@ -115,7 +115,7 @@ _COPIES = (
 )
 
 CALLOC_PAGE = _page(
-    "c-calloc", 344, "Zeroed memory, and copying a block",
+    "c-calloc", 83, "Zeroed memory, and copying a block",
     "calloc takes the count and the size separately and hands back memory "
     "that is already zero, which malloc does not promise. memcpy moves a "
     "block of bytes, so it takes bytes too, which means sizeof again.",
@@ -131,7 +131,7 @@ CALLOC_PAGE = _page(
 )
 
 
-# ── 345. The out-parameter ───────────────────────────────────
+# ── 84. The out-parameter ───────────────────────────────────
 
 _PICKS = (
     ((3, 9, 2, 8, 5), 4), ((1, 7, 4, 6), 3), ((5, 2, 9, 1, 8), 4),
@@ -144,7 +144,7 @@ _PICKS = (
 )
 
 OUT_PARAM_PAGE = _page(
-    "c-out-param", 345, "Returning a count through a pointer",
+    "c-out-param", 84, "Returning a count through a pointer",
     "A C function can only return one thing, and an array is really two: "
     "the memory and how much of it is used. So the count goes out through "
     "a pointer the caller supplies. Every array-returning signature in the "
@@ -162,7 +162,7 @@ OUT_PARAM_PAGE = _page(
 )
 
 
-# ── 346. A struct, a pointer, and the arrow ──────────────────
+# ── 85. A struct, a pointer, and the arrow ──────────────────
 
 _CHAIN_ROWS = (
     ((3, 1, 4), "sum"), ((2, 7, 1, 8), "count"), ((1, 9, 3), "max"),
@@ -181,7 +181,7 @@ _CHAIN_WORDS = {
 }
 
 LIST_NODE_PAGE = _page(
-    "c-list-node", 346, "A struct, a pointer, and the arrow",
+    "c-list-node", 85, "A struct, a pointer, and the arrow",
     "A node is a struct holding a value and a pointer at another one of "
     "itself. Every node comes from its own malloc, so every node needs its "
     "own free — and you have to save the next pointer before freeing, "
@@ -198,7 +198,7 @@ LIST_NODE_PAGE = _page(
 )
 
 
-# ── 347. Rebuilding a chain ──────────────────────────────────
+# ── 86. Rebuilding a chain ──────────────────────────────────
 
 _REVERSES = (
     (1, 2, 3), (3, 1, 4), (5, 2, 9), (2, 8, 5, 1), (9, 4, 6),
@@ -213,7 +213,7 @@ _MERGES = (
 )
 
 LIST_OPS_PAGE = _page(
-    "c-list-ops", 347, "Rebuilding a chain that you also have to free",
+    "c-list-ops", 86, "Rebuilding a chain that you also have to free",
     "The same two exercises as the Python pages, with the part Python does "
     "for you put back. Reversing hands you a new head and the old one is "
     "now the tail, so free from the new head. Merging with a dummy on the "
@@ -236,7 +236,7 @@ LIST_OPS_PAGE = _page(
 )
 
 
-# ── 348. Two pointers per node ───────────────────────────────
+# ── 87. Two pointers per node ───────────────────────────────
 
 _TREES = (
     (3, 9, 20, 15, 7), (5, 3, 8, 1, 4, 7, 9), (1, 2, 3, 4),
@@ -249,7 +249,7 @@ _TREES = (
 )
 
 TREE_NODE_PAGE = _page(
-    "c-tree-node", 348, "Two pointers per node",
+    "c-tree-node", 87, "Two pointers per node",
     "The same struct with one more pointer in it. Freeing a tree has to "
     "happen from the bottom up — free the node first and the pointers to "
     "its children go with it — which is why freeTree recurses before it "
@@ -267,7 +267,7 @@ TREE_NODE_PAGE = _page(
 )
 
 
-# ── 349. Handing a function to a function ────────────────────
+# ── 88. Handing a function to a function ────────────────────
 
 _SORTS = (
     (5, 1, 4, 2), (3, 9, 1, 6), (8, 2, 7, 4), (6, 3, 9, 1, 5),
@@ -289,7 +289,7 @@ _WORD_SETS = (
 )
 
 QSORT_PAGE = _page(
-    "c-qsort", 349, "Handing a function to a function",
+    "c-qsort", 88, "Handing a function to a function",
     "qsort does not know what it is sorting. You give it the memory, how "
     "many, how big each one is, and a function that compares two of them "
     "through void pointers — which you have to cast back yourself, because "
