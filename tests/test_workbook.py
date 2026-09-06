@@ -55,11 +55,23 @@ class ShapeTests(unittest.TestCase):
         self.assertGreaterEqual(exercise_count(), 100)
 
     def test_a_page_is_a_dozen_goes_at_one_thing(self) -> None:
-        """Three exercises is a demonstration. The repetition is the method."""
+        """Three exercises is a demonstration. The repetition is the method.
+
+        Review pages are the deliberate exception and the only one. They
+        mix shapes because that is what a review is: the same material met
+        again among other material, which is what makes it stick rather
+        than merely feel smooth. Every other page is still one thing.
+        """
         for p in pages():
             with self.subTest(page=p.id):
                 self.assertGreaterEqual(len(p.exercises), 10)
                 shapes = {e.shape for e in p.exercises}
+                if p.tier == "review":
+                    self.assertGreater(
+                        len(shapes), 1,
+                        f"{p.id} is a review page that revisits one shape, "
+                        f"which is a normal page with a misleading name")
+                    continue
                 self.assertEqual(len(shapes), 1, f"{p.id} mixes {shapes}")
 
     def test_each_language_is_numbered_in_order_and_once_each(self) -> None:
