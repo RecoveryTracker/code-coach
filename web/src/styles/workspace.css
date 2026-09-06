@@ -319,6 +319,14 @@
    .active, which had the same job first: accent border and text, plus a
    tint, so "this one is on" reads at a glance rather than only from the
    label having changed. */
+/* The complexity button shows the cost itself, so it is set in the mono
+   face the code is in — O(n log n) and O(n^2) read as notation there and
+   as a typo anywhere else. */
+.ws-btn.mono {
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.02em;
+}
+
 .ws-btn.on {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));

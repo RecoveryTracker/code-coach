@@ -728,18 +728,6 @@
   color: #b0c2b4;
 }
 
-.wb-cost-label {
-  display: inline-block;
-  margin-right: 8px;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: #23351f;
-  color: #9fd39a;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 /* Holds the step-through panel, which brings its own layout. */
 .wb-viz {
   margin: 16px 0 0;

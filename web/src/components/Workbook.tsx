@@ -649,14 +649,25 @@ export default function Workbook({ language }: Props) {
               {watching ? "Hide picture" : "Watch it run"}
             </button>
             {page.cost ? (
+              /* The button face is the answer — O(n), O(1), whatever the
+                 page costs — because that is the part worth seeing at a
+                 glance. The reasoning stays behind the click. It is no
+                 longer disabled until you have typed: that guard was
+                 protecting the explanation, and a greyed-out button would
+                 dim the label along with it. */
               <button
                 type="button"
-                className={costOpen ? "ws-btn on" : "ws-btn"}
+                className={costOpen ? "ws-btn mono on" : "ws-btn mono"}
                 onClick={() => setCostOpen((open) => !open)}
-                disabled={!code.trim()}
-                title="What this shape costs once the numbers get big"
+                title={
+                  costOpen
+                    ? "Hide why it costs this"
+                    : "Time complexity — click for why"
+                }
+                aria-label={`Time complexity ${page.cost.label}`}
+                aria-expanded={costOpen}
               >
-                {costOpen ? "Hide complexity" : "Time complexity"}
+                {page.cost.label}
               </button>
             ) : null}
             <button
@@ -682,10 +693,9 @@ export default function Workbook({ language }: Props) {
           </div>
 
           {costOpen && page.cost ? (
-            <p className="wb-cost">
-              <span className="wb-cost-label">{page.cost.label}</span>
-              {page.cost.note}
-            </p>
+            /* Just the reasoning. The label is on the button that opened
+               this, so repeating it here would say the same thing twice. */
+            <p className="wb-cost">{page.cost.note}</p>
           ) : null}
 
           {watching ? (
