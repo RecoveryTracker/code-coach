@@ -1559,3 +1559,97 @@ _add(
     "nothing reports it.",
     "cpp_tree",
 )
+
+
+# ── SQL, past the fundamentals ───────────────────────────────
+#
+# The same warning as the first ten SQL pages applies harder here. You are
+# describing an answer, not writing a loop, and the planner decides what it
+# costs. What follows is what it will usually decide.
+
+_add(
+    "O(n)",
+    "A scan, and LIKE is the reason to say so. A pattern anchored at the "
+    "start can use an index, because the rows it wants sit together in "
+    "order; a pattern beginning with a wildcard cannot, and no index will "
+    "ever help it. The two look almost identical and differ by everything.",
+    "sql_like",
+)
+
+_add(
+    "O(n)",
+    "One pass, constant per row. CASE is evaluated per row and cannot use "
+    "an index, so filtering on a CASE result rather than on the underlying "
+    "column turns a lookup into a scan. Computing it in the select list, "
+    "as here, costs nothing worth counting.",
+    "sql_case",
+)
+
+_add(
+    "O(n)",
+    "A scan. NULL is the part that costs correctness rather than time: "
+    "equality against NULL is never true, so a filter written that way "
+    "silently returns nothing, and NOT IN against a set containing one "
+    "returns nothing either, which is the same bug wearing a hat.",
+    "sql_null",
+)
+
+_add(
+    "O(n)",
+    "Two passes, not n passes. Nothing inside this subquery mentions the "
+    "outer row, so it is uncorrelated: the planner runs it once, keeps the "
+    "number, and scans with it. Written so that it does refer to the outer "
+    "row it becomes correlated and runs per row, and the same query is "
+    "suddenly quadratic.",
+    "sql_subquery",
+)
+
+_add(
+    "O(n × m)",
+    "Correlated, so the inner query runs once per outer row — that is what "
+    "referring to u.id costs. EXISTS stops at the first match rather than "
+    "counting them, which is why it beats COUNT(*) > 0 on a table where "
+    "the answer is usually yes. With an index on the joined column each "
+    "inner run is a lookup and the whole thing is n log m.",
+    "sql_exists",
+)
+
+_add(
+    "O(n²)",
+    "Every row against every row in the worst case, because both sides of "
+    "the join are the same table. The a.id < b.id is not only about "
+    "removing duplicates: it halves the work. An index on the joined "
+    "column turns each side into a lookup, and without one a self join on "
+    "a large table is the query that never comes back.",
+    "sql_self_join",
+)
+
+_add(
+    "O(n log n)",
+    "UNION has to remove duplicates, and removing duplicates means sorting "
+    "or hashing everything both halves produced. UNION ALL does not, and "
+    "is linear. That is the entire difference between them and the reason "
+    "to reach for ALL whenever you know the halves cannot overlap.",
+    "sql_union",
+)
+
+_add(
+    "O(n)",
+    "A CTE costs what the query inside it costs and nothing extra, at "
+    "least here: SQLite may materialise it once or may fold it into the "
+    "outer query, and either way this one is a grouped scan. The value is "
+    "readability, not speed, and a CTE referred to twice is the case where "
+    "materialising actually saves work.",
+    "sql_cte",
+)
+
+_add(
+    "O(n log n)",
+    "A sort per partition, which together is a sort of the table. That is "
+    "the cost of every window function with an ORDER BY inside the OVER, "
+    "and it is the price of the thing GROUP BY cannot do: keeping every "
+    "row while still answering a question about the group it belongs to. "
+    "An index matching the partition and order can remove the sort.",
+    "sql_window",
+    "sql_running",
+)

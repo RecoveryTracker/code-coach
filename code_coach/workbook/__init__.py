@@ -153,10 +153,13 @@ def expected_output(shape: str, args: dict) -> str:
         emit_js9,
         emit_dart2,
         emit_cpp2,
+        emit_sql2,
     )
 
     if emit_dart2.handles(shape):
         return emit_dart2.expected_output(shape, args, _value)
+    if emit_sql2.handles(shape):
+        return emit_sql2.expected_output(shape, args, _value)
     if emit_cpp2.handles(shape):
         return emit_cpp2.expected_output(shape, args, _value)
     if emit_js9.handles(shape):
