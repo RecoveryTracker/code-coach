@@ -140,6 +140,14 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix == ".lua":
         lua = _tool("lua", "lua/bin/lua.exe", "lua/bin/lua")
         return [lua, str(path)] if lua else None
+    if suffix == ".rb":
+        ruby = _tool(
+            "ruby",
+            "rubyinstaller-4.0.6-1-x64/bin/ruby.exe",
+            "ruby/bin/ruby.exe",
+            "ruby/bin/ruby",
+        )
+        return [ruby, str(path)] if ruby else None
     if suffix == ".zig":
         zig = _tool(
             "zig",
@@ -502,6 +510,7 @@ _SUFFIXES = {
     "php": ".php",
     "lua": ".lua",
     "zig": ".zig",
+    "ruby": ".rb",
 }
 
 # Languages that compile before they run get a longer clock — the wait is the

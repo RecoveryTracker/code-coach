@@ -44,6 +44,7 @@ LANGUAGES: tuple[str, ...] = (
     "php",
     "lua",
     "zig",
+    "ruby",
 )
 
 NL = "\n"

@@ -5,12 +5,17 @@ shape here, because a language earns its second page by having a toolchain
 that can prove the first one right, and most of these do not have one on
 this machine yet.
 
-Four of them do. Go, PHP, Lua and Zig were installed with their published
-checksums checked, and every exercise they serve is run and compared the
-same way every other page in the book is. The other twelve are written and
-switched off: `RUNNABLE` is the list the workbook is told about, and a
-language absent from it is offered no pages at all, however complete its
-emitter looks below.
+Five of them do. Go, PHP, Lua, Zig and Ruby have toolchains here, and
+every exercise they serve is run and compared the same way every other
+page in the book is. The other eleven are written and switched off:
+`RUNNABLE` is the list the workbook is told about, and a language absent
+from it is offered no pages at all, however complete its emitter looks
+below.
+
+The count in this sentence has been wrong once already, an hour after it
+was written, which is the argument for deriving it: len(RUNNABLE) is the
+number, and prose that repeats a number goes stale the moment the list
+grows.
 
 That split is deliberate. A reference answer that has never executed is
 worse than a missing language, because the app would tell someone their
@@ -29,12 +34,12 @@ from __future__ import annotations
 
 #: Languages whose toolchain is present and whose answers are executed by
 #: the suite. Everything else in this file is written but not offered.
-RUNNABLE: tuple[str, ...] = ("go", "php", "lua", "zig")
+RUNNABLE: tuple[str, ...] = ("go", "php", "lua", "zig", "ruby")
 
 #: Written, checked by eye, never executed here. Moving a name into
 #: RUNNABLE is a claim that the suite can now prove it.
 UNVERIFIED: tuple[str, ...] = (
-    "java", "kotlin", "ruby", "csharp", "swift", "scala",
+    "java", "kotlin", "csharp", "swift", "scala",
     "haskell", "ocaml", "elixir", "lisp", "odin", "assembly",
 )
 
