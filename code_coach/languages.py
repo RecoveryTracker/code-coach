@@ -131,6 +131,94 @@ LANGUAGES: tuple[Language, ...] = (
         ),
         ready=("fundamentals", "runner", "checks"),
     ),
+    Language(
+        id="go",
+        name="Go",
+        monaco="go",
+        extension="go",
+        available=True,
+        note=(
+            "Workbook and typing only. The toolchain lives in ~/toolchains rather than on PATH, and go run builds on every exercise."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="php",
+        name="PHP",
+        monaco="php",
+        extension="php",
+        available=True,
+        note=(
+            "Workbook and typing only. Fast to run, so a whole page comes back in a couple of seconds."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="lua",
+        name="Lua",
+        monaco="lua",
+        extension="lua",
+        available=True,
+        note=(
+            "Workbook and typing only. The quickest of the lot: a page of twenty runs in under a second."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="ruby",
+        name="Ruby",
+        monaco="ruby",
+        extension="rb",
+        available=True,
+        note=(
+            "Workbook and typing only."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="zig",
+        name="Zig",
+        monaco="zig",
+        extension="zig",
+        available=True,
+        note=(
+            "Workbook and typing only. Every run rebuilds against the standard library, so a page takes about a minute."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="java",
+        name="Java",
+        monaco="java",
+        extension="java",
+        available=True,
+        note=(
+            "Workbook and typing only. Runs the source file directly, no separate compile step."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="csharp",
+        name="C#",
+        monaco="csharp",
+        extension="cs",
+        available=True,
+        note=(
+            "Workbook and typing only. The very first run after an update initialises the SDK and takes minutes; every run after is instant."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
+        id="odin",
+        name="Odin",
+        monaco="odin",
+        extension="odin",
+        available=True,
+        note=(
+            "Workbook and typing only."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
 )
 
 DEFAULT_LANGUAGE = "python"

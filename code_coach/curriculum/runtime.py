@@ -73,6 +73,9 @@ def lesson_meta_for_drill(drill_id: str, progress: StudentProgress) -> dict[str,
     }
 
 
+from code_coach.languages import DEFAULT_LANGUAGE  # noqa: E402
+
+
 def get_active_drill(progress: StudentProgress) -> Drill:
     if progress.review_skill:
         # Class-aware review: foundations skills, or generic lesson1
@@ -110,6 +113,28 @@ def get_active_drill(progress: StudentProgress) -> Drill:
             # request's language, and it's already in hand here.
             language=getattr(progress, "language", "python") or "python",
         )
+        if drill is None:
+            # The curriculum has content in the languages it was written
+            # for, and the eight added for the workbook are not among
+            # them. Falling back to the default language keeps the
+            # practice screen working while the workbook and typing
+            # follow the language you actually picked.
+            #
+            # Before this, switching the app to Go returned a 500 from
+            # every practice request: get_active_drill handed None to
+            # register_dynamic and the traceback said NoneType has no
+            # attribute id, which is true and unhelpful.
+            drill = make_class_dictation_batch(
+                cls.id,
+                class_number=cls.number,
+                class_name=cls.name,
+                seed="local-student",
+                batch=batch,
+                level=level,
+                language=DEFAULT_LANGUAGE,
+            )
+        if drill is None:
+            return None
         register_dynamic(drill)
         return drill
 
