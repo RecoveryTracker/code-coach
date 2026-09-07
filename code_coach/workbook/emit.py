@@ -575,6 +575,7 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_sql2,
         emit_webnodes,
         emit_newlang,
+        emit_newlang2,
         emit_topup,
         emit_rust3,
     )
@@ -583,6 +584,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_dart2.solution(language, shape, args)
     if emit_newlang.handles(shape) and language in emit_newlang.RUNNABLE:
         return emit_newlang.solution(language, shape, args)
+    if emit_newlang2.handles(shape) and language in emit_newlang.RUNNABLE:
+        return emit_newlang2.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
     if emit_rust3.handles(shape):

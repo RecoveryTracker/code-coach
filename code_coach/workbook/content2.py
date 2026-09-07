@@ -22,15 +22,13 @@ from code_coach.workbook.wording import negated
 # writing them for seven looked like it would mean faking something. It did
 # not: `emit_more_native` answers each one the way that language actually
 # would, which is worth more than the shortcut would have been.
-WORKBOOK_LANGUAGES = (
-    "python",
-    "javascript",
-    "typescript",
-    "dart",
-    "c",
-    "cpp",
-    "rust",
-)
+# Every language the workbook is offered in, rather than a copy of the
+# list made when there were seven. A page naming this is saying "anyone who
+# can answer me", and pages() already drops a language with no reference
+# answer, so naming more languages than can answer costs nothing and
+# naming fewer silently hides a page from someone who could do it — which
+# is what happened to pages 12 to 14 when eight languages arrived.
+from code_coach.workbook.emit import LANGUAGES as WORKBOOK_LANGUAGES
 
 
 # Positional-only up to the shape, so a shape argument can share a name
