@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing import langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
+from code_coach.typing import rails
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -452,6 +453,20 @@ THEMES: tuple[Theme, ...] = (
         "assemblycode", "Assembly Code",
         "mov, cmp, jne, syscall.",
         passages=snippets2.BY_LANGUAGE["assembly"],
+    ),
+    # Rails is a framework rather than a language, so it has no workbook
+    # pages: an exercise there is one file that runs on its own, and Rails
+    # needs a project and a database before a line does anything. Typing
+    # suits it, because the framework is mostly a vocabulary.
+    Theme(
+        "rails", "Rails Lore",
+        "Convention over configuration, and what ActiveRecord is doing.",
+        passages=rails.RAILS_LORE,
+    ),
+    Theme(
+        "railscode", "Rails Code",
+        "Symbols, hash arguments without braces, and the arrow lambda.",
+        passages=rails.RAILS_CODE,
     ),
     # Which language's code you're typing. Picking Code for the keys and then
     # one of these is how you drill the punctuation of the language you're
