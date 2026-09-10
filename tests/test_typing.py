@@ -571,24 +571,36 @@ class CurriculumCodeThemeTests(unittest.TestCase):
     the solutions you were being taught.
     """
 
+    #: Theme ids are the language id with "code" on the end. Three were
+    #: named before that settled and keep their abbreviation.
+    ABBREVIATED = {
+        "python": "pycode",
+        "javascript": "jscode",
+        "typescript": "tscode",
+    }
+
     def test_every_available_language_has_a_code_theme(self) -> None:
+        """Derived rather than listed.
+
+        This was a dict of the eight languages that existed when it was
+        written, indexed by language id, so a ninth raised KeyError rather
+        than failing with anything useful. Nine arrived at once and it did.
+        The rule is that the theme id is the language id plus "code", and
+        the exceptions are named instead of the whole set — a list of
+        what follows the rule goes stale, a list of what does not is
+        finished.
+        """
         from code_coach.languages import LANGUAGES
         from code_coach.typing.drills import THEMES
 
         themed = {t.id for t in THEMES}
         for language in LANGUAGES:
-            expected = {
-                "python": "pycode",
-                "javascript": "jscode",
-                "typescript": "tscode",
-                "dart": "dartcode",
-                "sql": "sqlcode",
-                "c": "ccode",
-                "cpp": "cppcode",
-                "rust": "rustcode",
-            }[language.id]
+            expected = self.ABBREVIATED.get(language.id, language.id + "code")
             with self.subTest(language=language.id):
-                self.assertIn(expected, themed)
+                self.assertIn(
+                    expected, themed,
+                    f"{language.id} is offered in the picker but has no "
+                    f"code theme called {expected}")
 
     def test_a_code_theme_never_serves_another_language(self) -> None:
         """`patterns_for_language` falls back to Python's bank rather than
