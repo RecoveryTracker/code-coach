@@ -209,6 +209,19 @@ LANGUAGES: tuple[Language, ...] = (
         ready=("fundamentals", "runner"),
     ),
     Language(
+        id="lisp",
+        name="Common Lisp",
+        monaco="lisp",
+        extension="lisp",
+        available=True,
+        note=(
+            "Workbook and typing only, running on ABCL, which is a Common "
+            "Lisp on the JVM. SBCL would have been the obvious choice and "
+            "ships only through SourceForge, which refused the download."
+        ),
+        ready=("fundamentals", "runner"),
+    ),
+    Language(
         id="odin",
         name="Odin",
         monaco="odin",

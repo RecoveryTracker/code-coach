@@ -154,6 +154,27 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix == ".odin":
         odin = _tool("odin", "odin/dist/odin.exe", "odin/odin.exe")
         return [odin, "run", str(path), "-file"] if odin else None
+    if suffix == ".lisp":
+        # ABCL is a Common Lisp that runs on the JVM, which is why it is
+        # the one that installed: SBCL ships only through SourceForge and
+        # that returned 403, and the JDK was already here for Java.
+        #
+        # --batch with stdin closed, or it opens a REPL and waits forever.
+        # --add-opens because ABCL 1.9.2 introspects virtual threads on
+        # startup and Java 21 refuses without it; the run works either way
+        # but prints a stack trace to stderr that is not the program's.
+        java = _tool("java", "jdk-21.0.12.1+1/bin/java.exe", "jdk/bin/java.exe")
+        jar = _LOCAL_TOOLCHAINS / "abcl" / "abcl-bin-1.9.2" / "abcl.jar"
+        if java and jar.exists():
+            return [
+                java,
+                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                "-jar", str(jar),
+                "--noinform", "--batch",
+                "--load", str(path),
+                "--eval", "(quit)",
+            ]
+        return None
     if suffix == ".rb":
         ruby = _tool(
             "ruby",
@@ -528,6 +549,7 @@ _SUFFIXES = {
     "java": ".java",
     "csharp": ".cs",
     "odin": ".odin",
+    "lisp": ".lisp",
 }
 
 # Languages that compile before they run get a longer clock — the wait is the
@@ -535,7 +557,7 @@ _SUFFIXES = {
 # in particular is slow the first time it sees a standard library.
 _SLOW_LANGUAGES = {
     "dart", "c", "cpp", "rust", "typescript", "go", "zig",
-    "java", "csharp", "odin",
+    "java", "csharp", "odin", "lisp",
 }
 
 

@@ -48,6 +48,7 @@ LANGUAGES: tuple[str, ...] = (
     "java",
     "csharp",
     "odin",
+    "lisp",
 )
 
 NL = "\n"

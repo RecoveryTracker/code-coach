@@ -36,13 +36,14 @@ from __future__ import annotations
 #: the suite. Everything else in this file is written but not offered.
 RUNNABLE: tuple[str, ...] = (
     "go", "php", "lua", "zig", "ruby", "java", "csharp", "odin",
+    "lisp",
 )
 
 #: Written, checked by eye, never executed here. Moving a name into
 #: RUNNABLE is a claim that the suite can now prove it.
 UNVERIFIED: tuple[str, ...] = (
     "kotlin", "swift", "scala", "haskell", "ocaml", "elixir",
-    "lisp", "assembly",
+    "assembly",
 )
 
 LANGUAGES: tuple[str, ...] = RUNNABLE + UNVERIFIED

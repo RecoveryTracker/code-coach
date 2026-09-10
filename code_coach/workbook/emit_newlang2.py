@@ -166,6 +166,80 @@ def _nest(dialect: Dialect, *rows: tuple[int, str]) -> str:
     return NL.join(lines) + NL
 
 
+# ── Lisp is the one that is not infix ────────────────────────
+
+#: Binding power, loosest first, and what each operator is called in
+#: Common Lisp. The shapes only ever produce these seven.
+_PRECEDENCE: tuple[tuple[tuple[str, ...], int], ...] = (
+    (("==", "!=", "<=", ">=", "<", ">"), 1),
+    (("+", "-"), 2),
+    (("*", "/", "%"), 3),
+)
+
+_LISP_OP = {
+    "==": "=", "!=": "/=", "%": "mod", "<": "<", ">": ">",
+    "<=": "<=", ">=": ">=", "+": "+", "-": "-", "*": "*", "/": "/",
+}
+
+_TOKENS = re.compile(r"\s*(==|!=|<=|>=|[-+*/%<>()]|[A-Za-z_]\w*|\d+)")
+
+
+def _tokenise(expr: str) -> list[str]:
+    out, at = [], 0
+    while at < len(expr):
+        m = _TOKENS.match(expr, at)
+        if not m:
+            raise ValueError(f"cannot read {expr!r} at {at}")
+        out.append(m.group(1))
+        at = m.end()
+    return out
+
+
+def _binding(token: str) -> int:
+    for ops, power in _PRECEDENCE:
+        if token in ops:
+            return power
+    return 0
+
+
+def to_prefix(expr: str) -> str:
+    """`i * 2 + 1` becomes `(+ (* i 2) 1)`.
+
+    Precedence climbing, because the shapes write infix once and every
+    language but this one can paste it in unchanged. Left associative, so
+    `100 - 33 - 21` becomes `(- (- 100 33) 21)` and means what it did.
+
+    Correctness here is not a matter of reading it: every expression the
+    workbook contains is evaluated in Python and in Lisp and the two
+    answers compared, which is the only way to know.
+    """
+    tokens = _tokenise(expr)
+    pos = 0
+
+    def atom() -> str:
+        nonlocal pos
+        token = tokens[pos]
+        pos += 1
+        if token == "(":
+            inner = climb(1)
+            if pos < len(tokens) and tokens[pos] == ")":
+                pos += 1
+            return inner
+        return token
+
+    def climb(power: int) -> str:
+        nonlocal pos
+        left = atom()
+        while pos < len(tokens) and _binding(tokens[pos]) >= power:
+            op = tokens[pos]
+            pos += 1
+            right = climb(_binding(op) + 1)
+            left = f"({_LISP_OP[op]} {left} {right})"
+        return left
+
+    return climb(1)
+
+
 # ── The dialects ─────────────────────────────────────────────
 
 _ZIG_OPEN = (
@@ -294,6 +368,22 @@ DIALECTS: dict[str, Dialect] = {
         down=lambda var, lo, hi: f"for {var} := {hi}; {var} >= {lo}; {var} -= 1 {{",
         close_loop=("}",),
         when=lambda c: f"if {c} {{",
+    ),
+    "lisp": Dialect(
+        indent="  ",
+        say=lambda e: f'(format t "~a~%" {e})',
+        say_text=lambda t: f'(format t "~a~%" {t})',
+        say_labelled=lambda label, e: f'(format t "{label}: ~a~%" {e})',
+        let=lambda n, v: f"(defparameter {n} {v})",
+        total="(defparameter total 0)",
+        add=lambda e: f"(setf total (+ total {e}))",
+        say_total='(format t "~a~%" total)',
+        counted=lambda var, c: f"(dotimes ({var} {c})",
+        ranged=lambda var, lo, hi: f"(loop for {var} from {lo} to {hi} do",
+        down=lambda var, lo, hi: f"(loop for {var} from {hi} downto {lo} do",
+        close_loop=(")",),
+        when=lambda c: f"(when {c}",
+        fix=to_prefix,
     ),
     "zig": Dialect(
         header=('const std = @import("std");', ""),
