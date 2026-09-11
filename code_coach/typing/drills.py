@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing import langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
-from code_coach.typing import rails
+from code_coach.typing import rails, rails2
 from code_coach.typing.keys import (
     BOTTOM_ROW,
     HOME_ROW,
@@ -461,12 +461,16 @@ THEMES: tuple[Theme, ...] = (
     Theme(
         "rails", "Rails Lore",
         "Convention over configuration, and what ActiveRecord is doing.",
-        passages=rails.RAILS_LORE,
+        passages=rails.RAILS_LORE + rails2.RAILS_LORE2,
     ),
+    # The only theme whose blocks are written by hand. Every other one
+    # takes them from the curriculum, and Rails has no curriculum to take
+    # them from.
     Theme(
         "railscode", "Rails Code",
         "Symbols, hash arguments without braces, and the arrow lambda.",
-        passages=rails.RAILS_CODE,
+        passages=rails.RAILS_CODE + rails2.RAILS_CODE2,
+        blocks=rails2.RAILS_BLOCKS,
     ),
     # Which language's code you're typing. Picking Code for the keys and then
     # one of these is how you drill the punctuation of the language you're

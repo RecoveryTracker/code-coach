@@ -110,8 +110,16 @@ class Dialect:
     header: tuple[str, ...] = ()
     open_body: tuple[str, ...] = ()
     close_body: tuple[str, ...] = ()
-    #: One level of indentation inside the body.
+    #: The indent the body sits at. Java's body is two braces deep, so
+    #: this is eight spaces there and the nesting step below is four.
     indent: str = "    "
+    #: One further level of nesting inside the body. Empty means the same
+    #: as `indent`, which is right everywhere the body opens once.
+    step: str = ""
+    #: Whether a line of nothing but closing brackets belongs on the end
+    #: of the line above it. True of Lisp and of nothing else: a paren on
+    #: its own line is the one thing no Lisp programmer writes.
+    hug_closers: bool = False
     #: Print a number, and print a string literal.
     say: Callable[[str], str] = lambda e: f"print({e})"
     say_text: Callable[[str], str] = lambda t: f"print({t})"
@@ -144,6 +152,20 @@ class Dialect:
     dialect_of_cond: bool = True
 
 
+def _hug(dialect: Dialect, lines: list[str]) -> list[str]:
+    """Pull lines that are only closing brackets onto the line above."""
+    if not dialect.hug_closers:
+        return lines
+    out: list[str] = []
+    for line in lines:
+        bare = line.strip()
+        if out and bare and set(bare) == {")"}:
+            out[-1] += bare
+        else:
+            out.append(line)
+    return out
+
+
 def _block(dialect: Dialect, *body: str) -> str:
     """The whole file: header, opening, indented body, closing."""
     lines = list(dialect.header)
@@ -152,18 +174,19 @@ def _block(dialect: Dialect, *body: str) -> str:
     for line in body:
         lines.append((dialect.indent * depth if line else "") + line)
     lines += list(dialect.close_body)
-    return NL.join(lines) + NL
+    return NL.join(_hug(dialect, lines)) + NL
 
 
 def _nest(dialect: Dialect, *rows: tuple[int, str]) -> str:
     """Like `_block`, but each line says how deep it sits."""
     lines = list(dialect.header)
     lines += list(dialect.open_body)
-    base = 1 if dialect.open_body else 0
+    base = dialect.indent if dialect.open_body else ""
+    step = dialect.step or dialect.indent
     for depth, line in rows:
-        lines.append((dialect.indent * (base + depth) if line else "") + line)
+        lines.append((base + step * depth if line else "") + line)
     lines += list(dialect.close_body)
-    return NL.join(lines) + NL
+    return NL.join(_hug(dialect, lines)) + NL
 
 
 # ── Lisp is the one that is not infix ────────────────────────
@@ -323,6 +346,7 @@ DIALECTS: dict[str, Dialect] = {
                    "    public static void main(String[] args) {"),
         close_body=("    }", "}"),
         indent="        ",
+        step="    ",
         say=lambda e: f"System.out.println({e});",
         say_text=lambda t: f"System.out.println({t});",
         say_labelled=lambda label, e: f'System.out.println("{label}: " + ({e}));',
@@ -371,6 +395,7 @@ DIALECTS: dict[str, Dialect] = {
     ),
     "lisp": Dialect(
         indent="  ",
+        hug_closers=True,
         say=lambda e: f'(format t "~a~%" {e})',
         say_text=lambda t: f'(format t "~a~%" {t})',
         say_labelled=lambda label, e: f'(format t "{label}: ~a~%" {e})',

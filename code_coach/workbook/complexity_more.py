@@ -1747,3 +1747,106 @@ _add(
     "the saturating part is a compare, not a branch you pay for.",
     "rust_text_more",
 )
+
+
+# ── SQL past the second set of fundamentals ──────────────────
+
+_add(
+    "O(n log n)",
+    "Both of these remove duplicates the way UNION does, so both have to "
+    "sort or hash everything both halves produced. n is the rows the two "
+    "halves return between them. There is no INTERSECT ALL or EXCEPT ALL "
+    "in SQLite to escape into, which is the difference from UNION: with "
+    "these two the deduplication is the operation, not an extra it does.",
+    "sql_setops",
+)
+
+_add(
+    "O(n log n)",
+    "One sort of the rows in the window, and all three functions read it — "
+    "asking for three numberings costs roughly what asking for one costs, "
+    "because the expensive part is the ordering and it is shared. n is the "
+    "rows in the partition. An index in the window's order removes the "
+    "sort and makes it a scan.",
+    "sql_ranks",
+)
+
+_add(
+    "O(n log n)",
+    "The sort again, and then one pass: LAG and LEAD read a row the sorted "
+    "order has already placed, so neither goes back to the table. That is "
+    "the point of them. The same answer by joining the table to itself on "
+    "id minus one is quadratic without an index and wrong the moment the "
+    "ids have a gap in them.",
+    "sql_neighbour",
+)
+
+_add(
+    "O(n log n)",
+    "Sort, then divide. Working out which bucket a row is in is arithmetic "
+    "on its position — the count is known once the rows are ordered, so "
+    "NTILE adds a constant per row to the sort that the window already "
+    "needed. n is the rows in the partition.",
+    "sql_ntile",
+)
+
+_add(
+    "O(n)",
+    "One scan, however many aggregates are hung off it. FILTER is a test "
+    "per row per aggregate, which is a constant, so counting everything "
+    "and counting a subset beside it costs one pass rather than two. Two "
+    "queries joined together would read the table twice and then have to "
+    "match the results up.",
+    "sql_filter",
+)
+
+_add(
+    "O(n)",
+    "Linear in the rows, and linear in the characters they contain, which "
+    "is the part that is easy to forget: the result is one string per "
+    "group holding every name in it, so a group of a million rows builds a "
+    "string of a million names in memory. That is the limit on this one, "
+    "not the scan.",
+    "sql_concat",
+)
+
+_add(
+    "O(n)",
+    "One pass, and the cast is a constant per row — turning a number into "
+    "its digits is work proportional to the digits, and a number has few. "
+    "The cost that matters here is not in the letter: a cast on a column "
+    "in a WHERE stops an index on that column from being usable, because "
+    "the index holds the values, not the cast of them.",
+    "sql_cast",
+)
+
+_add(
+    "O(n)",
+    "One pass and a test per row. Both of these are a comparison and a "
+    "branch, which is as cheap as anything in a query gets. Worth knowing "
+    "for the same reason as the cast: IFNULL wrapped around an indexed "
+    "column in a WHERE is an expression rather than a column, and the "
+    "index goes unused.",
+    "sql_nulls",
+)
+
+_add(
+    "O(n log n)",
+    "The sort is the cost, and it is the whole table's — the database "
+    "cannot know which rows are the third page until it has ordered all of "
+    "them. OFFSET then walks past the rows it is skipping, so the tenth "
+    "page costs more than the first and the thousandth page costs a "
+    "thousand pages of walking. Keyset pagination, asking for rows after "
+    "the last id you saw, is what that walk is traded for.",
+    "sql_page",
+)
+
+_add(
+    "O(n)",
+    "n is the number of rows the recursion produces, not the rows in any "
+    "table — this one selects from nothing and counts. Each step is "
+    "constant and the WHERE is what makes n finite. Take the stopping "
+    "condition out and it is not slow, it is infinite, which is the way "
+    "this feature usually fails.",
+    "sql_recursive",
+)

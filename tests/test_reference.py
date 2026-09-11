@@ -25,15 +25,31 @@ class CoverageTests(unittest.TestCase):
     def test_there_are_sheets(self) -> None:
         self.assertTrue(languages_with_sheets())
 
-    def test_every_language_the_app_offers_has_one(self) -> None:
-        """A sheet per language, with no gaps left to explain away."""
+    def test_the_sheet_claim_is_true_both_ways(self) -> None:
+        """A language claiming `reference` has a sheet, and a language with
+        a sheet claims it.
+
+        This used to demand a sheet of every language the app offers, which
+        was right while every language was a whole course. Nine arrived for
+        the workbook and the typing drills alone, and the honest thing is
+        for the record to say which pieces a language has rather than for
+        the suite to insist on all of them.
+
+        Checked in both directions on purpose. One direction alone lets the
+        tag drift: drop the sheet and keep the tag, or write the sheet and
+        forget the tag, and only the other half complains.
+        """
         from code_coach.languages import LANGUAGES
 
         for language in LANGUAGES:
+            if not language.available:
+                continue
             with self.subTest(language=language.id):
-                self.assertIsNotNone(
-                    sheet_for(language.id),
-                    f"{language.id} is offered but has no cheat sheet",
+                claimed = "reference" in language.ready
+                self.assertEqual(
+                    claimed, sheet_for(language.id) is not None,
+                    f"{language.id} claims reference={claimed} and the "
+                    f"sheet says otherwise",
                 )
 
     def test_an_unknown_language_gets_nothing_rather_than_the_wrong_one(

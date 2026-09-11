@@ -57,6 +57,7 @@ from code_coach.workbook.content_js9 import JS9_PAGES
 from code_coach.workbook.content_dart2 import DART2_PAGES
 from code_coach.workbook.content_cpp2 import CPP2_PAGES
 from code_coach.workbook.content_sql2 import SQL2_PAGES
+from code_coach.workbook.content_sql3 import SQL3_PAGES
 from code_coach.workbook.content_webnodes import WEBNODE_PAGES
 from code_coach.workbook.content_topup import TOPUP_PAGES
 from code_coach.workbook.content_rust3 import RUST3_PAGES
@@ -703,6 +704,7 @@ _BASE_PAGES = (
     + DART2_PAGES
     + CPP2_PAGES
     + SQL2_PAGES
+    + SQL3_PAGES
     + WEBNODE_PAGES
     + TOPUP_PAGES
     + RUST3_PAGES

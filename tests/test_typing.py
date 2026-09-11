@@ -936,3 +936,98 @@ class OneBankPredicateTests(unittest.TestCase):
         from code_coach.leetcode.bank import has_own_bank
 
         self.assertTrue(has_own_bank("python"))
+
+
+class RailsMaterialTests(unittest.TestCase):
+    """The Rails claim, enforced rather than made once.
+
+    Rails is the one code theme with no workbook pages behind it, so
+    nothing else in the suite ever runs its lines. Without this they are
+    prose that happens to look like Ruby, and the docstring saying they
+    were checked would go quietly out of date the first time one was
+    edited.
+
+    What is checked is that the Ruby parses. Whether Rails would accept it
+    needs a project, a Gemfile and a database, and that is a different
+    claim which this deliberately does not make.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from code_coach.engine import _tool
+
+        cls.ruby = _tool(
+            "ruby",
+            "rubyinstaller-4.0.6-1-x64/bin/ruby.exe",
+            "ruby/bin/ruby.exe",
+            "ruby/bin/ruby",
+        )
+        if not cls.ruby:
+            raise unittest.SkipTest("no ruby toolchain")
+
+    def _parses(self, source: str) -> bool:
+        import os
+        import subprocess
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".rb", delete=False, encoding="utf-8"
+        ) as handle:
+            handle.write(source + "\n")
+            path = handle.name
+        try:
+            done = subprocess.run(
+                [self.ruby, "-c", path], capture_output=True, text=True
+            )
+        finally:
+            os.unlink(path)
+        return done.returncode == 0
+
+    def _check(self, pool) -> None:
+        for passage in pool:
+            with self.subTest(text=passage.text[:60]):
+                if self._parses(passage.text):
+                    continue
+                # A line that opens a block cannot parse on its own.
+                # Supplying the end it is missing is the whole allowance.
+                self.assertTrue(
+                    self._parses(passage.text + "\nend")
+                    or self._parses("begin\n" + passage.text + "\nend"),
+                    f"ruby cannot parse: {passage.text}",
+                )
+
+    def test_every_rails_line_is_ruby(self) -> None:
+        from code_coach.typing import rails, rails2
+
+        self._check(rails.RAILS_CODE)
+        self._check(rails2.RAILS_CODE2)
+
+    def test_every_rails_block_is_ruby(self) -> None:
+        from code_coach.typing import rails2
+
+        self._check(rails2.RAILS_BLOCKS)
+
+    def test_the_blocks_are_actually_blocks(self) -> None:
+        """A one-line block belongs in the line pool. Blocks mode is for
+        what sits under what, and a block with nothing under anything
+        teaches none of it."""
+        from code_coach.typing import rails2
+
+        for block in rails2.RAILS_BLOCKS:
+            with self.subTest(text=block.text[:40]):
+                self.assertGreater(len(block.text.splitlines()), 2)
+                self.assertTrue(
+                    any(line.startswith("  ") for line in
+                        block.text.splitlines()),
+                    "a block with no indentation drills no shape",
+                )
+
+    def test_rails_is_reachable_as_a_theme(self) -> None:
+        """Lore and code both, and the code theme can drive Blocks mode —
+        which it could not before it had any."""
+        from code_coach.typing.drills import THEMES
+
+        by_id = {t.id: t for t in THEMES}
+        self.assertTrue(by_id["rails"].passages)
+        self.assertTrue(by_id["railscode"].passages)
+        self.assertTrue(by_id["railscode"].blocks)

@@ -574,9 +574,11 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_dart2,
         emit_cpp2,
         emit_sql2,
+        emit_sql3,
         emit_webnodes,
         emit_newlang,
         emit_newlang2,
+        emit_newlang3,
         emit_topup,
         emit_rust3,
     )
@@ -587,12 +589,16 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_newlang.solution(language, shape, args)
     if emit_newlang2.handles(shape) and language in emit_newlang.RUNNABLE:
         return emit_newlang2.solution(language, shape, args)
+    if emit_newlang3.handles(shape) and language in emit_newlang.RUNNABLE:
+        return emit_newlang3.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
     if emit_rust3.handles(shape):
         return emit_rust3.solution(language, shape, args)
     if emit_topup.handles(shape):
         return emit_topup.solution(language, shape, args)
+    if emit_sql3.handles(shape):
+        return emit_sql3.solution(language, shape, args)
     if emit_sql2.handles(shape):
         return emit_sql2.solution(language, shape, args)
     if emit_cpp2.handles(shape):
@@ -779,6 +785,7 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_dart2,
         emit_cpp2,
         emit_sql2,
+        emit_sql3,
         emit_webnodes,
         emit_topup,
         emit_rust3,
@@ -839,6 +846,7 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_dart2.SHAPE_IDS
         + emit_cpp2.SHAPE_IDS
         + emit_sql2.SHAPE_IDS
+        + emit_sql3.SHAPE_IDS
         + emit_webnodes.SHAPE_IDS
         + emit_topup.SHAPE_IDS
         + emit_rust3.SHAPE_IDS

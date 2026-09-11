@@ -154,6 +154,7 @@ def expected_output(shape: str, args: dict) -> str:
         emit_dart2,
         emit_cpp2,
         emit_sql2,
+        emit_sql3,
         emit_webnodes,
         emit_topup,
         emit_rust3,
@@ -167,6 +168,8 @@ def expected_output(shape: str, args: dict) -> str:
         return emit_rust3.expected_output(shape, args, _value)
     if emit_topup.handles(shape):
         return emit_topup.expected_output(shape, args, _value)
+    if emit_sql3.handles(shape):
+        return emit_sql3.expected_output(shape, args, _value)
     if emit_sql2.handles(shape):
         return emit_sql2.expected_output(shape, args, _value)
     if emit_cpp2.handles(shape):

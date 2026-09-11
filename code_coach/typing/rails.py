@@ -13,9 +13,14 @@ symbols, hash arguments without braces, blocks, the arrow lambda — is
 exactly what fingers need to learn.
 
 Every code line below is checked with `ruby -c` rather than written from
-memory and hoped over. That proves the Ruby is well formed; it does not
-prove Rails would accept it, because that needs a project and a database,
-and saying so is more useful than implying a stronger check than was run.
+memory and hoped over. A line that opens a block — `respond_to do |format|`
+and its like — cannot parse on its own, so it is checked with the `end` it
+is missing supplied and nothing else. That proves the Ruby is well formed;
+it does not prove Rails would accept it, because that needs a project and a
+database, and saying so is more useful than implying a stronger check than
+was run.
+
+`rails2` holds the rest: more lore, more lines, and the blocks.
 """
 
 from __future__ import annotations
@@ -82,8 +87,9 @@ RAILS_LORE: tuple[Passage, ...] = (
 
 # ── Code ─────────────────────────────────────────────────────
 #
-# Each of these is valid Ruby, checked with `ruby -c`. Whether Rails would
-# accept it needs a project and a database, which is a different claim.
+# Each of these is valid Ruby, checked with `ruby -c` — a line that opens a
+# block with its `end` supplied, everything else as written. Whether Rails
+# would accept it needs a project and a database, which is a different claim.
 
 RAILS_CODE: tuple[Passage, ...] = (
     _s("class Order < ApplicationRecord", "a model is a table"),

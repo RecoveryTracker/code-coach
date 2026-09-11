@@ -110,17 +110,57 @@ class WindowTests(unittest.TestCase):
 
 
 class LanguageRegistryTests(unittest.TestCase):
-    def test_every_available_language_has_material(self):
+    def test_the_course_claim_is_true_both_ways(self):
+        """A language claiming `fundamentals` has classes, and a language
+        with classes claims it.
+
+        Not every available language has a taught course any more: the nine
+        added for the workbook and the typing drills have none, and say so.
+        Both directions, so neither a lost course nor a forgotten tag can
+        pass unnoticed.
+        """
         from code_coach.languages import LANGUAGES
 
         for lang in LANGUAGES:
             if not lang.available:
                 continue
             with self.subTest(language=lang.id):
-                self.assertTrue(
-                    classes_with_material(lang.id),
-                    f"{lang.id} is offered but has no classes",
+                claimed = "fundamentals" in lang.ready
+                self.assertEqual(
+                    claimed, bool(classes_with_material(lang.id)),
+                    f"{lang.id} claims fundamentals={claimed} and the "
+                    f"material says otherwise",
                 )
+
+    def test_the_workbook_and_typing_claims_are_true_both_ways(self):
+        """The two tags the nine new languages rest on.
+
+        A language is offered the workbook screen and the typing themes on
+        the strength of these, so an untrue one here is an empty screen
+        rather than a wrong number.
+        """
+        from code_coach.languages import LANGUAGES
+        from code_coach.typing.drills import THEMES
+        from code_coach.workbook import pages
+
+        # The three whose theme id is an abbreviation. Naming the
+        # exceptions rather than the members: a list of the rest goes
+        # stale the moment a language is added, and this does not.
+        abbreviated = {"python": "pycode", "javascript": "jscode",
+                       "typescript": "tscode"}
+        stocked = {t.id for t in THEMES if t.passages or t.blocks}
+
+        for lang in LANGUAGES:
+            if not lang.available:
+                continue
+            with self.subTest(language=lang.id):
+                self.assertEqual(
+                    "workbook" in lang.ready, bool(pages(lang.id)),
+                    f"{lang.id} and its workbook pages disagree")
+                theme = abbreviated.get(lang.id, lang.id + "code")
+                self.assertEqual(
+                    "typing" in lang.ready, theme in stocked,
+                    f"{lang.id} and its typing theme {theme} disagree")
 
     def test_a_language_can_rename_its_classes(self):
         # SQL doesn't loop, so its third class is Grouping & Joins.

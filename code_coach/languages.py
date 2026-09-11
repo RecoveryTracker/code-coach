@@ -34,7 +34,20 @@ class Language:
     available: bool = False
     # What's still missing, shown in the picker so it isn't a mystery.
     note: str = ""
-    # Which of the four pieces are done — keeps the UI honest as work lands.
+    # Which pieces are done — keeps the UI honest as work lands, and the
+    # suite checks each claim rather than taking it on trust.
+    #
+    #   reference     has a cheat sheet
+    #   fundamentals  has a taught course
+    #   workbook      has workbook pages
+    #   typing        has its own typing material
+    #   runner        can execute what you write
+    #   checks bank tracer explainer   the rest, as they land
+    #
+    # The nine added most recently claim workbook and typing and not
+    # fundamentals, because that is what is true of them: they were added
+    # for the drill screens rather than for the taught course, and saying
+    # fundamentals here made the suite demand a course that does not exist.
     ready: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -45,7 +58,7 @@ LANGUAGES: tuple[Language, ...] = (
         monaco="python",
         extension="py",
         available=True,
-        ready=("fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
     ),
     Language(
         id="dart",
@@ -57,7 +70,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Run and code tracing both need the Dart SDK on your PATH. "
             "Tracing starts two Dart VMs, so it takes a couple of seconds."
         ),
-        ready=("fundamentals", "runner", "checks", "bank", "tracer"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank", "tracer"),
     ),
     Language(
         id="javascript",
@@ -69,7 +82,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Run and code tracing both need Node on your PATH. Everything "
             "else works offline."
         ),
-        ready=("fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
     ),
     Language(
         id="typescript",
@@ -81,7 +94,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Run type-checks with tsc before executing, so a type error stops "
             "it. Watch it run is Python-only for now."
         ),
-        ready=("fundamentals", "runner", "checks", "bank"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank"),
     ),
     Language(
         id="sql",
@@ -93,7 +106,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run executes your query against a small "
             "sample database — users and orders — and prints the rows."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner"),
     ),
     Language(
         id="c",
@@ -105,7 +118,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run needs gcc or clang on your PATH; without "
             "one the drills still work, only Run won't."
         ),
-        ready=("fundamentals", "runner", "checks"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks"),
     ),
     Language(
         id="cpp",
@@ -117,7 +130,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run needs g++ or clang++ on your PATH; "
             "without one the drills still work, only Run won't."
         ),
-        ready=("fundamentals", "runner", "checks"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks"),
     ),
     Language(
         id="rust",
@@ -129,7 +142,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run needs rustc on your PATH; without it the "
             "drills still work, only Run won't."
         ),
-        ready=("fundamentals", "runner", "checks"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks"),
     ),
     Language(
         id="go",
@@ -140,7 +153,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. The toolchain lives in ~/toolchains rather than on PATH, and go run builds on every exercise."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="php",
@@ -151,7 +164,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. Fast to run, so a whole page comes back in a couple of seconds."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="lua",
@@ -162,7 +175,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. The quickest of the lot: a page of twenty runs in under a second."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="ruby",
@@ -173,7 +186,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="zig",
@@ -184,7 +197,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. Every run rebuilds against the standard library, so a page takes about a minute."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="java",
@@ -195,7 +208,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. Runs the source file directly, no separate compile step."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="csharp",
@@ -206,7 +219,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only. The very first run after an update initialises the SDK and takes minutes; every run after is instant."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="lisp",
@@ -219,7 +232,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Lisp on the JVM. SBCL would have been the obvious choice and "
             "ships only through SourceForge, which refused the download."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
     Language(
         id="odin",
@@ -230,7 +243,7 @@ LANGUAGES: tuple[Language, ...] = (
         note=(
             "Workbook and typing only."
         ),
-        ready=("fundamentals", "runner"),
+        ready=("workbook", "typing", "runner"),
     ),
 )
 

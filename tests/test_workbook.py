@@ -320,6 +320,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_js9 import SHAPE_IDS as JS9_SHAPES
         from code_coach.workbook.emit_cpp2 import SHAPE_IDS as CPP2_SHAPES
         from code_coach.workbook.emit_sql2 import SHAPE_IDS as SQL2_SHAPES
+        from code_coach.workbook.emit_sql3 import SHAPE_IDS as SQL3_SHAPES
         from code_coach.workbook.emit_webnodes import SHAPE_IDS as WEB_SHAPES
         from code_coach.workbook.emit_topup import SHAPE_IDS as TOPUP_SHAPES
         from code_coach.workbook.emit_rust3 import SHAPE_IDS as RUST3_SHAPES
@@ -374,6 +375,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JS9_SHAPES)
             | set(CPP2_SHAPES)
             | set(SQL2_SHAPES)
+            | set(SQL3_SHAPES)
             | set(WEB_SHAPES)
             # dart_more is dart's, but the other three in this block
             # are not, and the roster is what dart does not have.
@@ -874,15 +876,26 @@ class LanguageReachTests(unittest.TestCase):
                 self.assertEqual(p.languages, ())
 
     def test_the_later_pages_name_who_they_are_for(self) -> None:
-        """Past page 11 a page always says which languages it is for, and the
-        set is always one the app actually runs."""
+        """Past page 11 a page always says which languages it is for, and
+        every name in it is a language the app offers.
+
+        Against LANGUAGES rather than DEEP, which is the thing that went
+        stale. A page naming a language means "anyone here who can answer
+        me", and pages() already drops a language with no reference
+        answer, so naming one that cannot answer costs nothing while
+        naming too few hides the page from someone who could do it. What
+        is still worth catching is a name that is not a language at all —
+        a typo hides a page from everybody and nothing else complains.
+        """
+        allowed = set(LANGUAGES) | {"sql"}
         for p in pages():
             if p.number <= 11:
                 continue
             with self.subTest(page=p.id):
                 self.assertTrue(p.languages)
                 self.assertTrue(
-                    set(p.languages) <= set(self.DEEP) | {"sql"})
+                    set(p.languages) <= allowed,
+                    f"{p.id} names {sorted(set(p.languages) - allowed)}")
 
     def test_no_two_languages_are_told_to_print_different_things(self) -> None:
         """The rule the multi-language pages rest on. An exercise has one
