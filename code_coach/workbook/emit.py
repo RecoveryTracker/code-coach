@@ -579,6 +579,7 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_newlang,
         emit_newlang2,
         emit_newlang3,
+        emit_newlang4,
         emit_topup,
         emit_rust3,
     )
@@ -591,6 +592,11 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_newlang2.solution(language, shape, args)
     if emit_newlang3.handles(shape) and language in emit_newlang.RUNNABLE:
         return emit_newlang3.solution(language, shape, args)
+    # Its own gate rather than RUNNABLE: two of these pages ask for a
+    # position in a list, and the language that counts from one answers
+    # them differently, so it is given no reference and loses the page.
+    if emit_newlang4.handles(shape) and emit_newlang4.supports(language, shape):
+        return emit_newlang4.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
     if emit_rust3.handles(shape):
