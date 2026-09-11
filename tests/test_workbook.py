@@ -15,6 +15,7 @@ the languages that run in milliseconds.
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from code_coach.engine import run_code
 from code_coach.workbook import (
@@ -1159,3 +1160,87 @@ class RefusedPageTests(unittest.TestCase):
             for shape in emit_newlang5.POSITIONAL:
                 with self.subTest(language=language, shape=shape):
                     self.assertFalse(emit_newlang5.supports(language, shape))
+
+
+class KotlinBatchTests(unittest.TestCase):
+    """Every Kotlin exercise, compiled in batches rather than one by one.
+
+    The other compiled languages are sampled: `test_every_shape_compiles_
+    and_runs_in_every_language` takes one exercise per shape, because
+    within a shape only the numbers change and each one is another
+    compile. That is a reasonable trade at half a second a compile.
+
+    Kotlin's compiler costs four and a half seconds a file, almost all of
+    it starting a JVM, so the same trade would buy forty-seven exercises
+    for four minutes. Compiling a folder in one call pays that startup
+    once: all fourteen hundred cost less than five, which is thirty times
+    the coverage for the same money.
+
+    Each file gets a package of its own. Kotlin puts top-level functions
+    in a shared namespace, so two exercises that both declare `fun
+    greet()` are conflicting overloads when compiled side by side — an
+    artefact of batching rather than anything wrong with the answers, and
+    the package is what makes the batch a fair stand-in for compiling
+    alone. Checked against compiling alone on a sample, which agreed.
+    """
+
+    CHUNK = 60
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from code_coach.engine import _kotlin_parts
+
+        parts = _kotlin_parts()
+        if parts is None:
+            raise unittest.SkipTest("no kotlin toolchain")
+        cls.kotlinc, cls.stdlib, cls.java = parts
+
+    def test_every_kotlin_exercise_runs(self) -> None:
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+
+        env = dict(os.environ)
+        env.setdefault("JAVA_HOME", str(self.java.parent.parent))
+        work = [e for p in pages("kotlin") for e in p.exercises]
+        self.assertTrue(work, "kotlin is offered no pages")
+
+        for start in range(0, len(work), self.CHUNK):
+            batch = work[start:start + self.CHUNK]
+            folder = Path(tempfile.mkdtemp())
+            try:
+                named = []
+                for offset, exercise in enumerate(batch):
+                    code = exercise.answer("kotlin")
+                    self.assertIsNotNone(code, f"no reference for {exercise.id}")
+                    tag = f"p{start + offset}"
+                    name = f"Ex{start + offset}"
+                    (folder / f"{name}.kt").write_text(
+                        f"package {tag}\n\n{code}", encoding="utf-8")
+                    named.append((f"{tag}.{name}Kt", exercise))
+
+                out = folder / "out"
+                built = subprocess.run(
+                    [str(self.kotlinc), str(folder), "-d", str(out)],
+                    capture_output=True, text=True, timeout=900, env=env)
+                self.assertEqual(
+                    built.returncode, 0,
+                    (built.stderr or built.stdout)[:600])
+
+                classpath = os.pathsep.join([str(out), str(self.stdlib)])
+                for entry, exercise in named:
+                    with self.subTest(exercise=exercise.id):
+                        ran = subprocess.run(
+                            [str(self.java), "-cp", classpath, entry],
+                            capture_output=True, text=True, timeout=120,
+                            stdin=subprocess.DEVNULL, env=env)
+                        self.assertEqual(
+                            ran.returncode, 0,
+                            (ran.stderr or ran.stdout)[:400])
+                        self.assertTrue(
+                            matches(ran.stdout, exercise.expect),
+                            f"printed {ran.stdout!r}, "
+                            f"wanted {exercise.expect!r}")
+            finally:
+                shutil.rmtree(folder, ignore_errors=True)

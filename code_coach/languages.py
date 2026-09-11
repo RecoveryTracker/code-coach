@@ -222,6 +222,19 @@ LANGUAGES: tuple[Language, ...] = (
         ready=("workbook", "typing", "runner"),
     ),
     Language(
+        id="kotlin",
+        name="Kotlin",
+        monaco="kotlin",
+        extension="kt",
+        available=True,
+        note=(
+            "Workbook and typing only, on the JDK that Java and Lisp "
+            "already use. Run takes about five seconds, nearly all of it "
+            "starting a JVM for the compiler."
+        ),
+        ready=("workbook", "typing", "runner"),
+    ),
+    Language(
         id="swift",
         name="Swift",
         monaco="swift",

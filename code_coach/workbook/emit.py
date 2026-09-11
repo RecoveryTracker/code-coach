@@ -50,6 +50,7 @@ LANGUAGES: tuple[str, ...] = (
     "odin",
     "lisp",
     "swift",
+    "kotlin",
 )
 
 NL = "\n"

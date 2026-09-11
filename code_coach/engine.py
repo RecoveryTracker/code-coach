@@ -427,6 +427,70 @@ def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
             return "", f"Program timed out after {timeout:g}s.", 124
 
 
+def _kotlin_parts() -> tuple[Path, Path, Path] | None:
+    """The compiler, the standard library, and a JVM to run the result."""
+    kotlinc = _tool("kotlinc", "kotlinc/bin/kotlinc.bat", "kotlinc/bin/kotlinc")
+    java = _tool("java", "jdk-21.0.12.1+1/bin/java.exe", "jdk/bin/java.exe")
+    stdlib = _LOCAL_TOOLCHAINS / "kotlinc" / "lib" / "kotlin-stdlib.jar"
+    if not kotlinc or not java or not stdlib.exists():
+        return None
+    return Path(kotlinc), stdlib, Path(java)
+
+
+def _run_kotlin(path: Path, timeout: float) -> tuple[str, str, int]:
+    """Compile one file and run the class that comes out.
+
+    The source is copied to `Main.kt` first, so the class is `MainKt`
+    whatever the temporary file was called — Kotlin names the class after
+    the file, and a name like `tmp1x7t5lmz.kt` is a class nobody can
+    predict from the outside.
+
+    This is four and a half seconds, nearly all of it starting a JVM, and
+    that is the cost of pressing Run. The suite does not pay it: it
+    compiles a folder of exercises in one call, where the same startup is
+    amortised across all of them and each file costs about a seventh of a
+    second.
+    """
+    parts = _kotlin_parts()
+    if parts is None:
+        return (
+            "",
+            "kotlinc isn't installed, so this can't be compiled. The "
+            "type-along drills still work — only Run needs the toolchain.",
+            127,
+        )
+    kotlinc, stdlib, java = parts
+    folder = Path(tempfile.mkdtemp())
+    try:
+        source = folder / "Main.kt"
+        source.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+        out = folder / "out"
+        env = dict(os.environ)
+        env.setdefault("JAVA_HOME", str(java.parent.parent))
+        try:
+            built = subprocess.run(
+                [str(kotlinc), str(source), "-d", str(out)],
+                capture_output=True, text=True, timeout=timeout, env=env,
+            )
+        except subprocess.TimeoutExpired:
+            return "", f"Compiler timed out after {timeout:g}s.", 124
+        if built.returncode != 0:
+            return "", _cap_output(built.stderr or built.stdout), built.returncode
+
+        classpath = os.pathsep.join([str(out), str(stdlib)])
+        try:
+            ran = subprocess.run(
+                [str(java), "-cp", classpath, "MainKt"],
+                capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL, env=env,
+            )
+        except subprocess.TimeoutExpired:
+            return "", f"Program timed out after {timeout:g}s.", 124
+        return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def _swift_home() -> Path | None:
     """Where the Swift for Windows installer put things.
 
@@ -642,6 +706,7 @@ _SUFFIXES = {
     "lua": ".lua",
     "zig": ".zig",
     "swift": ".swift",
+    "kotlin": ".kt",
     "ruby": ".rb",
     "java": ".java",
     "csharp": ".cs",
@@ -654,7 +719,7 @@ _SUFFIXES = {
 # in particular is slow the first time it sees a standard library.
 _SLOW_LANGUAGES = {
     "dart", "c", "cpp", "rust", "typescript", "go", "zig",
-    "java", "csharp", "odin", "lisp", "swift",
+    "java", "csharp", "odin", "lisp", "swift", "kotlin",
 }
 
 
@@ -689,6 +754,8 @@ def run_code(
             return _run_typescript(tmp_path, timeout)
         if suffix == ".swift":
             return _run_swift(tmp_path, timeout)
+        if suffix == ".kt":
+            return _run_kotlin(tmp_path, timeout)
         if suffix in _COMPILERS:
             return _compile_then_run(tmp_path, timeout)
         return run_file(tmp_path, timeout=timeout)

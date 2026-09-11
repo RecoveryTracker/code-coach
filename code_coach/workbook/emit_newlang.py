@@ -38,13 +38,13 @@ RUNNABLE: tuple[str, ...] = (
     "go", "php", "lua", "zig", "ruby", "java", "csharp", "odin",
     "lisp",
     "swift",
+    "kotlin",
 )
 
 #: Written, checked by eye, never executed here. Moving a name into
 #: RUNNABLE is a claim that the suite can now prove it.
 UNVERIFIED: tuple[str, ...] = (
-    "kotlin", "scala", "haskell", "ocaml", "elixir",
-    "assembly",
+    "scala", "haskell", "ocaml", "elixir", "assembly",
 )
 
 LANGUAGES: tuple[str, ...] = RUNNABLE + UNVERIFIED
