@@ -121,6 +121,11 @@ def _csharp_grid(rows) -> str:
     return ", ".join("new int[] {" + _items(r) + "}" for r in rows)
 
 
+def _listed(rows) -> str:
+    """Kotlin nests its list constructor rather than using brackets."""
+    return ", ".join("listOf(" + _items(r) + ")" for r in rows)
+
+
 def _zig_grid(rows) -> str:
     return ", ".join("[_]i32{ " + _items(r) + " }" for r in rows)
 
@@ -269,6 +274,40 @@ LISTS: dict[str, Lists] = {
         stepped=lambda v, lo, hi, s: (
             f"var {v}: i32 = {lo};\nwhile ({v} <= {hi}) : ({v} += {s}) {{"),
         stop="break;",
+    ),
+    "kotlin": Lists(
+        lit=lambda n, xs: f"val {n} = listOf({xs})",
+        each=lambda v, n: f"for ({v} in {n}) {{",
+        upto=lambda k, n: f"for ({k} in {n}.indices) {{",
+        at=lambda n, k: f"{n}[{k}]",
+        down=lambda k, n: f"for ({k} in {n}.indices.reversed()) {{",
+        down_at=lambda n, k: f"{n}[{k}]",
+        empty=lambda n: f"val {n} = mutableListOf<Int>()",
+        push=lambda n, e: f"{n}.add({e})",
+        grid=lambda n, rs: f"val {n} = listOf({_listed(rs)})",
+        rows=lambda r, n: f"for ({r} in {n}) {{",
+        cols=lambda c, r: f"for ({c} in {r}) {{",
+        times=lambda n, i, p: (
+            'println("${' + n + '} x ${' + i + '} = ${' + p + '}")'),
+        stepped=lambda v, lo, hi, s: (
+            f"for ({v} in {lo}..{hi} step {s}) {{"),
+    ),
+    "swift": Lists(
+        lit=lambda n, xs: f"let {n} = [{xs}]",
+        each=lambda v, n: f"for {v} in {n} {{",
+        upto=lambda k, n: f"for {k} in 0..<{n}.count {{",
+        at=lambda n, k: f"{n}[{k}]",
+        down=lambda k, n: (
+            f"for {k} in stride(from: {n}.count - 1, through: 0, by: -1) {{"),
+        down_at=lambda n, k: f"{n}[{k}]",
+        empty=lambda n: f"var {n}: [Int] = []",
+        push=lambda n, e: f"{n}.append({e})",
+        grid=lambda n, rs: f"let {n} = [{_bracketed(rs)}]",
+        rows=lambda r, n: f"for {r} in {n} {{",
+        cols=lambda c, r: f"for {c} in {r} {{",
+        times=lambda n, i, p: f'print("\\({n}) x \\({i}) = \\({p})")',
+        stepped=lambda v, lo, hi, s: (
+            f"for {v} in stride(from: {lo}, through: {hi}, by: {s}) {{"),
     ),
 }
 

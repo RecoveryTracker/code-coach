@@ -427,6 +427,102 @@ def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
             return "", f"Program timed out after {timeout:g}s.", 124
 
 
+def _swift_home() -> Path | None:
+    """Where the Swift for Windows installer put things.
+
+    Not `~/toolchains` like the rest: Swift ships an installer rather than
+    an archive, and it chooses its own home. The version is in the folder
+    name, so the newest one is taken rather than a version written down
+    here that goes stale on the next release.
+    """
+    roots = [
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Swift",
+        Path(os.environ.get("ProgramFiles", "")) / "Swift",
+    ]
+    for root in roots:
+        if not root.is_dir():
+            continue
+        toolchains = sorted(
+            (root / "Toolchains").glob("*/usr/bin/swiftc.exe"), reverse=True)
+        if toolchains:
+            return root
+    return None
+
+
+def _swift_env(home: Path) -> dict[str, str] | None:
+    """PATH and SDKROOT for a Swift build.
+
+    The installer sets both for the user, and a server started before it
+    ran has neither — which shows up as a compiler that exits with
+    0xC0000135 and says nothing, because the runtime DLLs are beside the
+    compiler rather than on the path. Setting them here means it works
+    however the server was started.
+    """
+    compilers = sorted(
+        (home / "Toolchains").glob("*/usr/bin/swiftc.exe"), reverse=True)
+    if not compilers:
+        return None
+    version = compilers[0].parents[2].name.split("+")[0]
+    runtime = home / "Runtimes" / version / "usr" / "bin"
+    sdk = (home / "Platforms" / version / "Windows.platform" / "Developer"
+           / "SDKs" / "Windows.sdk")
+    env = dict(os.environ)
+    env["PATH"] = os.pathsep.join(
+        [str(compilers[0].parent), str(runtime), env.get("PATH", "")])
+    if sdk.is_dir():
+        env["SDKROOT"] = str(sdk)
+    return env
+
+
+def _run_swift(path: Path, timeout: float) -> tuple[str, str, int]:
+    """Build with swiftc and run what came out.
+
+    Compiled rather than run as a script, because `swift file.swift` on
+    Windows goes through a JIT that cannot resolve the standard library's
+    array symbols — a program as small as declaring a list and printing
+    its total fails there and builds fine. Building costs about half a
+    second, which is cheaper than the interpreter was anyway.
+    """
+    home = _swift_home()
+    env = _swift_env(home) if home else None
+    if home is None or env is None:
+        return (
+            "",
+            "Swift isn't installed, so this can't be compiled. The "
+            "type-along drills still work — only Run needs the toolchain.",
+            127,
+        )
+    swiftc = sorted(
+        (home / "Toolchains").glob("*/usr/bin/swiftc.exe"), reverse=True)[0]
+    exe = path.with_suffix(".exe")
+    try:
+        built = subprocess.run(
+            [str(swiftc), str(path), "-o", str(exe)],
+            capture_output=True, text=True, timeout=timeout, env=env,
+            cwd=str(path.parent),
+        )
+    except subprocess.TimeoutExpired:
+        return "", f"Compiler timed out after {timeout:g}s.", 124
+    if built.returncode != 0:
+        return "", _cap_output(built.stderr or built.stdout), built.returncode
+
+    try:
+        ran = subprocess.run(
+            [str(exe)], capture_output=True, text=True, timeout=timeout,
+            stdin=subprocess.DEVNULL, env=env,
+        )
+        return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
+    except subprocess.TimeoutExpired:
+        return "", f"Program timed out after {timeout:g}s.", 124
+    finally:
+        for leftover in (exe, exe.with_suffix(".pdb"), exe.with_suffix(".lib"),
+                         exe.with_suffix(".exp"), exe.with_suffix(".obj")):
+            try:
+                leftover.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
 def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
     """Build the source, then run what came out."""
     suffix = path.suffix.lower()
@@ -545,6 +641,7 @@ _SUFFIXES = {
     "php": ".php",
     "lua": ".lua",
     "zig": ".zig",
+    "swift": ".swift",
     "ruby": ".rb",
     "java": ".java",
     "csharp": ".cs",
@@ -557,7 +654,7 @@ _SUFFIXES = {
 # in particular is slow the first time it sees a standard library.
 _SLOW_LANGUAGES = {
     "dart", "c", "cpp", "rust", "typescript", "go", "zig",
-    "java", "csharp", "odin", "lisp",
+    "java", "csharp", "odin", "lisp", "swift",
 }
 
 
@@ -590,6 +687,8 @@ def run_code(
     try:
         if suffix == ".ts":
             return _run_typescript(tmp_path, timeout)
+        if suffix == ".swift":
+            return _run_swift(tmp_path, timeout)
         if suffix in _COMPILERS:
             return _compile_then_run(tmp_path, timeout)
         return run_file(tmp_path, timeout=timeout)

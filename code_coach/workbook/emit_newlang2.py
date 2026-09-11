@@ -446,6 +446,44 @@ DIALECTS: dict[str, Dialect] = {
         close_loop=("}",),
         when=lambda c: f"if {c} {{",
     ),
+    "kotlin": Dialect(
+        open_body=("fun main() {",),
+        close_body=("}",),
+        indent="    ",
+        say=lambda e: f"println({e})",
+        say_text=lambda t: f"println({t})",
+        say_labelled=lambda label, e: (
+            'println("' + label + ': ${' + e + '}")'),
+        let=lambda n, v: f"val {n} = {v}",
+        total="var total = 0",
+        add=lambda e: f"total += {e}",
+        say_total="println(total)",
+        counted=lambda var, c: f"for ({var} in 0 until {c}) {{",
+        ranged=lambda var, lo, hi: f"for ({var} in {lo}..{hi}) {{",
+        down=lambda var, lo, hi: (
+            f"for ({var} in {hi} downTo {lo}) {{"),
+        close_loop=("}",),
+        when=lambda c: f"if ({c}) {{",
+    ),
+    "swift": Dialect(
+        indent="    ",
+        say=lambda e: f"print({e})",
+        say_text=lambda t: f"print({t})",
+        # Swift interpolates with a backslash and parentheses, which is a
+        # sequence Python does not know — escaped, or it is a warning that
+        # happens to produce the right string.
+        say_labelled=lambda label, e: f'print("{label}: \\({e})")',
+        let=lambda n, v: f"let {n} = {v}",
+        total="var total = 0",
+        add=lambda e: f"total += {e}",
+        say_total="print(total)",
+        counted=lambda var, c: f"for {var} in 0..<{c} {{",
+        ranged=lambda var, lo, hi: f"for {var} in {lo}...{hi} {{",
+        down=lambda var, lo, hi: (
+            f"for {var} in stride(from: {hi}, through: {lo}, by: -1) {{"),
+        close_loop=("}",),
+        when=lambda c: f"if {c} {{",
+    ),
     "lisp": Dialect(
         indent="  ",
         hug_closers=True,

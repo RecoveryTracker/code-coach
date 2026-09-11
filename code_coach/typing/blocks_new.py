@@ -1,4 +1,4 @@
-"""Whole programs to type, in the nine languages with a toolchain here.
+"""Whole programs to type, in the ten languages with a toolchain here.
 
 Every code theme except these had blocks and these had none, which meant
 Blocks mode simply could not be driven by them. Lines drill punctuation;
@@ -7,7 +7,7 @@ code — and that is the half these languages were missing.
 
 Where the other themes get their blocks is the curriculum: the solution
 bank and the fundamentals, whole functions with their indentation. These
-nine have neither, so the blocks are written here.
+ten have neither, so the blocks are written here.
 
 They are whole programs rather than excerpts, and that is the point of
 the file. A fragment cannot be checked by anything; a program can be run.
@@ -20,11 +20,15 @@ and that keyboard has no Tab key — a block full of them is a block you
 cannot type. Go and Odin will both retab this the moment you run their
 formatter over it, which is the right place for that to happen.
 
-The seven languages without a toolchain on this machine — Kotlin, Swift,
-Scala, Haskell, OCaml, Elixir and Assembly — get no blocks, because a
-block written from documentation and never run is exactly the thing this
-file exists to avoid. Their lines stay in `snippets2`, where the weaker
+The six languages without a toolchain on this machine — Kotlin, Scala,
+Haskell, OCaml, Elixir and Assembly — get no blocks, because a block
+written from documentation and never run is exactly the thing this file
+exists to avoid. Their lines stay in `snippets2`, where the weaker
 guarantee is stated.
+
+Swift used to be the seventh and is not any more. It is the one of them
+worth a 1.76 GB installer, and now that `swiftc` is here its blocks are
+run like everyone else's.
 """
 
 from __future__ import annotations
@@ -453,6 +457,65 @@ LISP_BLOCKS: tuple[Passage, ...] = (
 )
 
 
+# ── Swift ────────────────────────────────────────────────────
+#
+# Built rather than run as a script. `swift file.swift` on Windows goes
+# through a JIT that cannot resolve the standard library's array symbols,
+# so a program as small as the first one here fails there and compiles
+# perfectly well.
+
+SWIFT_BLOCKS: tuple[Passage, ...] = (
+    _s('for i in 1...5 {\n'
+       '    print(i * i)\n'
+       '}',
+       "a closed range, and the square of one to five"),
+    _s('func sum(_ xs: [Int]) -> Int {\n'
+       '    var total = 0\n'
+       '    for x in xs {\n'
+       '        total += x\n'
+       '    }\n'
+       '    return total\n'
+       '}\n'
+       '\n'
+       'print(sum([3, 5, 8]))',
+       "the underscore that drops the argument label"),
+    _s('struct Point {\n'
+       '    let x: Int\n'
+       '    let y: Int\n'
+       '\n'
+       '    var total: Int { x + y }\n'
+       '}\n'
+       '\n'
+       'let p = Point(x: 3, y: 4)\n'
+       'print(p.total)',
+       "a struct, its memberwise init, and a computed property"),
+    _s('enum Shape {\n'
+       '    case circle(Double)\n'
+       '    case square(Double)\n'
+       '}\n'
+       '\n'
+       'func describe(_ shape: Shape) -> String {\n'
+       '    switch shape {\n'
+       '    case .circle(let r):\n'
+       '        return "circle of \\(r)"\n'
+       '    case .square(let s):\n'
+       '        return "square of \\(s)"\n'
+       '    }\n'
+       '}\n'
+       '\n'
+       'print(describe(.circle(2.0)))',
+       "an enum with values, and the switch that must cover it"),
+    _s('var counts: [String: Int] = [:]\n'
+       'for w in ["a", "b", "a"] {\n'
+       '    counts[w, default: 0] += 1\n'
+       '}\n'
+       'for key in counts.keys.sorted() {\n'
+       '    print(key, counts[key]!)\n'
+       '}',
+       "a dictionary with a default, and the bang that unwraps"),
+)
+
+
 BY_LANGUAGE: dict[str, tuple[Passage, ...]] = {
     "go": GO_BLOCKS,
     "php": PHP_BLOCKS,
@@ -463,4 +526,5 @@ BY_LANGUAGE: dict[str, tuple[Passage, ...]] = {
     "odin": ODIN_BLOCKS,
     "zig": ZIG_BLOCKS,
     "lisp": LISP_BLOCKS,
+    "swift": SWIFT_BLOCKS,
 }

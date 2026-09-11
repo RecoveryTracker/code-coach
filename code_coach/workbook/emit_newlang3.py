@@ -149,6 +149,28 @@ EXTRAS: dict[str, Extra] = {
         both="and",
         either="or",
     ),
+    "kotlin": Extra(
+        otherwise=("} else {",),
+        close_if=("}",),
+        let_mut=lambda n, v: f"var {n} = {v}",
+        assign=lambda n, e: f"{n} = {e}",
+        bump=lambda n: f"{n} += 1",
+        while_=lambda c: f"while ({c}) {{",
+        close_while=("}",),
+        both="&&",
+        either="||",
+    ),
+    "swift": Extra(
+        otherwise=("} else {",),
+        close_if=("}",),
+        let_mut=lambda n, v: f"var {n} = {v}",
+        assign=lambda n, e: f"{n} = {e}",
+        bump=lambda n: f"{n} += 1",
+        while_=lambda c: f"while {c} {{",
+        close_while=("}",),
+        both="&&",
+        either="||",
+    ),
     "lisp": Extra(
         # Lisp has no else keyword: the if form takes both branches as
         # arguments, so the shapes below build it as one expression

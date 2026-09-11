@@ -222,6 +222,21 @@ LANGUAGES: tuple[Language, ...] = (
         ready=("workbook", "typing", "runner"),
     ),
     Language(
+        id="swift",
+        name="Swift",
+        monaco="swift",
+        extension="swift",
+        available=True,
+        note=(
+            "Workbook and typing only. Swift ships an installer rather "
+            "than an archive, so it lives in Programs\Swift rather than "
+            "~/toolchains, and each exercise is compiled — `swift "
+            "file.swift` on Windows uses a JIT that cannot resolve the "
+            "standard library's array symbols."
+        ),
+        ready=("workbook", "typing", "runner"),
+    ),
+    Language(
         id="lisp",
         name="Common Lisp",
         monaco="lisp",

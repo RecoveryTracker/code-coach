@@ -434,6 +434,7 @@ THEMES: tuple[Theme, ...] = (
         "guard let, dollar zero, and backslash interpolation.",
         passages=snippets2.BY_LANGUAGE["swift"]
         + snippets3.BY_LANGUAGE["swift"],
+        blocks=blocks_new.BY_LANGUAGE["swift"],
     ),
     Theme(
         "scalacode", "Scala Code",

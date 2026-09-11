@@ -5,12 +5,12 @@ does a dozen goes at a thing. This is the rest: another twenty or so
 each, chosen the same way — the punctuation your hands will actually
 meet in that language, rather than one idea translated sixteen times.
 
-The same division of honesty as before, and it has moved. Nine of these
-languages now have a toolchain here, and their *blocks* — whole programs
-— are in `blocks_new` and are run by the suite. The lines below are
-fragments, which is what makes them typing practice, and a fragment
-cannot be executed in any language. For the seven without a toolchain —
-Kotlin, Swift, Scala, Haskell, OCaml, Elixir and Assembly — the lines are
+The same division of honesty as before, and it has moved twice. Ten of
+these languages now have a toolchain here, and their *blocks* — whole
+programs — are in `blocks_new` and are run by the suite. The lines below
+are fragments, which is what makes them typing practice, and a fragment
+cannot be executed in any language. For the six without a toolchain —
+Kotlin, Scala, Haskell, OCaml, Elixir and Assembly — the lines are
 written from documentation and read carefully, which is weaker, and
 saying so is better than implying a check that was not run.
 """

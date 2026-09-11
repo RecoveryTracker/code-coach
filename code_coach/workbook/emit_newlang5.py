@@ -190,6 +190,29 @@ FUNCS: dict[str, Funcs] = {
         extra_param="out: *std.Io.Writer",
         extra_arg="out",
     ),
+    "kotlin": Funcs(
+        define=lambda n, p, r: (
+            f"fun {n}({p})"
+            + {"": " {", "int": ": Int {", "text": ": String {"}[r]),
+        close_def=("}",),
+        param=lambda n, k: f"{n}: Int" if _int(k) else f"{n}: String",
+        give=lambda e: f"return {e}",
+        call=lambda n, a: f"{n}({a})",
+        use=lambda n, a: f"{n}({a})",
+    ),
+    "swift": Funcs(
+        define=lambda n, p, r: (
+            f"func {n}({p})"
+            + {"": " {", "int": " -> Int {", "text": " -> String {"}[r]),
+        close_def=("}",),
+        # The underscore drops the argument label, so the call reads
+        # `twice(3)` rather than `twice(n: 3)` — which is what every other
+        # language on the page does.
+        param=lambda n, k: f"_ {n}: Int" if _int(k) else f"_ {n}: String",
+        give=lambda e: f"return {e}",
+        call=lambda n, a: f"{n}({a})",
+        use=lambda n, a: f"{n}({a})",
+    ),
 }
 
 
@@ -269,6 +292,25 @@ STRS: dict[str, Strs] = {
         say_char=lambda e: 'try out.print("{c}\\n", .{' + e + "});",
         upper_setup=("var ubuf: [64]u8 = undefined;",),
         let_text=lambda n, v: f"const {n} = {v};",
+    ),
+    "kotlin": Strs(
+        length=lambda s: f"{s}.length",
+        chars=lambda v, s: f"for ({v} in {s}) {{",
+        upper=lambda s: f"{s}.uppercase()",
+        join=lambda a, b: f'{a} + " " + {b}',
+        char_at=lambda s, i: f"{s}[{i}]",
+        let_text=lambda n, v: f"val {n} = {v}",
+    ),
+    "swift": Strs(
+        length=lambda s: f"{s}.count",
+        chars=lambda v, s: f"for {v} in {s} {{",
+        upper=lambda s: f"{s}.uppercased()",
+        join=lambda a, b: f'{a} + " " + {b}',
+        # Swift will not index a string with an integer, because a
+        # character is not a fixed number of bytes and pretending it is
+        # was how the others got it wrong. An index is made by walking.
+        char_at=lambda s, i: f"{s}[{s}.index({s}.startIndex, offsetBy: {i})]",
+        let_text=lambda n, v: f"let {n} = {v}",
     ),
 }
 
