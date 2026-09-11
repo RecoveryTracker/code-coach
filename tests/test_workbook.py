@@ -1104,3 +1104,58 @@ class MemoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RefusedPageTests(unittest.TestCase):
+    """A page a language is declared for but not offered.
+
+    `pages` drops a page when the language has no reference answer for
+    it, which is what lets a language join the workbook before it can
+    answer everything. That mechanism is silent by design, and silence is
+    the risk: a page can stop being offered because someone genuinely
+    decided it should not be, or because an emitter quietly stopped
+    handling a shape, and nothing tells the two apart.
+
+    So every refusal has to have a reason on record. There is one reason
+    at the moment — a language that counts from one cannot answer a page
+    about index zero, because its answer is a different number — and this
+    says so rather than listing which pages those are. A list of the
+    three would go stale the first time a fourth is added; asking why
+    does not.
+    """
+
+    def test_every_refused_page_has_a_reason(self) -> None:
+        from code_coach.workbook import emit_newlang4, emit_newlang5
+        from code_coach.workbook.content import PAGES
+
+        positional = set(emit_newlang4.POSITIONAL) | set(emit_newlang5.POSITIONAL)
+
+        for language in LANGUAGES:
+            offered = {p.id for p in pages(language)}
+            for p in PAGES:
+                if not p.applies_to(language) or p.id in offered:
+                    continue
+                with self.subTest(language=language, page=p.id):
+                    self.assertIn(
+                        language, emit_newlang4.ONE_BASED,
+                        f"{language} is quietly not offered {p.id}")
+                    self.assertTrue(
+                        {e.shape for e in p.exercises} <= positional,
+                        f"{p.id} is refused to {language} for no stated "
+                        f"reason")
+
+    def test_the_one_based_language_really_does_refuse_them(self) -> None:
+        """The other half. If the refusal stopped happening — a reference
+        appeared that prints a one where every other language prints a
+        zero — the page would come back and quietly be wrong, and the
+        rule above would still pass because it only looks at what is
+        missing."""
+        from code_coach.workbook import emit_newlang4, emit_newlang5
+
+        for language in emit_newlang4.ONE_BASED:
+            for shape in emit_newlang4.POSITIONAL:
+                with self.subTest(language=language, shape=shape):
+                    self.assertFalse(emit_newlang4.supports(language, shape))
+            for shape in emit_newlang5.POSITIONAL:
+                with self.subTest(language=language, shape=shape):
+                    self.assertFalse(emit_newlang5.supports(language, shape))

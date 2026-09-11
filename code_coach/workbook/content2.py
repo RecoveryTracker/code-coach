@@ -821,7 +821,9 @@ _FUNC_PRINT = (
     ("done", "finished", 1),
     ("beat", "thump", 6),
     ("nudge", "your turn", 2),
-    ("echo", "again", 4),
+    # Not `echo`: it is a keyword in PHP, so a student typing what the
+    # prompt asked for gets a parse error rather than a function.
+    ("repeat_it", "again", 4),
     ("mark", "here", 2),
     ("call_out", "listen", 3),
     ("stamp", "seen", 1),

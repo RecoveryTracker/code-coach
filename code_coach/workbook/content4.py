@@ -355,7 +355,10 @@ _WORDS = (
     ("speed", "n", "n > 60", "is over 60", "too fast", "legal", [70, 60]),
     ("fives", "n", "n % 5 == 0", "divides by 5", "yes", "no", [10, 11, 25]),
     ("tiny", "n", "n < 3", "is under 3", "tiny", "not tiny", [1, 3]),
-    ("round", "n", "n % 100 == 0", "divides by 100", "round", "awkward", [200, 250]),
+    # Not `round`: PHP will not let a builtin be redeclared, so the
+    # name the prompt asks for is a fatal error there.
+    ("hundredish", "n", "n % 100 == 0", "divides by 100", "round",
+     "awkward", [200, 250]),
     ("level", "n", "n > 20", "is more than 20", "high", "low", [25, 3]),
     ("band", "n", "n % 10 == 0", "divides by 10", "round ten", "in between", [40, 44]),
     ("zone", "n", "n < 0", "is below 0", "below", "above", [-5, 12]),

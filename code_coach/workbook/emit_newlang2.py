@@ -77,9 +77,46 @@ def _same(expr: str) -> str:
     return expr
 
 
-#: `a % b` where both sides are a name or a number, which is every form
-#: these shapes produce.
-_REM = re.compile(r"(\w+)\s*%\s*(\w+)")
+def _operand_start(expr: str, at: int) -> int:
+    """Where the thing to the left of `at` begins."""
+    i = at - 1
+    while i >= 0 and expr[i] == " ":
+        i -= 1
+    if i >= 0 and expr[i] == ")":
+        depth = 0
+        while i >= 0:
+            if expr[i] == ")":
+                depth += 1
+            elif expr[i] == "(":
+                depth -= 1
+                if depth == 0:
+                    return i
+            i -= 1
+        return 0
+    while i >= 0 and (expr[i].isalnum() or expr[i] == "_"):
+        i -= 1
+    return i + 1
+
+
+def _operand_stop(expr: str, at: int) -> int:
+    """Where the thing to the right of `at` ends."""
+    i = at + 1
+    while i < len(expr) and expr[i] == " ":
+        i += 1
+    if i < len(expr) and expr[i] == "(":
+        depth = 0
+        while i < len(expr):
+            if expr[i] == "(":
+                depth += 1
+            elif expr[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    return i
+            i += 1
+        return len(expr) - 1
+    while i < len(expr) and (expr[i].isalnum() or expr[i] == "_"):
+        i += 1
+    return i - 1
 
 
 def _zig_rem(expr: str) -> str:
@@ -94,8 +131,24 @@ def _zig_rem(expr: str) -> str:
 
     Precedence survives the rewrite: `n % m + m` becomes `@rem(n, m) + m`,
     which is what it meant.
+
+    This reads the operands rather than matching a pattern, and it does so
+    because the pattern it replaced said "both sides are a name or a
+    number, which is every form these shapes produce" — which was true
+    when it was written and stopped being true when a page asked for
+    `(a + b) % 10`. One exercise in two thousand three hundred, and it
+    failed to compile rather than printing the wrong thing, which is the
+    only reason it was cheap.
     """
-    return _REM.sub(lambda m: f"@rem({m.group(1)}, {m.group(2)})", expr)
+    while True:
+        at = expr.find("%")
+        if at == -1:
+            return expr
+        start = _operand_start(expr, at)
+        stop = _operand_stop(expr, at)
+        left = expr[start:at].strip()
+        right = expr[at + 1:stop + 1].strip()
+        expr = f"{expr[:start]}@rem({left}, {right}){expr[stop + 1:]}"
 
 
 def _q(text: str) -> str:

@@ -580,6 +580,7 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_newlang2,
         emit_newlang3,
         emit_newlang4,
+        emit_newlang5,
         emit_topup,
         emit_rust3,
     )
@@ -597,6 +598,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
     # them differently, so it is given no reference and loses the page.
     if emit_newlang4.handles(shape) and emit_newlang4.supports(language, shape):
         return emit_newlang4.solution(language, shape, args)
+    if emit_newlang5.handles(shape) and emit_newlang5.supports(language, shape):
+        return emit_newlang5.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
     if emit_rust3.handles(shape):
