@@ -1031,3 +1031,131 @@ class RailsMaterialTests(unittest.TestCase):
         self.assertTrue(by_id["rails"].passages)
         self.assertTrue(by_id["railscode"].passages)
         self.assertTrue(by_id["railscode"].blocks)
+
+
+class NewLanguageBlockTests(unittest.TestCase):
+    """The blocks for the nine, enforced by running them.
+
+    These are the only typing material in the app that is a whole
+    program, and that is the point of them: a fragment can only be read
+    carefully, and a program can be run. Nothing else in the suite
+    touches this file, so without this the claim in its docstring rests
+    on having been true once.
+
+    Zig's are tests rather than programs, because a test beside the code
+    is how Zig is actually written, so they are run with `zig test` —
+    which asserts rather than merely compiling. Everything else runs as a
+    program and has to exit cleanly.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from code_coach.engine import _SUFFIXES
+
+        cls.suffixes = _SUFFIXES
+
+    def _zig_test(self, source: str):
+        import os
+        import pathlib
+        import subprocess
+        import tempfile
+
+        from code_coach.engine import _tool
+
+        zig = _tool("zig", "zig-x86_64-windows-0.16.0/zig.exe", "zig/zig.exe")
+        if not zig:
+            self.skipTest("no zig toolchain")
+        folder = tempfile.mkdtemp()
+        path = os.path.join(folder, "t.zig")
+        pathlib.Path(path).write_text(source, encoding="utf-8")
+        done = subprocess.run(
+            [zig, "test", path], capture_output=True, text=True,
+            timeout=300, cwd=folder,
+        )
+        return done.stdout, done.stderr, done.returncode
+
+    def test_every_block_runs(self) -> None:
+        from code_coach.engine import run_code
+        from code_coach.typing import blocks_new
+
+        for language, pool in blocks_new.BY_LANGUAGE.items():
+            for block in pool:
+                with self.subTest(language=language, block=block.source):
+                    if language == "zig" and 'test "' in block.text:
+                        out, err, code = self._zig_test(block.text)
+                    else:
+                        out, err, code = run_code(block.text, language=language)
+                    self.assertEqual(
+                        code, 0, (err or out)[:400])
+
+    def test_a_block_is_more_than_a_line(self) -> None:
+        """Blocks mode drills what sits under what. A one-liner belongs in
+        the line pool, where it would be drilled properly."""
+        from code_coach.typing import blocks_new
+
+        for language, pool in blocks_new.BY_LANGUAGE.items():
+            for block in pool:
+                with self.subTest(language=language, block=block.source):
+                    lines = block.text.splitlines()
+                    self.assertGreater(len(lines), 2)
+                    self.assertTrue(
+                        any(ln.startswith((" ", "\t")) for ln in lines),
+                        "a block with no indentation drills no shape")
+
+    def test_the_nine_can_drive_blocks_mode(self) -> None:
+        """Which is what they could not do before, and the reason the file
+        exists. A theme with no blocks is silently absent from the mode."""
+        from code_coach.typing import blocks_new
+        from code_coach.typing.drills import THEMES
+
+        by_id = {t.id: t for t in THEMES}
+        for language in blocks_new.BY_LANGUAGE:
+            with self.subTest(language=language):
+                theme = by_id.get(language + "code")
+                self.assertIsNotNone(theme, f"no theme for {language}")
+                self.assertTrue(theme.blocks, f"{language} has no blocks")
+
+
+class ThemePoolTests(unittest.TestCase):
+    """What a drill pool has to be, to be worth drilling."""
+
+    def test_no_theme_repeats_itself(self) -> None:
+        """A repeated line is a wasted go.
+
+        The pools are assembled from several files — the original lines,
+        the later ones, and for some the blocks as well — and a line
+        written twice in two of them looks fine in both. It only shows up
+        here. This caught sixteen the day it was written.
+        """
+        from code_coach.typing.drills import THEMES
+
+        for theme in THEMES:
+            texts = [p.text for p in theme.passages]
+            texts += [b.text for b in theme.blocks]
+            with self.subTest(theme=theme.id):
+                repeated = sorted({t for t in texts if texts.count(t) > 1})
+                self.assertEqual(
+                    repeated, [], f"{theme.id} repeats {repeated[:3]}")
+
+    def test_nothing_in_a_pool_is_blank(self) -> None:
+        from code_coach.typing.drills import THEMES
+
+        for theme in THEMES:
+            for passage in (*theme.passages, *theme.blocks):
+                with self.subTest(theme=theme.id):
+                    self.assertTrue(passage.text.strip())
+                    self.assertTrue(passage.source.strip())
+
+    def test_the_newer_languages_carry_enough_to_drill(self) -> None:
+        """Twelve lines is one sitting for anyone who does a dozen goes at
+        a thing, which is the whole premise of the screen. This is the
+        floor, not the target."""
+        from code_coach.typing import snippets3
+        from code_coach.typing.drills import THEMES
+
+        by_id = {t.id: t for t in THEMES}
+        for language in snippets3.BY_LANGUAGE:
+            with self.subTest(language=language):
+                theme = by_id.get(language + "code")
+                self.assertIsNotNone(theme, f"no theme for {language}")
+                self.assertGreaterEqual(len(theme.passages), 25)
