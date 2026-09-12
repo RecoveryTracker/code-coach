@@ -587,3 +587,38 @@ class DrillEvaluateResponse(BaseModel):
     progress: ProgressResponse | None = None
     # Build exercises: the goal's pieces with live pass/fail (✓/✗ checklist)
     requirements: list[RequirementItem] | None = None
+
+
+class KataCheckRequest(BaseModel):
+    """One kata, and the function the student wrote for it."""
+
+    kata_id: str = ""
+    code: str = ""
+
+
+class KataCaseResult(BaseModel):
+    """One call, and whether it was right.
+
+    The arguments are carried back rather than only the verdict, because
+    "seven of ten passed" is not help — which input broke it is the whole
+    of the feedback.
+    """
+
+    args: list = Field(default_factory=list)
+    want: Any = None
+    got: Any = None
+    error: str = ""
+    passed: bool = False
+
+
+class KataCheckResponse(BaseModel):
+    passed: bool = False
+    count: int = 0
+    total: int = 0
+    results: list[KataCaseResult] = Field(default_factory=list)
+    # Set when the file did not run at all — a syntax error, or no
+    # function by that name. A different problem from failing cases, and
+    # reporting it as "0 of 10" would send someone looking in the wrong
+    # place.
+    broke: str = ""
+    stdout: str = ""

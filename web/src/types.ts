@@ -567,3 +567,54 @@ export type WorkbookCheck = {
   done_on_page: number;
   page_total: number;
 };
+
+/**
+ * A kata: a function to write, and the inputs it will be called with.
+ *
+ * The count of cases rather than the cases themselves. Seeing the inputs
+ * in advance turns the exercise into a lookup table — the whole point is
+ * that the function has to work on inputs you did not pick, so they
+ * arrive only when it has been run.
+ */
+export type KataSummary = {
+  id: string;
+  name: string;
+  brief: string;
+  signature: string;
+  example: string;
+  hint: string;
+  cases: number;
+};
+
+export type KataFamily = {
+  name: string;
+  katas: KataSummary[];
+};
+
+export type KataList = {
+  families: KataFamily[];
+};
+
+/** One call, and whether it was right. */
+export type KataCaseResult = {
+  args: unknown[];
+  want: unknown;
+  got: unknown;
+  error: string;
+  passed: boolean;
+};
+
+export type KataCheck = {
+  passed: boolean;
+  count: number;
+  total: number;
+  results: KataCaseResult[];
+  /**
+   * Set when the file did not run at all — a syntax error, or no
+   * function by that name. A different problem from failing cases, and
+   * showing it as "0 of 10" sends you looking in the wrong place.
+   */
+  broke: string;
+  /** Whatever the student printed themselves, without the marker's line. */
+  stdout: string;
+};

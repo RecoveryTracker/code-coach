@@ -24,6 +24,9 @@ from code_coach.api.schemas import (
     ExplainRequest,
     ExplainResponse,
     HealthResponse,
+    KataCaseResult,
+    KataCheckRequest,
+    KataCheckResponse,
     PracticeSession,
     ProgressResponse,
     ProgressSettingsUpdate,
@@ -1214,3 +1217,75 @@ def practice_complete_and_next(body: DrillEvaluateRequest) -> PracticeSession:
     progress.current_drill_id = None
     _store.save(progress)
     return practice_next()
+
+
+# ── Katas ────────────────────────────────────────────────────
+#
+# The other half of problem solving, and the half this app did not have.
+# Everywhere else asks a program to print something; here the student
+# writes a function and it is called with inputs they did not choose,
+# which is what Codewars and freeCodeCamp do and is the only way an edge
+# case is ever met.
+
+
+@app.get("/api/kata")
+def kata_list() -> dict:
+    """Every kata, grouped the way the screen shows them."""
+    from code_coach.kata import families, katas
+
+    return {
+        "families": [
+            {
+                "name": family,
+                "katas": [
+                    {
+                        "id": k.id,
+                        "name": k.name,
+                        "brief": k.brief,
+                        "signature": k.signature,
+                        "example": k.example,
+                        "hint": k.hint,
+                        "cases": len(k.cases),
+                    }
+                    for k in katas(family)
+                ],
+            }
+            for family in families()
+        ]
+    }
+
+
+@app.post("/api/kata/check", response_model=KataCheckResponse)
+def kata_check(body: KataCheckRequest) -> KataCheckResponse:
+    """Run the student's function against every case and say which failed."""
+    from code_coach.kata import harness, judge, kata as find_kata
+
+    found = find_kata(body.kata_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown kata {body.kata_id}"
+        )
+
+    stdout, stderr, exit_code = run_code(
+        harness(found, body.code), language="python"
+    )
+    outcome = judge(found, stdout, stderr, exit_code)
+    # Whatever the student printed themselves, without the driver's line.
+    theirs = stdout.split("<<<KATA>>>")[0]
+    return KataCheckResponse(
+        passed=outcome.passed,
+        count=outcome.count,
+        total=len(found.cases),
+        broke=outcome.broke,
+        stdout=theirs,
+        results=[
+            KataCaseResult(
+                args=list(r.args),
+                want=r.want,
+                got=r.got,
+                error=r.error,
+                passed=r.passed,
+            )
+            for r in outcome.results
+        ],
+    )

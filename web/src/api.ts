@@ -3,6 +3,8 @@ import type {
   ConceptTopic,
   DrillEvaluateResult,
   ExplainResult,
+  KataCheck,
+  KataList,
   LanguageInfo,
   LessonEntry,
   PracticeMode,
@@ -118,6 +120,22 @@ export function fetchConcepts(language?: string): Promise<ConceptTopic[]> {
 
 export function fetchWorkbook(language?: string): Promise<WorkbookData> {
   return request(withLanguage("/api/workbook", language));
+}
+
+/** Every kata, grouped by family. */
+export function fetchKatas(): Promise<KataList> {
+  return request("/api/kata");
+}
+
+/** Run one function against every case it has. */
+export function checkKata(body: {
+  kata_id: string;
+  code: string;
+}): Promise<KataCheck> {
+  return request("/api/kata/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function checkWorkbook(body: {

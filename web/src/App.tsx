@@ -29,6 +29,7 @@ import { TypeTarget } from "./components/TypeTarget";
 import Concepts from "./components/Concepts";
 import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
+import Katas from "./components/Katas";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
@@ -203,6 +204,7 @@ export default function App() {
   // The workbook is the one screen you are producing on rather than reading,
   // so it takes the whole window the same way the editor does.
   const [workbookOpen, setWorkbookOpen] = useState(false);
+  const [katasOpen, setKatasOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /**
    * Free mode's reminders. Not the coach: they say nothing about whether you
@@ -1047,6 +1049,14 @@ export default function App() {
       <button
         type="button"
         className="ws-btn"
+        onClick={() => setKatasOpen(true)}
+        title="Write a function and have it called with inputs you haven't seen"
+      >
+        Katas
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
         onClick={() => setConceptsOpen(true)}
         title="The questions an interview asks that aren't coding problems"
       >
@@ -1131,6 +1141,26 @@ export default function App() {
           </div>
         </div>
         <Reference language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (katasOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Katas</span>
+          <div className="panel-actions">
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setKatasOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
+        </div>
+        <Katas />
       </div>
     );
   }
