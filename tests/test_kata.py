@@ -22,15 +22,34 @@ from code_coach.kata import families, harness, judge, kata, katas
 def _is_edge(arg) -> bool:
     """Whether one argument is an awkward input rather than a middle.
 
-    Zero is the obvious degenerate number and is not always legal —
-    Collatz never terminates from zero, so its smallest legal input is
-    one. Counting one is the difference between describing the rule and
-    describing the data that happened to exist when this was written.
+    Three clauses, each of which had to be argued for.
+
+    A container that is empty or holds one thing. This is the usual
+    degenerate case and covers dicts and tuples as well as lists and
+    strings — a kata taking a dict was the first to notice the predicate
+    only knew about two of the four.
+
+    A number that is zero, one, minus one, or negative. Zero is the
+    obvious one and is not always a legal input: Collatz never
+    terminates from zero, so its smallest legal input is one, and that
+    is its base case rather than a middle.
+
+    And a container holding a negative. Some functions cannot have a
+    degenerate input at all — one that swaps a pair always gets exactly
+    two things — so for those the awkward case is a sign rather than a
+    size. Without this clause such a kata can have no awkward input at
+    all and the rule becomes unsatisfiable rather than demanding.
     """
     if isinstance(arg, bool):
         return False
-    if isinstance(arg, (str, list)):
-        return len(arg) <= 1
+    if isinstance(arg, (str, list, dict, tuple)):
+        if len(arg) <= 1:
+            return True
+        items = arg.values() if isinstance(arg, dict) else arg
+        return any(
+            isinstance(x, int) and not isinstance(x, bool) and x < 0
+            for x in items
+        )
     if isinstance(arg, int):
         return arg in (-1, 0, 1) or arg < 0
     return False

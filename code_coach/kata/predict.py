@@ -126,6 +126,44 @@ MUTATION: tuple[Puzzle, ...] = (
         ),
     ),
     _p(
+        id="predict-remove-while-looping",
+        name="Removing as you go",
+        family="Mutation",
+        code=(
+            "nums = [1, 2, 3, 4]\n"
+            "for n in nums:\n"
+            "    if n % 2 == 0:\n"
+            "        nums.remove(n)\n"
+            "print(nums)"
+        ),
+        expect="[1, 3]",
+        why=(
+            "The loop walks by position while the list is getting "
+            "shorter underneath it. Removing 2 shifts everything left, "
+            "so the next position holds 4 and 3 is stepped straight "
+            "over — which is why 4 survives. Loop over a copy, or build "
+            "a new list."
+        ),
+    ),
+    _p(
+        id="predict-append-extend",
+        name="Append, and extend",
+        family="Mutation",
+        code=(
+            "a = [1]\n"
+            "a.append([2, 3])\n"
+            "b = [1]\n"
+            "b.extend([2, 3])\n"
+            "print(a, b)"
+        ),
+        expect="[1, [2, 3]] [1, 2, 3]",
+        why=(
+            "`append` adds one thing, whatever it is, so a list goes in "
+            "as a single nested item. `extend` adds each item of what it "
+            "was given. Both return None, so neither can be chained."
+        ),
+    ),
+    _p(
         id="predict-sort-returns",
         name="What sort hands back",
         family="Mutation",
@@ -197,6 +235,38 @@ TRUTH: tuple[Puzzle, ...] = (
             "counts them, which is occasionally useful and occasionally "
             "the reason a function returning 1 passes a test that wanted "
             "True."
+        ),
+    ),
+    _p(
+        id="predict-all-of-nothing",
+        name="All of nothing",
+        family="Truthiness",
+        code="print(all([]), any([]), sum([]), max([1], default=0))",
+        expect="True False 0 1",
+        why=(
+            "`all` of an empty list is True, because there is nothing in "
+            "it that is false. `any` is False for the mirror reason. It "
+            "reads as a paradox and falls straight out of the "
+            "definitions — and it is why an `all(...)` guard passes "
+            "cheerfully when the thing it was guarding turned out to be "
+            "empty."
+        ),
+    ),
+    _p(
+        id="predict-dict-get",
+        name="get, and the key that is there",
+        family="Truthiness",
+        code=(
+            'd = {"a": None}\n'
+            'print(d.get("a", "fallback"), d.get("b", "fallback"), "a" in d)'
+        ),
+        expect="None fallback True",
+        why=(
+            "The default only applies when the key is missing, not when "
+            "the value is falsy — a key holding None gives you None. To "
+            "ask whether a key exists, use `in`; `get` cannot tell you, "
+            "because None is also a value something might legitimately "
+            "hold."
         ),
     ),
     _p(
@@ -279,6 +349,40 @@ SEQUENCES: tuple[Puzzle, ...] = (
         ),
     ),
     _p(
+        id="predict-print-repr",
+        name="Printed, and printed inside something",
+        family="Sequences",
+        code=(
+            'items = ["a", 1, None]\n'
+            "print(items)\n"
+            "print(*items)"
+        ),
+        expect="['a', 1, None]\na 1 None",
+        why=(
+            "Printing a list shows repr for the things inside it, which "
+            "is why the string keeps its quotes and None shows as None. "
+            "Printing the items themselves uses str, which is the plain "
+            "form. The same value has two spellings and a container "
+            "always picks the first."
+        ),
+    ),
+    _p(
+        id="predict-in-a-dict",
+        name="What `in` looks at",
+        family="Sequences",
+        code=(
+            'd = {"a": 1, "b": 2}\n'
+            'print("a" in d, 1 in d, 1 in d.values())'
+        ),
+        expect="True False True",
+        why=(
+            "`in` on a dict asks about keys, never values, which is why "
+            "the middle one is False even though 1 is sitting right "
+            "there. Looping over a dict gives you keys for the same "
+            "reason. Ask `.values()` when you mean values."
+        ),
+    ),
+    _p(
         id="predict-dict-order",
         name="What order a dict comes back in",
         family="Sequences",
@@ -299,7 +403,146 @@ SEQUENCES: tuple[Puzzle, ...] = (
 )
 
 
-PUZZLES: tuple[Puzzle, ...] = MUTATION + TRUTH + SEQUENCES
+# ── Numbers ──────────────────────────────────────────────────
+
+NUMBERS: tuple[Puzzle, ...] = (
+    _p(
+        id="predict-negative-division",
+        name="Dividing a negative",
+        family="Numbers",
+        code="print(-7 // 2, -7 % 2, int(-7 / 2), divmod(-7, 2))",
+        expect="-4 1 -3 (-4, 1)",
+        why=(
+            "Floor division rounds towards negative infinity, so -7 // 2 "
+            "is -4 rather than -3, and the remainder comes back positive "
+            "to match. int() on the true division rounds towards zero "
+            "instead, which is where the two disagree. Every language "
+            "picks one of these and Python's choice is the one that keeps "
+            "`a == (a // b) * b + a % b` true."
+        ),
+    ),
+    _p(
+        id="predict-rounding",
+        name="Rounding a half",
+        family="Numbers",
+        code="print(round(0.5), round(1.5), round(2.5), round(-0.5))",
+        expect="0 2 2 0",
+        why=(
+            "Python rounds a half to the nearest even number rather than "
+            "always up, so 0.5 and 2.5 both land on an even one. It is "
+            "there so that rounding a long column of numbers does not "
+            "drift upwards. Use Decimal when you need the school rule."
+        ),
+    ),
+    _p(
+        id="predict-float-sum",
+        name="A tenth plus two tenths",
+        family="Numbers",
+        code="print(0.1 + 0.2 == 0.3, 0.1 + 0.2)",
+        expect="False 0.30000000000000004",
+        why=(
+            "Neither 0.1 nor 0.2 can be written exactly in binary, so the "
+            "sum is very slightly off and the comparison fails. This is "
+            "not a Python quirk — it is how floating point works "
+            "everywhere. Compare with math.isclose, or use Decimal for "
+            "money."
+        ),
+    ),
+)
+
+
+# ── Errors and flow ──────────────────────────────────────────
+
+FLOW: tuple[Puzzle, ...] = (
+    _p(
+        id="predict-finally-return",
+        name="The finally that wins",
+        family="Errors",
+        code=(
+            "def pick():\n"
+            "    try:\n"
+            '        return "try"\n'
+            "    finally:\n"
+            '        return "finally"\n'
+            "\n"
+            "print(pick())"
+        ),
+        expect="finally",
+        why=(
+            "A return in a finally replaces whatever the try was already "
+            "returning, and would swallow an exception on its way past "
+            "too. It is almost never what anyone means, which is why "
+            "linters warn about it."
+        ),
+    ),
+    _p(
+        id="predict-except-order",
+        name="Which except catches it",
+        family="Errors",
+        code=(
+            "try:\n"
+            '    int("x")\n'
+            "except Exception:\n"
+            '    print("broad")\n'
+            "except ValueError:\n"
+            '    print("narrow")'
+        ),
+        expect="broad",
+        why=(
+            "The arms are tried in order and the first one that matches "
+            "wins. A broad except written first catches everything, and "
+            "the specific arm below it can never run. Narrowest first."
+        ),
+    ),
+    _p(
+        id="predict-tuple-of-list",
+        name="The one that fails and works",
+        family="Errors",
+        code=(
+            "t = ([1], 2)\n"
+            "try:\n"
+            "    t[0] += [3]\n"
+            "except TypeError:\n"
+            '    print("TypeError")\n'
+            "print(t)"
+        ),
+        expect="TypeError\n([1, 3], 2)",
+        why=(
+            "`+=` on a list extends it in place and then assigns the "
+            "result back — and assigning into a tuple is the part that "
+            "fails. The extension has already happened by then, so the "
+            "list really did change and the error is real. Both halves "
+            "of that sentence are true at once, which is why this one is "
+            "famous."
+        ),
+    ),
+    _p(
+        id="predict-shadowed-builtin",
+        name="The name you took",
+        family="Errors",
+        code=(
+            "list = [1, 2]\n"
+            "try:\n"
+            "    made = list((3, 4))\n"
+            "except TypeError:\n"
+            '    made = "could not"\n'
+            "print(made, len(list))"
+        ),
+        expect="could not 2",
+        why=(
+            "Assigning to `list` replaced the builtin for the rest of "
+            "the scope, so calling it is calling a list, which is not "
+            "callable. The same goes for `dict`, `sum`, `id` and `type`, "
+            "and the error arrives a long way from the line that caused "
+            "it."
+        ),
+    ),
+)
+
+
+PUZZLES: tuple[Puzzle, ...] = (
+    MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW
+)
 
 
 def puzzles(family: str | None = None) -> tuple[Puzzle, ...]:
