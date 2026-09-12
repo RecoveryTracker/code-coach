@@ -628,3 +628,32 @@ export type KataCheck = {
   /** What the bug was. Only sent once every case passes. */
   bug: string;
 };
+
+/**
+ * One "what does this print" puzzle.
+ *
+ * No answer on it, and that is deliberate: the answer is the exercise,
+ * so it only arrives once a guess has been sent.
+ */
+export type PredictPuzzle = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+export type PredictFamily = {
+  name: string;
+  puzzles: PredictPuzzle[];
+};
+
+export type PredictList = {
+  families: PredictFamily[];
+};
+
+export type PredictCheck = {
+  passed: boolean;
+  expect: string;
+  guess: string;
+  /** Shown whether you were right or wrong. */
+  why: string;
+};

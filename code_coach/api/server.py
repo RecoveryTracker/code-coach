@@ -28,6 +28,8 @@ from code_coach.api.schemas import (
     KataCheckRequest,
     KataCheckResponse,
     PracticeSession,
+    PredictCheckRequest,
+    PredictCheckResponse,
     ProgressResponse,
     ProgressSettingsUpdate,
     LanguageInfo,
@@ -1309,4 +1311,61 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
             )
             for r in outcome.results
         ],
+    )
+
+
+# ── Predict the output ───────────────────────────────────────
+#
+# The other question. The katas ask you to write a function; this asks
+# what a piece of correct Python actually does, which is where the gap
+# between what you meant and what the language does shows up.
+
+
+@app.get("/api/predict")
+def predict_list() -> dict:
+    """Every puzzle, grouped, without its answer.
+
+    The answer is deliberately absent. It is the whole exercise, and a
+    payload carrying it is a payload someone can read instead of
+    thinking.
+    """
+    from code_coach.kata.predict import predict_families, puzzles
+
+    return {
+        "families": [
+            {
+                "name": family,
+                "puzzles": [
+                    {"id": p.id, "name": p.name, "code": p.code}
+                    for p in puzzles(family)
+                ],
+            }
+            for family in predict_families()
+        ]
+    }
+
+
+@app.post("/api/predict/check", response_model=PredictCheckResponse)
+def predict_check(body: PredictCheckRequest) -> PredictCheckResponse:
+    """Compare the guess with what the snippet prints."""
+    from code_coach.kata.predict import puzzle as find_puzzle
+
+    found = find_puzzle(body.puzzle_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown puzzle {body.puzzle_id}"
+        )
+    # Trailing blank lines and stray spaces at the ends of lines are not
+    # the thing being tested, and failing someone for one would teach
+    # them to distrust the marker rather than to read the code.
+    def tidy(text: str) -> str:
+        lines = text.replace("\r\n", "\n").split("\n")
+        return "\n".join(line.rstrip() for line in lines).strip()
+
+    passed = tidy(body.guess) == tidy(found.expect)
+    return PredictCheckResponse(
+        passed=passed,
+        expect=found.expect,
+        guess=body.guess,
+        why=found.why,
     )

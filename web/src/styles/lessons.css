@@ -926,3 +926,39 @@
 .kata-answer {
   margin-top: 12px;
 }
+
+/* ── Predict ─────────────────────────────────────────────────
+   The snippet, which is read rather than written — so it is set apart
+   from the box below it rather than looking like another editor. */
+
+.predict-code {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a3b52;
+  background: #0d1117;
+  color: #cdd9e5;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+
+/* What you said, beside what it does. Side by side because the whole
+   lesson is in the difference between them. */
+.predict-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.predict-compare pre {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .predict-compare {
+    grid-template-columns: 1fr;
+  }
+}

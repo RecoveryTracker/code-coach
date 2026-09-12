@@ -7,6 +7,8 @@ import type {
   KataList,
   LanguageInfo,
   LessonEntry,
+  PredictCheck,
+  PredictList,
   PracticeMode,
   PracticeSession,
   ProgressInfo,
@@ -125,6 +127,22 @@ export function fetchWorkbook(language?: string): Promise<WorkbookData> {
 /** Every kata, grouped by family. */
 export function fetchKatas(): Promise<KataList> {
   return request("/api/kata");
+}
+
+/** Every predict-the-output puzzle, grouped, without its answer. */
+export function fetchPredicts(): Promise<PredictList> {
+  return request("/api/predict");
+}
+
+/** Send a guess, and get back what it really prints and why. */
+export function checkPredict(body: {
+  puzzle_id: string;
+  guess: string;
+}): Promise<PredictCheck> {
+  return request("/api/predict/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 /** The worked answer for one kata, fetched only when asked for. */

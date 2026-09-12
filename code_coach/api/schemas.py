@@ -630,3 +630,20 @@ class KataCheckResponse(BaseModel):
     # own mistake after finding it is what makes it the last time;
     # naming it beforehand is just giving the answer away.
     bug: str = ""
+
+
+class PredictCheckRequest(BaseModel):
+    """One puzzle, and what the student thinks it prints."""
+
+    puzzle_id: str = ""
+    guess: str = ""
+
+
+class PredictCheckResponse(BaseModel):
+    passed: bool = False
+    expect: str = ""
+    guess: str = ""
+    # Shown either way. A wrong guess with no explanation teaches only
+    # that you were wrong, and a right one with no explanation leaves
+    # you unsure whether you knew it or guessed it.
+    why: str = ""
