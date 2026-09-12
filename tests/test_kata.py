@@ -113,10 +113,21 @@ class ReferenceTests(unittest.TestCase):
                     f"input, so none of them pins a boundary")
 
     def test_every_reference_passes_its_own_cases(self) -> None:
-        """Weaker than it looks, and kept for what it does catch: a
-        reference that raises, hangs, or returns something that cannot
-        survive the trip through the driver. It cannot catch one that is
-        merely wrong — see the test above."""
+        """Weaker than it looks, and it earns its keep anyway.
+
+        It cannot catch a reference that is merely wrong, because the
+        expectation comes from the reference — see the test above for
+        that. What it does catch is a reference that will not run on its
+        own: one that raises, hangs, returns something that cannot
+        survive the trip through the driver, or leans on a name defined
+        beside it rather than inside it.
+
+        That last one is not hypothetical. `to_roman` kept its table of
+        numerals at module level, which is the obvious place for it and
+        means Show answer hands over a function referring to something
+        that is not there. Every case came back as a NameError the first
+        time this ran.
+        """
         for k in katas():
             with self.subTest(kata=k.id):
                 out, err, code = run_code(

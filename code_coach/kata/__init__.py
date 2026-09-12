@@ -302,8 +302,9 @@ def _same(got: Any, want: Any) -> bool:
 def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs import BUGS
     from code_coach.kata.content import KATAS
+    from code_coach.kata.content2 import MORE
 
-    everything = KATAS + BUGS
+    everything = KATAS + MORE + BUGS
     if family is None:
         return everything
     return tuple(k for k in everything if k.family == family)
