@@ -122,6 +122,8 @@ class ReferenceTests(unittest.TestCase):
         """
         for k in katas():
             with self.subTest(kata=k.id):
+                if k.edge_note:
+                    continue
                 on_edge = [
                     args for args, _ in k.checks
                     if any(_is_edge(a) for a in args)
@@ -221,8 +223,19 @@ class ReferenceTests(unittest.TestCase):
             with self.subTest(kata=k.id):
                 edges = sum(
                     1 for case in k.cases for arg in case if _is_edge(arg))
+                if edges:
+                    continue
+                # No structural edge is possible for every shape — a
+                # clock time is never the empty string. Such a kata has
+                # to say so and say what stands in for one, which is a
+                # stated exemption rather than a silent one.
+                self.assertTrue(
+                    k.edge_note.strip(),
+                    f"{k.id} never tries an awkward input, and does not "
+                    f"say why it cannot")
                 self.assertGreater(
-                    edges, 0, f"{k.id} never tries an awkward input")
+                    len(k.edge_note.split()), 6,
+                    f"{k.id} waves the rule away rather than answering it")
 
     def test_the_answers_are_not_all_the_same(self) -> None:
         """A case set whose every answer is False passes for a function

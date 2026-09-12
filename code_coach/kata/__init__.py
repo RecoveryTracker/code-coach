@@ -61,6 +61,19 @@ class Kata:
     family: str = ""
     #: A hint that costs nothing to read and is not the answer.
     hint: str = ""
+    #: Why this kata has no structurally awkward input, and what stands
+    #: in for one.
+    #:
+    #: The suite insists every kata try something degenerate — an empty
+    #: input, a single item, a zero, a negative — because a set of ten
+    #: comfortable middles teaches nothing a printed exercise did not.
+    #: Some shapes cannot have one: a function taking a clock time never
+    #: gets an empty string, and one that swaps a pair always gets
+    #: exactly two things. For those the boundary is in the meaning
+    #: rather than the size — midnight, the wrap past a day — and this
+    #: is where that has to be said out loud. Left empty, the structural
+    #: rule applies and is enforced.
+    edge_note: str = ""
     #: Whether this function is allowed to change what it was handed.
     #:
     #: Almost none are, and a function that quietly modifies its
@@ -304,8 +317,9 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
+    from code_coach.kata.projects import PROJECTS
 
-    everything = KATAS + MORE + BUGS + BUGS2
+    everything = KATAS + MORE + PROJECTS + BUGS + BUGS2
     if family is None:
         return everything
     return tuple(k for k in everything if k.family == family)
