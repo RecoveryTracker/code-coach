@@ -584,6 +584,12 @@ export type KataSummary = {
   example: string;
   hint: string;
   cases: number;
+  /**
+   * Code already in the box and already wrong. Empty for a kata you
+   * write yourself; filled for a "fix the bug" exercise, and that is
+   * what tells the two apart on screen.
+   */
+  start: string;
 };
 
 export type KataFamily = {
@@ -602,6 +608,8 @@ export type KataCaseResult = {
   got: unknown;
   error: string;
   passed: boolean;
+  /** Changed what it was handed, and was not meant to. */
+  changed: boolean;
 };
 
 export type KataCheck = {
@@ -617,4 +625,6 @@ export type KataCheck = {
   broke: string;
   /** Whatever the student printed themselves, without the marker's line. */
   stdout: string;
+  /** What the bug was. Only sent once every case passes. */
+  bug: string;
 };

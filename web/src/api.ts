@@ -127,6 +127,13 @@ export function fetchKatas(): Promise<KataList> {
   return request("/api/kata");
 }
 
+/** The worked answer for one kata, fetched only when asked for. */
+export function fetchKataAnswer(
+  kataId: string,
+): Promise<{ id: string; answer: string }> {
+  return request(`/api/kata/answer?kata_id=${encodeURIComponent(kataId)}`);
+}
+
 /** Run one function against every case it has. */
 export function checkKata(body: {
   kata_id: string;

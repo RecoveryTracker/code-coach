@@ -1246,6 +1246,9 @@ def kata_list() -> dict:
                         "example": k.example,
                         "hint": k.hint,
                         "cases": len(k.cases),
+                        # Filled in for the broken ones, empty for the
+                        # rest, which is what the screen keys off.
+                        "start": k.start,
                     }
                     for k in katas(family)
                 ],
@@ -1253,6 +1256,22 @@ def kata_list() -> dict:
             for family in families()
         ]
     }
+
+
+@app.get("/api/kata/answer")
+def kata_answer(kata_id: str = "") -> dict:
+    """The worked answer, asked for rather than shipped with the list.
+
+    Its own request on purpose. Sending every answer with the list would
+    put them all in the browser whether or not anyone wanted them, and
+    the point of the button is that looking is a decision you make.
+    """
+    from code_coach.kata import kata as find_kata
+
+    found = find_kata(kata_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown kata {kata_id}")
+    return {"id": found.id, "answer": found.reference()}
 
 
 @app.post("/api/kata/check", response_model=KataCheckResponse)
@@ -1278,6 +1297,7 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
         total=len(found.cases),
         broke=outcome.broke,
         stdout=theirs,
+        bug=found.bug if outcome.passed else "",
         results=[
             KataCaseResult(
                 args=list(r.args),
@@ -1285,6 +1305,7 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
                 got=r.got,
                 error=r.error,
                 passed=r.passed,
+                changed=r.changed,
             )
             for r in outcome.results
         ],

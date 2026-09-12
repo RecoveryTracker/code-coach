@@ -61,6 +61,25 @@ class Kata:
     family: str = ""
     #: A hint that costs nothing to read and is not the answer.
     hint: str = ""
+    #: Whether this function is allowed to change what it was handed.
+    #:
+    #: Almost none are, and a function that quietly modifies its
+    #: argument is one of the harder bugs to see: the value it returns
+    #: is right, and the damage is somewhere else entirely. The marker
+    #: compares the arguments before and after the call, so that damage
+    #: fails the case rather than going unnoticed.
+    mutates: bool = False
+    #: Code that is already in the box and already wrong.
+    #:
+    #: An empty `start` is a kata: you write the function. A filled one
+    #: is a broken exercise: the function is written, it fails some of
+    #: its cases, and the job is to find out why. The machinery is
+    #: identical, which is the point — the driver, the marker and the
+    #: screen are the ones already in use and already tested.
+    start: str = ""
+    #: What the bug was, shown once it passes. Reading the name of your
+    #: own mistake after finding it is what makes it the last time.
+    bug: str = ""
     #: A few answers written out by hand, as (arguments, answer).
     #:
     #: These exist because the obvious test does not work. Running the
@@ -75,16 +94,37 @@ class Kata:
     def signature(self) -> str:
         return f"def {self.name}({', '.join(self.params)}):"
 
+    def answer(self, args) -> Any:
+        """What the reference gives for one case.
+
+        The arguments are copied first. A reference that appends to a
+        list it was handed would otherwise change the kata's own cases
+        as it went — asking twice gave different answers and the second
+        set was nonsense, which is how this was found.
+        """
+        import copy
+
+        return self.solve(*copy.deepcopy(tuple(args)))
+
     def expected(self) -> tuple[Any, ...]:
         """What the reference says each case should produce."""
-        return tuple(self.solve(*case) for case in self.cases)
+        return tuple(self.answer(case) for case in self.cases)
 
     def reference(self) -> str:
-        """The reference solution as source, for Show answer."""
+        """The reference solution, as the student would write it.
+
+        Renamed from the private name it has in the content file to the
+        one the kata asks for, so what is shown is code that would pass
+        if you typed it in. The suite runs this exact string through the
+        driver rather than re-deriving it, which is what stops the
+        answer on screen drifting from the answer that is checked.
+        """
         import inspect
         import textwrap
 
-        return textwrap.dedent(inspect.getsource(self.solve)).strip()
+        source = textwrap.dedent(inspect.getsource(self.solve)).strip()
+        return source.replace(
+            f"def {self.solve.__name__}", f"def {self.name}", 1)
 
 
 # ── Running one ──────────────────────────────────────────────
@@ -111,16 +151,21 @@ def _main() -> None:
     cases = _json.loads({cases!r})
     results = []
     for args in cases:
+        # What the arguments looked like before the call, so a function
+        # that changes them can be caught. The value it returns can be
+        # perfectly right while the caller's list has been wrecked.
+        before = _json.dumps(args)
         try:
             got = {name}(*args)
         except Exception as error:          # noqa: BLE001 - reported, not raised
             results.append({{"error": f"{{type(error).__name__}}: {{error}}"}})
             continue
+        changed = _json.dumps(args) != before
         try:
             _json.dumps(got)
         except TypeError:
             got = repr(got)
-        results.append({{"got": got}})
+        results.append({{"got": got, "changed": changed}})
     print("<<<KATA>>>" + _json.dumps(results))
 
 
@@ -150,6 +195,8 @@ class CaseResult:
     got: Any = None
     error: str = ""
     passed: bool = False
+    #: The function changed what it was handed, and was not meant to.
+    changed: bool = False
 
 
 @dataclass(frozen=True)
@@ -208,12 +255,16 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
                 CaseResult(args=args, want=want, error=entry["error"]))
             continue
         got = entry["got"]
+        # Changing the caller's list is a failure even when the answer
+        # is right — that is the whole shape of the bug, and a marker
+        # that only reads return values cannot see it.
+        changed = bool(entry.get("changed")) and not kata.mutates
         # JSON has one sequence type and Python has two, so a function
         # that correctly returns a tuple comes back as a list. Compare
         # the shapes rather than the containers.
         results.append(
-            CaseResult(args=args, want=want, got=got,
-                       passed=_same(got, want)))
+            CaseResult(args=args, want=want, got=got, changed=changed,
+                       passed=_same(got, want) and not changed))
     return Outcome(results=tuple(results))
 
 
@@ -249,11 +300,13 @@ def _same(got: Any, want: Any) -> bool:
 
 
 def katas(family: str | None = None) -> tuple[Kata, ...]:
+    from code_coach.kata.bugs import BUGS
     from code_coach.kata.content import KATAS
 
+    everything = KATAS + BUGS
     if family is None:
-        return KATAS
-    return tuple(k for k in KATAS if k.family == family)
+        return everything
+    return tuple(k for k in everything if k.family == family)
 
 
 def kata(kata_id: str) -> Kata | None:

@@ -37,9 +37,14 @@ def _is_edge(arg) -> bool:
 
 
 def _as_student(k) -> str:
-    """The reference, renamed to what the kata asks for."""
-    return k.reference().replace(
-        f"def {k.solve.__name__}", f"def {k.name}", 1)
+    """Exactly what Show answer puts on screen.
+
+    Not a re-derivation of it. The whole value of running this is that
+    the string a student is shown is the string that was checked — a
+    helper that rebuilt it here could pass while the screen showed
+    something that does not work.
+    """
+    return k.reference()
 
 
 class ReferenceTests(unittest.TestCase):
@@ -64,7 +69,7 @@ class ReferenceTests(unittest.TestCase):
                 self.assertTrue(
                     k.checks, f"{k.id} has no hand-written answer")
                 for args, want in k.checks:
-                    got = k.solve(*args)
+                    got = k.answer(args)
                     self.assertEqual(
                         got, want,
                         f"{k.id}{args}: the reference says {got!r} and a "
@@ -122,6 +127,26 @@ class ReferenceTests(unittest.TestCase):
                 self.assertEqual(
                     failed, [],
                     f"{k.id}: {[(r.args, r.got, r.want) for r in failed][:3]}")
+
+    def test_the_shown_answer_defines_the_function_that_was_asked_for(
+        self,
+    ) -> None:
+        """Show answer has to be code you could paste in.
+
+        The reference is written under a private name in the content
+        file and renamed on the way out. A rename that stopped working
+        would leave the screen offering `_count_vowels`, which runs and
+        then fails every case for a reason that is nothing to do with
+        the student.
+        """
+        for k in katas():
+            with self.subTest(kata=k.id):
+                shown = k.reference()
+                self.assertIn(f"def {k.name}(", shown)
+                self.assertNotIn(f"def {k.solve.__name__}(", shown)
+                self.assertFalse(
+                    shown.lstrip().startswith("def _"),
+                    f"{k.id} shows a private name")
 
     def test_every_kata_is_named_once(self) -> None:
         ids = [k.id for k in katas()]
@@ -290,6 +315,33 @@ class RouteTests(unittest.TestCase):
                 self.assertTrue(entry["signature"].startswith("def "))
                 self.assertGreater(entry["cases"], 0)
 
+    def test_the_answer_is_served_for_one_kata_at_a_time(self) -> None:
+        from code_coach.api import server
+
+        payload = server.kata_answer(kata_id="digital-root")
+        self.assertEqual(payload["id"], "digital-root")
+        self.assertIn("def digital_root(", payload["answer"])
+
+    def test_asking_for_an_unknown_answer_is_refused(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api import server
+
+        with self.assertRaises(HTTPException) as caught:
+            server.kata_answer(kata_id="nonsense")
+        self.assertEqual(caught.exception.status_code, 404)
+
+    def test_the_answer_is_not_in_the_list_payload(self) -> None:
+        """Asking is the point. An answer already in the browser is one
+        you did not decide to look at."""
+        from code_coach.api import server
+
+        payload = server.kata_list()
+        for family in payload["families"]:
+            for entry in family["katas"]:
+                with self.subTest(kata=entry["id"]):
+                    self.assertNotIn("answer", entry)
+
     def test_checking_an_unknown_kata_is_refused(self) -> None:
         from fastapi import HTTPException
 
@@ -311,3 +363,70 @@ class RouteTests(unittest.TestCase):
                      "    return sum(int(d) for d in str(abs(n)))"))
         self.assertTrue(response.passed)
         self.assertEqual(response.count, response.total)
+
+
+class BrokenExerciseTests(unittest.TestCase):
+    """The ones that arrive already written and already wrong.
+
+    Two things have to be true of each, and the second is the one that
+    can rot silently.
+
+    The correct version has to pass — same rule as any kata, and covered
+    by the tests above, which walk every kata including these.
+
+    And the broken version has to fail. A "fix the bug" exercise whose
+    code already works is a page that wastes your time, reads as though
+    the marker is broken, and nothing else in the suite would ever
+    notice: every other check here is about correct answers passing.
+    """
+
+    def _run(self, k, code: str):
+        out, err, exit_code = run_code(harness(k, code), language="python")
+        return judge(k, out, err, exit_code)
+
+    def test_the_broken_version_really_is_broken(self) -> None:
+        for k in katas("Fix the bug"):
+            with self.subTest(kata=k.id):
+                outcome = self._run(k, k.start)
+                if outcome.broke:
+                    # Refusing to run at all counts as broken, and is how
+                    # a couple of these fail — an IndexError on the empty
+                    # string, say. What is not allowed is passing.
+                    continue
+                self.assertFalse(
+                    outcome.passed,
+                    f"{k.id} is meant to be broken and passes all "
+                    f"{len(k.cases)} cases")
+
+    def test_the_fixed_version_passes(self) -> None:
+        """The other half. Both are run through the driver rather than
+        compared as text, because what is being claimed is that one works
+        and the other does not."""
+        for k in katas("Fix the bug"):
+            with self.subTest(kata=k.id):
+                outcome = self._run(k, _as_student(k))
+                self.assertEqual(outcome.broke, "")
+                self.assertTrue(
+                    outcome.passed,
+                    f"{k.id}: the correct version fails "
+                    f"{[r.args for r in outcome.results if not r.passed][:3]}")
+
+    def test_each_broken_one_explains_itself(self) -> None:
+        for k in katas("Fix the bug"):
+            with self.subTest(kata=k.id):
+                self.assertTrue(k.start.strip())
+                self.assertTrue(k.bug.strip())
+                self.assertIn(
+                    f"def {k.name}", k.start,
+                    f"{k.start!r} does not define {k.name}")
+
+    def test_nothing_outside_the_family_is_pre_filled(self) -> None:
+        """A kata with code already in the box is a different exercise.
+        Filling one in by accident turns writing it yourself into reading
+        someone else's, which is the one thing the mode is not for."""
+        for k in katas():
+            if k.family == "Fix the bug":
+                continue
+            with self.subTest(kata=k.id):
+                self.assertEqual(k.start, "")
+                self.assertEqual(k.bug, "")

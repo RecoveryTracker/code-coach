@@ -197,7 +197,16 @@ def _interpreter_for(path: Path) -> list[str] | None:
 # Compiled languages: (compiler candidates, extra args). The binary lands
 # beside the source and is removed with it.
 _COMPILERS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
-    ".c": (("gcc", "clang"), ("-std=c17", "-lm")),
+    # -lm only where libm is a separate library, which is to say not on
+    # Windows: there the maths functions are already in the C runtime and
+    # the flag sends the linker looking for an m.lib that does not exist.
+    #
+    # This sat harmlessly wrong for as long as no clang was on PATH here —
+    # C fell through to MSVC, which never saw the flag. Installing Swift
+    # put its own clang on PATH, `shutil.which("clang")` started finding
+    # it, and seventy-five C tests failed at the link step on a machine
+    # where nothing about C had changed.
+    ".c": (("gcc", "clang"), ("-std=c17", *(("-lm",) if _IS_POSIX else ()))),
     ".cpp": (("g++", "clang++"), ("-std=c++17",)),
     # Pin the edition. Without it rustc defaults to 2015, which is not what
     # anyone writing Rust means today — and the difference is not cosmetic:

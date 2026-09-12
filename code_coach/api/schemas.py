@@ -609,6 +609,10 @@ class KataCaseResult(BaseModel):
     got: Any = None
     error: str = ""
     passed: bool = False
+    # The function changed what it was handed and was not meant to. Its
+    # answer can be right and the case still fails, which is the whole
+    # shape of the bug and needs saying rather than showing a tick.
+    changed: bool = False
 
 
 class KataCheckResponse(BaseModel):
@@ -622,3 +626,7 @@ class KataCheckResponse(BaseModel):
     # place.
     broke: str = ""
     stdout: str = ""
+    # What the bug was, sent only once every case passes. Naming your
+    # own mistake after finding it is what makes it the last time;
+    # naming it beforehand is just giving the answer away.
+    bug: str = ""

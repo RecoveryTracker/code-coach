@@ -906,3 +906,23 @@
     gap: 2px;
   }
 }
+
+/* The name of the mistake, after you have found it. Green like a pass
+   because that is when it appears, and it is the reward rather than a
+   correction. */
+.kata-bug {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #2f6f47;
+  background: #121d16;
+  color: #a8e6c0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* The worked answer. Quiet rather than triumphant: you asked to see it,
+   and the next thing to do is close it and write it yourself. */
+.kata-answer {
+  margin-top: 12px;
+}
