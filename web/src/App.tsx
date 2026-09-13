@@ -34,6 +34,7 @@ import Predict from "./components/Predict";
 import { ModeButtons, isMode } from "./components/ModeBar";
 import type { Mode } from "./components/ModeBar";
 import Styles from "./components/Styles";
+import Magnets from "./components/Magnets";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
@@ -232,6 +233,7 @@ export default function App() {
   const stylesOpen = mode === "styles";
   const predictOpen = mode === "predict";
   const katasOpen = mode === "katas";
+  const magnetsOpen = mode === "magnets";
   const workbookOpen = mode === "workbook";
   const conceptsOpen = mode === "concepts";
   const lessonsOpen = mode === "lessons";
@@ -1184,6 +1186,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Styles />
+      </div>
+    );
+  }
+
+  if (magnetsOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Magnets />
       </div>
     );
   }

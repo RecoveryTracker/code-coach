@@ -775,3 +775,34 @@ export type MarkupCheck = {
   want_line: string;
   typed_line: string;
 };
+
+export type MagnetPuzzle = {
+  id: string;
+  name: string;
+  note: string;
+  language: string;
+  /** The lines, jumbled by the server. The finished order never leaves it. */
+  pieces: string[];
+  done: number;
+  last: string;
+  level: number;
+};
+
+export type MagnetFamily = {
+  name: string;
+  magnets: MagnetPuzzle[];
+};
+
+export type MagnetList = {
+  families: MagnetFamily[];
+};
+
+export type MagnetCheck = {
+  passed: boolean;
+  done: number;
+  printed: string;
+  expect: string;
+  /** Set when it could not be marked at all, rather than being wrong. */
+  broke: string;
+  why: string;
+};

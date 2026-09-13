@@ -4,6 +4,8 @@ import type {
   CssCheck,
   CssList,
   DrillEvaluateResult,
+  MagnetCheck,
+  MagnetList,
   MarkupCheck,
   MarkupList,
   ExplainResult,
@@ -160,6 +162,22 @@ export function checkCss(body: {
   choice: string;
 }): Promise<CssCheck> {
   return request("/api/css/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Every magnet puzzle, with its lines jumbled afresh by the server. */
+export function fetchMagnets(): Promise<MagnetList> {
+  return request("/api/magnets");
+}
+
+/** Send the arrangement, and have it run. */
+export function checkMagnet(body: {
+  magnet_id: string;
+  lines: string[];
+}): Promise<MagnetCheck> {
+  return request("/api/magnets/check", {
     method: "POST",
     body: JSON.stringify(body),
   });

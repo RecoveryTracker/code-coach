@@ -169,3 +169,107 @@
   max-height: 220px;
   overflow: auto;
 }
+
+/* ── Code magnets ── */
+
+.magnet-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+@media (max-width: 1000px) {
+  .magnet-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.magnet-side {
+  min-width: 0;
+}
+
+.magnet-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A magnet keeps its own indentation visible — which line is nested is
+   half the clue, and collapsing the whitespace would throw it away. */
+.magnet code,
+.magnet-line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.magnet {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  background: var(--bg-elevated, #1b1f26);
+  color: inherit;
+  cursor: pointer;
+}
+
+.magnet:hover {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.magnet-program {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  counter-reset: none;
+}
+
+.magnet-program li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.magnet-num {
+  opacity: 0.45;
+  font-size: 11px;
+  min-width: 1.4em;
+  text-align: right;
+}
+
+.magnet-line {
+  flex: 1;
+  min-width: 0;
+}
+
+.magnet-controls {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Small enough not to compete with the code, big enough to hit. */
+.magnet-move {
+  padding: 1px 7px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.magnet-empty {
+  opacity: 0.55;
+  font-size: 12px;
+  padding: 8px 2px;
+  list-style: none;
+}

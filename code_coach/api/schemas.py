@@ -693,3 +693,26 @@ class DrillCheckResponse(BaseModel):
     #: That line as it should be, and as it was typed.
     want_line: str = ""
     typed_line: str = ""
+
+
+class MagnetCheckRequest(BaseModel):
+    """One puzzle, and the lines in the order they were arranged."""
+
+    magnet_id: str = ""
+    lines: list[str] = []
+
+
+class MagnetCheckResponse(BaseModel):
+    passed: bool = False
+    done: int = 0
+    #: What the arrangement printed, and what it should print. Both are
+    #: shown on a miss: the gap between them is the lesson, and hiding
+    #: the output would leave "wrong" with nothing to think about.
+    printed: str = ""
+    expect: str = ""
+    #: Set when the arrangement could not be marked at all — pieces that
+    #: are not the puzzle's, or a program that would not run. Different
+    #: from being wrong, and said differently.
+    broke: str = ""
+    #: Shown once it is right.
+    why: str = ""

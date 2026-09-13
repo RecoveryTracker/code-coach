@@ -48,6 +48,12 @@ export const MODES = [
     title: "Read the code and say what it prints, then watch it happen",
   },
   {
+    id: "magnets",
+    label: "Magnets",
+    title:
+      "The lines of a working program, shuffled — put them back in order",
+  },
+  {
     id: "styles",
     label: "HTML & CSS",
     title: "Read the markup and styles, say what the browser makes of it",

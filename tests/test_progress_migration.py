@@ -93,3 +93,86 @@ class MigrationV2ToV3(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CounterRoundTripTests(unittest.TestCase):
+    """Every practice counter has to survive being saved and read back.
+
+    This is here because three of them did not. A counter is declared on
+    StudentProgress and must also be named in the loader, and the three
+    that were missing from the loader failed in the quietest way
+    available: the field existed, writing to it worked, saving wrote it
+    to the file — and the next read dropped it. So a count went up,
+    persisted, and came back as one every single time.
+
+    It surfaced as a magnet puzzle solved twice that still said "done
+    1x". The CSS quizzes and the typing drills had been doing it since
+    the day they shipped and nobody had looked.
+
+    So this walks the counters rather than listing them. A test that
+    named them would have to be remembered too, which is the thing that
+    already failed.
+    """
+
+    def _counters(self) -> list[str]:
+        from dataclasses import fields
+
+        from code_coach.progress.store import StudentProgress
+
+        return [
+            f.name for f in fields(StudentProgress)
+            if f.name.endswith("_done") and f.name != "workbook_done"
+        ]
+
+    def test_there_are_some_to_check(self) -> None:
+        self.assertGreaterEqual(len(self._counters()), 5)
+
+    def test_every_counter_survives_a_save_and_load(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from code_coach.progress.store import ProgressStore, StudentProgress
+
+        for name in self._counters():
+            with self.subTest(counter=name):
+                folder = tempfile.mkdtemp(prefix="counter-test-")
+                store = ProgressStore(Path(folder) / "progress.json")
+                progress = StudentProgress()
+                bumped = getattr(progress, name)
+                from code_coach.progress.store import _bump
+
+                _bump(bumped, "thing-one")
+                _bump(bumped, "thing-one")
+                _bump(bumped, "thing-two")
+                store.save(progress)
+
+                back = store.load()
+                counts = {k: v.count for k, v in getattr(back, name).items()}
+                self.assertEqual(
+                    counts, {"thing-one": 2, "thing-two": 1},
+                    f"{name} did not come back from the file — it is "
+                    f"probably missing from the loader")
+
+    def test_every_counter_has_a_last_at_that_survives(self) -> None:
+        """The dates decide what is offered next. A counter that keeps
+        its count and loses its dates makes the picker offer things in
+        the order they were first tried, for ever."""
+        import tempfile
+        from pathlib import Path
+
+        from code_coach.progress.store import (
+            ProgressStore,
+            StudentProgress,
+            _bump,
+        )
+
+        for name in self._counters():
+            with self.subTest(counter=name):
+                folder = tempfile.mkdtemp(prefix="counter-date-")
+                store = ProgressStore(Path(folder) / "progress.json")
+                progress = StudentProgress()
+                _bump(getattr(progress, name), "thing")
+                store.save(progress)
+
+                back = getattr(store.load(), name)
+                self.assertTrue(back["thing"].last_at)

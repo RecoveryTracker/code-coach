@@ -150,6 +150,7 @@ class StudentProgress:
     predict_done: dict[str, DrillRecord] = field(default_factory=dict)
     css_done: dict[str, DrillRecord] = field(default_factory=dict)
     markup_done: dict[str, DrillRecord] = field(default_factory=dict)
+    magnet_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -227,6 +228,12 @@ class StudentProgress:
     def markup_counts(self) -> dict[str, int]:
         return {k: v.count for k, v in self.markup_done.items()}
 
+    def record_magnet(self, magnet_id: str) -> int:
+        return _bump(self.magnet_done, magnet_id)
+
+    def magnet_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.magnet_done.items()}
+
     def kata_last(self) -> dict[str, str]:
         """When each was last got right, for choosing what to do next.
 
@@ -252,6 +259,11 @@ class StudentProgress:
     def markup_last(self) -> dict[str, str]:
         return {
             k: v.last_at for k, v in self.markup_done.items() if v.last_at
+        }
+
+    def magnet_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.magnet_done.items() if v.last_at
         }
 
     def workbook_page_for(self, language: str) -> str:
@@ -347,6 +359,17 @@ class StudentProgress:
             },
             kata_done=_records(raw.get("kata_done")),
             predict_done=_records(raw.get("predict_done")),
+            # Every counter has to be named here as well as on the
+            # dataclass. Three of these were not, and the failure is
+            # silent in the worst way: the field exists, writes to it
+            # succeed, and it is dropped on the next read — so a count
+            # goes up, is saved, and comes back as one for ever. It
+            # showed up as a magnet puzzle solved twice still saying
+            # "done 1×". test_progress_migration now walks the counters
+            # rather than listing them, so a fourth cannot be forgotten.
+            css_done=_records(raw.get("css_done")),
+            markup_done=_records(raw.get("markup_done")),
+            magnet_done=_records(raw.get("magnet_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

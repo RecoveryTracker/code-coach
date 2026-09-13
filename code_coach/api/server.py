@@ -32,6 +32,8 @@ from code_coach.api.schemas import (
     CssCheckResponse,
     DrillCheckRequest,
     DrillCheckResponse,
+    MagnetCheckRequest,
+    MagnetCheckResponse,
     PredictCheckRequest,
     PredictCheckResponse,
     ProgressResponse,
@@ -1583,3 +1585,105 @@ def drill_check(body: DrillCheckRequest) -> DrillCheckResponse:
         want_line=want_lines[where - 1] if where <= len(want_lines) else "",
         typed_line=got_lines[where - 1] if where <= len(got_lines) else "",
     )
+
+
+@app.get("/api/magnets")
+def magnet_list() -> dict:
+    """Every puzzle, with its magnets jumbled.
+
+    Jumbled here rather than on the screen, and jumbled afresh on every
+    request: the finished order never leaves the server, and coming
+    back to a puzzle gives you a new arrangement rather than the one
+    you have already learned the shape of.
+    """
+    from code_coach.magnets import magnet_families, magnets
+
+    saved = _store.load()
+    counts, last = saved.magnet_counts(), saved.magnet_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "magnets": [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "note": m.note,
+                        "language": m.language,
+                        "pieces": list(m.shuffled()),
+                        "done": counts.get(m.id, 0),
+                        "last": last.get(m.id, ""),
+                        "level": m.level,
+                    }
+                    for m in magnets(family)
+                ],
+            }
+            for family in magnet_families()
+        ]
+    }
+
+
+@app.post("/api/magnets/check", response_model=MagnetCheckResponse)
+def magnet_check(body: MagnetCheckRequest) -> MagnetCheckResponse:
+    """Run what was arranged, and compare what it printed.
+
+    Not a comparison of line orders. There is always more than one
+    arrangement that works — a function declaration is hoisted, two
+    independent statements can go either way round — and failing those
+    would teach you to guess at the author's preference rather than at
+    what the language does. Any arrangement that prints the right thing
+    is right, because it is.
+    """
+    from code_coach.engine import run_code
+    from code_coach.magnets import magnet as find_magnet
+    from code_coach.magnets import same_pieces
+
+    found = find_magnet(body.magnet_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown puzzle {body.magnet_id}"
+        )
+    if not same_pieces(found, list(body.lines)):
+        return MagnetCheckResponse(
+            broke=(
+                "Those are not this puzzle's magnets — every piece has "
+                "to be used, once each."
+            ),
+            expect=found.expect,
+        )
+
+    out, err, exit_code = run_code(
+        "\n".join(body.lines), language=found.language)
+    printed = out.replace("\r\n", "\n").strip()
+    if exit_code != 0:
+        return MagnetCheckResponse(
+            broke=_tidy_magnet_error(err) or "That arrangement did not run.",
+            printed=printed,
+            expect=found.expect,
+        )
+
+    passed = printed == found.expect.strip()
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_magnet(found.id)
+        _store.save(progress)
+    return MagnetCheckResponse(
+        passed=passed,
+        done=done,
+        printed=printed,
+        expect=found.expect,
+        why=found.note if passed else "",
+    )
+
+
+def _tidy_magnet_error(detail: str) -> str:
+    """Take the scratch file out of an error.
+
+    Same reason as the kata marker: the path is true and unhelpful, and
+    naming a file in the system temp directory reads as though the
+    mistake is somewhere the person has never been.
+    """
+    from code_coach.kata import _tidy
+
+    return _tidy(detail)
