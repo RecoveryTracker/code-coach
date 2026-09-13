@@ -814,6 +814,26 @@ export default function App() {
   }, [freeMode, session, loadSession]);
 
   /**
+   * Free mode from wherever you are, in one click.
+   *
+   * It lives in the editor — it pauses the exercise session and hands
+   * that editor over to you — but it is reached constantly and from
+   * everywhere, so the row carries it on every screen rather than
+   * making it a trip to the editor and then a second click. From
+   * another module this means "take me there and turn it on", which is
+   * the thing that was two clicks; from the editor it toggles, which is
+   * what the button has always done.
+   */
+  const openFreeMode = useCallback(() => {
+    if (mode !== "leetcode") {
+      go("leetcode");
+      if (!freeMode) toggleFreeMode();
+      return;
+    }
+    toggleFreeMode();
+  }, [mode, go, freeMode, toggleFreeMode]);
+
+  /**
    * Clamp every stored size against what's actually on screen right now.
    *
    * The terminal's ceiling is measured, not guessed: the header and coach
@@ -1036,6 +1056,42 @@ export default function App() {
     })();
   };
 
+  /* The controls every screen carries, defined once and rendered by
+     both rows — the panels' bar below and the editor's own toolbar.
+     Two copies of this list is how a module gets added to one row and
+     not the other, which is the drift this whole arrangement exists to
+     stop. */
+  const moduleRow = (
+    <>
+      <ModeButtons mode={mode} onPick={go} />
+      <button
+        type="button"
+        className={`ws-btn${progressOpen ? " primary" : ""}`}
+        onClick={() => setProgressOpen((o) => !o)}
+        title="Skills, type-along lines, and what's due for review"
+      >
+        Progress
+      </button>
+      <button
+        type="button"
+        className={`ws-btn${freeMode ? " primary" : ""}`}
+        onClick={openFreeMode}
+        aria-pressed={freeMode}
+        title={
+          freeMode
+            ? "Leave free mode and go back to the exercises"
+            : "Code anything you like, with the exercises paused"
+        }
+      >
+        {/* The name never changes, so you look for the same word to get
+            back. It used to become "Coach on", which reads as a
+            different button and is somewhere else on the row by the
+            time you want it. */}
+        Free mode{freeMode ? " · on" : ""}
+      </button>
+    </>
+  );
+
   const toolbar = (
     <div className="ws-top-actions">
       <LanguagePicker
@@ -1061,34 +1117,10 @@ export default function App() {
           }
         }}
       />
-      {/* The same row the other eight screens wear, from the same
-          source. This screen used to hand-write the list, which is how
-          a module gets added to the app and not to the editor's row. */}
-      <ModeButtons mode={mode} onPick={go} />
-      <button
-        type="button"
-        className={`ws-btn${progressOpen ? " primary" : ""}`}
-        onClick={() => setProgressOpen((o) => !o)}
-        title="Skills, type-along lines, and what's due for review"
-      >
-        Progress
-      </button>
-      <button
-        type="button"
-        className={`ws-btn${freeMode ? " primary" : ""}`}
-        onClick={toggleFreeMode}
-        aria-pressed={freeMode}
-        title={
-          freeMode
-            ? "Leave free mode and go back to the exercises"
-            : "Code anything you like, with the exercises paused"
-        }
-      >
-        {/* The name never changes, so you look for the same word to get
-            back. It used to become "Coach on", which reads as a different
-            button and is somewhere else on the row by the time you want it. */}
-        Free mode{freeMode ? " · on" : ""}
-      </button>
+      {/* The same controls the other eight screens wear, from the same
+          definition. This screen used to hand-write the list, which is
+          how a module gets added to the app and not to the editor. */}
+      {moduleRow}
       {!freeMode ? (
         <button
           type="button"
@@ -1132,16 +1164,8 @@ export default function App() {
     <div className="typing-topbar mode-bar">
       <span className="ws-brand-inline">Code Coach</span>
       <div className="panel-actions">
-        <ModeButtons mode={mode} onPick={go} />
         {panelLanguage}
-        <button
-          type="button"
-          className={`ws-btn${progressOpen ? " primary" : ""}`}
-          onClick={() => setProgressOpen((o) => !o)}
-          title="Skills, type-along lines, and what's due for review"
-        >
-          Progress
-        </button>
+        {moduleRow}
       </div>
     </div>
   );
