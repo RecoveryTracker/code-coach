@@ -1,7 +1,7 @@
 /**
  * Predict the output: read the code, say what it prints.
  *
- * The Katas screen asks you to write a function. This asks the other
+ * The Forms screen asks you to write a function. This asks the other
  * question, and it is the one that finds out whether you know what the
  * language does rather than what you meant it to do.
  *

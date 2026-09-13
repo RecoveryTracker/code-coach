@@ -1302,7 +1302,7 @@ def kata_answer(kata_id: str = "") -> dict:
 
     found = find_kata(kata_id)
     if found is None:
-        raise HTTPException(status_code=404, detail=f"Unknown kata {kata_id}")
+        raise HTTPException(status_code=404, detail=f"Unknown form {kata_id}")
     return {"id": found.id, "answer": found.reference()}
 
 
@@ -1314,7 +1314,7 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
     found = find_kata(body.kata_id)
     if found is None:
         raise HTTPException(
-            status_code=404, detail=f"Unknown kata {body.kata_id}"
+            status_code=404, detail=f"Unknown form {body.kata_id}"
         )
 
     # The kata's own language, not Python. This was hard-coded from

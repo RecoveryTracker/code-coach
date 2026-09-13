@@ -33,9 +33,14 @@ export const MODES = [
     title: "The patterns, taught — how to get from a question to a solution",
   },
   {
+    /* The id stays "katas". It is written into saved progress and into
+       the remembered-mode key, and renaming it would lose both for the
+       sake of a word nobody sees. */
     id: "katas",
-    label: "Katas",
-    title: "Write a function and have it called with inputs you haven't seen",
+    label: "Forms",
+    title:
+      "Write the function, then walk it again — called with inputs you "
+      + "haven't seen",
   },
   {
     id: "predict",

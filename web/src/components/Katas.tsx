@@ -385,17 +385,19 @@ print(${asCall(kata.name, pick.args)})
   }, [result]);
 
   if (error && !list) {
-    return <div className="lessons-empty">Could not load the katas: {error}</div>;
+    return <div className="lessons-empty">Could not load the forms: {error}</div>;
   }
   if (!list || !kata) return <div className="lessons-empty">Loading…</div>;
 
   return (
     <div className="lessons-wrap">
       <nav className="lessons-list">
-        <h2>Katas</h2>
+        <h2>Forms</h2>
         <p className="lessons-intro">
           Write the function. It is called with inputs you have not seen —
-          which is where the empty list and the negative number live.
+          which is where the empty list and the negative number live. A
+          form is a sequence you walk through until it is in the body,
+          so the count beside each one is goes, not ticks.
         </p>
         {leastDone && leastDone.id !== chosen ? (
           <button

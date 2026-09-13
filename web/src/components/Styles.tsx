@@ -119,7 +119,7 @@ export default function Styles() {
   /* Keyed on the id rather than on the quiz object: the list is rebuilt
      after a correct answer, which changes the object's identity, and an
      effect watching the object would fire and wipe the result it just
-     set. That exact bug cost an afternoon on the katas screen. */
+     set. That exact bug cost an afternoon on the Forms screen. */
   useEffect(() => {
     if (!chosen) return;
     setPicked("");
