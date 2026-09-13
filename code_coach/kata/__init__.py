@@ -59,6 +59,21 @@ class Kata:
     example: str = ""
     #: Which family this belongs to, for grouping on screen.
     family: str = ""
+    #: Which language the student writes in.
+    #:
+    #: `solve` stays Python whatever this says, because it is the oracle
+    #: rather than the answer: the expected values are numbers, strings
+    #: and lists, which mean the same thing in both languages, so one
+    #: implementation of the truth means the hand-written checks guard
+    #: every language at once. What changes is the driver the code runs
+    #: with, and which source Show answer hands over.
+    language: str = "python"
+    #: The worked answer in JavaScript, for a kata written in it.
+    #:
+    #: Checked by running rather than by being read: the suite puts this
+    #: through the same driver a student's code goes through, which is
+    #: also what proves it agrees with the Python oracle.
+    js_answer: str = ""
     #: How hard this one is, 1 to 5, and the order a family is read in.
     #:
     #: A judgement rather than anything derivable — there is no measure
@@ -114,7 +129,16 @@ class Kata:
 
     @property
     def signature(self) -> str:
-        return f"def {self.name}({', '.join(self.params)}):"
+        """The line the screen shows and the box opens on.
+
+        In the language being written, obviously — but it was not
+        obvious until a JavaScript kata opened on `def uniqueOf(items):`
+        and the box had to be emptied before a word could be typed.
+        """
+        joined = ", ".join(self.params)
+        if self.language == "javascript":
+            return f"function {self.name}({joined}) {{"
+        return f"def {self.name}({joined}):"
 
     def answer(self, args) -> Any:
         """What the reference gives for one case.
@@ -144,6 +168,8 @@ class Kata:
         import inspect
         import textwrap
 
+        if self.language == "javascript":
+            return self.js_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
         return source.replace(
             f"def {self.solve.__name__}", f"def {self.name}", 1)
@@ -195,9 +221,57 @@ _main()
 '''
 
 
+#: The same driver in JavaScript, for the katas written in it.
+#:
+#: Deliberately the same shape: the same marker, the same one entry per
+#: case, the same record of what the arguments looked like before the
+#: call. That means `judge` below reads both without knowing which
+#: language produced the line, and the two cannot drift apart in what
+#: they report.
+JS_DRIVER = '''
+
+// ── the marker ───────────────────────────────────────────────
+(function () {{
+  // Naming it something else is a different mistake from getting it
+  // wrong, and reporting it as ten failed cases sends you looking in
+  // the wrong place.
+  if (typeof {name} !== "function") {{
+    console.log("<<<KATANAME>>>");
+    return;
+  }}
+  const cases = JSON.parse({cases!r});
+  const results = [];
+  for (const args of cases) {{
+    const before = JSON.stringify(args);
+    let got;
+    try {{
+      got = {name}(...args);
+    }} catch (error) {{
+      results.push({{ error: error.constructor.name + ": " + error.message }});
+      continue;
+    }}
+    const changed = JSON.stringify(args) !== before;
+    // undefined has no JSON spelling and would vanish from the object
+    // entirely, which reads downstream as "no answer given" rather than
+    // as the answer being undefined. null is the nearest honest thing
+    // and matches what Python's None becomes.
+    if (got === undefined) got = null;
+    try {{
+      JSON.stringify(got);
+    }} catch (error) {{
+      got = String(got);
+    }}
+    results.push({{ got: got, changed: changed }});
+  }}
+  console.log("<<<KATA>>>" + JSON.stringify(results));
+}})();
+'''
+
+
 def harness(kata: Kata, code: str) -> str:
     """The student's code with a driver appended."""
-    return code.rstrip() + "\n" + DRIVER.format(
+    driver = JS_DRIVER if kata.language == "javascript" else DRIVER
+    return code.rstrip() + "\n" + driver.format(
         cases=json.dumps([list(case) for case in kata.cases]),
         name=kata.name,
     )
@@ -300,7 +374,27 @@ def _tidy(detail: str) -> str:
     """
     import re
 
-    return re.sub(r'File "[^"]*", line', 'Line', detail)
+    # Python writes: File "<path>", line 4
+    detail = re.sub(r'File "[^"]*", line', "Line", detail)
+
+    # Node writes the path bare and then the line: <path>.js:39. Split
+    # on the extension rather than on the first colon, because on
+    # Windows the first colon is the drive letter — which is exactly
+    # what the first attempt at this got wrong, leaving the whole path
+    # on screen.
+    out: list[str] = []
+    for line in detail.splitlines():
+        # Node's own frames, which are about Node and not about you.
+        if line.lstrip().startswith("at "):
+            continue
+        for suffix in (".js:", ".py:"):
+            if suffix in line:
+                after = line.split(suffix, 1)[1]
+                number = after.split(":")[0].strip()
+                line = f"Line {number}" if number.isdigit() else ""
+                break
+        out.append(line)
+    return "\n".join(out).strip()
 
 
 def _same(got: Any, want: Any) -> bool:
@@ -326,10 +420,15 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
+    from code_coach.kata.js import JS_KATAS
+    from code_coach.kata.js_stubs import STUBS
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
-    everything = KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
+    everything = (
+        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
+        + JS_KATAS + STUBS
+    )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
     # sorting.
@@ -344,10 +443,36 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
+    from code_coach.kata.js import JS_KATAS
+    from code_coach.kata.js_stubs import STUBS
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
-    return KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
+    return (
+        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
+        + JS_KATAS + STUBS
+    )
+
+
+def kata_language_of(family: str) -> str:
+    """Which language a kata family is written in.
+
+    A family never mixes them, so this belongs on the family rather
+    than being repeated against every kata in it.
+    """
+    for k in _in_file_order():
+        if k.family == family:
+            return k.language
+    return "python"
+
+
+def languages() -> tuple[str, ...]:
+    """Every language the katas are written in, in the order met."""
+    seen: list[str] = []
+    for k in _in_file_order():
+        if k.language not in seen:
+            seen.append(k.language)
+    return tuple(seen)
 
 
 def kata(kata_id: str) -> Kata | None:

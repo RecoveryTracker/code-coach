@@ -44,6 +44,14 @@ const DRAFT_KEY = "code-coach:kata-drafts";
 /** Which kata you were on. */
 const LAST_KEY = "code-coach:kata-last";
 
+/** Which language you were filtering to. */
+const LANG_KEY = "code-coach:kata-language";
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  python: "Python",
+  javascript: "JavaScript",
+};
+
 function readDrafts(): Record<string, string> {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -92,6 +100,24 @@ function asCall(name: string, args: unknown[]): string {
   return `${name}(${args.map(asPython).join(", ")})`;
 }
 
+/**
+ * Which to offer next: fewest goes, and of those the longest ago.
+ *
+ * The count alone cannot separate two things done twice, and the one
+ * from last week is worth more than the one from this morning. Never
+ * done sorts first because its date is empty, which is before every
+ * real one.
+ */
+function nextUp<T extends { done: number; last: string }>(
+  all: T[],
+): T | null {
+  if (!all.length) return null;
+  return all.reduce((best, item) => {
+    if (item.done !== best.done) return item.done < best.done ? item : best;
+    return item.last < best.last ? item : best;
+  }, all[0]);
+}
+
 export default function Katas() {
   const [list, setList] = useState<KataList | null>(null);
   const [chosen, setChosen] = useState<string>("");
@@ -104,6 +130,15 @@ export default function Katas() {
   const [explaining, setExplaining] = useState(false);
   const [watching, setWatching] = useState(false);
   const [error, setError] = useState("");
+  // Which language is on show. Remembered, because it is a decision
+  // about what you are learning this month rather than this minute.
+  const [only, setOnly] = useState<string>(() => {
+    try {
+      return localStorage.getItem(LANG_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const box = useRef<HTMLTextAreaElement | null>(null);
   const drafts = useRef<Record<string, string>>(readDrafts());
 
@@ -130,6 +165,13 @@ export default function Katas() {
       alive = false;
     };
   }, []);
+
+  /** The families on show, which is all of them until you narrow it. */
+  const shown = useMemo(() => {
+    if (!list) return [];
+    if (!only) return list.families;
+    return list.families.filter((f) => f.language === only);
+  }, [list, only]);
 
   const kata: KataSummary | null = useMemo(() => {
     if (!list) return null;
@@ -201,10 +243,24 @@ export default function Katas() {
         setList((was) =>
           was
             ? {
+                // Spread rather than rebuilt: listing the fields here
+                // means every new one has to be remembered in a second
+                // place, and the first one added was forgotten.
+                ...was,
                 families: was.families.map((f) => ({
                   ...f,
                   katas: f.katas.map((k) =>
-                    k.id === kata.id ? { ...k, done: got.done } : k,
+                    k.id === kata.id
+                      ? // The date too, or the picker keeps offering the
+                        // one just finished: its count went up but its
+                        // last-done was still whatever the page loaded
+                        // with.
+                        {
+                          ...k,
+                          done: got.done,
+                          last: new Date().toISOString(),
+                        }
+                      : k,
                   ),
                 })),
               }
@@ -233,6 +289,33 @@ export default function Katas() {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, [kata, answer]);
+
+  /**
+   * Narrow to one language, and move onto something in it.
+   *
+   * Without the move you stay on the kata you were already on, which
+   * has just been filtered out of the list beside it — so the screen
+   * shows a Python kata under a heading that says JavaScript, and
+   * nothing on the left is highlighted.
+   */
+  const pickLanguage = useCallback(
+    (id: string) => {
+      setOnly(id);
+      try {
+        localStorage.setItem(LANG_KEY, id);
+      } catch {
+        /* not worth interrupting practice for */
+      }
+      if (!id || !list) return;
+      const here = list.families.find((f) =>
+        f.katas.some((k) => k.id === chosen),
+      );
+      if (here?.language === id) return;
+      const first = list.families.find((f) => f.language === id)?.katas[0];
+      if (first) setChosen(first.id);
+    },
+    [list, chosen],
+  );
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -287,11 +370,10 @@ print(${asCall(kata.name, pick.args)})
    * same six get practised and the rest go untouched; the least
    * practised is a decision the list can make for you.
    */
-  const leastDone = useMemo(() => {
-    const all = list?.families.flatMap((f) => f.katas) ?? [];
-    if (!all.length) return null;
-    return all.reduce((worst, k) => (k.done < worst.done ? k : worst), all[0]);
-  }, [list]);
+  const leastDone = useMemo(
+    () => nextUp(shown.flatMap((f) => f.katas)),
+    [shown],
+  );
 
   // Failures first. A panel that opens on four passes and buries the one
   // that matters is a panel you have to read rather than glance at.
@@ -322,14 +404,36 @@ print(${asCall(kata.name, pick.args)})
             onClick={() => setChosen(leastDone.id)}
             title={
               leastDone.done
-                ? `${leastDone.name} — ${leastDone.done} so far`
+                ? `${leastDone.name} — ${leastDone.done} so far, and the `
+                  + `longest ago of those`
                 : `${leastDone.name} — not tried yet`
             }
           >
-            Least practised: {leastDone.name}
+            Next up: {leastDone.name}
           </button>
         ) : null}
-        {list.families.map((family) => (
+        {list.languages.length > 1 ? (
+          <div className="kata-langs">
+            <button
+              type="button"
+              className={`ws-btn${only ? "" : " on"}`}
+              onClick={() => pickLanguage("")}
+            >
+              All
+            </button>
+            {list.languages.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`ws-btn${only === id ? " on" : ""}`}
+                onClick={() => pickLanguage(id)}
+              >
+                {LANGUAGE_NAMES[id] ?? id}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {shown.map((family) => (
           <div key={family.name} className="wb-section">
             <h4 className="wb-section-head">
               {family.name}

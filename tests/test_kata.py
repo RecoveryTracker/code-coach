@@ -152,7 +152,7 @@ class ReferenceTests(unittest.TestCase):
         for k in katas():
             with self.subTest(kata=k.id):
                 out, err, code = run_code(
-                    harness(k, _as_student(k)), language="python")
+                    harness(k, _as_student(k)), language=k.language)
                 outcome = judge(k, out, err, code)
                 self.assertEqual(outcome.broke, "")
                 failed = [r for r in outcome.results if not r.passed]
@@ -174,7 +174,12 @@ class ReferenceTests(unittest.TestCase):
         for k in katas():
             with self.subTest(kata=k.id):
                 shown = k.reference()
-                self.assertIn(f"def {k.name}(", shown)
+                opener = (
+                    f"function {k.name}("
+                    if k.language == "javascript"
+                    else f"def {k.name}("
+                )
+                self.assertIn(opener, shown)
                 self.assertNotIn(f"def {k.solve.__name__}(", shown)
                 self.assertFalse(
                     shown.lstrip().startswith("def _"),
@@ -355,7 +360,8 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(served, len(katas()))
         for family in payload["families"]:
             for entry in family["katas"]:
-                self.assertTrue(entry["signature"].startswith("def "))
+                self.assertTrue(
+                    entry["signature"].startswith(("def ", "function ")))
                 self.assertGreater(entry["cases"], 0)
 
     def test_the_answer_is_served_for_one_kata_at_a_time(self) -> None:
@@ -463,17 +469,36 @@ class BrokenExerciseTests(unittest.TestCase):
                     f"def {k.name}", k.start,
                     f"{k.start!r} does not define {k.name}")
 
-    def test_nothing_outside_the_family_is_pre_filled(self) -> None:
+    def test_nothing_outside_those_families_is_pre_filled(self) -> None:
         """A kata with code already in the box is a different exercise.
         Filling one in by accident turns writing it yourself into reading
-        someone else's, which is the one thing the mode is not for."""
+        someone else's, which is the one thing the mode is not for.
+
+        Two families are allowed it and both say why in their name.
+        "Fix the bug" hands you something wrong to repair, and "Finish
+        the program" hands you the surroundings a function lives in so
+        the exercise is writing against code you did not write. Every
+        other family starts empty, and the exemption is a list here
+        rather than a condition per kata so that adding a third one is
+        a decision somebody makes on purpose.
+        """
+        allowed = {"Fix the bug", "Finish the program"}
         for k in katas():
-            if k.family == "Fix the bug":
+            if k.family in allowed:
                 continue
             with self.subTest(kata=k.id):
                 self.assertEqual(k.start, "")
                 self.assertEqual(k.bug, "")
 
+    def test_the_pre_filled_families_are_the_ones_named(self) -> None:
+        """The other half of the rule above: a family that ships code in
+        the box must be one of the two, so a new family cannot quietly
+        acquire pre-filled starts by being written that way."""
+        named = {"Fix the bug", "Finish the program"}
+        for k in katas():
+            if k.start.strip():
+                with self.subTest(kata=k.id):
+                    self.assertIn(k.family, named)
 
 class ProgressTests(unittest.TestCase):
     """Counting the goes, which is what decides the next one.
@@ -641,8 +666,319 @@ class LevelTests(unittest.TestCase):
         """Sorting by level interleaves the families, so the list of
         families has to come from the files rather than from the sorted
         katas — otherwise it starts with whichever family happens to
-        hold the easiest kata."""
-        from code_coach.kata import families
+        hold the easiest kata.
 
-        self.assertEqual(families()[0], "Text")
-        self.assertEqual(families()[-1], "Fix the bug")
+        Against the file order itself rather than against two names
+        written down here. Naming the last family meant this failed the
+        day a new one was added at the end, which says nothing about
+        whether the rule still holds.
+        """
+        from code_coach.kata import _in_file_order, families
+
+        written: list[str] = []
+        for k in _in_file_order():
+            if k.family not in written:
+                written.append(k.family)
+        self.assertEqual(list(families()), written)
+
+
+class NextUpTests(unittest.TestCase):
+    """What the screen offers next, and why recency is part of it.
+
+    The count alone cannot separate two things you have done twice. One
+    of them was last week and one was ten minutes ago, and only one of
+    those is worth doing again now — so the list carries when each was
+    last right, and the screen breaks the tie on it.
+    """
+
+    def setUp(self) -> None:
+        import tempfile
+        from pathlib import Path as _Path
+
+        from code_coach.api import server
+        from code_coach.progress.store import ProgressStore
+
+        self.folder = _Path(tempfile.mkdtemp())
+        self.was = server._store
+        server._store = ProgressStore(self.folder / "progress.json")
+        self.server = server
+
+    def tearDown(self) -> None:
+        self.server._store = self.was
+
+    def test_the_list_says_when_each_was_last_right(self) -> None:
+        from code_coach.api.schemas import KataCheckRequest
+
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self.server.kata_check(
+            KataCheckRequest(kata_id="sum-digits", code=right))
+        served = {
+            k["id"]: k
+            for f in self.server.kata_list()["families"] for k in f["katas"]
+        }
+        self.assertTrue(served["sum-digits"]["last"])
+        # Never done is an empty string rather than a missing key, so the
+        # screen can compare it against a real date without a special
+        # case — and empty sorts before every date, which is what puts
+        # the untried ones first.
+        self.assertEqual(served["count-vowels"]["last"], "")
+
+    def test_a_later_pass_moves_the_date_on(self) -> None:
+        from code_coach.api.schemas import KataCheckRequest
+
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self.server.kata_check(
+            KataCheckRequest(kata_id="sum-digits", code=right))
+        first = self.server._store.load().kata_last()["sum-digits"]
+        self.server.kata_check(
+            KataCheckRequest(kata_id="sum-digits", code=right))
+        second = self.server._store.load().kata_last()["sum-digits"]
+        self.assertGreaterEqual(second, first)
+
+    def test_predict_carries_the_same_two_fields(self) -> None:
+        from code_coach.api.schemas import PredictCheckRequest
+        from code_coach.kata.predict import PUZZLES
+
+        self.server.predict_check(
+            PredictCheckRequest(puzzle_id=PUZZLES[0].id, guess=PUZZLES[0].expect))
+        served = {
+            p["id"]: p
+            for f in self.server.predict_list()["families"]
+            for p in f["puzzles"]
+        }
+        self.assertEqual(served[PUZZLES[0].id]["done"], 1)
+        self.assertTrue(served[PUZZLES[0].id]["last"])
+        self.assertIn("level", served[PUZZLES[0].id])
+
+
+class JavaScriptTests(unittest.TestCase):
+    """The katas written in JavaScript, and the join between the two.
+
+    A JavaScript kata keeps a Python `solve`, because that is the oracle
+    rather than the answer — the expected values are numbers, strings,
+    arrays and plain objects, which mean the same in both languages, so
+    one implementation of the truth is guarded by the same hand-written
+    checks as everything else.
+
+    Which leaves one thing to prove that the Python katas do not need:
+    that the JavaScript answer agrees with that oracle. Reading it
+    cannot show that. Running it can, and it is the same driver a
+    student's code goes through, so a reference that agreed with itself
+    and not with the oracle fails here.
+    """
+
+    def _js(self) -> tuple:
+        return tuple(k for k in katas() if k.language == "javascript")
+
+    def test_there_are_some(self) -> None:
+        self.assertTrue(self._js())
+
+    def test_every_javascript_answer_passes_every_case(self) -> None:
+        for k in self._js():
+            with self.subTest(kata=k.id):
+                out, err, code = run_code(
+                    harness(k, k.reference()), language="javascript")
+                outcome = judge(k, out, err, code)
+                self.assertEqual(outcome.broke, "")
+                failed = [
+                    (r.args, r.got, r.want, r.changed, r.error)
+                    for r in outcome.results if not r.passed
+                ]
+                self.assertEqual(failed, [], f"{k.id}: {failed[:2]}")
+
+    def test_the_answer_shown_is_javascript(self) -> None:
+        """Show answer on a JavaScript kata handing over Python would be
+        worse than showing nothing."""
+        for k in self._js():
+            with self.subTest(kata=k.id):
+                shown = k.reference()
+                self.assertTrue(shown.strip())
+                self.assertNotIn("def ", shown)
+                self.assertIn(k.name, shown)
+
+    def test_the_signature_is_in_the_right_language(self) -> None:
+        """The box opens on this line, so a Python signature on a
+        JavaScript kata is a line that has to be deleted before anything
+        can be typed."""
+        for k in katas():
+            with self.subTest(kata=k.id):
+                if k.language == "javascript":
+                    self.assertTrue(k.signature.startswith("function "))
+                    self.assertTrue(k.signature.endswith("{"))
+                else:
+                    self.assertTrue(k.signature.startswith("def "))
+
+    def test_a_wrong_javascript_answer_fails_and_names_the_input(
+        self,
+    ) -> None:
+        k = kata("js-unique-of")
+        outcome = self._run(k, "function uniqueOf(items) { return items; }")
+        self.assertFalse(outcome.passed)
+        wrong = [r for r in outcome.results if not r.passed]
+        self.assertTrue(wrong)
+
+    def test_changing_the_array_fails_even_when_the_answer_is_right(
+        self,
+    ) -> None:
+        """The rule that matters most in this language.
+
+        sort, reverse and splice all change the array in place, and the
+        array was the caller's. The value returned can be exactly right
+        while the page behind it is wrong, and only comparing the
+        arguments before and after the call can see it.
+        """
+        k = kata("js-sorted-desc")
+        outcome = self._run(
+            k, "function sortedDesc(numbers) {\n"
+               "  return numbers.sort((a, b) => b - a);\n}")
+        self.assertFalse(outcome.passed)
+        spoiled = [r for r in outcome.results if r.changed]
+        self.assertTrue(spoiled, "mutating sort was not noticed")
+
+    def test_sorting_as_text_is_caught(self) -> None:
+        """`[10, 9, 100].sort()` gives 10, 100, 9 — the default compares
+        as strings, which is the trap this kata exists for."""
+        k = kata("js-sorted-desc")
+        outcome = self._run(
+            k, "function sortedDesc(numbers) {\n"
+               "  return [...numbers].sort().reverse();\n}")
+        self.assertFalse(outcome.passed)
+
+    def _run(self, k, code: str):
+        out, err, exit_code = run_code(harness(k, code), language="javascript")
+        return judge(k, out, err, exit_code)
+
+
+class RouteLanguageTests(unittest.TestCase):
+    """The route runs a kata in the kata's language.
+
+    It ran everything as Python, which was right while Python was the
+    only one and meant every JavaScript kata came back "this did not
+    run" whatever was typed into it. The screen tests could not see it
+    because they call the marker directly; only going through the route
+    does.
+    """
+
+    def _check(self, kata_id: str, code: str):
+        from code_coach.api import server
+        from code_coach.api.schemas import KataCheckRequest
+
+        return server.kata_check(
+            KataCheckRequest(kata_id=kata_id, code=code))
+
+    def test_a_javascript_kata_runs_as_javascript(self) -> None:
+        response = self._check(
+            "js-unique-of",
+            "function uniqueOf(items) { return [...new Set(items)]; }")
+        self.assertEqual(response.broke, "")
+        self.assertTrue(response.passed)
+
+    def test_a_wrong_javascript_answer_is_marked_wrong_not_broken(
+        self,
+    ) -> None:
+        """The distinction the hard-coded language destroyed: code that
+        runs and is wrong has to read differently from code that did not
+        run at all."""
+        response = self._check(
+            "js-unique-of", "function uniqueOf(items) { return items; }")
+        self.assertEqual(response.broke, "")
+        self.assertFalse(response.passed)
+        self.assertGreater(response.total, response.count)
+
+    def test_every_language_has_a_route_that_runs_it(self) -> None:
+        """One right answer per language, through the route.
+
+        Derived rather than listing the two: a third language added
+        without touching the route would otherwise fail silently in
+        exactly the same way.
+        """
+        from code_coach.kata import languages
+
+        for language in languages():
+            with self.subTest(language=language):
+                first = next(
+                    k for k in katas() if k.language == language)
+                response = self._check(first.id, first.reference())
+                self.assertEqual(response.broke, "")
+                self.assertTrue(
+                    response.passed,
+                    f"{first.id} does not pass through the route")
+
+
+class StubTests(unittest.TestCase):
+    """Finish the program: a stub with the rest of the code around it.
+
+    Two things have to hold, and they are the mirror of the broken
+    exercises' two.
+
+    The stub as given must not pass. An unfinished function that
+    already answers every case is not unfinished, and nothing else in
+    the suite would notice — every other check here is about correct
+    answers passing.
+
+    And the surroundings have to be surroundings. A stub whose `start`
+    is only the empty function is a kata with a comment in it: the
+    whole point of the shape is that there is a helper or a constant
+    already in scope, and the answer should use it.
+    """
+
+    def _stubs(self) -> tuple:
+        return katas("Finish the program")
+
+    def _run(self, k, code: str):
+        out, err, exit_code = run_code(harness(k, code), language=k.language)
+        return judge(k, out, err, exit_code)
+
+    def test_there_are_some(self) -> None:
+        self.assertTrue(self._stubs())
+
+    def test_the_stub_as_given_does_not_pass(self) -> None:
+        for k in self._stubs():
+            with self.subTest(kata=k.id):
+                outcome = self._run(k, k.start)
+                if outcome.broke:
+                    continue
+                self.assertFalse(
+                    outcome.passed,
+                    f"{k.id} is meant to be unfinished and answers "
+                    f"every case as it stands")
+
+    def test_the_finished_version_passes(self) -> None:
+        for k in self._stubs():
+            with self.subTest(kata=k.id):
+                outcome = self._run(k, k.reference())
+                self.assertEqual(outcome.broke, "")
+                failed = [
+                    (r.args, r.got, r.want) for r in outcome.results
+                    if not r.passed
+                ]
+                self.assertEqual(failed, [], f"{k.id}: {failed[:2]}")
+
+    def test_there_is_a_program_around_the_stub(self) -> None:
+        """More than the empty function, or it is not this shape.
+
+        Measured as lines before the function being asked for: the
+        constants, the helper, the comment saying how the page calls
+        it. Three is a low bar and a stub that cannot clear it is a
+        plain kata that has been filed in the wrong place.
+        """
+        for k in self._stubs():
+            with self.subTest(kata=k.id):
+                before = k.start.split(f"function {k.name}")[0]
+                lines = [ln for ln in before.splitlines() if ln.strip()]
+                self.assertGreaterEqual(
+                    len(lines), 3,
+                    f"{k.id} has {len(lines)} lines of program around it")
+
+    def test_the_stub_defines_the_function_and_leaves_it_empty(
+        self,
+    ) -> None:
+        for k in self._stubs():
+            with self.subTest(kata=k.id):
+                self.assertIn(f"function {k.name}(", k.start)
+                self.assertIn("your code here", k.start)
+
+    def test_each_one_says_what_to_take_away(self) -> None:
+        for k in self._stubs():
+            with self.subTest(kata=k.id):
+                self.assertTrue(k.bug.strip())

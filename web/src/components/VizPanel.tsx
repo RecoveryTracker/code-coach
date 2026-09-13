@@ -22,6 +22,14 @@ type Props = {
   problemNumber: number | null;
   /** Reset the trace when the exercise changes. */
   resetKey: string;
+  /**
+   * Trace as this language rather than the one being worked in.
+   *
+   * Only the screens showing a snippet in a language of their own need
+   * it — a JavaScript puzzle on a Python account would otherwise be
+   * traced as Python and fail on the first line.
+   */
+  language?: string | null;
 };
 
 type Heap = Record<string, VizHeapEntry>;
@@ -598,7 +606,13 @@ function loadSpeed(): number {
   return 1000;
 }
 
-export function VizPanel({ getCode, patternId, problemNumber, resetKey }: Props) {
+export function VizPanel({
+  getCode,
+  patternId,
+  problemNumber,
+  resetKey,
+  language = null,
+}: Props) {
   const [data, setData] = useState<VisualizeResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [i, setI] = useState(0);
@@ -637,6 +651,7 @@ export function VizPanel({ getCode, patternId, problemNumber, resetKey }: Props)
           call: withCall ?? call,
           pattern_id: patternId,
           problem_number: problemNumber,
+          language,
         });
         setData(res);
         setCall(res.call);

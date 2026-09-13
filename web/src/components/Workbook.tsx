@@ -642,13 +642,15 @@ export default function Workbook({ language }: Props) {
               type="button"
               className={watching ? "ws-btn on" : "ws-btn"}
               onClick={() => setWatching((open) => !open)}
-              // The tracer is Python's alone for now, so the button says so
-              // rather than opening a panel that cannot answer.
-              disabled={!code.trim() || language !== "python"}
+              // Whether there is a tracer is the server's answer, not a
+              // list kept here: this read `language !== "python"` while
+              // JavaScript and Dart both had one, so the button was grey
+              // for two languages that could have answered.
+              disabled={!code.trim() || !data.can_trace}
               title={
-                language === "python"
+                data.can_trace
                   ? "Step through it and watch the variables change"
-                  : "The step-through only works in Python at the moment"
+                  : `There is no step-through for ${data.language_name} yet`
               }
             >
               {watching ? "Hide picture" : "Watch it run"}
@@ -710,6 +712,7 @@ export default function Workbook({ language }: Props) {
                 patternId={null}
                 problemNumber={null}
                 resetKey={exercise.id}
+                language={language}
               />
             </div>
           ) : null}

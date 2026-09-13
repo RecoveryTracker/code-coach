@@ -49,6 +49,24 @@ function writeDrafts(drafts: Record<string, string>): void {
   }
 }
 
+/**
+ * Which to offer next: fewest goes, and of those the longest ago.
+ *
+ * The count alone cannot separate two things done twice, and the one
+ * from last week is worth more than the one from this morning. Never
+ * done sorts first because its date is empty, which is before every
+ * real one.
+ */
+function nextUp<T extends { done: number; last: string }>(
+  all: T[],
+): T | null {
+  if (!all.length) return null;
+  return all.reduce((best, item) => {
+    if (item.done !== best.done) return item.done < best.done ? item : best;
+    return item.last < best.last ? item : best;
+  }, all[0]);
+}
+
 export default function Predict() {
   const [list, setList] = useState<PredictList | null>(null);
   const [chosen, setChosen] = useState("");
@@ -132,7 +150,13 @@ export default function Predict() {
                 families: was.families.map((f) => ({
                   ...f,
                   puzzles: f.puzzles.map((p) =>
-                    p.id === puzzle.id ? { ...p, done: got.done } : p,
+                    p.id === puzzle.id
+                      ? {
+                          ...p,
+                          done: got.done,
+                          last: new Date().toISOString(),
+                        }
+                      : p,
                   ),
                 })),
               }
@@ -146,12 +170,18 @@ export default function Predict() {
     }
   }, [puzzle, guess, checking]);
 
-  /** The one answered correctly fewest times, ties to the first. */
-  const leastDone = useMemo(() => {
-    const all = list?.families.flatMap((f) => f.puzzles) ?? [];
-    if (!all.length) return null;
-    return all.reduce((worst, p) => (p.done < worst.done ? p : worst), all[0]);
-  }, [list]);
+  const leastDone = useMemo(
+    () => nextUp(list?.families.flatMap((f) => f.puzzles) ?? []),
+    [list],
+  );
+
+  /** Which language the open puzzle is in, for the tracer and the label. */
+  const language = useMemo(() => {
+    const family = list?.families.find((f) =>
+      f.puzzles.some((p) => p.id === chosen),
+    );
+    return family?.language ?? "python";
+  }, [list, chosen]);
 
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
@@ -174,11 +204,12 @@ export default function Predict() {
             onClick={() => setChosen(leastDone.id)}
             title={
               leastDone.done
-                ? `${leastDone.name} — right ${leastDone.done} so far`
+                ? `${leastDone.name} — right ${leastDone.done} so far, and `
+                  + `the longest ago of those`
                 : `${leastDone.name} — not tried yet`
             }
           >
-            Least practised: {leastDone.name}
+            Next up: {leastDone.name}
           </button>
         ) : null}
         {list.families.map((family) => (
@@ -186,7 +217,8 @@ export default function Predict() {
             <h4 className="wb-section-head">
               {family.name}
               <span className="wb-section-count">
-                {family.puzzles.length} to try
+                {family.language === "javascript" ? "JS" : "Py"} ·{" "}
+                {family.puzzles.length}
               </span>
             </h4>
             {family.puzzles.map((p) => (
@@ -210,7 +242,12 @@ export default function Predict() {
 
       <article className="lessons-open wb">
         <header>
-          <h3>{puzzle.name}</h3>
+          <h3>
+            {puzzle.name}
+            <span className="predict-lang">
+              {language === "javascript" ? "JavaScript" : "Python"}
+            </span>
+          </h3>
         </header>
 
         {/* Read-only on purpose. Editing it would answer the question. */}
@@ -303,6 +340,7 @@ export default function Predict() {
               patternId={null}
               problemNumber={null}
               resetKey={puzzle.id}
+              language={language}
             />
           </div>
         ) : null}

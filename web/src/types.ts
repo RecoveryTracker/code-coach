@@ -543,6 +543,14 @@ export type WorkbookPage = {
 };
 
 export type WorkbookData = {
+  /**
+   * Whether Watch it run can answer in this language.
+   *
+   * From the server, which asks the language, rather than a list on
+   * this side that goes stale — it said Python only while JavaScript
+   * and Dart both had tracers.
+   */
+  can_trace?: boolean;
   language: string;
   /** The display name, for writing into a sentence. */
   language_name: string;
@@ -599,6 +607,14 @@ export type KataSummary = {
    */
   done: number;
   /**
+   * When this was last got right, or empty for never.
+   *
+   * Beside the count because the count alone cannot separate two
+   * things you have done twice — and the one you did last week is the
+   * one worth doing again before the one you did this morning.
+   */
+  last: string;
+  /**
    * How hard it is, 1 to 5, and the order a family is listed in.
    *
    * Shown on the open kata rather than beside every name in the list:
@@ -610,10 +626,14 @@ export type KataSummary = {
 
 export type KataFamily = {
   name: string;
+  /** Which language its katas are written in. A family never mixes. */
+  language: string;
   katas: KataSummary[];
 };
 
 export type KataList = {
+  /** Every language on offer, in the order the families meet them. */
+  languages: string[];
   families: KataFamily[];
 };
 
@@ -659,10 +679,16 @@ export type PredictPuzzle = {
   code: string;
   /** How many times this one has been answered correctly. */
   done: number;
+  /** When it was last right, or empty for never. */
+  last: string;
+  /** How surprising it is, 1 to 5. */
+  level: number;
 };
 
 export type PredictFamily = {
   name: string;
+  /** Which language its snippets are in. A family never mixes them. */
+  language: string;
   puzzles: PredictPuzzle[];
 };
 
@@ -676,5 +702,43 @@ export type PredictCheck = {
   guess: string;
   done: number;
   /** Shown whether you were right or wrong. */
+  why: string;
+};
+
+export type CssQuiz = {
+  id: string;
+  name: string;
+  /** The markup, as it goes inside body. */
+  html: string;
+  css: string;
+  /** Which element is being asked about. Always an id selector. */
+  target: string;
+  /** The computed property, or rect.width / rect.height for the space
+   *  it really takes - which is the question wherever the computed
+   *  property reports the declaration and means nothing. */
+  prop: string;
+  /** Everything on offer, sorted, with the answer hidden among them. */
+  choices: string[];
+  /** The whole document, so the page shown is the page measured. */
+  page: string;
+  done: number;
+  last: string;
+  level: number;
+};
+
+export type CssFamily = {
+  name: string;
+  quizzes: CssQuiz[];
+};
+
+export type CssList = {
+  families: CssFamily[];
+};
+
+export type CssCheck = {
+  passed: boolean;
+  expect: string;
+  choice: string;
+  done: number;
   why: string;
 };

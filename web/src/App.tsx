@@ -31,6 +31,7 @@ import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
 import Katas from "./components/Katas";
 import Predict from "./components/Predict";
+import Styles from "./components/Styles";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
@@ -207,6 +208,7 @@ export default function App() {
   const [workbookOpen, setWorkbookOpen] = useState(false);
   const [katasOpen, setKatasOpen] = useState(false);
   const [predictOpen, setPredictOpen] = useState(false);
+  const [stylesOpen, setStylesOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /**
    * Free mode's reminders. Not the coach: they say nothing about whether you
@@ -1067,6 +1069,14 @@ export default function App() {
       <button
         type="button"
         className="ws-btn"
+        onClick={() => setStylesOpen(true)}
+        title="Read the CSS and say what the browser computes, then see it"
+      >
+        Styles
+      </button>
+      <button
+        type="button"
+        className="ws-btn"
         onClick={() => setConceptsOpen(true)}
         title="The questions an interview asks that aren't coding problems"
       >
@@ -1151,6 +1161,26 @@ export default function App() {
           </div>
         </div>
         <Reference language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (stylesOpen) {
+    return (
+      <div className="typing-shell">
+        <div className="typing-topbar">
+          <span className="ws-brand-inline">Styles</span>
+          <div className="panel-actions">
+            <button
+              type="button"
+              className="ws-btn"
+              onClick={() => setStylesOpen(false)}
+            >
+              Back to code
+            </button>
+          </div>
+        </div>
+        <Styles />
       </div>
     );
   }

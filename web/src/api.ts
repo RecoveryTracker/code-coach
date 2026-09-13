@@ -1,6 +1,8 @@
 import type {
   CheckAnswerResult,
   ConceptTopic,
+  CssCheck,
+  CssList,
   DrillEvaluateResult,
   ExplainResult,
   KataCheck,
@@ -145,6 +147,22 @@ export function checkPredict(body: {
   });
 }
 
+/** Every CSS quiz, grouped, with the answers left out. */
+export function fetchCssQuizzes(): Promise<CssList> {
+  return request("/api/css");
+}
+
+/** Send a pick, and get back what the browser computed and why. */
+export function checkCss(body: {
+  quiz_id: string;
+  choice: string;
+}): Promise<CssCheck> {
+  return request("/api/css/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 /** The worked answer for one kata, fetched only when asked for. */
 export function fetchKataAnswer(
   kataId: string,
@@ -274,6 +292,8 @@ export function visualizeCode(body: {
   call?: string;
   pattern_id?: string | null;
   problem_number?: number | null;
+  /** Trace as this language rather than the one being worked in. */
+  language?: string | null;
 }): Promise<VisualizeResult> {
   return request("/api/visualize", {
     method: "POST",

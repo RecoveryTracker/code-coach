@@ -345,6 +345,11 @@ class VisualizeRequest(BaseModel):
     call: str = ""
     pattern_id: str | None = None
     problem_number: int | None = None
+    # Which language to trace as. Blank means the one being worked in,
+    # which is right everywhere except a screen showing a snippet in a
+    # language of its own: the JavaScript predict puzzles would
+    # otherwise be traced as Python and fail on the first line.
+    language: str | None = None
 
 
 class VisualizeResponse(BaseModel):
@@ -651,4 +656,21 @@ class PredictCheckResponse(BaseModel):
     # Shown either way. A wrong guess with no explanation teaches only
     # that you were wrong, and a right one with no explanation leaves
     # you unsure whether you knew it or guessed it.
+    why: str = ""
+
+class CssCheckRequest(BaseModel):
+    """One quiz, and which of the offered values was picked."""
+
+    quiz_id: str = ""
+    choice: str = ""
+
+
+class CssCheckResponse(BaseModel):
+    passed: bool = False
+    expect: str = ""
+    choice: str = ""
+    done: int = 0
+    # Shown either way, same as the predict puzzles: being wrong with
+    # no explanation teaches only that you were wrong, and being right
+    # with none leaves you unsure whether you knew it.
     why: str = ""

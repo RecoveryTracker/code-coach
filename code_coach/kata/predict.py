@@ -26,27 +26,10 @@ nothing except that the author had not run it. It is not in the file.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from code_coach.kata.predict_js import JS_PUZZLES
+from code_coach.kata.puzzle import Puzzle, _p
 
 
-@dataclass(frozen=True)
-class Puzzle:
-    """A snippet, what it prints, and why that surprises people."""
-
-    id: str
-    name: str
-    family: str
-    #: The whole program. Short enough to hold in your head at once.
-    code: str
-    #: Exactly what it prints, typed out by a person.
-    expect: str
-    #: What is going on, shown after you have answered either way. A
-    #: wrong guess with no explanation teaches only that you were wrong.
-    why: str
-
-
-def _p(**kw) -> Puzzle:
-    return Puzzle(**kw)
 
 
 # ── Mutation and aliasing ────────────────────────────────────
@@ -54,6 +37,7 @@ def _p(**kw) -> Puzzle:
 MUTATION: tuple[Puzzle, ...] = (
     _p(
         id="predict-default-list",
+        level=4,
         name="The basket that remembers",
         family="Mutation",
         code=(
@@ -74,6 +58,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-repeated-row",
+        level=3,
         name="Three rows, or one row three times",
         family="Mutation",
         code=(
@@ -91,6 +76,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-alias",
+        level=1,
         name="Two names, one list",
         family="Mutation",
         code=(
@@ -108,6 +94,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-string-copy",
+        level=2,
         name="The same two names, with text",
         family="Mutation",
         code=(
@@ -127,6 +114,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-remove-while-looping",
+        level=3,
         name="Removing as you go",
         family="Mutation",
         code=(
@@ -147,6 +135,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-append-extend",
+        level=2,
         name="Append, and extend",
         family="Mutation",
         code=(
@@ -165,6 +154,7 @@ MUTATION: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-sort-returns",
+        level=2,
         name="What sort hands back",
         family="Mutation",
         code=(
@@ -187,6 +177,7 @@ MUTATION: tuple[Puzzle, ...] = (
 TRUTH: tuple[Puzzle, ...] = (
     _p(
         id="predict-or-default",
+        level=3,
         name="The empty list that vanishes",
         family="Truthiness",
         code=(
@@ -206,6 +197,7 @@ TRUTH: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-is-equal",
+        level=1,
         name="Equal, and not the same",
         family="Truthiness",
         code=(
@@ -223,6 +215,7 @@ TRUTH: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-bool-is-int",
+        level=2,
         name="True, counted",
         family="Truthiness",
         code=(
@@ -239,6 +232,7 @@ TRUTH: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-all-of-nothing",
+        level=3,
         name="All of nothing",
         family="Truthiness",
         code="print(all([]), any([]), sum([]), max([1], default=0))",
@@ -254,6 +248,7 @@ TRUTH: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-dict-get",
+        level=2,
         name="get, and the key that is there",
         family="Truthiness",
         code=(
@@ -271,6 +266,7 @@ TRUTH: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-chained",
+        level=3,
         name="Comparisons in a chain",
         family="Truthiness",
         code="print(1 < 2 < 3, (1 < 2) < 3, 2 < 3 > 1)",
@@ -290,6 +286,7 @@ TRUTH: tuple[Puzzle, ...] = (
 SEQUENCES: tuple[Puzzle, ...] = (
     _p(
         id="predict-late-binding",
+        level=4,
         name="The loop variable that outlived the loop",
         family="Sequences",
         code=(
@@ -305,6 +302,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-generator-once",
+        level=3,
         name="The generator that was already empty",
         family="Sequences",
         code=(
@@ -321,6 +319,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-one-tuple",
+        level=2,
         name="The comma that makes a tuple",
         family="Sequences",
         code='print(type(("a")).__name__, type(("a",)).__name__, len(("a", )))',
@@ -334,6 +333,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-slice-past-end",
+        level=2,
         name="Slicing past the end",
         family="Sequences",
         code=(
@@ -350,6 +350,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-print-repr",
+        level=2,
         name="Printed, and printed inside something",
         family="Sequences",
         code=(
@@ -368,6 +369,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-in-a-dict",
+        level=1,
         name="What `in` looks at",
         family="Sequences",
         code=(
@@ -384,6 +386,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-dict-order",
+        level=3,
         name="What order a dict comes back in",
         family="Sequences",
         code=(
@@ -408,6 +411,7 @@ SEQUENCES: tuple[Puzzle, ...] = (
 NUMBERS: tuple[Puzzle, ...] = (
     _p(
         id="predict-negative-division",
+        level=3,
         name="Dividing a negative",
         family="Numbers",
         code="print(-7 // 2, -7 % 2, int(-7 / 2), divmod(-7, 2))",
@@ -423,6 +427,7 @@ NUMBERS: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-rounding",
+        level=3,
         name="Rounding a half",
         family="Numbers",
         code="print(round(0.5), round(1.5), round(2.5), round(-0.5))",
@@ -436,6 +441,7 @@ NUMBERS: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-float-sum",
+        level=2,
         name="A tenth plus two tenths",
         family="Numbers",
         code="print(0.1 + 0.2 == 0.3, 0.1 + 0.2)",
@@ -456,6 +462,7 @@ NUMBERS: tuple[Puzzle, ...] = (
 FLOW: tuple[Puzzle, ...] = (
     _p(
         id="predict-finally-return",
+        level=3,
         name="The finally that wins",
         family="Errors",
         code=(
@@ -477,6 +484,7 @@ FLOW: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-except-order",
+        level=2,
         name="Which except catches it",
         family="Errors",
         code=(
@@ -496,6 +504,7 @@ FLOW: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-tuple-of-list",
+        level=4,
         name="The one that fails and works",
         family="Errors",
         code=(
@@ -518,6 +527,7 @@ FLOW: tuple[Puzzle, ...] = (
     ),
     _p(
         id="predict-shadowed-builtin",
+        level=2,
         name="The name you took",
         family="Errors",
         code=(
@@ -541,14 +551,16 @@ FLOW: tuple[Puzzle, ...] = (
 
 
 PUZZLES: tuple[Puzzle, ...] = (
-    MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW
+    MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
 )
 
 
 def puzzles(family: str | None = None) -> tuple[Puzzle, ...]:
+    """Least surprising first, stable within a level."""
+    ordered = tuple(sorted(PUZZLES, key=lambda p: p.level))
     if family is None:
-        return PUZZLES
-    return tuple(p for p in PUZZLES if p.family == family)
+        return ordered
+    return tuple(p for p in ordered if p.family == family)
 
 
 def puzzle(puzzle_id: str) -> Puzzle | None:
@@ -556,8 +568,26 @@ def puzzle(puzzle_id: str) -> Puzzle | None:
 
 
 def predict_families() -> tuple[str, ...]:
+    """From the file order, not the sorted one.
+
+    Sorting by level interleaves the families, so reading the families
+    off the sorted list would start with whichever family happened to
+    hold the least surprising puzzle.
+    """
     seen: list[str] = []
     for p in PUZZLES:
         if p.family not in seen:
             seen.append(p.family)
     return tuple(seen)
+
+
+def language_of(family: str) -> str:
+    """Which language a family's snippets are in.
+
+    A family never mixes them: reading JavaScript in a list you opened
+    for Python is a worse surprise than any of the puzzles.
+    """
+    for p in PUZZLES:
+        if p.family == family:
+            return p.language
+    return "python"

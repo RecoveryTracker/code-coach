@@ -27,15 +27,16 @@ from code_coach.kata.predict import PUZZLES, predict_families, puzzles
 
 
 class PuzzleTests(unittest.TestCase):
-    def test_python_agrees_with_every_written_answer(self) -> None:
+    def test_the_language_agrees_with_every_written_answer(self) -> None:
+        """Each snippet in its own language, which is now two of them."""
         for p in PUZZLES:
-            with self.subTest(puzzle=p.id):
-                stdout, stderr, code = run_code(p.code, language="python")
+            with self.subTest(puzzle=p.id, language=p.language):
+                stdout, stderr, code = run_code(p.code, language=p.language)
                 self.assertEqual(code, 0, (stderr or stdout)[:300])
                 self.assertEqual(
                     stdout.rstrip("\n"), p.expect,
-                    f"{p.id}: Python prints {stdout.rstrip()!r} and the "
-                    f"file says {p.expect!r}")
+                    f"{p.id}: {p.language} prints {stdout.rstrip()!r} "
+                    f"and the file says {p.expect!r}")
 
     def test_every_snippet_prints_something(self) -> None:
         """A puzzle whose answer is the empty string asks nothing."""
@@ -49,7 +50,9 @@ class PuzzleTests(unittest.TestCase):
                 self.assertTrue(p.name.strip())
                 self.assertTrue(p.why.strip())
                 self.assertIn(p.family, predict_families())
-                self.assertIn("print", p.code)
+                self.assertIn(
+                    "print" if p.language == "python" else "console.log",
+                    p.code)
 
     def test_the_answer_is_not_sitting_in_the_snippet(self) -> None:
         """A snippet that contains its own answer as a literal is one you
@@ -157,3 +160,39 @@ class RouteTests(unittest.TestCase):
             server.predict_check(
                 PredictCheckRequest(puzzle_id="nonsense", guess="x"))
         self.assertEqual(caught.exception.status_code, 404)
+
+
+class LevelTests(unittest.TestCase):
+    """The order a family of puzzles is read in.
+
+    Same arrangement as the katas. There is no measure of surprise to
+    compute, so what is checked is that the ranking was done: a family
+    all on one level has a field saying nothing, and its order is then
+    whichever order the puzzles were written in.
+    """
+
+    def test_every_level_is_in_range(self) -> None:
+        for p in PUZZLES:
+            with self.subTest(puzzle=p.id):
+                self.assertIn(p.level, (1, 2, 3, 4, 5))
+
+    def test_a_family_is_not_all_one_level(self) -> None:
+        for family in predict_families():
+            with self.subTest(family=family):
+                levels = {p.level for p in puzzles(family)}
+                self.assertGreater(
+                    len(levels), 1,
+                    f"{family} is all level {levels.pop()}, so nothing in "
+                    f"it has been ranked against anything else")
+
+    def test_each_family_reads_least_surprising_first(self) -> None:
+        for family in predict_families():
+            with self.subTest(family=family):
+                levels = [p.level for p in puzzles(family)]
+                self.assertEqual(levels, sorted(levels))
+
+    def test_the_families_keep_their_own_order(self) -> None:
+        """Sorting by level interleaves them, so the family list has to
+        come from the file rather than from the sorted puzzles."""
+        self.assertEqual(predict_families()[0], "Mutation")
+        self.assertEqual(predict_families()[-1], "Objects and arrays")

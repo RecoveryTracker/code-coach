@@ -28,6 +28,8 @@ from code_coach.api.schemas import (
     KataCheckRequest,
     KataCheckResponse,
     PracticeSession,
+    CssCheckRequest,
+    CssCheckResponse,
     PredictCheckRequest,
     PredictCheckResponse,
     ProgressResponse,
@@ -760,13 +762,20 @@ def workbook(language: str | None = None) -> dict:
     language = _viewing_language(language)
     # The screen writes the name into a sentence ("Write it in Rust"), so it
     # needs the one with the capital letter rather than the id.
-    name = get_language(language).name
+    lang = get_language(language)
+    name = lang.name
+    # Whether Watch it run can answer here, asked of the language rather
+    # than written down on the screen. It was hard-coded to Python there,
+    # which left the button greyed out in JavaScript and Dart — both of
+    # which have had a tracer for as long as the button has existed.
+    can_trace = "tracer" in lang.ready
     if not has_workbook(language):
         # Better than a page of exercises that cannot be written.
         return {
             "language": language,
             "language_name": name,
             "has_workbook": False,
+            "can_trace": can_trace,
             "pages": [],
             "done": [],
         }
@@ -775,6 +784,7 @@ def workbook(language: str | None = None) -> dict:
         "language": language,
         "language_name": name,
         "has_workbook": True,
+        "can_trace": can_trace,
         "pages": payload(language),
         "done": progress.workbook_for(language),
         # Where to open. Empty means the student has not started, so the
@@ -1021,7 +1031,12 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
     # Python is traced with sys.settrace and JavaScript with Node's inspector.
     # Everything else has no tracer, and feeding one a SQL query produced
     # "SyntaxError: invalid syntax", which says nothing useful about why.
-    lang = get_language(getattr(_store.load(), "language", "python"))
+    # What the request asked for, falling back to the language being
+    # worked in. A screen showing a snippet in a language of its own has
+    # to be able to say so: the JavaScript predict puzzles would
+    # otherwise be traced as Python and fail on the first line.
+    lang = get_language(
+        body.language or getattr(_store.load(), "language", "python"))
     if "tracer" not in lang.ready:
         return VisualizeResponse(
             ok=False,
@@ -1233,13 +1248,24 @@ def practice_complete_and_next(body: DrillEvaluateRequest) -> PracticeSession:
 @app.get("/api/kata")
 def kata_list() -> dict:
     """Every kata, grouped the way the screen shows them."""
-    from code_coach.kata import families, katas
+    from code_coach.kata import (
+        families,
+        kata_language_of,
+        katas,
+        languages,
+    )
 
-    counts = _store.load().kata_counts()
+    saved = _store.load()
+    counts, last = saved.kata_counts(), saved.kata_last()
     return {
+        # The languages on offer, so the screen can filter rather than
+        # making someone scroll past fifty-five to reach the eight they
+        # came for.
+        "languages": list(languages()),
         "families": [
             {
                 "name": family,
+                "language": kata_language_of(family),
                 "katas": [
                     {
                         "id": k.id,
@@ -1253,6 +1279,7 @@ def kata_list() -> dict:
                         # rest, which is what the screen keys off.
                         "start": k.start,
                         "done": counts.get(k.id, 0),
+                        "last": last.get(k.id, ""),
                         "level": k.level,
                     }
                     for k in katas(family)
@@ -1290,8 +1317,12 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
             status_code=404, detail=f"Unknown kata {body.kata_id}"
         )
 
+    # The kata's own language, not Python. This was hard-coded from
+    # when Python was the only one, so every JavaScript kata was run
+    # through the Python interpreter and came back as "this did not
+    # run" whatever was typed into it.
     stdout, stderr, exit_code = run_code(
-        harness(found, body.code), language="python"
+        harness(found, body.code), language=found.language
     )
     outcome = judge(found, stdout, stderr, exit_code)
     done = 0
@@ -1340,19 +1371,29 @@ def predict_list() -> dict:
     payload carrying it is a payload someone can read instead of
     thinking.
     """
-    from code_coach.kata.predict import predict_families, puzzles
+    from code_coach.kata.predict import (
+        language_of,
+        predict_families,
+        puzzles,
+    )
 
-    counts = _store.load().predict_counts()
+    saved = _store.load()
+    counts, last = saved.predict_counts(), saved.predict_last()
     return {
         "families": [
             {
                 "name": family,
+                # A family never mixes languages, so this belongs on the
+                # family rather than being repeated on every puzzle.
+                "language": language_of(family),
                 "puzzles": [
                     {
                         "id": p.id,
                         "name": p.name,
                         "code": p.code,
                         "done": counts.get(p.id, 0),
+                        "last": last.get(p.id, ""),
+                        "level": p.level,
                     }
                     for p in puzzles(family)
                 ],
@@ -1390,5 +1431,75 @@ def predict_check(body: PredictCheckRequest) -> PredictCheckResponse:
         done=done,
         expect=found.expect,
         guess=body.guess,
+        why=found.why,
+    )
+
+
+@app.get("/api/css")
+def css_list() -> dict:
+    """Every CSS quiz, grouped, with the choices and without the answer.
+
+    The choices come from the quiz rather than being assembled here,
+    because they are sorted on the way out and that sort is what stops
+    the answer's position giving it away. Assembling them in a second
+    place would be a second chance to lose that.
+    """
+    from code_coach.css import css_families, quizzes
+
+    saved = _store.load()
+    counts, last = saved.css_counts(), saved.css_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "quizzes": [
+                    {
+                        "id": q.id,
+                        "name": q.name,
+                        "html": q.html,
+                        "css": q.css,
+                        "target": q.target,
+                        "prop": q.prop,
+                        "choices": list(q.choices),
+                        "page": q.page(),
+                        "done": counts.get(q.id, 0),
+                        "last": last.get(q.id, ""),
+                        "level": q.level,
+                    }
+                    for q in quizzes(family)
+                ],
+            }
+            for family in css_families()
+        ]
+    }
+
+
+@app.post("/api/css/check", response_model=CssCheckResponse)
+def css_check(body: CssCheckRequest) -> CssCheckResponse:
+    """Compare the pick with what Chromium computed.
+
+    Nothing runs here. The answer was measured once by
+    tools/verify_css.py and the suite holds it to that measurement, so
+    marking is a comparison against evidence rather than against an
+    opinion about how the cascade ought to work.
+    """
+    from code_coach.css import quiz as find_quiz
+
+    found = find_quiz(body.quiz_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown quiz {body.quiz_id}"
+        )
+    passed = body.choice.strip() == found.expect
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_css(found.id)
+        _store.save(progress)
+    return CssCheckResponse(
+        passed=passed,
+        done=done,
+        expect=found.expect,
+        choice=body.choice,
         why=found.why,
     )

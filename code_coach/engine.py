@@ -36,6 +36,17 @@ MAX_OUTPUT_CHARS = 100_000
 
 _IS_POSIX = os.name == "posix"
 
+# How a child program's output is read back.
+#
+# UTF-8 rather than whatever the machine's locale happens to be, because
+# the programs being run are not written for this machine: Node emits
+# UTF-8 always, and on Windows the locale is cp1252, so a JavaScript
+# program printing an ellipsis came back as three characters of
+# nonsense. errors="replace" so a program that emits something genuinely
+# undecodable still reports what it managed rather than killing the run
+# with an exception from the reader thread.
+_TEXT_OUT = {"text": True, "encoding": "utf-8", "errors": "replace"}
+
 try:
     import resource as _resource  # POSIX only
 except ImportError:  # pragma: no cover - Windows
@@ -281,7 +292,7 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
                 "--strict",
             ],
             capture_output=True,
-            text=True,
+            **_TEXT_OUT,
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
@@ -295,7 +306,7 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
         ran = subprocess.run(
             [node, str(built)],
             capture_output=True,
-            text=True,
+            **_TEXT_OUT,
             timeout=timeout,
             stdin=subprocess.DEVNULL,
         )
@@ -354,7 +365,7 @@ def _find_vcvars() -> Path | None:
                     "-property", "installationPath",
                 ],
                 capture_output=True,
-                text=True,
+                **_TEXT_OUT,
                 timeout=15,
             )
         except (OSError, subprocess.TimeoutExpired):
@@ -410,8 +421,14 @@ def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
             built = subprocess.run(
                 f'cmd /s /c "{command}"',
                 capture_output=True,
+                # The one place that does NOT want UTF-8. This is the
+                # compiler talking, not the student's program, and cl
+                # writes in the console codepage — so the locale codec
+                # is the right reader here and _TEXT_OUT is not. Forcing
+                # UTF-8 on it turned four compiler messages into
+                # mojibake and clashed with the errors= already here.
                 text=True,
-                errors="replace",  # cl speaks the console codepage
+                errors="replace",
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired:
@@ -427,7 +444,7 @@ def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
             ran = subprocess.run(
                 [str(exe)],
                 capture_output=True,
-                text=True,
+                **_TEXT_OUT,
                 timeout=timeout,
                 stdin=subprocess.DEVNULL,
             )
@@ -479,7 +496,7 @@ def _run_kotlin(path: Path, timeout: float) -> tuple[str, str, int]:
         try:
             built = subprocess.run(
                 [str(kotlinc), str(source), "-d", str(out)],
-                capture_output=True, text=True, timeout=timeout, env=env,
+                capture_output=True, timeout=timeout, env=env, **_TEXT_OUT,
             )
         except subprocess.TimeoutExpired:
             return "", f"Compiler timed out after {timeout:g}s.", 124
@@ -490,7 +507,7 @@ def _run_kotlin(path: Path, timeout: float) -> tuple[str, str, int]:
         try:
             ran = subprocess.run(
                 [str(java), "-cp", classpath, "MainKt"],
-                capture_output=True, text=True, timeout=timeout,
+                capture_output=True, timeout=timeout, **_TEXT_OUT,
                 stdin=subprocess.DEVNULL, env=env,
             )
         except subprocess.TimeoutExpired:
@@ -571,7 +588,7 @@ def _run_swift(path: Path, timeout: float) -> tuple[str, str, int]:
     try:
         built = subprocess.run(
             [str(swiftc), str(path), "-o", str(exe)],
-            capture_output=True, text=True, timeout=timeout, env=env,
+            capture_output=True, timeout=timeout, env=env, **_TEXT_OUT,
             cwd=str(path.parent),
         )
     except subprocess.TimeoutExpired:
@@ -581,7 +598,7 @@ def _run_swift(path: Path, timeout: float) -> tuple[str, str, int]:
 
     try:
         ran = subprocess.run(
-            [str(exe)], capture_output=True, text=True, timeout=timeout,
+            [str(exe)], capture_output=True, timeout=timeout, **_TEXT_OUT,
             stdin=subprocess.DEVNULL, env=env,
         )
         return _cap_output(ran.stdout), _cap_output(ran.stderr), ran.returncode
@@ -620,7 +637,7 @@ def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
 
     try:
         built = subprocess.run(
-            build, capture_output=True, text=True, timeout=timeout
+            build, capture_output=True, timeout=timeout, **_TEXT_OUT
         )
     except subprocess.TimeoutExpired:
         return "", f"Compiler timed out after {timeout:g}s.", 124
@@ -631,7 +648,7 @@ def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
         ran = subprocess.run(
             [str(exe)],
             capture_output=True,
-            text=True,
+            **_TEXT_OUT,
             timeout=timeout,
             stdin=subprocess.DEVNULL,
         )
@@ -663,7 +680,12 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.DEVNULL,
-        text=True,
+        # Tell the child to write UTF-8, since that is what is read back.
+        # Node does anyway; Python asks the machine, and on Windows the
+        # answer is cp1252 — so `print("…")` arrived as a byte that is
+        # not valid UTF-8 and came out as the replacement character.
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        **_TEXT_OUT,
     )
     if _IS_POSIX:
         popen_kwargs["preexec_fn"] = _apply_limits

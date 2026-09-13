@@ -989,3 +989,34 @@
 .kata-level-rest {
   color: #2a3b52;
 }
+
+/* Which language the open snippet is in. Worth saying plainly: reading
+   JavaScript while expecting Python is a worse surprise than any of the
+   puzzles, and the two look similar enough at four lines. */
+.predict-lang {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #2a3b52;
+  background: #0d1117;
+  color: #9ecbff;
+  font-size: 11px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+/* The language filter, above the families. Only rendered when there is
+   more than one to choose between — a single button saying "Python"
+   next to "All" is a control that does nothing. */
+.kata-langs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.kata-langs .ws-btn {
+  flex: 1 1 auto;
+  padding: 5px 10px;
+  font-size: 12px;
+}

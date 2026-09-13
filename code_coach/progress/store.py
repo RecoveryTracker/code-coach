@@ -148,6 +148,7 @@ class StudentProgress:
     # the next one. Not keyed by language — both modes are Python only.
     kata_done: dict[str, DrillRecord] = field(default_factory=dict)
     predict_done: dict[str, DrillRecord] = field(default_factory=dict)
+    css_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -212,6 +213,34 @@ class StudentProgress:
 
     def predict_counts(self) -> dict[str, int]:
         return {k: v.count for k, v in self.predict_done.items()}
+
+    def record_css(self, quiz_id: str) -> int:
+        return _bump(self.css_done, quiz_id)
+
+    def css_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.css_done.items()}
+
+    def kata_last(self) -> dict[str, str]:
+        """When each was last got right, for choosing what to do next.
+
+        Counts alone say what has had fewest goes; this says which of
+        those was longest ago, which is the difference between the list
+        offering you something you did once last week and something you
+        did twice this morning.
+        """
+        return {
+            k: v.last_at for k, v in self.kata_done.items() if v.last_at
+        }
+
+    def predict_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.predict_done.items() if v.last_at
+        }
+
+    def css_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.css_done.items() if v.last_at
+        }
 
     def workbook_page_for(self, language: str) -> str:
         return self.workbook_page.get(language, "")
