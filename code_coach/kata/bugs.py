@@ -91,6 +91,7 @@ def _initials(name: str) -> str:
 BUGS: tuple[Kata, ...] = (
     Kata(
         id="bug-sum-to",
+        level=1,
         name="sum_to",
         brief=(
             "Add up every number from 1 to n, including n itself. It is "
@@ -115,6 +116,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-count-evens",
+        level=3,
         name="count_evens",
         brief=(
             "Count how many numbers in the list are even. Zero is even, "
@@ -147,6 +149,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-last-index",
+        level=2,
         name="last_index",
         brief=(
             "Return the position of the LAST time the target appears, or "
@@ -177,6 +180,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-average",
+        level=2,
         name="average",
         brief=(
             "Return the mean of the numbers, and 0.0 for an empty list "
@@ -203,6 +207,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-add-item",
+        level=4,
         name="add_item",
         brief=(
             "Add the item to the basket and return it. With no basket "
@@ -234,6 +239,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-doubled",
+        level=4,
         name="doubled",
         brief=(
             "Return a new list with every number doubled. The list you "
@@ -264,6 +270,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-all-positive",
+        level=2,
         name="all_positive",
         brief=(
             "Return True when every number is greater than zero. An empty "
@@ -295,6 +302,7 @@ BUGS: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-initials",
+        level=3,
         name="initials",
         brief=(
             "Return the first letter of each word, in upper case, joined "

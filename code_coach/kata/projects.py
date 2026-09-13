@@ -77,6 +77,7 @@ def _align(numbers: list) -> list:
 PROJECTS: tuple[Kata, ...] = (
     Kata(
         id="add-time",
+        level=4,
         name="add_time",
         brief=(
             "Add a duration to a twelve-hour clock time. The start looks "
@@ -121,6 +122,7 @@ PROJECTS: tuple[Kata, ...] = (
     ),
     Kata(
         id="make-change",
+        level=4,
         name="make_change",
         brief=(
             "Work out the change from a price and what was handed over. "
@@ -161,6 +163,7 @@ PROJECTS: tuple[Kata, ...] = (
     ),
     Kata(
         id="align",
+        level=2,
         name="align",
         brief=(
             "Right-align the numbers in a column. Return one string per "

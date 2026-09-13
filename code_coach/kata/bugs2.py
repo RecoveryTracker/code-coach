@@ -60,6 +60,7 @@ def _mean(numbers: list) -> float:
 BUGS2: tuple[Kata, ...] = (
     Kata(
         id="bug-drop-low",
+        level=3,
         name="drop_low",
         brief=(
             "Return the scores of 50 and over, leaving the ones below out. "
@@ -94,6 +95,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-countdown",
+        level=1,
         name="countdown",
         brief=(
             "Return the numbers from n down to 1. An n of 0 or less gives "
@@ -119,6 +121,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-first-letters",
+        level=2,
         name="first_letters",
         brief=(
             "Return the first letter of every name, joined together. No "
@@ -151,6 +154,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-swapped",
+        level=2,
         name="swapped",
         brief=(
             "Return a two-item list with the pair the other way round. The "
@@ -186,6 +190,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-all-but-last",
+        level=1,
         name="all_but_last",
         brief=(
             "Return a new list with everything except the final item. An "
@@ -214,6 +219,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-longest",
+        level=3,
         name="longest",
         brief=(
             "Return the longest word. When two are equally long, return "
@@ -249,6 +255,7 @@ BUGS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="bug-mean",
+        level=1,
         name="mean",
         brief=(
             "Return the average of the numbers as a real number, and 0.0 "

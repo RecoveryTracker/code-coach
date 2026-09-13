@@ -974,3 +974,18 @@
   white-space: normal;
   line-height: 1.4;
 }
+
+/* How hard the open kata is, as five dots. On the one you are looking
+   at rather than beside all forty-seven names: the list is already in
+   order, so a number against every one of them is noise. */
+.kata-level {
+  margin-left: 10px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #6aa1d8;
+  vertical-align: middle;
+}
+
+.kata-level-rest {
+  color: #2a3b52;
+}

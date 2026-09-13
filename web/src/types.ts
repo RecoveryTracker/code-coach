@@ -598,6 +598,14 @@ export type KataSummary = {
    * what picks the next one.
    */
   done: number;
+  /**
+   * How hard it is, 1 to 5, and the order a family is listed in.
+   *
+   * Shown on the open kata rather than beside every name in the list:
+   * the ordering already says it, and a number against all forty-seven
+   * is noise.
+   */
+  level: number;
 };
 
 export type KataFamily = {

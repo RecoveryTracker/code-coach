@@ -92,6 +92,7 @@ def _roman_add(one: str, two: str) -> str:
 PROJECTS2: tuple[Kata, ...] = (
     Kata(
         id="format-sum",
+        level=5,
         name="format_sum",
         brief=(
             "Lay the problems out in columns the way you would on paper: "
@@ -138,6 +139,7 @@ PROJECTS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="ledger",
+        level=3,
         name="ledger",
         brief=(
             "Apply each entry in order and report the balance after it, "
@@ -178,6 +180,7 @@ PROJECTS2: tuple[Kata, ...] = (
     ),
     Kata(
         id="roman-add",
+        level=3,
         name="roman_add",
         brief=(
             "Add two Roman numerals and answer in Roman. Four is IV and "

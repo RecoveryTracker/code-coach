@@ -64,6 +64,7 @@ def _are_anagrams(one: str, two: str) -> bool:
 TEXT: tuple[Kata, ...] = (
     Kata(
         id="count-vowels",
+        level=1,
         name="count_vowels",
         brief="Return how many vowels are in the word. Upper case counts.",
         params=("word",),
@@ -80,6 +81,7 @@ TEXT: tuple[Kata, ...] = (
     ),
     Kata(
         id="reverse-words",
+        level=2,
         name="reverse_words",
         brief=(
             "Return the sentence with its words in reverse order, one space "
@@ -103,6 +105,7 @@ TEXT: tuple[Kata, ...] = (
     ),
     Kata(
         id="is-pangram",
+        level=2,
         name="is_pangram",
         brief=(
             "Return True when the sentence uses every letter of the "
@@ -132,6 +135,7 @@ TEXT: tuple[Kata, ...] = (
     ),
     Kata(
         id="to-snake",
+        level=3,
         name="to_snake",
         brief=(
             "Turn a camelCase name into snake_case: an underscore before "
@@ -155,6 +159,7 @@ TEXT: tuple[Kata, ...] = (
     ),
     Kata(
         id="longest-word",
+        level=1,
         name="longest_word",
         brief=(
             "Return the longest word in the sentence. When two are equally "
@@ -175,6 +180,7 @@ TEXT: tuple[Kata, ...] = (
     ),
     Kata(
         id="are-anagrams",
+        level=2,
         name="are_anagrams",
         brief=(
             "Return True when the two words use exactly the same letters, "
@@ -247,6 +253,7 @@ def _sort_odds(numbers: list) -> list:
 NUMBERS: tuple[Kata, ...] = (
     Kata(
         id="digital-root",
+        level=2,
         name="digital_root",
         brief=(
             "Add the digits of the number, then add the digits of that, "
@@ -267,6 +274,7 @@ NUMBERS: tuple[Kata, ...] = (
     ),
     Kata(
         id="is-prime",
+        level=3,
         name="is_prime",
         brief=(
             "Return True when the number is prime and False when it is "
@@ -289,6 +297,7 @@ NUMBERS: tuple[Kata, ...] = (
     ),
     Kata(
         id="collatz-steps",
+        level=2,
         name="collatz_steps",
         brief=(
             "Count the steps to reach 1: halve an even number, and treble "
@@ -307,6 +316,7 @@ NUMBERS: tuple[Kata, ...] = (
     ),
     Kata(
         id="gcd",
+        level=2,
         name="gcd",
         brief=(
             "Return the largest number that divides both, and 0 when both "
@@ -329,6 +339,7 @@ NUMBERS: tuple[Kata, ...] = (
     ),
     Kata(
         id="sum-digits",
+        level=1,
         name="sum_digits",
         brief=(
             "Add up the digits of the number. A negative number has the "
@@ -348,6 +359,7 @@ NUMBERS: tuple[Kata, ...] = (
     ),
     Kata(
         id="sort-odds",
+        level=3,
         name="sort_odds",
         brief=(
             "Sort only the odd numbers, leaving every even number where it "
@@ -417,6 +429,7 @@ def _balanced(text: str) -> bool:
 VALIDATION: tuple[Kata, ...] = (
     Kata(
         id="luhn-valid",
+        level=4,
         name="luhn_valid",
         brief=(
             "Return True when the digits pass the Luhn check: double every "
@@ -442,6 +455,7 @@ VALIDATION: tuple[Kata, ...] = (
     ),
     Kata(
         id="valid-ip",
+        level=3,
         name="valid_ip",
         brief=(
             "Return True when the text is four numbers separated by dots, "
@@ -467,6 +481,7 @@ VALIDATION: tuple[Kata, ...] = (
     ),
     Kata(
         id="balanced",
+        level=2,
         name="balanced",
         brief=(
             "Return True when every bracket is closed by its own kind in "

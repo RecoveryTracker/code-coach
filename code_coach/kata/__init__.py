@@ -59,6 +59,15 @@ class Kata:
     example: str = ""
     #: Which family this belongs to, for grouping on screen.
     family: str = ""
+    #: How hard this one is, 1 to 5, and the order a family is read in.
+    #:
+    #: A judgement rather than anything derivable — there is no measure
+    #: of difficulty to compute — so what the suite can check is that
+    #: the judgement was made: a family whose every kata is the same
+    #: level is one where the field is saying nothing, and the order
+    #: those katas appear in is then whatever order they were written,
+    #: which is what this exists to stop.
+    level: int = 2
     #: A hint that costs nothing to read and is not the answer.
     hint: str = ""
     #: Why this kata has no structurally awkward input, and what stands
@@ -321,9 +330,24 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.projects2 import PROJECTS2
 
     everything = KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
+    # Easiest first, and stable within a level so the order inside one
+    # is still the order it was curated in rather than an accident of
+    # sorting.
+    everything = tuple(sorted(everything, key=lambda k: k.level))
     if family is None:
         return everything
     return tuple(k for k in everything if k.family == family)
+
+
+def _in_file_order() -> tuple[Kata, ...]:
+    from code_coach.kata.bugs import BUGS
+    from code_coach.kata.bugs2 import BUGS2
+    from code_coach.kata.content import KATAS
+    from code_coach.kata.content2 import MORE
+    from code_coach.kata.projects import PROJECTS
+    from code_coach.kata.projects2 import PROJECTS2
+
+    return KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
 
 
 def kata(kata_id: str) -> Kata | None:
@@ -331,8 +355,14 @@ def kata(kata_id: str) -> Kata | None:
 
 
 def families() -> tuple[str, ...]:
+    """The families, in the order they were written rather than sorted.
+
+    Reading from `KATAS` and not from the sorted list: sorting by level
+    interleaves the families, so the first kata seen would be whichever
+    family happened to hold the easiest one.
+    """
     seen: list[str] = []
-    for k in katas():
+    for k in _in_file_order():
         if k.family not in seen:
             seen.append(k.family)
     return tuple(seen)

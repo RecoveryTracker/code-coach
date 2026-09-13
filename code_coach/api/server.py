@@ -1253,6 +1253,7 @@ def kata_list() -> dict:
                         # rest, which is what the screen keys off.
                         "start": k.start,
                         "done": counts.get(k.id, 0),
+                        "level": k.level,
                     }
                     for k in katas(family)
                 ],

@@ -107,6 +107,7 @@ def _to_base(n: int, base: int) -> str:
 TURNING: tuple[Kata, ...] = (
     Kata(
         id="caesar",
+        level=2,
         name="caesar",
         brief=(
             "Shift every letter along the alphabet by the given amount, "
@@ -134,6 +135,7 @@ TURNING: tuple[Kata, ...] = (
     ),
     Kata(
         id="run-length",
+        level=3,
         name="run_length",
         brief=(
             "Compress the text by writing each character followed by how "
@@ -159,6 +161,7 @@ TURNING: tuple[Kata, ...] = (
     ),
     Kata(
         id="expand",
+        level=3,
         name="expand",
         brief=(
             "The other direction: turn a character and a count back into "
@@ -183,6 +186,7 @@ TURNING: tuple[Kata, ...] = (
     ),
     Kata(
         id="to-roman",
+        level=4,
         name="to_roman",
         brief=(
             "Write the number in Roman numerals. Four is IV rather than "
@@ -209,6 +213,7 @@ TURNING: tuple[Kata, ...] = (
     ),
     Kata(
         id="from-roman",
+        level=3,
         name="from_roman",
         brief=(
             "Read a Roman numeral back as a number. A smaller letter "
@@ -233,6 +238,7 @@ TURNING: tuple[Kata, ...] = (
     ),
     Kata(
         id="to-base",
+        level=2,
         name="to_base",
         brief=(
             "Write the number in the given base, from 2 to 16, using "
@@ -340,6 +346,7 @@ def _count_islands(grid: list) -> int:
 GRIDS: tuple[Kata, ...] = (
     Kata(
         id="transpose",
+        level=1,
         name="transpose",
         brief=(
             "Turn the rows into columns. The grid you were given must not "
@@ -366,6 +373,7 @@ GRIDS: tuple[Kata, ...] = (
     ),
     Kata(
         id="diagonal-sum",
+        level=2,
         name="diagonal_sum",
         brief=(
             "Add up both diagonals of a square grid. Where they cross, "
@@ -398,6 +406,7 @@ GRIDS: tuple[Kata, ...] = (
     ),
     Kata(
         id="spiral",
+        level=3,
         name="spiral",
         brief=(
             "Read the grid clockwise from the top left, spiralling "
@@ -432,6 +441,7 @@ GRIDS: tuple[Kata, ...] = (
     ),
     Kata(
         id="rotate",
+        level=2,
         name="rotate",
         brief=(
             "Turn the square grid a quarter turn clockwise and return the "
@@ -464,6 +474,7 @@ GRIDS: tuple[Kata, ...] = (
     ),
     Kata(
         id="count-islands",
+        level=4,
         name="count_islands",
         brief=(
             "Count the groups of 1s in the grid. Two cells are in the same "

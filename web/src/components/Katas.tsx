@@ -356,7 +356,15 @@ print(${asCall(kata.name, pick.args)})
 
       <article className="lessons-open wb">
         <header>
-          <h3>{kata.name}</h3>
+          <h3>
+            {kata.name}
+            <span className="kata-level" title={`Level ${kata.level} of 5`}>
+              {"●".repeat(kata.level)}
+              <span className="kata-level-rest">
+                {"●".repeat(5 - kata.level)}
+              </span>
+            </span>
+          </h3>
           <p className="lessons-blurb">{kata.brief}</p>
           {kata.example ? (
             <p className="wb-example">{kata.example}</p>

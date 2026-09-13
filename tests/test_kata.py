@@ -580,3 +580,69 @@ class ProgressTests(unittest.TestCase):
         saved = self.server._store.load()
         self.assertEqual(list(saved.kata_counts()), ["sum-digits"])
         self.assertEqual(list(saved.predict_counts()), [PUZZLES[0].id])
+
+
+class LevelTests(unittest.TestCase):
+    """The order a family is read in.
+
+    Difficulty is a judgement and there is nothing to compute it from,
+    so what can be checked is that the judgement was made rather than
+    skipped. A family whose katas are all the same level has a field
+    saying nothing, and its order is then whichever order they happened
+    to be written in — which is the thing this exists to stop.
+    """
+
+    def test_every_level_is_in_range(self) -> None:
+        for k in katas():
+            with self.subTest(kata=k.id):
+                self.assertIn(k.level, (1, 2, 3, 4, 5))
+
+    def test_a_family_is_not_all_one_level(self) -> None:
+        from code_coach.kata import families
+
+        for family in families():
+            with self.subTest(family=family):
+                levels = {k.level for k in katas(family)}
+                self.assertGreater(
+                    len(levels), 1,
+                    f"{family} is all level {levels.pop()}, so nothing in "
+                    f"it has been ranked against anything else")
+
+    def test_each_family_reads_easiest_first(self) -> None:
+        from code_coach.kata import families
+
+        for family in families():
+            with self.subTest(family=family):
+                levels = [k.level for k in katas(family)]
+                self.assertEqual(
+                    levels, sorted(levels),
+                    f"{family} is out of order: {levels}")
+
+    def test_the_order_inside_a_level_is_the_one_it_was_written_in(
+        self,
+    ) -> None:
+        """Sorting has to be stable.
+
+        Within a level the order is curated — a family opens on the one
+        worth doing first — and a sort that reshuffled equals would
+        throw that away silently.
+        """
+        from code_coach.kata import _in_file_order
+
+        written = [k.id for k in _in_file_order()]
+        for level in (1, 2, 3, 4, 5):
+            at_level = [k.id for k in katas() if k.level == level]
+            with self.subTest(level=level):
+                self.assertEqual(
+                    at_level,
+                    [i for i in written if i in set(at_level)])
+
+    def test_the_families_keep_their_own_order(self) -> None:
+        """Sorting by level interleaves the families, so the list of
+        families has to come from the files rather than from the sorted
+        katas — otherwise it starts with whichever family happens to
+        hold the easiest kata."""
+        from code_coach.kata import families
+
+        self.assertEqual(families()[0], "Text")
+        self.assertEqual(families()[-1], "Fix the bug")
