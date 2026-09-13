@@ -19,7 +19,24 @@ from pathlib import Path
 from typing import Any
 
 # Cap runaway student programs (e.g. while True).
+#
+# Three seconds is the rule for a person sitting in front of the app, and
+# it is the right one: a `while True` should stop the screen for three
+# seconds, not thirty.
+#
+# It is the wrong rule for the suite, which starts thousands of processes
+# back to back. Under that load Windows can spend seconds on process
+# startup alone, so a program that finishes in 0.3s gets killed at the
+# three-second mark and reported as a possible infinite loop. That has
+# happened twice in hour-long runs - `dataclass-06` and the marker's
+# syntax-error test - both times to code that runs in well under a
+# second when asked on its own.
+#
+# A suite that fails at random is worse than no suite, because you stop
+# believing it. So the ceiling is settable, the app never sets it, and
+# tests/conftest.py raises it for the duration of a run.
 RUN_TIMEOUT_SECONDS = 3.0
+
 # Dart compiles before it runs, so a first execution costs seconds that have
 # nothing to do with the student's loop. Its own ceiling, not Python's.
 DART_TIMEOUT_SECONDS = 25.0
@@ -35,6 +52,34 @@ MEM_BYTES = 700 * 1024 * 1024
 MAX_OUTPUT_CHARS = 100_000
 
 _IS_POSIX = os.name == "posix"
+
+#: Environment variable that raises the ceiling. Read per call rather
+#: than at import, so setting it cannot depend on which module was
+#: imported first.
+TIMEOUT_ENV = "CODE_COACH_RUN_TIMEOUT"
+
+
+def default_timeout(language: str = "python") -> float:
+    """How long this language's programs get, in seconds.
+
+    Slow languages compile before they run, and that cost has nothing to
+    do with the student's loop, so they keep their own larger ceiling —
+    raised too if the override asks for more than it.
+    """
+    floor = (
+        DART_TIMEOUT_SECONDS if language in _SLOW_LANGUAGES
+        else RUN_TIMEOUT_SECONDS
+    )
+    raised = os.environ.get(TIMEOUT_ENV, "").strip()
+    if not raised:
+        return floor
+    try:
+        # Never lower the ceiling: the override exists to stop false
+        # timeouts, and a too-small value would manufacture them instead.
+        return max(floor, float(raised))
+    except ValueError:
+        return floor
+
 
 # How a child program's output is read back.
 #
@@ -667,7 +712,9 @@ def dart_available() -> bool:
     return shutil.which("dart") is not None
 
 
-def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, str, int]:
+def run_file(
+    path: Path, *, timeout: float | None = None
+) -> tuple[str, str, int]:
     """Execute a student file with a wall-clock timeout, in-kernel CPU/memory
     caps, a new session (so a timeout kills the whole process group, not just
     the direct child), and bounded captured output.
@@ -676,6 +723,8 @@ def run_file(path: Path, *, timeout: float = RUN_TIMEOUT_SECONDS) -> tuple[str, 
     NOT a security sandbox. It is a guard against runaway/accidental programs on
     a local, single-user tool. Do not expose this server beyond localhost.
     """
+    if timeout is None:
+        timeout = default_timeout()
     popen_kwargs: dict[str, Any] = dict(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -768,9 +817,7 @@ def run_code(
 
     suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
-        timeout = (
-            DART_TIMEOUT_SECONDS if language in _SLOW_LANGUAGES else RUN_TIMEOUT_SECONDS
-        )
+        timeout = default_timeout(language)
 
     with tempfile.NamedTemporaryFile(
         mode="w",

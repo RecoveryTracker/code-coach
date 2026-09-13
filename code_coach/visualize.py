@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from code_coach.engine import RUN_TIMEOUT_SECONDS
+from code_coach.engine import default_timeout
 
 _RUNNER = Path(__file__).with_name("_trace_runner.py")
 _JS_RUNNER = Path(__file__).with_name("_js_trace_runner.js")
@@ -331,10 +331,15 @@ def trace_code(
     code: str,
     *,
     call: str = "",
-    timeout: float = RUN_TIMEOUT_SECONDS,
+    timeout: float | None = None,
     language: str = "python",
 ) -> dict[str, Any]:
     """Run `code` (optionally followed by `call`) and return execution steps."""
+    # Resolved here rather than in the signature: a default argument is
+    # evaluated at import, which would freeze the ceiling before the
+    # suite has had a chance to raise it.
+    if timeout is None:
+        timeout = default_timeout(language)
     source = code if not call.strip() else f"{code.rstrip()}\n\n{call.strip()}\n"
 
     if language in ("javascript", "typescript"):
