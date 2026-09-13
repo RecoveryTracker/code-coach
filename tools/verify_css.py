@@ -86,6 +86,25 @@ function measure(q) {
         const found = doc.querySelectorAll(q.target);
         if (found.length !== 1) {
           got = `selector matched ${found.length} elements`;
+        } else if (q.prop.startsWith("dom.")) {
+          // What the parser built, rather than how it is painted.
+          // HTML has no syntax errors: the tree you get is not the
+          // tags you typed, and these questions are about the gap.
+          const el = found[0];
+          const which = q.prop.slice(4);
+          if (which === "parentTag") {
+            got = el.parentElement
+              ? el.parentElement.tagName.toLowerCase()
+              : "(none)";
+          } else if (which === "childCount") {
+            got = String(el.children.length);
+          } else if (which === "tag") {
+            got = el.tagName.toLowerCase();
+          } else if (which === "text") {
+            got = el.textContent.trim();
+          } else {
+            got = `unknown measurement ${q.prop}`;
+          }
         } else if (q.prop.startsWith("rect.")) {
           // The space it really takes, for the questions where the
           // computed property reports the declaration and lies.

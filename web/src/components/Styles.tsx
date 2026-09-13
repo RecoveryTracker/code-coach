@@ -44,15 +44,36 @@ function nextUp<T extends { done: number; last: string }>(
   }, all[0]);
 }
 
-/** What the question is asking for, in words rather than in API spelling. */
+/**
+ * What the question is asking for, in words rather than in API spelling.
+ *
+ * Three kinds, and the wording has to keep them apart, because two of them
+ * are only interesting where they disagree. "The computed width" and "how
+ * much room it takes" are different numbers for the same box, and a
+ * question that blurred them would be unanswerable rather than hard.
+ */
 function asked(quiz: CssQuiz): string {
-  if (quiz.prop === "rect.width") {
-    return `How much horizontal room does ${quiz.target} actually take?`;
+  switch (quiz.prop) {
+    case "rect.width":
+      return `How much horizontal room does ${quiz.target} actually take?`;
+    case "rect.height":
+      return `How much vertical room does ${quiz.target} actually take?`;
+    case "dom.parentTag":
+      return `Once the parser is done, what is ${quiz.target} inside?`;
+    case "dom.childCount":
+      return `How many element children does ${quiz.target} end up with?`;
+    case "dom.tag":
+      return `What tag does ${quiz.target} turn out to be?`;
+    case "dom.text":
+      return `What is ${quiz.target}'s text content?`;
+    default:
+      return `What is the computed ${quiz.prop} of ${quiz.target}?`;
   }
-  if (quiz.prop === "rect.height") {
-    return `How much vertical room does ${quiz.target} actually take?`;
-  }
-  return `What is the computed ${quiz.prop} of ${quiz.target}?`;
+}
+
+/** Whether this one is about the tree rather than about the painting. */
+function isParserQuestion(quiz: CssQuiz): boolean {
+  return quiz.prop.startsWith("dom.");
 }
 
 export default function Styles() {
@@ -163,11 +184,13 @@ export default function Styles() {
   return (
     <div className="lessons-wrap">
       <nav className="lessons-list">
-        <h2>Styles</h2>
+        <h2>HTML &amp; CSS</h2>
         <p className="lessons-intro">
           Read the markup and the stylesheet, say what the browser worked
-          out, then watch it render. Every answer here was measured in
-          Chromium rather than reasoned about.
+          out, then watch it render. Some of these ask what the cascade
+          computed; some ask what the parser built, which is not always
+          the tags you typed. Every answer was measured in Chromium
+          rather than reasoned about.
         </p>
         {leastDone && leastDone.id !== chosen ? (
           <button
@@ -213,7 +236,9 @@ export default function Styles() {
         <header>
           <h3>
             {quiz.name}
-            <span className="predict-lang">CSS</span>
+            <span className="predict-lang">
+              {isParserQuestion(quiz) ? "HTML" : "CSS"}
+            </span>
           </h3>
         </header>
 
@@ -307,7 +332,11 @@ export default function Styles() {
         {showing && result ? (
           <div className="wb-viz css-render">
             <p className="wb-walkthrough-note">
-              The same document that was measured, rendered here.
+              {isParserQuestion(quiz)
+                ? "The same document, rendered. Open devtools on it to "
+                  + "see the tree the parser actually built - the "
+                  + "elements panel shows the tree, never your tags."
+                : "The same document that was measured, rendered here."}
             </p>
             <iframe
               className="css-frame"

@@ -63,11 +63,25 @@ class ShapeTests(unittest.TestCase):
                     f"{q.id}: {attribute} appears "
                     f"{q.html.count(attribute)} times in the markup")
 
-    def test_the_property_is_one_of_the_two_kinds(self) -> None:
+    def test_the_property_is_one_the_verifier_can_measure(self) -> None:
+        """Three kinds, and the list is closed on purpose.
+
+        A computed property; `rect.width`/`rect.height` for the space
+        the element really takes, which is the question wherever the
+        computed property reports the declaration and means nothing;
+        and `dom.*` for what the parser built rather than how it was
+        painted. Anything else reaches the verifier as "unknown
+        measurement" and the quiz can never agree with a browser - a
+        typo in a property name should fail here rather than there.
+        """
+        measurable = {
+            "rect.width", "rect.height",
+            "dom.parentTag", "dom.childCount", "dom.tag", "dom.text",
+        }
         for q in quizzes():
             with self.subTest(quiz=q.id):
-                if q.prop.startswith("rect."):
-                    self.assertIn(q.prop, ("rect.width", "rect.height"))
+                if "." in q.prop:
+                    self.assertIn(q.prop, measurable)
                 else:
                     self.assertRegex(q.prop, r"^[a-z-]+$")
 

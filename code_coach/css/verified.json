@@ -2,29 +2,233 @@
  "measured_by": "Chromium, via tools/verify_css.py, in an 800x300 frame",
  "how_to_refresh": "python tools/verify_css.py, open scratch/css_check.html, copy window.__record",
  "record": [
-  {"id": "css-source-order", "prop": "color", "page_sha256": "503d197e78fe15037624d66638aa86a15d2c050d679e3797acc2ef77f39cc0c4", "browser_value": "rgb(0, 128, 0)"},
-  {"id": "css-color-inherits", "prop": "color", "page_sha256": "7b9e5619b2340ba0a5b8299d024c1468f1f1625b6a190b99b49316273fa1565b", "browser_value": "rgb(0, 128, 0)"},
-  {"id": "css-id-beats-classes", "prop": "color", "page_sha256": "88c90eff8c581cbc8b42f94da007d03f8a3f74c985f8b06ecc2fb91f935504e2", "browser_value": "rgb(255, 0, 0)"},
-  {"id": "css-class-beats-two-elements", "prop": "color", "page_sha256": "5d472256035e27adbd1721aadee38c95108b4a4f8cfb01c8eab43f75ae41fcc2", "browser_value": "rgb(0, 128, 0)"},
-  {"id": "css-content-box-on-the-page", "prop": "rect.width", "page_sha256": "3594c0612f420a7c7ec60239c4cde1c81af271a6d7f7d0c2aa6b96ee77da9322", "browser_value": "250px"},
-  {"id": "css-border-does-not-inherit", "prop": "border-top-style", "page_sha256": "ccd706b4bb6e257f6d1cea4e74426ecca8390847a7c4625afb803ecf9ede28c4", "browser_value": "none"},
-  {"id": "css-flex-one-splits", "prop": "width", "page_sha256": "a3986ecb4ece3edeef9c52945b271b4c73e4496cfa504bc7b1470993fa212b36", "browser_value": "150px"},
-  {"id": "css-attribute-is-a-class", "prop": "color", "page_sha256": "3c244a66c12c62976e79fac457904190e6b0b921103fe52a4957642b68a0f22b", "browser_value": "rgb(255, 0, 0)"},
-  {"id": "css-content-box-width", "prop": "width", "page_sha256": "3594c0612f420a7c7ec60239c4cde1c81af271a6d7f7d0c2aa6b96ee77da9322", "browser_value": "200px"},
-  {"id": "css-border-box-width", "prop": "width", "page_sha256": "91290aabe47ace911cf12e1ca03f9f9c261a94abb0d4b1c8f2245f1f3d805250", "browser_value": "200px"},
-  {"id": "css-em-compounds", "prop": "font-size", "page_sha256": "36599c45d7216638f7daf0bbefc41105135e6491633ba51b8893499b83aeb873", "browser_value": "45px"},
-  {"id": "css-rem-ignores-the-parent", "prop": "font-size", "page_sha256": "c41bdfc7e9b7901bacf93ba7e1f4a159d55cdc987c531fe1c7695d84f3526ef3", "browser_value": "24px"},
-  {"id": "css-align-items-stretch", "prop": "height", "page_sha256": "82845813e1a3c29b64243486911c802043bf335b8cde0b22f7e2b1ded8e4f48e", "browser_value": "100px"},
-  {"id": "css-inline-ignores-width", "prop": "rect.width", "page_sha256": "43189876dffd70dcbf5a101a9fa743b9d7c1586995f3aa08666972f01ace463b", "browser_value": "0px"},
-  {"id": "css-important-beats-inline", "prop": "color", "page_sha256": "cf84f0efbe0638d6bfa3771535dcd2bda5880d94d4bf0145b1f3df9ab7c1bbbc", "browser_value": "rgb(0, 128, 0)"},
-  {"id": "css-universal-beats-inheritance", "prop": "color", "page_sha256": "af38979929e477968b93176e88225c22543171789511b4a9768ea7a0af3c6de8", "browser_value": "rgb(255, 0, 0)"},
-  {"id": "css-percentage-padding", "prop": "padding-top", "page_sha256": "e9424722556e6a53899353b352a89794aa20b7ef2b204c5401901adaae76ab16", "browser_value": "40px"},
-  {"id": "css-height-percent-auto-parent", "prop": "height", "page_sha256": "060f057084e251ca6d2823d99de83af059fab5dd1b77f14a10155945e4e32f3d", "browser_value": "0px"},
-  {"id": "css-absolute-needs-a-positioned-ancestor", "prop": "width", "page_sha256": "e78d738a0287dea7a01260edec1d93f0345e00a424b1c039feeb31781526bc37", "browser_value": "400px"},
-  {"id": "css-z-index-needs-position", "prop": "z-index", "page_sha256": "3d5cc98e68fc48ee27881950881a10c79d167256751fbc8d03709f2a509798b9", "browser_value": "5"},
-  {"id": "css-where-costs-nothing", "prop": "color", "page_sha256": "a3df5fe8ebf8b78c7f305d44aabdb741f187bd2532a70d91fcb3930aaf4e8036", "browser_value": "rgb(0, 128, 0)"},
-  {"id": "css-margin-collapse", "prop": "height", "page_sha256": "9c41751ffe589d721a0218b8f9402dc2b22a61480a359e3b09de45bb357d288d", "browser_value": "20px"},
-  {"id": "css-unitless-line-height", "prop": "line-height", "page_sha256": "47286d2ee15b0d9f42d206609acd96a91783e8c86c3c3f9be1da8edb7db5f870", "browser_value": "20px"},
-  {"id": "css-transform-percent-is-self", "prop": "transform", "page_sha256": "293484610247b46aa079ae0a1c37f4d75f89027aa0f9e710f6666aaf265641be", "browser_value": "matrix(1, 0, 0, 1, 40, 0)"}
+  {
+   "id": "css-source-order",
+   "prop": "color",
+   "page_sha256": "503d197e78fe15037624d66638aa86a15d2c050d679e3797acc2ef77f39cc0c4",
+   "browser_value": "rgb(0, 128, 0)"
+  },
+  {
+   "id": "css-color-inherits",
+   "prop": "color",
+   "page_sha256": "7b9e5619b2340ba0a5b8299d024c1468f1f1625b6a190b99b49316273fa1565b",
+   "browser_value": "rgb(0, 128, 0)"
+  },
+  {
+   "id": "css-id-beats-classes",
+   "prop": "color",
+   "page_sha256": "88c90eff8c581cbc8b42f94da007d03f8a3f74c985f8b06ecc2fb91f935504e2",
+   "browser_value": "rgb(255, 0, 0)"
+  },
+  {
+   "id": "css-class-beats-two-elements",
+   "prop": "color",
+   "page_sha256": "5d472256035e27adbd1721aadee38c95108b4a4f8cfb01c8eab43f75ae41fcc2",
+   "browser_value": "rgb(0, 128, 0)"
+  },
+  {
+   "id": "css-content-box-on-the-page",
+   "prop": "rect.width",
+   "page_sha256": "3594c0612f420a7c7ec60239c4cde1c81af271a6d7f7d0c2aa6b96ee77da9322",
+   "browser_value": "250px"
+  },
+  {
+   "id": "css-border-does-not-inherit",
+   "prop": "border-top-style",
+   "page_sha256": "ccd706b4bb6e257f6d1cea4e74426ecca8390847a7c4625afb803ecf9ede28c4",
+   "browser_value": "none"
+  },
+  {
+   "id": "css-flex-one-splits",
+   "prop": "width",
+   "page_sha256": "a3986ecb4ece3edeef9c52945b271b4c73e4496cfa504bc7b1470993fa212b36",
+   "browser_value": "150px"
+  },
+  {
+   "id": "css-attribute-is-a-class",
+   "prop": "color",
+   "page_sha256": "3c244a66c12c62976e79fac457904190e6b0b921103fe52a4957642b68a0f22b",
+   "browser_value": "rgb(255, 0, 0)"
+  },
+  {
+   "id": "css-content-box-width",
+   "prop": "width",
+   "page_sha256": "3594c0612f420a7c7ec60239c4cde1c81af271a6d7f7d0c2aa6b96ee77da9322",
+   "browser_value": "200px"
+  },
+  {
+   "id": "css-border-box-width",
+   "prop": "width",
+   "page_sha256": "91290aabe47ace911cf12e1ca03f9f9c261a94abb0d4b1c8f2245f1f3d805250",
+   "browser_value": "200px"
+  },
+  {
+   "id": "css-em-compounds",
+   "prop": "font-size",
+   "page_sha256": "36599c45d7216638f7daf0bbefc41105135e6491633ba51b8893499b83aeb873",
+   "browser_value": "45px"
+  },
+  {
+   "id": "css-rem-ignores-the-parent",
+   "prop": "font-size",
+   "page_sha256": "c41bdfc7e9b7901bacf93ba7e1f4a159d55cdc987c531fe1c7695d84f3526ef3",
+   "browser_value": "24px"
+  },
+  {
+   "id": "css-align-items-stretch",
+   "prop": "height",
+   "page_sha256": "82845813e1a3c29b64243486911c802043bf335b8cde0b22f7e2b1ded8e4f48e",
+   "browser_value": "100px"
+  },
+  {
+   "id": "css-inline-ignores-width",
+   "prop": "rect.width",
+   "page_sha256": "43189876dffd70dcbf5a101a9fa743b9d7c1586995f3aa08666972f01ace463b",
+   "browser_value": "0px"
+  },
+  {
+   "id": "css-important-beats-inline",
+   "prop": "color",
+   "page_sha256": "cf84f0efbe0638d6bfa3771535dcd2bda5880d94d4bf0145b1f3df9ab7c1bbbc",
+   "browser_value": "rgb(0, 128, 0)"
+  },
+  {
+   "id": "css-universal-beats-inheritance",
+   "prop": "color",
+   "page_sha256": "af38979929e477968b93176e88225c22543171789511b4a9768ea7a0af3c6de8",
+   "browser_value": "rgb(255, 0, 0)"
+  },
+  {
+   "id": "css-percentage-padding",
+   "prop": "padding-top",
+   "page_sha256": "e9424722556e6a53899353b352a89794aa20b7ef2b204c5401901adaae76ab16",
+   "browser_value": "40px"
+  },
+  {
+   "id": "css-height-percent-auto-parent",
+   "prop": "height",
+   "page_sha256": "060f057084e251ca6d2823d99de83af059fab5dd1b77f14a10155945e4e32f3d",
+   "browser_value": "0px"
+  },
+  {
+   "id": "css-absolute-needs-a-positioned-ancestor",
+   "prop": "width",
+   "page_sha256": "e78d738a0287dea7a01260edec1d93f0345e00a424b1c039feeb31781526bc37",
+   "browser_value": "400px"
+  },
+  {
+   "id": "css-z-index-needs-position",
+   "prop": "z-index",
+   "page_sha256": "3d5cc98e68fc48ee27881950881a10c79d167256751fbc8d03709f2a509798b9",
+   "browser_value": "5"
+  },
+  {
+   "id": "css-where-costs-nothing",
+   "prop": "color",
+   "page_sha256": "a3df5fe8ebf8b78c7f305d44aabdb741f187bd2532a70d91fcb3930aaf4e8036",
+   "browser_value": "rgb(0, 128, 0)"
+  },
+  {
+   "id": "css-margin-collapse",
+   "prop": "height",
+   "page_sha256": "9c41751ffe589d721a0218b8f9402dc2b22a61480a359e3b09de45bb357d288d",
+   "browser_value": "20px"
+  },
+  {
+   "id": "css-unitless-line-height",
+   "prop": "line-height",
+   "page_sha256": "47286d2ee15b0d9f42d206609acd96a91783e8c86c3c3f9be1da8edb7db5f870",
+   "browser_value": "20px"
+  },
+  {
+   "id": "css-transform-percent-is-self",
+   "prop": "transform",
+   "page_sha256": "293484610247b46aa079ae0a1c37f4d75f89027aa0f9e710f6666aaf265641be",
+   "browser_value": "matrix(1, 0, 0, 1, 40, 0)"
+  },
+  {
+   "id": "html-li-autocloses",
+   "prop": "dom.childCount",
+   "page_sha256": "d9c72190f1e524c0c23d57ce76405d643ddc8c461f2c59a590b00e8ea2a4e0cf",
+   "browser_value": "3"
+  },
+  {
+   "id": "html-tag-case",
+   "prop": "dom.tag",
+   "page_sha256": "9cf3767d4063d64a9662bcbee918a4958d86fb6ea1e1c71c51bb6b9f3087de7e",
+   "browser_value": "div"
+  },
+  {
+   "id": "html-ul-padding",
+   "prop": "padding-left",
+   "page_sha256": "594881a04819174a20f4de17f8051f4fd95b52dae1713489588e36e5c47c2a00",
+   "browser_value": "40px"
+  },
+  {
+   "id": "html-pre-whitespace",
+   "prop": "white-space",
+   "page_sha256": "70f0a3cd599a4b6f06445bea9fc57f8ed2ce7baccea83ef6ae6743104ba811de",
+   "browser_value": "pre"
+  },
+  {
+   "id": "html-p-cannot-hold-a-div",
+   "prop": "dom.parentTag",
+   "page_sha256": "fbe68eede1d94ef80e787e8b3fdbb84a83a566081abd6dcff981ed21c34cd0d6",
+   "browser_value": "body"
+  },
+  {
+   "id": "html-implicit-tbody",
+   "prop": "dom.parentTag",
+   "page_sha256": "f044fe2ac1543053b56b73d85ba4c329ec5bc2dc4d509edf3eb127c54a153324",
+   "browser_value": "tbody"
+  },
+  {
+   "id": "html-entities-are-text",
+   "prop": "dom.text",
+   "page_sha256": "401d1852c9440962fd3c2df23b067a36543bcc16097b684ddabc8f6c84071b70",
+   "browser_value": "5 < 6 && 7 > 6"
+  },
+  {
+   "id": "html-bold-weight",
+   "prop": "font-weight",
+   "page_sha256": "5f82a3977d712d1e2a04d9407b668da456efbbfe891e88fcfc0a2a2fb3dddc9a",
+   "browser_value": "700"
+  },
+  {
+   "id": "html-body-margin",
+   "prop": "rect.width",
+   "page_sha256": "b9be27638aef9f35ebd12a84d6e5431d6008fd0c69979ecae025c6de7ca38638",
+   "browser_value": "784px"
+  },
+  {
+   "id": "html-nested-anchor",
+   "prop": "dom.parentTag",
+   "page_sha256": "277cda9303231f38b7f017afb8dbfb89fd3194665708a111f362c56183d0fd27",
+   "browser_value": "body"
+  },
+  {
+   "id": "html-button-font",
+   "prop": "font-size",
+   "page_sha256": "67b598d835a5b6795e2defdba4c4340625f9817cb8d28ff54782e58805ddef4d",
+   "browser_value": "13.3333px"
+  },
+  {
+   "id": "html-foster-parenting",
+   "prop": "dom.parentTag",
+   "page_sha256": "f1c92c600f3072cefe3daf4e75d883864ec550c6886ddb5606d17ce05a04fac9",
+   "browser_value": "body"
+  },
+  {
+   "id": "html-h1-in-section",
+   "prop": "font-size",
+   "page_sha256": "32666e5e953535f576815255e4d5d86053454d0c227aeca8e4cfda721cd9eae2",
+   "browser_value": "32px"
+  },
+  {
+   "id": "html-span-is-not-self-closing",
+   "prop": "dom.parentTag",
+   "page_sha256": "9bbf987b8f7914e3944590c2a2c3d5d1c922ff45cc48acec6a8264a26d2e3907",
+   "browser_value": "span"
+  }
  ]
 }

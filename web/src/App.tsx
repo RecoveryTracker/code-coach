@@ -1070,9 +1070,9 @@ export default function App() {
         type="button"
         className="ws-btn"
         onClick={() => setStylesOpen(true)}
-        title="Read the CSS and say what the browser computes, then see it"
+        title="Read the HTML and CSS, say what the browser makes of it, then see it"
       >
-        Styles
+        HTML &amp; CSS
       </button>
       <button
         type="button"
@@ -1169,7 +1169,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         <div className="typing-topbar">
-          <span className="ws-brand-inline">Styles</span>
+          <span className="ws-brand-inline">HTML &amp; CSS</span>
           <div className="panel-actions">
             <button
               type="button"

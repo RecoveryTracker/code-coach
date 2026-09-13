@@ -115,8 +115,9 @@ def quizzes(family: str | None = None) -> tuple[StyleQuiz, ...]:
     """
     from code_coach.css.content import BOX, CASCADE
     from code_coach.css.content2 import INHERIT, LAYOUT
+    from code_coach.css.content3 import DEFAULTS, PARSER
 
-    everything = (*CASCADE, *BOX, *INHERIT, *LAYOUT)
+    everything = (*CASCADE, *BOX, *INHERIT, *LAYOUT, *PARSER, *DEFAULTS)
     if family is not None:
         everything = tuple(q for q in everything if q.family == family)
     return tuple(sorted(everything, key=lambda q: q.level))
@@ -127,8 +128,9 @@ def css_families() -> tuple[str, ...]:
     seen: list[str] = []
     from code_coach.css.content import BOX, CASCADE
     from code_coach.css.content2 import INHERIT, LAYOUT
+    from code_coach.css.content3 import DEFAULTS, PARSER
 
-    for q in (*CASCADE, *BOX, *INHERIT, *LAYOUT):
+    for q in (*CASCADE, *BOX, *INHERIT, *LAYOUT, *PARSER, *DEFAULTS):
         if q.family not in seen:
             seen.append(q.family)
     return tuple(seen)
