@@ -318,8 +318,9 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
     from code_coach.kata.projects import PROJECTS
+    from code_coach.kata.projects2 import PROJECTS2
 
-    everything = KATAS + MORE + PROJECTS + BUGS + BUGS2
+    everything = KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
     if family is None:
         return everything
     return tuple(k for k in everything if k.family == family)
