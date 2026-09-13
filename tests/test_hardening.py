@@ -16,7 +16,7 @@ import time
 import unittest
 
 from code_coach.api.server import host_allowed
-from code_coach.engine import MAX_OUTPUT_CHARS, run_code
+from code_coach.engine import MAX_OUTPUT_CHARS, default_timeout, run_code
 
 
 class HostGuard(unittest.TestCase):
@@ -38,11 +38,22 @@ class RunnerCaps(unittest.TestCase):
         self.assertEqual(out.strip(), "42")
 
     def test_infinite_loop_times_out(self):
+        """Killed at whatever the ceiling currently is.
+
+        This used to allow six seconds, which was three plus slack and
+        was right while three was the only ceiling there had ever been.
+        The suite now raises it — programs that finish in a third of a
+        second were being reported as runaways under load — and a
+        hardcoded six turned this into a test of the number rather than
+        of the guard. Asking default_timeout() keeps it a test of the
+        guard under either.
+        """
+        ceiling = default_timeout()
         start = time.time()
         out, err, rc = run_code("while True:\n    pass")
         elapsed = time.time() - start
         self.assertEqual(rc, 124)
-        self.assertLess(elapsed, 6.0)  # ~3s timeout + slack
+        self.assertLess(elapsed, ceiling + 3.0)
 
     def test_output_is_capped(self):
         out, err, rc = run_code('print("x" * 500000)')

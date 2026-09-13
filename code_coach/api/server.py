@@ -30,6 +30,8 @@ from code_coach.api.schemas import (
     PracticeSession,
     CssCheckRequest,
     CssCheckResponse,
+    DrillCheckRequest,
+    DrillCheckResponse,
     PredictCheckRequest,
     PredictCheckResponse,
     ProgressResponse,
@@ -1502,4 +1504,82 @@ def css_check(body: CssCheckRequest) -> CssCheckResponse:
         expect=found.expect,
         choice=body.choice,
         why=found.why,
+    )
+
+
+@app.get("/api/drills")
+def drill_list() -> dict:
+    """Every typing drill, grouped, with the code you are copying.
+
+    The code is in the payload on purpose — unlike the katas and the
+    quizzes, this is not a question with an answer to protect. You are
+    copying the thing in front of you, and hiding it would leave
+    nothing to copy.
+    """
+    from code_coach.markup import drill_families, drills
+
+    saved = _store.load()
+    counts, last = saved.markup_counts(), saved.markup_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "drills": [
+                    {
+                        "id": d.id,
+                        "name": d.name,
+                        "code": d.code,
+                        "note": d.note,
+                        "wrapper": d.wrapper,
+                        "lines": d.lines,
+                        "done": counts.get(d.id, 0),
+                        "last": last.get(d.id, ""),
+                        "level": d.level,
+                    }
+                    for d in drills(family)
+                ],
+            }
+            for family in drill_families()
+        ]
+    }
+
+
+@app.post("/api/drills/check", response_model=DrillCheckResponse)
+def drill_check(body: DrillCheckRequest) -> DrillCheckResponse:
+    """Compare what was typed with the drill, character for character.
+
+    Both sides go through the same tidying, which forgives line endings
+    and trailing spaces and forgives nothing else. On a mismatch the
+    answer is the first line that differs rather than a diff of the
+    whole thing: you are about to type it again, so what you need is
+    the one place to look.
+    """
+    from code_coach.markup import drill as find_drill
+    from code_coach.markup import tidy
+
+    found = find_drill(body.drill_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown drill {body.drill_id}"
+        )
+    want, got = tidy(found.code), tidy(body.typed)
+    if want == got:
+        progress = _store.load()
+        done = progress.record_markup(found.id)
+        _store.save(progress)
+        return DrillCheckResponse(passed=True, done=done)
+
+    want_lines, got_lines = want.split("\n"), got.split("\n")
+    where = 0
+    for i in range(max(len(want_lines), len(got_lines))):
+        a = want_lines[i] if i < len(want_lines) else ""
+        b = got_lines[i] if i < len(got_lines) else ""
+        if a != b:
+            where = i + 1
+            break
+    return DrillCheckResponse(
+        passed=False,
+        first_wrong_line=where,
+        want_line=want_lines[where - 1] if where <= len(want_lines) else "",
+        typed_line=got_lines[where - 1] if where <= len(got_lines) else "",
     )

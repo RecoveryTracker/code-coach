@@ -742,3 +742,36 @@ export type CssCheck = {
   done: number;
   why: string;
 };
+
+export type MarkupDrill = {
+  id: string;
+  name: string;
+  /** The code you are copying. Not hidden — copying it is the exercise. */
+  code: string;
+  note: string;
+  /** A page with {{drill}} where the piece goes, or "" when the drill
+   *  is itself the whole document. */
+  wrapper: string;
+  lines: number;
+  done: number;
+  last: string;
+  level: number;
+};
+
+export type MarkupFamily = {
+  name: string;
+  drills: MarkupDrill[];
+};
+
+export type MarkupList = {
+  families: MarkupFamily[];
+};
+
+export type MarkupCheck = {
+  passed: boolean;
+  done: number;
+  /** 1-based, or 0 when it matched. One place to look, not a diff. */
+  first_wrong_line: number;
+  want_line: string;
+  typed_line: string;
+};

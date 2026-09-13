@@ -4,6 +4,8 @@ import type {
   CssCheck,
   CssList,
   DrillEvaluateResult,
+  MarkupCheck,
+  MarkupList,
   ExplainResult,
   KataCheck,
   KataList,
@@ -158,6 +160,22 @@ export function checkCss(body: {
   choice: string;
 }): Promise<CssCheck> {
   return request("/api/css/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Every HTML and CSS typing drill, grouped. */
+export function fetchDrills(): Promise<MarkupList> {
+  return request("/api/drills");
+}
+
+/** Send what was typed, and find out where it first differs. */
+export function checkDrill(body: {
+  drill_id: string;
+  typed: string;
+}): Promise<MarkupCheck> {
+  return request("/api/drills/check", {
     method: "POST",
     body: JSON.stringify(body),
   });

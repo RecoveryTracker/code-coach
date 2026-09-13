@@ -674,3 +674,22 @@ class CssCheckResponse(BaseModel):
     # no explanation teaches only that you were wrong, and being right
     # with none leaves you unsure whether you knew it.
     why: str = ""
+
+
+class DrillCheckRequest(BaseModel):
+    """One drill, and what was typed into the box."""
+
+    drill_id: str = ""
+    typed: str = ""
+
+
+class DrillCheckResponse(BaseModel):
+    passed: bool = False
+    done: int = 0
+    #: The first line that differs, 1-based, or 0 when they match.
+    #: Whole-file diffs are for review; here you want the one place to
+    #: look, because you are about to type it again.
+    first_wrong_line: int = 0
+    #: That line as it should be, and as it was typed.
+    want_line: str = ""
+    typed_line: str = ""

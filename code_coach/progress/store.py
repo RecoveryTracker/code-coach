@@ -149,6 +149,7 @@ class StudentProgress:
     kata_done: dict[str, DrillRecord] = field(default_factory=dict)
     predict_done: dict[str, DrillRecord] = field(default_factory=dict)
     css_done: dict[str, DrillRecord] = field(default_factory=dict)
+    markup_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -220,6 +221,12 @@ class StudentProgress:
     def css_counts(self) -> dict[str, int]:
         return {k: v.count for k, v in self.css_done.items()}
 
+    def record_markup(self, drill_id: str) -> int:
+        return _bump(self.markup_done, drill_id)
+
+    def markup_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.markup_done.items()}
+
     def kata_last(self) -> dict[str, str]:
         """When each was last got right, for choosing what to do next.
 
@@ -240,6 +247,11 @@ class StudentProgress:
     def css_last(self) -> dict[str, str]:
         return {
             k: v.last_at for k, v in self.css_done.items() if v.last_at
+        }
+
+    def markup_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.markup_done.items() if v.last_at
         }
 
     def workbook_page_for(self, language: str) -> str:

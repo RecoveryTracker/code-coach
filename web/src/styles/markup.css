@@ -1,0 +1,171 @@
+/* The HTML & CSS screens: the quizzes, the typing drills, and the row
+   of module names that every screen wears.
+
+   This started life as web/src/index.css, which Vite creates by
+   convention and which this project does not import — main.tsx names
+   its stylesheets one by one out of styles/. So none of it applied.
+   The mode row looked right anyway because those buttons carry
+   .ws-btn as well as .mode-btn, and workspace.css styles .ws-btn.on;
+   the drill layout was the first rule with no such understudy, which
+   is what made it visible. */
+
+/* ── Styles mode: the CSS quizzes ── */
+
+/* The choices are the answer, so they get to be big and obvious rather
+   than a select. Monospace because most of them are values - rgb(0, 128,
+   0) next to rgb(0, 0, 255) is hard to tell apart in a proportional
+   font, and telling them apart is the exercise. */
+.css-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.css-choice {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.css-choice.ok {
+  border-color: #2f9e57;
+  color: #2f9e57;
+}
+
+.css-choice.bad {
+  border-color: #c4443a;
+  color: #c4443a;
+}
+
+/* Disabled after answering, but the right one still has to read as the
+   right one - the default dimming would grey out the thing you are
+   meant to be looking at. */
+.css-choice:disabled {
+  opacity: 1;
+}
+
+.css-choice:disabled:not(.ok):not(.bad) {
+  opacity: 0.45;
+}
+
+.css-render {
+  margin-top: 12px;
+}
+
+/* White on purpose: these render as a plain document would, and the
+   app's dark surface behind a transparent body would change what the
+   colours look like. */
+.css-frame {
+  width: 100%;
+  height: 220px;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* ── The module row ── */
+
+/* It wraps rather than scrolls. Nine names will not fit on a narrow
+   window, and a row that scrolls sideways hides the last few names in
+   exactly the way the fixed row exists to prevent. */
+.mode-bar .panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The module you are in. Marked, not removed: a row that drops the
+   current name changes width and moves every other name along with it,
+   which is the opposite of being able to find a word where you last
+   saw it. */
+.mode-btn.on {
+  border-color: var(--accent, #6ea8fe);
+  color: var(--accent, #6ea8fe);
+  font-weight: 600;
+}
+
+/* ── HTML & CSS: the two halves ── */
+
+.css-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.css-halves {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+
+/* ── Typing drills ── */
+
+/* Box and render side by side, because the whole point is watching the
+   one change the other. They stack on a narrow window rather than
+   shrinking to two unusable columns. */
+.drill-work {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .drill-work {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Monospace, and tall enough for the longest drill without scrolling —
+   a box that scrolls while you type hides the line you just got wrong. */
+.drill-box {
+  min-height: 320px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+/* White, like a page. The app's dark surface behind a transparent body
+   would change what the colours look like, and these are documents. */
+.drill-frame {
+  width: 100%;
+  height: 320px;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.drill-frame-target {
+  margin-top: 8px;
+  height: 200px;
+  opacity: 0.9;
+}
+
+.drill-reference {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.drill-wrapper {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.drill-wrapper summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.drill-wrapper-code {
+  opacity: 0.7;
+  max-height: 220px;
+  overflow: auto;
+}

@@ -22,10 +22,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkCss, fetchCssQuizzes } from "../api";
+import Drills from "./Drills";
 import type { CssCheck, CssList, CssQuiz } from "../types";
 
 /** Which quiz you were on, so coming back lands where you left. */
 const LAST_KEY = "code-coach:css-last";
+
+/** Reading the page, or writing it. Remembered like everything else. */
+const HALF_KEY = "code-coach:css-half";
 
 /**
  * Which to offer next: fewest goes, and of those the longest ago.
@@ -77,6 +81,64 @@ function isParserQuestion(quiz: CssQuiz): boolean {
 }
 
 export default function Styles() {
+  /* Two halves of one subject, so one screen with a pair of tabs rather
+     than a tenth name in the row. Reading what the browser makes of a
+     page and writing the page are the same material from two sides, and
+     they are worth switching between in a session. */
+  const [half, setHalf] = useState<"read" | "type">(() => {
+    try {
+      return localStorage.getItem(HALF_KEY) === "type" ? "type" : "read";
+    } catch {
+      return "read";
+    }
+  });
+
+  const pickHalf = (next: "read" | "type") => {
+    setHalf(next);
+    try {
+      localStorage.setItem(HALF_KEY, next);
+    } catch {
+      /* a blocked store is not worth interrupting practice for */
+    }
+  };
+
+  const tabs = (
+    <div className="css-halves" role="tablist" aria-label="Read or type">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={half === "read"}
+        className={`ws-btn${half === "read" ? " on" : ""}`}
+        onClick={() => pickHalf("read")}
+        title="Read the markup and styles, say what the browser computes"
+      >
+        Read it
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={half === "type"}
+        className={`ws-btn${half === "type" ? " on" : ""}`}
+        onClick={() => pickHalf("type")}
+        title="Type the markup and watch what you typed render"
+      >
+        Type it
+      </button>
+    </div>
+  );
+
+  if (half === "type") {
+    return (
+      <div className="css-screen">
+        {tabs}
+        <Drills />
+      </div>
+    );
+  }
+  return <StyleQuizzes tabs={tabs} />;
+}
+
+function StyleQuizzes({ tabs }: { tabs: React.ReactNode }) {
   const [list, setList] = useState<CssList | null>(null);
   const [chosen, setChosen] = useState("");
   const [picked, setPicked] = useState("");
@@ -177,14 +239,28 @@ export default function Styles() {
   );
 
   if (error && !list) {
-    return <div className="lessons-empty">Could not load these: {error}</div>;
+    return (
+      <div className="css-screen">
+        {tabs}
+        <div className="lessons-empty">Could not load these: {error}</div>
+      </div>
+    );
   }
-  if (!list || !quiz) return <div className="lessons-empty">Loading…</div>;
+  if (!list || !quiz) {
+    return (
+      <div className="css-screen">
+        {tabs}
+        <div className="lessons-empty">Loading…</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="lessons-wrap">
+    <div className="css-screen">
+      {tabs}
+      <div className="lessons-wrap">
       <nav className="lessons-list">
-        <h2>HTML &amp; CSS</h2>
+        <h2>Read it</h2>
         <p className="lessons-intro">
           Read the markup and the stylesheet, say what the browser worked
           out, then watch it render. Some of these ask what the cascade
@@ -347,6 +423,7 @@ export default function Styles() {
           </div>
         ) : null}
       </article>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import "./styles/workspace.css";
 import "./styles/typing.css";
 import "./styles/lessons.css";
 import "./styles/reference.css";
+import "./styles/markup.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
