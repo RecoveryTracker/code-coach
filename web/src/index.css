@@ -52,3 +52,25 @@
   border-radius: 6px;
   background: #fff;
 }
+
+/* ── The module row ── */
+
+/* It wraps rather than scrolls. Nine names will not fit on a narrow
+   window, and a row that scrolls sideways hides the last few names in
+   exactly the way the fixed row exists to prevent. */
+.mode-bar .panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The module you are in. Marked, not removed: a row that drops the
+   current name changes width and moves every other name along with it,
+   which is the opposite of being able to find a word where you last
+   saw it. */
+.mode-btn.on {
+  border-color: var(--accent, #6ea8fe);
+  color: var(--accent, #6ea8fe);
+  font-weight: 600;
+}

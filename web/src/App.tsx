@@ -31,6 +31,8 @@ import Lessons from "./components/Lessons";
 import Reference from "./components/Reference";
 import Katas from "./components/Katas";
 import Predict from "./components/Predict";
+import { ModeButtons, isMode } from "./components/ModeBar";
+import type { Mode } from "./components/ModeBar";
 import Styles from "./components/Styles";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
@@ -179,6 +181,9 @@ const PANE_LABELS: { key: keyof Panes; label: string; title: string }[] = [
  * ← Back / Next → always steer between lessons (never grayed for "not done").
  * Free mode: coach off, plain coding.
  */
+/** Which module you were last in, so a reload lands where you were. */
+const MODE_KEY = "code-coach:mode";
+
 export default function App() {
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
@@ -193,22 +198,52 @@ export default function App() {
   const [watching, setWatching] = useState(false);
   const [freeMode, setFreeMode] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
+
+  /* Which module is open.
+     Nine booleans before this, one per screen, which is nine ways to be
+     in two places at once and no way to ask where you are. One value
+     also makes "the row of names, with the current one marked" a thing
+     that can be rendered rather than derived from nine flags. */
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      const saved = localStorage.getItem(MODE_KEY) ?? "";
+      if (isMode(saved)) return saved;
+    } catch {
+      /* a blocked store is not worth refusing to start over */
+    }
+    // Not the editor. The app used to open there because it was the
+    // only screen; landing there still says it is the important one.
+    return "workbook";
+  });
+
+  const go = useCallback((next: Mode) => {
+    setMode(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      /* same */
+    }
+  }, []);
+
+  /* The old names, so the screens below read as they did. Each was a
+     piece of state that could disagree with the others; now each is a
+     question about the one value. */
+  const referenceOpen = mode === "reference";
+  const stylesOpen = mode === "styles";
+  const predictOpen = mode === "predict";
+  const katasOpen = mode === "katas";
+  const workbookOpen = mode === "workbook";
+  const conceptsOpen = mode === "concepts";
+  const lessonsOpen = mode === "lessons";
+  const typingOpen = mode === "typing";
   // The typing trainer takes the whole screen: it listens on every keypress,
   // so it can't share a window with an editor that wants the same keys.
-  const [typingOpen, setTypingOpen] = useState(false);
   // Lessons takes the whole screen for the same reason typing does: it is
   // reading, and reading in a side panel next to an editor is glancing.
-  const [lessonsOpen, setLessonsOpen] = useState(false);
-  const [referenceOpen, setReferenceOpen] = useState(false);
   // Concepts is reading too, so it takes the screen for the same reason
   // Lessons does.
-  const [conceptsOpen, setConceptsOpen] = useState(false);
   // The workbook is the one screen you are producing on rather than reading,
   // so it takes the whole window the same way the editor does.
-  const [workbookOpen, setWorkbookOpen] = useState(false);
-  const [katasOpen, setKatasOpen] = useState(false);
-  const [predictOpen, setPredictOpen] = useState(false);
-  const [stylesOpen, setStylesOpen] = useState(false);
   const [panes, setPanes] = useState<Panes>(loadPanes);
   /**
    * Free mode's reminders. Not the coach: they say nothing about whether you
@@ -608,7 +643,7 @@ export default function App() {
       try {
         const next = await gotoProblem(patternId, problemNumber);
         await loadSession(next, false, null, next.jump_to_exercise ?? undefined);
-        setLessonsOpen(false);
+        go("leetcode");
       } catch {
         /* stay in the lesson rather than half-navigating */
       }
@@ -1026,6 +1061,10 @@ export default function App() {
           }
         }}
       />
+      {/* The same row the other eight screens wear, from the same
+          source. This screen used to hand-write the list, which is how
+          a module gets added to the app and not to the editor's row. */}
+      <ModeButtons mode={mode} onPick={go} />
       <button
         type="button"
         className={`ws-btn${progressOpen ? " primary" : ""}`}
@@ -1033,70 +1072,6 @@ export default function App() {
         title="Skills, type-along lines, and what's due for review"
       >
         Progress
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setLessonsOpen(true)}
-        title="The patterns, taught — how to get from a question to a solution"
-      >
-        Lessons
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setWorkbookOpen(true)}
-        title="Pages of small exercises you solve by typing"
-      >
-        Workbook
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setKatasOpen(true)}
-        title="Write a function and have it called with inputs you haven't seen"
-      >
-        Katas
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setPredictOpen(true)}
-        title="Read the code and say what it prints, then watch it happen"
-      >
-        Predict
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setStylesOpen(true)}
-        title="Read the HTML and CSS, say what the browser makes of it, then see it"
-      >
-        HTML &amp; CSS
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setConceptsOpen(true)}
-        title="The questions an interview asks that aren't coding problems"
-      >
-        Concepts
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setReferenceOpen(true)}
-        title="Cheat sheet and flashcards for the language you're in"
-      >
-        Reference
-      </button>
-      <button
-        type="button"
-        className="ws-btn"
-        onClick={() => setTypingOpen(true)}
-        title="Keyboard practice — key sections, symbols, speed and vocabulary"
-      >
-        Typing
       </button>
       <button
         type="button"
@@ -1144,22 +1119,37 @@ export default function App() {
     <LanguagePicker current={viewingLanguage} onChanged={onLanguageChanged} />
   );
 
+  /* The row every screen wears. Same names, same order, same place,
+     whichever module you are in — including the editor, which used to
+     be the only screen that had them and is now one of the nine.
+
+     The language picker rides along because every module shows one
+     language's material. Free mode does not: it reshapes the editor's
+     panes and pauses the exercise session, which means nothing on the
+     other eight, and a button that does nothing on most screens is
+     worse than one you have to go somewhere to find. */
+  const modeBar = (
+    <div className="typing-topbar mode-bar">
+      <span className="ws-brand-inline">Code Coach</span>
+      <div className="panel-actions">
+        <ModeButtons mode={mode} onPick={go} />
+        {panelLanguage}
+        <button
+          type="button"
+          className={`ws-btn${progressOpen ? " primary" : ""}`}
+          onClick={() => setProgressOpen((o) => !o)}
+          title="Skills, type-along lines, and what's due for review"
+        >
+          Progress
+        </button>
+      </div>
+    </div>
+  );
+
   if (referenceOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Reference</span>
-          <div className="panel-actions">
-            {panelLanguage}
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setReferenceOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Reference language={viewingLanguage} />
       </div>
     );
@@ -1168,18 +1158,7 @@ export default function App() {
   if (stylesOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">HTML &amp; CSS</span>
-          <div className="panel-actions">
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setStylesOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Styles />
       </div>
     );
@@ -1188,18 +1167,7 @@ export default function App() {
   if (predictOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Predict</span>
-          <div className="panel-actions">
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setPredictOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Predict />
       </div>
     );
@@ -1208,18 +1176,7 @@ export default function App() {
   if (katasOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Katas</span>
-          <div className="panel-actions">
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setKatasOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Katas />
       </div>
     );
@@ -1228,19 +1185,7 @@ export default function App() {
   if (workbookOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Workbook</span>
-          <div className="panel-actions">
-            {panelLanguage}
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setWorkbookOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Workbook language={viewingLanguage} />
       </div>
     );
@@ -1249,19 +1194,7 @@ export default function App() {
   if (conceptsOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Concepts</span>
-          <div className="panel-actions">
-            {panelLanguage}
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setConceptsOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Concepts language={viewingLanguage} />
       </div>
     );
@@ -1270,19 +1203,7 @@ export default function App() {
   if (lessonsOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Lessons</span>
-          <div className="panel-actions">
-            {panelLanguage}
-            <button
-              type="button"
-              className="ws-btn"
-              onClick={() => setLessonsOpen(false)}
-            >
-              Back to code
-            </button>
-          </div>
-        </div>
+        {modeBar}
         <Lessons
           language={viewingLanguage}
           onOpenProblem={(patternId, problemNumber) =>
@@ -1296,16 +1217,7 @@ export default function App() {
   if (typingOpen) {
     return (
       <div className="typing-shell">
-        <div className="typing-topbar">
-          <span className="ws-brand-inline">Typing</span>
-          <button
-            type="button"
-            className="ws-btn"
-            onClick={() => setTypingOpen(false)}
-          >
-            Back to code
-          </button>
-        </div>
+        {modeBar}
         <TypingTrainer />
       </div>
     );
