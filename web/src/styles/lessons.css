@@ -962,3 +962,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* The button that decides what to do next. Full width in the sidebar,
+   above the list, because choosing by hand out of forty-four is how the
+   same six get practised and the rest go untouched. */
+.kata-next {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.4;
+}

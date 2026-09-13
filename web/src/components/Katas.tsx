@@ -140,10 +140,19 @@ export default function Katas() {
     return null;
   }, [list, chosen]);
 
+  // Held in a ref so the effect below can read the current one while
+  // depending only on which one it is. Updating the pass count rebuilds
+  // every object in the list, and an effect keyed on the object itself
+  // then fires and clears the result — so passing a kata wiped the panel
+  // that had just said it passed.
+  const latest = useRef<KataSummary | null>(null);
+  latest.current = kata;
+
   // Moving to a kata brings back what you had typed for it, or starts you
   // on the signature — an empty box and a name to get exactly right is a
   // worse first second than the line already being there.
   useEffect(() => {
+    const kata = latest.current;
     if (!kata) return;
     const saved = drafts.current[kata.id];
     // A broken exercise opens on the broken code; a kata opens on its
@@ -164,7 +173,7 @@ export default function Katas() {
     } catch {
       /* not worth interrupting practice for */
     }
-  }, [kata]);
+  }, [chosen]);
 
   const onCode = useCallback(
     (next: string) => {
@@ -184,7 +193,24 @@ export default function Katas() {
     setRunning(true);
     setError("");
     try {
-      setResult(await checkKata({ kata_id: kata.id, code }));
+      const got = await checkKata({ kata_id: kata.id, code });
+      setResult(got);
+      if (got.passed) {
+        // The count in the sidebar is the thing that says "again"; it
+        // has to move the moment it changes, not on the next reload.
+        setList((was) =>
+          was
+            ? {
+                families: was.families.map((f) => ({
+                  ...f,
+                  katas: f.katas.map((k) =>
+                    k.id === kata.id ? { ...k, done: got.done } : k,
+                  ),
+                })),
+              }
+            : was,
+        );
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -253,6 +279,20 @@ print(${asCall(kata.name, pick.args)})
 `;
   }, [code, kata, result]);
 
+  /**
+   * The one with the fewest goes at it, ties going to the first.
+   *
+   * This is what the counts are for. Choosing by hand from forty-four
+   * means picking whichever name catches your eye, which is how the
+   * same six get practised and the rest go untouched; the least
+   * practised is a decision the list can make for you.
+   */
+  const leastDone = useMemo(() => {
+    const all = list?.families.flatMap((f) => f.katas) ?? [];
+    if (!all.length) return null;
+    return all.reduce((worst, k) => (k.done < worst.done ? k : worst), all[0]);
+  }, [list]);
+
   // Failures first. A panel that opens on four passes and buries the one
   // that matters is a panel you have to read rather than glance at.
   const ordered = useMemo(() => {
@@ -275,6 +315,20 @@ print(${asCall(kata.name, pick.args)})
           Write the function. It is called with inputs you have not seen —
           which is where the empty list and the negative number live.
         </p>
+        {leastDone && leastDone.id !== chosen ? (
+          <button
+            type="button"
+            className="ws-btn kata-next"
+            onClick={() => setChosen(leastDone.id)}
+            title={
+              leastDone.done
+                ? `${leastDone.name} — ${leastDone.done} so far`
+                : `${leastDone.name} — not tried yet`
+            }
+          >
+            Least practised: {leastDone.name}
+          </button>
+        ) : null}
         {list.families.map((family) => (
           <div key={family.name} className="wb-section">
             <h4 className="wb-section-head">
@@ -291,7 +345,9 @@ print(${asCall(kata.name, pick.args)})
                 onClick={() => setChosen(k.id)}
               >
                 <span className="lessons-pick-name">{k.name}</span>
-                <span className="lessons-pick-blurb">{k.cases} cases</span>
+                <span className="lessons-pick-blurb">
+                  {k.done ? `done ${k.done}×` : `${k.cases} cases`}
+                </span>
               </button>
             ))}
           </div>

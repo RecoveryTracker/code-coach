@@ -64,6 +64,37 @@ class DrillRecord:
     last_at: str | None = None
 
 
+def _bump(records: dict[str, DrillRecord], key: str) -> int:
+    """One more go at `key`, dated now. Returns the new count."""
+    was = records.get(key)
+    count = (was.count if was else 0) + 1
+    records[key] = DrillRecord(count=count, last_at=_now())
+    return count
+
+
+def _records(raw: object) -> dict[str, DrillRecord]:
+    """Read a counter map that may be absent, or may hold bare numbers.
+
+    Absent is the normal case for a file written before these existed,
+    and it means nothing has been done rather than anything being wrong.
+    """
+    out: dict[str, DrillRecord] = {}
+    if not isinstance(raw, dict):
+        return out
+    for key, value in raw.items():
+        if isinstance(value, dict):
+            out[str(key)] = DrillRecord(
+                count=int(value.get("count", 0) or 0),
+                last_at=value.get("last_at"),
+            )
+        else:
+            try:
+                out[str(key)] = DrillRecord(count=int(value), last_at=None)
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 @dataclass
 class StudentProgress:
     version: int = 3
@@ -108,6 +139,15 @@ class StudentProgress:
     # exercise id. Your own answers are the one thing in this app you cannot
     # get back if it is not kept.
     workbook_answers: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Katas and predict-the-output puzzles that have been got right, and
+    # how many times each.
+    #
+    # A count rather than a tick, because these are practised rather than
+    # completed: the useful question is not "have I done this" but "how
+    # many goes have I had at it", and the answer to that is what picks
+    # the next one. Not keyed by language — both modes are Python only.
+    kata_done: dict[str, DrillRecord] = field(default_factory=dict)
+    predict_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -158,6 +198,20 @@ class StudentProgress:
 
     def workbook_answers_for(self, language: str) -> dict[str, str]:
         return dict(self.workbook_answers.get(language, {}))
+
+    # ── Katas and puzzles ──
+    def record_kata(self, kata_id: str) -> int:
+        """Count one more correct go at this kata, and say how many now."""
+        return _bump(self.kata_done, kata_id)
+
+    def record_predict(self, puzzle_id: str) -> int:
+        return _bump(self.predict_done, puzzle_id)
+
+    def kata_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.kata_done.items()}
+
+    def predict_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.predict_done.items()}
 
     def workbook_page_for(self, language: str) -> str:
         return self.workbook_page.get(language, "")
@@ -250,6 +304,8 @@ class StudentProgress:
                 }
                 for k, v in (raw.get("workbook_answers") or {}).items()
             },
+            kata_done=_records(raw.get("kata_done")),
+            predict_done=_records(raw.get("predict_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

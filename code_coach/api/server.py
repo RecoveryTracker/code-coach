@@ -1235,6 +1235,7 @@ def kata_list() -> dict:
     """Every kata, grouped the way the screen shows them."""
     from code_coach.kata import families, katas
 
+    counts = _store.load().kata_counts()
     return {
         "families": [
             {
@@ -1251,6 +1252,7 @@ def kata_list() -> dict:
                         # Filled in for the broken ones, empty for the
                         # rest, which is what the screen keys off.
                         "start": k.start,
+                        "done": counts.get(k.id, 0),
                     }
                     for k in katas(family)
                 ],
@@ -1291,6 +1293,13 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
         harness(found, body.code), language="python"
     )
     outcome = judge(found, stdout, stderr, exit_code)
+    done = 0
+    if outcome.passed:
+        # Counted here rather than on the screen, so the number survives
+        # a reload and a different browser.
+        progress = _store.load()
+        done = progress.record_kata(found.id)
+        _store.save(progress)
     # Whatever the student printed themselves, without the driver's line.
     theirs = stdout.split("<<<KATA>>>")[0]
     return KataCheckResponse(
@@ -1300,6 +1309,7 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
         broke=outcome.broke,
         stdout=theirs,
         bug=found.bug if outcome.passed else "",
+        done=done,
         results=[
             KataCaseResult(
                 args=list(r.args),
@@ -1331,12 +1341,18 @@ def predict_list() -> dict:
     """
     from code_coach.kata.predict import predict_families, puzzles
 
+    counts = _store.load().predict_counts()
     return {
         "families": [
             {
                 "name": family,
                 "puzzles": [
-                    {"id": p.id, "name": p.name, "code": p.code}
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "code": p.code,
+                        "done": counts.get(p.id, 0),
+                    }
                     for p in puzzles(family)
                 ],
             }
@@ -1363,8 +1379,14 @@ def predict_check(body: PredictCheckRequest) -> PredictCheckResponse:
         return "\n".join(line.rstrip() for line in lines).strip()
 
     passed = tidy(body.guess) == tidy(found.expect)
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_predict(found.id)
+        _store.save(progress)
     return PredictCheckResponse(
         passed=passed,
+        done=done,
         expect=found.expect,
         guess=body.guess,
         why=found.why,

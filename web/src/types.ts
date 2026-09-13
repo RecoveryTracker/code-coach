@@ -590,6 +590,14 @@ export type KataSummary = {
    * what tells the two apart on screen.
    */
   start: string;
+  /**
+   * How many times this one has been got right.
+   *
+   * A count, not a tick. These are practised rather than finished, so
+   * the useful question is how many goes you have had — which is also
+   * what picks the next one.
+   */
+  done: number;
 };
 
 export type KataFamily = {
@@ -627,6 +635,8 @@ export type KataCheck = {
   stdout: string;
   /** What the bug was. Only sent once every case passes. */
   bug: string;
+  /** Goes at this one that came out right, counting this one. */
+  done: number;
 };
 
 /**
@@ -639,6 +649,8 @@ export type PredictPuzzle = {
   id: string;
   name: string;
   code: string;
+  /** How many times this one has been answered correctly. */
+  done: number;
 };
 
 export type PredictFamily = {
@@ -654,6 +666,7 @@ export type PredictCheck = {
   passed: boolean;
   expect: string;
   guess: string;
+  done: number;
   /** Shown whether you were right or wrong. */
   why: string;
 };

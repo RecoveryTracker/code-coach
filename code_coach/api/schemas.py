@@ -630,6 +630,10 @@ class KataCheckResponse(BaseModel):
     # own mistake after finding it is what makes it the last time;
     # naming it beforehand is just giving the answer away.
     bug: str = ""
+    # How many times this one has been got right, counting this go. The
+    # point of the number is that it is not a tick: these are practised
+    # rather than finished.
+    done: int = 0
 
 
 class PredictCheckRequest(BaseModel):
@@ -643,6 +647,7 @@ class PredictCheckResponse(BaseModel):
     passed: bool = False
     expect: str = ""
     guess: str = ""
+    done: int = 0
     # Shown either way. A wrong guess with no explanation teaches only
     # that you were wrong, and a right one with no explanation leaves
     # you unsure whether you knew it or guessed it.

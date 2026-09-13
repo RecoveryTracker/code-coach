@@ -473,3 +473,110 @@ class BrokenExerciseTests(unittest.TestCase):
             with self.subTest(kata=k.id):
                 self.assertEqual(k.start, "")
                 self.assertEqual(k.bug, "")
+
+
+class ProgressTests(unittest.TestCase):
+    """Counting the goes, which is what decides the next one.
+
+    A tick would be the wrong shape. These are practised rather than
+    completed — the premise of the whole app is a dozen goes at one
+    thing — so what is kept is how many times each came out right, and
+    the screen picks the one with the fewest.
+    """
+
+    def setUp(self) -> None:
+        import tempfile
+        from pathlib import Path as _Path
+
+        from code_coach.api import server
+        from code_coach.progress.store import ProgressStore
+
+        self.folder = _Path(tempfile.mkdtemp())
+        self.was = server._store
+        server._store = ProgressStore(self.folder / "progress.json")
+        self.server = server
+
+    def tearDown(self) -> None:
+        self.server._store = self.was
+
+    def _check(self, kata_id: str, code: str):
+        from code_coach.api.schemas import KataCheckRequest
+
+        return self.server.kata_check(
+            KataCheckRequest(kata_id=kata_id, code=code))
+
+    def test_a_right_answer_counts_and_a_wrong_one_does_not(self) -> None:
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self.assertEqual(self._check("sum-digits", right).done, 1)
+        self.assertEqual(self._check("sum-digits", right).done, 2)
+        # A wrong go leaves the count where it was rather than resetting
+        # it — getting one wrong on the fifth attempt does not undo four.
+        wrong = self._check("sum-digits", "def sum_digits(n):\n    return 0")
+        self.assertFalse(wrong.passed)
+        self.assertEqual(wrong.done, 0)
+        self.assertEqual(self._check("sum-digits", right).done, 3)
+
+    def test_the_count_is_on_the_list(self) -> None:
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self._check("sum-digits", right)
+        payload = self.server.kata_list()
+        found = {
+            k["id"]: k["done"]
+            for f in payload["families"] for k in f["katas"]
+        }
+        self.assertEqual(found["sum-digits"], 1)
+        # Everything else stays at nothing, so the screen can tell what
+        # has been touched from what has not.
+        self.assertEqual(found["count-vowels"], 0)
+
+    def test_it_survives_being_written_and_read_back(self) -> None:
+        """The number is the point, so losing it on a restart would be
+        losing the feature."""
+        from code_coach.progress.store import ProgressStore
+
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self._check("sum-digits", right)
+        self._check("sum-digits", right)
+        fresh = ProgressStore(self.folder / "progress.json").load()
+        self.assertEqual(fresh.kata_counts()["sum-digits"], 2)
+        self.assertIsNotNone(fresh.kata_done["sum-digits"].last_at)
+
+    def test_a_file_written_before_this_existed_still_loads(self) -> None:
+        """Nothing done yet, rather than a crash."""
+        from code_coach.progress.store import StudentProgress
+
+        raw = StudentProgress().to_dict()
+        del raw["kata_done"]
+        del raw["predict_done"]
+        loaded = StudentProgress.from_dict(raw)
+        self.assertEqual(loaded.kata_counts(), {})
+        self.assertEqual(loaded.predict_counts(), {})
+
+    def test_predict_counts_the_same_way(self) -> None:
+        from code_coach.api.schemas import PredictCheckRequest
+        from code_coach.kata.predict import PUZZLES
+
+        p = PUZZLES[0]
+        first = self.server.predict_check(
+            PredictCheckRequest(puzzle_id=p.id, guess=p.expect))
+        self.assertEqual(first.done, 1)
+        missed = self.server.predict_check(
+            PredictCheckRequest(puzzle_id=p.id, guess="nonsense"))
+        self.assertEqual(missed.done, 0)
+        again = self.server.predict_check(
+            PredictCheckRequest(puzzle_id=p.id, guess=p.expect))
+        self.assertEqual(again.done, 2)
+
+    def test_the_two_modes_count_separately(self) -> None:
+        """A kata and a puzzle can share an id one day, and one being
+        practised is not the other being practised."""
+        from code_coach.api.schemas import PredictCheckRequest
+        from code_coach.kata.predict import PUZZLES
+
+        right = "def sum_digits(n):\n    return sum(int(d) for d in str(abs(n)))"
+        self._check("sum-digits", right)
+        self.server.predict_check(
+            PredictCheckRequest(puzzle_id=PUZZLES[0].id, guess=PUZZLES[0].expect))
+        saved = self.server._store.load()
+        self.assertEqual(list(saved.kata_counts()), ["sum-digits"])
+        self.assertEqual(list(saved.predict_counts()), [PUZZLES[0].id])

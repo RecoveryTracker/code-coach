@@ -92,17 +92,20 @@ export default function Predict() {
     return null;
   }, [list, chosen]);
 
+  // Keyed on which puzzle, not on the object: recording a correct
+  // answer rebuilds the list, and an effect watching the object would
+  // fire and clear the verdict that had just appeared.
   useEffect(() => {
-    if (!puzzle) return;
-    setGuess(drafts.current[puzzle.id] ?? "");
+    if (!chosen) return;
+    setGuess(drafts.current[chosen] ?? "");
     setResult(null);
     setWatching(false);
     try {
-      localStorage.setItem(LAST_KEY, puzzle.id);
+      localStorage.setItem(LAST_KEY, chosen);
     } catch {
       /* not worth interrupting practice for */
     }
-  }, [puzzle]);
+  }, [chosen]);
 
   const onGuess = useCallback(
     (next: string) => {
@@ -120,13 +123,35 @@ export default function Predict() {
     setChecking(true);
     setError("");
     try {
-      setResult(await checkPredict({ puzzle_id: puzzle.id, guess }));
+      const got = await checkPredict({ puzzle_id: puzzle.id, guess });
+      setResult(got);
+      if (got.passed) {
+        setList((was) =>
+          was
+            ? {
+                families: was.families.map((f) => ({
+                  ...f,
+                  puzzles: f.puzzles.map((p) =>
+                    p.id === puzzle.id ? { ...p, done: got.done } : p,
+                  ),
+                })),
+              }
+            : was,
+        );
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setChecking(false);
     }
   }, [puzzle, guess, checking]);
+
+  /** The one answered correctly fewest times, ties to the first. */
+  const leastDone = useMemo(() => {
+    const all = list?.families.flatMap((f) => f.puzzles) ?? [];
+    if (!all.length) return null;
+    return all.reduce((worst, p) => (p.done < worst.done ? p : worst), all[0]);
+  }, [list]);
 
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
@@ -142,6 +167,20 @@ export default function Predict() {
           correct Python that does something most people get wrong first
           time.
         </p>
+        {leastDone && leastDone.id !== chosen ? (
+          <button
+            type="button"
+            className="ws-btn kata-next"
+            onClick={() => setChosen(leastDone.id)}
+            title={
+              leastDone.done
+                ? `${leastDone.name} — right ${leastDone.done} so far`
+                : `${leastDone.name} — not tried yet`
+            }
+          >
+            Least practised: {leastDone.name}
+          </button>
+        ) : null}
         {list.families.map((family) => (
           <div key={family.name} className="wb-section">
             <h4 className="wb-section-head">
@@ -158,6 +197,11 @@ export default function Predict() {
                 onClick={() => setChosen(p.id)}
               >
                 <span className="lessons-pick-name">{p.name}</span>
+                {p.done ? (
+                  <span className="lessons-pick-blurb">
+                    right {p.done}&#215;
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
