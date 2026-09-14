@@ -382,3 +382,28 @@
 .err-halves .bad {
   color: #c4443a;
 }
+
+/* ── Trace ── */
+
+.trace-code {
+  margin-bottom: 4px;
+}
+
+.trace-line {
+  cursor: default;
+}
+
+/* The line the question is about. Counting down four lines yourself is a
+   different job from the one being practised. */
+.trace-line.here {
+  border-color: var(--accent, #6ea8fe);
+  background: rgb(110 168 254 / 0.10);
+}
+
+.trace-marker {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--accent, #6ea8fe);
+  margin-left: 8px;
+  white-space: nowrap;
+}

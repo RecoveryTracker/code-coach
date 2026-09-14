@@ -842,3 +842,36 @@ export type ErrorCheck = {
   meaning: string;
   fix: string;
 };
+
+export type TraceMoment = {
+  id: string;
+  name: string;
+  code: string;
+  /** The moment, in words, exactly as the tracer means it. */
+  question: string;
+  at_line: number;
+  occurrence: number;
+  variable: string;
+  language: string;
+  choices: string[];
+  done: number;
+  last: string;
+  level: number;
+};
+
+export type TraceFamily = {
+  name: string;
+  traces: TraceMoment[];
+};
+
+export type TraceList = {
+  families: TraceFamily[];
+};
+
+export type TraceCheck = {
+  passed: boolean;
+  done: number;
+  expect: string;
+  answer: string;
+  why: string;
+};

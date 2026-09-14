@@ -48,6 +48,11 @@ export const MODES = [
     title: "Read the code and say what it prints, then watch it happen",
   },
   {
+    id: "trace",
+    label: "Trace",
+    title: "Stop the program part way and say what a variable holds",
+  },
+  {
     id: "errors",
     label: "Errors",
     title: "Read the message, find the line, say what it is telling you",

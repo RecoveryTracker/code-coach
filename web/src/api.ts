@@ -8,6 +8,8 @@ import type {
   MagnetList,
   MarkupCheck,
   MarkupList,
+  TraceCheck,
+  TraceList,
   ErrorCheck,
   ErrorList,
   ExplainResult,
@@ -164,6 +166,22 @@ export function checkCss(body: {
   choice: string;
 }): Promise<CssCheck> {
   return request("/api/css/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Every traced moment, with the question and without the value. */
+export function fetchTraces(): Promise<TraceList> {
+  return request("/api/trace");
+}
+
+/** Send what you think the variable holds at that moment. */
+export function checkTrace(body: {
+  trace_id: string;
+  answer: string;
+}): Promise<TraceCheck> {
+  return request("/api/trace/check", {
     method: "POST",
     body: JSON.stringify(body),
   });

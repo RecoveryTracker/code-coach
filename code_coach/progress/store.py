@@ -152,6 +152,7 @@ class StudentProgress:
     markup_done: dict[str, DrillRecord] = field(default_factory=dict)
     magnet_done: dict[str, DrillRecord] = field(default_factory=dict)
     error_done: dict[str, DrillRecord] = field(default_factory=dict)
+    trace_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -241,6 +242,12 @@ class StudentProgress:
     def error_counts(self) -> dict[str, int]:
         return {k: v.count for k, v in self.error_done.items()}
 
+    def record_trace(self, trace_id: str) -> int:
+        return _bump(self.trace_done, trace_id)
+
+    def trace_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.trace_done.items()}
+
     def kata_last(self) -> dict[str, str]:
         """When each was last got right, for choosing what to do next.
 
@@ -276,6 +283,11 @@ class StudentProgress:
     def error_last(self) -> dict[str, str]:
         return {
             k: v.last_at for k, v in self.error_done.items() if v.last_at
+        }
+
+    def trace_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.trace_done.items() if v.last_at
         }
 
     def workbook_page_for(self, language: str) -> str:
@@ -383,6 +395,7 @@ class StudentProgress:
             markup_done=_records(raw.get("markup_done")),
             magnet_done=_records(raw.get("magnet_done")),
             error_done=_records(raw.get("error_done")),
+            trace_done=_records(raw.get("trace_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

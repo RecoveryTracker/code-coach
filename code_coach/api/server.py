@@ -34,6 +34,8 @@ from code_coach.api.schemas import (
     DrillCheckResponse,
     ErrorCheckRequest,
     ErrorCheckResponse,
+    TraceCheckRequest,
+    TraceCheckResponse,
     MagnetCheckRequest,
     MagnetCheckResponse,
     PredictCheckRequest,
@@ -1755,4 +1757,68 @@ def error_check(body: ErrorCheckRequest) -> ErrorCheckResponse:
         line=found.line,
         meaning=found.meaning,
         fix=found.fix,
+    )
+
+
+@app.get("/api/trace")
+def trace_list() -> dict:
+    """Every moment, with the question and without the answer.
+
+    The program, the question and the choices are what you are given.
+    The value and the explanation are what you are working out, so
+    neither is here.
+    """
+    from code_coach.trace import trace_families, traces
+
+    saved = _store.load()
+    counts, last = saved.trace_counts(), saved.trace_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "traces": [
+                    {
+                        "id": t.id,
+                        "name": t.name,
+                        "code": t.code,
+                        "question": t.question,
+                        "at_line": t.at_line,
+                        "occurrence": t.occurrence,
+                        "variable": t.variable,
+                        "language": t.language,
+                        "choices": list(t.choices),
+                        "done": counts.get(t.id, 0),
+                        "last": last.get(t.id, ""),
+                        "level": t.level,
+                    }
+                    for t in traces(family)
+                ],
+            }
+            for family in trace_families()
+        ]
+    }
+
+
+@app.post("/api/trace/check", response_model=TraceCheckResponse)
+def trace_check(body: TraceCheckRequest) -> TraceCheckResponse:
+    """Compare the guess with what the tracer reports at that moment."""
+    from code_coach.trace import one_trace
+
+    found = one_trace(body.trace_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown moment {body.trace_id}"
+        )
+    passed = body.answer.strip() == found.expect
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_trace(found.id)
+        _store.save(progress)
+    return TraceCheckResponse(
+        passed=passed,
+        done=done,
+        expect=found.expect,
+        answer=body.answer,
+        why=found.why,
     )

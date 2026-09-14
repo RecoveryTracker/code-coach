@@ -740,3 +740,18 @@ class ErrorCheckResponse(BaseModel):
     #: What to do about this error. A message you can read and not act
     #: on is half a lesson.
     fix: str = ""
+
+
+class TraceCheckRequest(BaseModel):
+    """One moment, and what you think the variable holds."""
+
+    trace_id: str = ""
+    answer: str = ""
+
+
+class TraceCheckResponse(BaseModel):
+    passed: bool = False
+    done: int = 0
+    expect: str = ""
+    answer: str = ""
+    why: str = ""
