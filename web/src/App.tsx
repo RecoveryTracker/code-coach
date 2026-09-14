@@ -35,6 +35,7 @@ import { ModeButtons, isMode } from "./components/ModeBar";
 import type { Mode } from "./components/ModeBar";
 import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
+import Errors from "./components/Errors";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
@@ -234,6 +235,7 @@ export default function App() {
   const predictOpen = mode === "predict";
   const katasOpen = mode === "katas";
   const magnetsOpen = mode === "magnets";
+  const errorsOpen = mode === "errors";
   const workbookOpen = mode === "workbook";
   const conceptsOpen = mode === "concepts";
   const lessonsOpen = mode === "lessons";
@@ -1186,6 +1188,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Styles />
+      </div>
+    );
+  }
+
+  if (errorsOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Errors />
       </div>
     );
   }

@@ -32,6 +32,8 @@ from code_coach.api.schemas import (
     CssCheckResponse,
     DrillCheckRequest,
     DrillCheckResponse,
+    ErrorCheckRequest,
+    ErrorCheckResponse,
     MagnetCheckRequest,
     MagnetCheckResponse,
     PredictCheckRequest,
@@ -1687,3 +1689,70 @@ def _tidy_magnet_error(detail: str) -> str:
     from code_coach.kata import _tidy
 
     return _tidy(detail)
+
+
+@app.get("/api/errors")
+def error_list() -> dict:
+    """Every crash, with its message and without its answers.
+
+    The program and the message are the question and have to be here.
+    The line it blames, the right reading and the fix are the answer —
+    and the fix says the answer in prose, which is the easy one to
+    leave in by accident.
+    """
+    from code_coach.errors import crash_families, crashes
+
+    saved = _store.load()
+    counts, last = saved.error_counts(), saved.error_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "crashes": [
+                    {
+                        "id": c.id,
+                        "name": c.name,
+                        "code": c.code,
+                        "message": c.message,
+                        "language": c.language,
+                        "choices": list(c.choices),
+                        "lines": len(c.numbered),
+                        "done": counts.get(c.id, 0),
+                        "last": last.get(c.id, ""),
+                        "level": c.level,
+                    }
+                    for c in crashes(family)
+                ],
+            }
+            for family in crash_families()
+        ]
+    }
+
+
+@app.post("/api/errors/check", response_model=ErrorCheckResponse)
+def error_check(body: ErrorCheckRequest) -> ErrorCheckResponse:
+    """Mark the two halves separately, and say what to do about it."""
+    from code_coach.errors import crash as find_crash
+
+    found = find_crash(body.crash_id)
+    if found is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown crash {body.crash_id}"
+        )
+    line_right = body.line == found.line
+    meaning_right = body.meaning.strip() == found.meaning
+    passed = line_right and meaning_right
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_error(found.id)
+        _store.save(progress)
+    return ErrorCheckResponse(
+        passed=passed,
+        done=done,
+        line_right=line_right,
+        meaning_right=meaning_right,
+        line=found.line,
+        meaning=found.meaning,
+        fix=found.fix,
+    )

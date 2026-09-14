@@ -8,6 +8,8 @@ import type {
   MagnetList,
   MarkupCheck,
   MarkupList,
+  ErrorCheck,
+  ErrorList,
   ExplainResult,
   KataCheck,
   KataList,
@@ -162,6 +164,23 @@ export function checkCss(body: {
   choice: string;
 }): Promise<CssCheck> {
   return request("/api/css/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Every crash, with its message and without its answers. */
+export function fetchErrors(): Promise<ErrorList> {
+  return request("/api/errors");
+}
+
+/** Send the line and the reading; both are marked separately. */
+export function checkError(body: {
+  crash_id: string;
+  line: number;
+  meaning: string;
+}): Promise<ErrorCheck> {
+  return request("/api/errors/check", {
     method: "POST",
     body: JSON.stringify(body),
   });

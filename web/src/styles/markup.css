@@ -273,3 +273,112 @@
   padding: 8px 2px;
   list-style: none;
 }
+
+/* ── Errors ── */
+
+/* The message as a terminal would show it: red on dark, monospace, and
+   allowed to wrap — a message that scrolls sideways is one nobody reads
+   to the end, which is the exact habit this mode is trying to break. */
+.err-message {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #ff8b7a;
+  background: #1a1113;
+  border: 1px solid #4a2a2a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.err-code {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+/* A whole line is the target, because picking a line in a stack trace is
+   pointing at code — not typing a number into a box. */
+.err-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.err-line code {
+  white-space: pre;
+}
+
+.err-line:hover:not(:disabled) {
+  border-color: var(--line, #333);
+}
+
+.err-line.on {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.err-line.ok {
+  border-color: #2f9e57;
+  background: rgb(47 158 87 / 0.12);
+}
+
+.err-line.bad {
+  border-color: #c4443a;
+  background: rgb(196 68 58 / 0.12);
+}
+
+/* Answered lines stay legible: dimming the one you are meant to be
+   looking at is the opposite of the point. */
+.err-line:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.err-num {
+  opacity: 0.4;
+  min-width: 1.6em;
+  text-align: right;
+  font-size: 11px;
+}
+
+/* The readings are sentences, not values, so they stack rather than sit
+   in a row of chips. */
+.err-choices {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.err-choice {
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.err-halves {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.err-halves .ok {
+  color: #2f9e57;
+}
+
+.err-halves .bad {
+  color: #c4443a;
+}

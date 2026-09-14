@@ -806,3 +806,39 @@ export type MagnetCheck = {
   broke: string;
   why: string;
 };
+
+export type ErrorCrash = {
+  id: string;
+  name: string;
+  /** The program that crashed, newline separated. */
+  code: string;
+  /** The message exactly as the engine printed it. */
+  message: string;
+  language: string;
+  /** Readings on offer, sorted. The right one is not marked. */
+  choices: string[];
+  lines: number;
+  done: number;
+  last: string;
+  level: number;
+};
+
+export type ErrorFamily = {
+  name: string;
+  crashes: ErrorCrash[];
+};
+
+export type ErrorList = {
+  families: ErrorFamily[];
+};
+
+export type ErrorCheck = {
+  passed: boolean;
+  done: number;
+  /** Marked separately: which half you can do is the useful part. */
+  line_right: boolean;
+  meaning_right: boolean;
+  line: number;
+  meaning: string;
+  fix: string;
+};

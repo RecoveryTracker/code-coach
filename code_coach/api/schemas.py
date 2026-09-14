@@ -716,3 +716,27 @@ class MagnetCheckResponse(BaseModel):
     broke: str = ""
     #: Shown once it is right.
     why: str = ""
+
+
+class ErrorCheckRequest(BaseModel):
+    """One crash, the line blamed for it, and what the message means."""
+
+    crash_id: str = ""
+    line: int = 0
+    meaning: str = ""
+
+
+class ErrorCheckResponse(BaseModel):
+    passed: bool = False
+    done: int = 0
+    #: The two halves, marked separately. Being told only "wrong" when
+    #: one of the two was right teaches nothing about which half you
+    #: cannot do yet.
+    line_right: bool = False
+    meaning_right: bool = False
+    #: What the answers were, once answered either way.
+    line: int = 0
+    meaning: str = ""
+    #: What to do about this error. A message you can read and not act
+    #: on is half a lesson.
+    fix: str = ""
