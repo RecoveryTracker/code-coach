@@ -109,6 +109,21 @@ LANGUAGES: tuple[Language, ...] = (
         ready=("reference", "workbook", "typing", "fundamentals", "runner"),
     ),
     Language(
+        id="postgresql",
+        name="PostgreSQL",
+        monaco="pgsql",
+        extension="sql",
+        available=True,
+        note=(
+            "Run executes against a real PostgreSQL 17 on this machine, "
+            "so RETURNING, ILIKE, ::casts, arrays and JSONB all work. "
+            "Every go runs in a transaction that is rolled back, so a "
+            "stray UPDATE shows you exactly what it did and then undoes "
+            "it. Needs the local server — see tools/get_postgres.py."
+        ),
+        ready=("runner",),
+    ),
+    Language(
         id="c",
         name="C",
         monaco="c",
@@ -242,7 +257,7 @@ LANGUAGES: tuple[Language, ...] = (
         available=True,
         note=(
             "Workbook and typing only. Swift ships an installer rather "
-            "than an archive, so it lives in Programs\Swift rather than "
+            "than an archive, so it lives in Programs\\Swift rather than "
             "~/toolchains, and each exercise is compiled — `swift "
             "file.swift` on Windows uses a JIT that cannot resolve the "
             "standard library's array symbols."

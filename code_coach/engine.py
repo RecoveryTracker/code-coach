@@ -814,6 +814,14 @@ def run_code(
         from code_coach.sql_runner import run_sql
 
         return run_sql(code)
+    if language == "postgresql":
+        # A server rather than a file, so it has its own runner and its
+        # own timeout — the wall-clock ceiling here is for a program
+        # this process started, and psql waiting on a connection is a
+        # different kind of slow.
+        from code_coach.pg_runner import run_postgres
+
+        return run_postgres(code)
 
     suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
