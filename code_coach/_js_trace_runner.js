@@ -57,6 +57,56 @@ function post(method, params) {
   return out;
 }
 
+/**
+ * A number that is the same every time for the same object.
+ *
+ * The obvious key is remote.objectId, and it is wrong. CDP mints a fresh
+ * objectId every time it hands back a value, so `const b = a` — two scope
+ * properties pointing at one array — comes through as two unrelated ids and
+ * is drawn as two arrays that happen to hold the same things. The whole
+ * lesson of aliasing is that there is one array, and the picture said the
+ * opposite.
+ *
+ * The only thing that knows the truth is the program itself, so it is asked:
+ * a WeakMap living in the debuggee, keyed by the object, handing out numbers.
+ * WeakMap so that tagging a value cannot keep it alive, and globalThis so
+ * the map survives between pauses — the global scope is not one of the
+ * scopes the picture shows, so nothing of this appears in the diagram.
+ */
+const IDENTITY_FN = `
+  function () {
+    const g = globalThis;
+    if (!g.__ccIdentity) {
+      g.__ccIdentity = new WeakMap();
+      g.__ccIdentityNext = 0;
+    }
+    let id = g.__ccIdentity.get(this);
+    if (id === undefined) {
+      id = ++g.__ccIdentityNext;
+      g.__ccIdentity.set(this, id);
+    }
+    return id;
+  }
+`;
+
+function identityOf(objectId) {
+  try {
+    const res = post("Runtime.callFunctionOn", {
+      objectId,
+      functionDeclaration: IDENTITY_FN,
+      returnByValue: true,
+      silent: true,
+    });
+    const value = res && res.result && res.result.value;
+    return typeof value === "number" ? value : null;
+  } catch {
+    // Anything the debuggee refuses to run a function on — a revoked proxy,
+    // an exotic host object — falls back to the old behaviour rather than
+    // losing the whole snapshot.
+    return null;
+  }
+}
+
 // ── Value encoding ─────────────────────────────────────────
 // Mirrors _encode in the Python runner: primitives inline, everything else
 // into a heap keyed by reference, so shared and cyclic structures terminate.
@@ -113,10 +163,15 @@ function encode(remote, heap, seen, depth) {
   if (!objectId) {
     return { k: "prim", t: "str", v: remote.description || String(remote.type) };
   }
-  if (seen.has(objectId)) return { k: "ref", id: seen.get(objectId) };
+  // Keyed by what the object is, not by which handle we were given for it.
+  // Falling back to the handle keeps a value that cannot be tagged looking
+  // the way it always did, rather than dropping it.
+  const identity = identityOf(objectId);
+  const key = identity === null ? `handle:${objectId}` : `object:${identity}`;
+  if (seen.has(key)) return { k: "ref", id: seen.get(key) };
 
   const ref = seen.size + 1;
-  seen.set(objectId, ref);
+  seen.set(key, ref);
   const entry = {};
   heap[ref] = entry;
 

@@ -196,3 +196,88 @@ class EveryProblemIsWatchableTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AliasingTests(unittest.TestCase):
+    """Two names for one object have to draw as one object.
+
+    This is the single most useful thing a tracer can show, and it was
+    wrong: the encoder keyed its heap on the CDP objectId, and CDP mints
+    a fresh objectId every time it hands back a value. So `const b = a`
+    came through as two unrelated ids and drew two arrays that happened
+    to hold the same things — the exact opposite of the lesson.
+
+    It was invisible because everything about the picture was right
+    except the identity: both arrays showed the right contents, both
+    updated when either was changed. Only the sameness was missing, and
+    nothing was asserting it.
+    """
+
+    def _last(self, code: str) -> tuple[dict, dict]:
+        result = trace_code(code, language="javascript")
+        self.assertTrue(result.get("steps"), result.get("stderr", ""))
+        last = result["steps"][-1]
+        return last.get("vars") or {}, last.get("heap") or {}
+
+    def test_two_names_for_one_array_share_an_id(self) -> None:
+        vars_, heap = self._last(
+            "const a = [1, 2];\n"
+            "const b = a;\n"
+            "b.push(3);\n"
+            "console.log(a.length);"
+        )
+        self.assertEqual(vars_["a"], {"k": "ref", "id": vars_["a"]["id"]})
+        self.assertEqual(
+            vars_["a"]["id"], vars_["b"]["id"],
+            "a and b are the same array and were drawn as two")
+        self.assertEqual(len(heap), 1, "one array, one heap entry")
+
+    def test_a_copy_is_a_different_object(self) -> None:
+        """The other half. An encoder that gave everything the same id
+        would pass the test above and be just as wrong."""
+        vars_, heap = self._last(
+            "const a = [1, 2];\n"
+            "const b = [...a];\n"
+            "b.push(3);\n"
+            "console.log(a.length);"
+        )
+        self.assertNotEqual(
+            vars_["a"]["id"], vars_["b"]["id"],
+            "a copy was drawn as the same array")
+        self.assertEqual(len(heap), 2)
+
+    def test_one_object_in_two_places_is_one_object(self) -> None:
+        vars_, _heap = self._last(
+            "const item = { n: 1 };\n"
+            "const pair = [item, item];\n"
+            "console.log(pair.length);"
+        )
+        items = _heap[str(vars_["pair"]["id"])]["items"]
+        self.assertEqual(items[0]["id"], items[1]["id"])
+        self.assertEqual(items[0]["id"], vars_["item"]["id"])
+
+    def test_an_object_holding_itself_terminates(self) -> None:
+        """Identity is what stops the walk, so getting identity wrong
+        and getting cycles wrong are the same bug wearing two hats."""
+        vars_, heap = self._last(
+            "const a = { name: 'a' };\n"
+            "a.self = a;\n"
+            "console.log(Object.keys(a).length);"
+        )
+        entry = heap[str(vars_["a"]["id"])]
+        inner = dict(
+            (pair[0]["v"], pair[1]) for pair in entry["pairs"]
+        )
+        self.assertEqual(inner["self"], {"k": "ref", "id": vars_["a"]["id"]})
+
+    def test_python_still_shows_aliasing_too(self) -> None:
+        """The Python tracer has always had this right — it keys on
+        id(), which is identity by definition. Worth pinning so the two
+        languages cannot drift apart on the thing they most need to
+        agree about."""
+        result = trace_code(
+            "a = [1, 2]\nb = a\nb.append(3)\nprint(len(a))",
+            language="python")
+        last = result["steps"][-1]
+        vars_ = last.get("vars") or {}
+        self.assertEqual(vars_["a"]["id"], vars_["b"]["id"])

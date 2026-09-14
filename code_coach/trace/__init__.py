@@ -26,13 +26,18 @@ The tracer. Every expected value here is checked against what it
 reports, so a puzzle whose answer has quietly stopped being true fails
 the suite rather than marking somebody wrong.
 
-Two things the tracer cannot currently show, which is why no puzzle
-here depends on them. It gives two names that point at the same array
-separate heap entries, so it shows the right values but not that they
-are one object. And in JavaScript it reports undefined and null
-identically. Aliasing is still worth asking about — the surprise is
-that `a` changed at all, and the value shows that — but the identity
-itself is not something this mode can ask about yet.
+One thing the tracer still cannot show, which is why no puzzle depends
+on it: in JavaScript it reports undefined and null identically. The
+Errors mode covers that distinction instead.
+
+It could not show aliasing either when this mode was written — two
+names for one array came back as two separate heap entries, because
+the encoder keyed on the handle CDP gave it and CDP mints a fresh
+handle every time. The runner asks the program for identity now, so
+one array is drawn as one array with two names on it. These puzzles
+ask for values rather than identity and did not change, but Watch it
+run afterwards is worth more than it was: the picture now agrees with
+the answer.
 """
 
 from __future__ import annotations
