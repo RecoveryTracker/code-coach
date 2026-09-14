@@ -37,6 +37,7 @@ import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
 import Errors from "./components/Errors";
 import TraceValue from "./components/TraceValue";
+import Session from "./components/Session";
 import Workbook from "./components/Workbook";
 import TypingTrainer from "./components/TypingTrainer";
 import {
@@ -238,6 +239,7 @@ export default function App() {
   const magnetsOpen = mode === "magnets";
   const errorsOpen = mode === "errors";
   const traceOpen = mode === "trace";
+  const sessionOpen = mode === "session";
   const workbookOpen = mode === "workbook";
   const conceptsOpen = mode === "concepts";
   const lessonsOpen = mode === "lessons";
@@ -1190,6 +1192,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Styles />
+      </div>
+    );
+  }
+
+  if (sessionOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Session go={go} />
       </div>
     );
   }

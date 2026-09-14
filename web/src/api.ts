@@ -8,6 +8,7 @@ import type {
   MagnetList,
   MarkupCheck,
   MarkupList,
+  SessionQueue,
   TraceCheck,
   TraceList,
   ErrorCheck,
@@ -169,6 +170,11 @@ export function checkCss(body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/** The next things to do, across every practice at once. */
+export function fetchSession(size = 20): Promise<SessionQueue> {
+  return request(`/api/session?size=${size}`);
 }
 
 /** Every traced moment, with the question and without the value. */

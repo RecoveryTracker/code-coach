@@ -26,12 +26,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkDrill, fetchDrills } from "../api";
 import type { MarkupCheck, MarkupDrill, MarkupList } from "../types";
+import { LAST_KEYS } from "../lastKeys";
 
 /** What you had typed, per drill, so leaving and coming back keeps it. */
 const DRAFT_KEY = "code-coach:drill-drafts";
 
 /** Which drill you were on. */
-const LAST_KEY = "code-coach:drill-last";
+const LAST_KEY = LAST_KEYS.drills;
 
 function readDrafts(): Record<string, string> {
   try {

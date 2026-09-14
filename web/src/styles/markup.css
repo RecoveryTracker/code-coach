@@ -407,3 +407,110 @@
   margin-left: 8px;
   white-space: nowrap;
 }
+
+/* ── Session ── */
+
+.session-wrap {
+  padding: 16px 20px 28px;
+  max-width: 900px;
+  overflow: auto;
+}
+
+.session-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-count {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.session-sizes {
+  display: flex;
+  gap: 4px;
+}
+
+.session-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.session-item:hover {
+  border-color: var(--accent, #6ea8fe);
+}
+
+/* The one you would do next, so the eye lands on it without reading. */
+.session-item.next {
+  border-color: var(--accent, #6ea8fe);
+  background: rgb(110 168 254 / 0.08);
+}
+
+.session-item.seen {
+  opacity: 0.55;
+}
+
+.session-num {
+  opacity: 0.4;
+  font-size: 11px;
+  min-width: 1.6em;
+  text-align: right;
+}
+
+/* Fixed width so the names line up in a column and the list can be read
+   down rather than across. */
+.session-where {
+  min-width: 88px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.session-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-goes,
+.session-tick {
+  font-size: 11px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.session-note {
+  margin-top: 18px;
+  font-size: 12px;
+  opacity: 0.6;
+  max-width: 60ch;
+}

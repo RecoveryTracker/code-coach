@@ -24,9 +24,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkMagnet, fetchMagnets } from "../api";
 import type { MagnetCheck, MagnetList, MagnetPuzzle } from "../types";
+import { LAST_KEYS } from "../lastKeys";
 
 /** Which puzzle you were on. */
-const LAST_KEY = "code-coach:magnet-last";
+const LAST_KEY = LAST_KEYS.magnets;
 
 /**
  * Which to offer next: fewest goes, and of those the longest ago.

@@ -24,12 +24,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { checkCss, fetchCssQuizzes } from "../api";
 import Drills from "./Drills";
 import type { CssCheck, CssList, CssQuiz } from "../types";
+import { CSS_HALF_KEY, LAST_KEYS } from "../lastKeys";
 
 /** Which quiz you were on, so coming back lands where you left. */
-const LAST_KEY = "code-coach:css-last";
+const LAST_KEY = LAST_KEYS.styles;
 
 /** Reading the page, or writing it. Remembered like everything else. */
-const HALF_KEY = "code-coach:css-half";
+const HALF_KEY = CSS_HALF_KEY;
 
 /**
  * Which to offer next: fewest goes, and of those the longest ago.

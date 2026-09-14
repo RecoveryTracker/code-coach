@@ -1822,3 +1822,24 @@ def trace_check(body: TraceCheckRequest) -> TraceCheckResponse:
         answer=body.answer,
         why=found.why,
     )
+
+
+@app.get("/api/session")
+def session_queue(size: int = 20) -> dict:
+    """The next things to do, across every practice at once.
+
+    No answers here — it is a list of what to open, and opening it is
+    what serves the question. Size is capped so a stray query string
+    cannot ask for the whole app in one response.
+    """
+    from code_coach.session import SOURCES, queue
+
+    saved = _store.load()
+    wanted = max(1, min(int(size), 60))
+    return {
+        "size": wanted,
+        "practices": [
+            {"key": s.key, "label": s.label} for s in SOURCES
+        ],
+        "items": queue(saved, wanted),
+    }

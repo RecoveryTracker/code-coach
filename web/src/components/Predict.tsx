@@ -25,12 +25,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { checkPredict, fetchPredicts } from "../api";
 import { VizPanel } from "./VizPanel";
 import type { PredictCheck, PredictList, PredictPuzzle } from "../types";
+import { LAST_KEYS } from "../lastKeys";
 
 /** What you guessed, per puzzle, so coming back does not lose it. */
 const DRAFT_KEY = "code-coach:predict-drafts";
 
 /** Which puzzle you were on. */
-const LAST_KEY = "code-coach:predict-last";
+const LAST_KEY = LAST_KEYS.predict;
 
 function readDrafts(): Record<string, string> {
   try {

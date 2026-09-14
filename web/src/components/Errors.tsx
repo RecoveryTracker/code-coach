@@ -25,9 +25,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkError, fetchErrors } from "../api";
 import type { ErrorCheck, ErrorCrash, ErrorList } from "../types";
+import { LAST_KEYS } from "../lastKeys";
 
 /** Which one you were on. */
-const LAST_KEY = "code-coach:error-last";
+const LAST_KEY = LAST_KEYS.errors;
 
 /** Fewest goes, and of those the longest ago. Same rule as everywhere. */
 function nextUp<T extends { done: number; last: string }>(

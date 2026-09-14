@@ -34,6 +34,7 @@ import type {
   KataList,
   KataSummary,
 } from "../types";
+import { LAST_KEYS } from "../lastKeys";
 
 /** How wide one press of Tab is. */
 const INDENT = "    ";
@@ -42,7 +43,7 @@ const INDENT = "    ";
 const DRAFT_KEY = "code-coach:kata-drafts";
 
 /** Which kata you were on. */
-const LAST_KEY = "code-coach:kata-last";
+const LAST_KEY = LAST_KEYS.forms;
 
 /** Which language you were filtering to. */
 const LANG_KEY = "code-coach:kata-language";

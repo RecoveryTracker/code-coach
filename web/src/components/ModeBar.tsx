@@ -23,6 +23,13 @@ import type { ReactNode } from "react";
 /** Every module, in the order they sit in the row. */
 export const MODES = [
   {
+    /* First, because it answers the question you have when you sit
+       down. Everything after it is for when you know what you want. */
+    id: "session",
+    label: "Session",
+    title: "One queue across every practice — whatever you have done least",
+  },
+  {
     id: "workbook",
     label: "Workbook",
     title: "Pages of small exercises you solve by typing",

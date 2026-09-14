@@ -875,3 +875,20 @@ export type TraceCheck = {
   answer: string;
   why: string;
 };
+
+export type SessionItem = {
+  /** Which practice it belongs to, matching the keys in lastKeys.ts. */
+  practice: string;
+  /** What that practice is called on screen. */
+  label: string;
+  id: string;
+  name: string;
+  done: number;
+  last: string;
+};
+
+export type SessionQueue = {
+  size: number;
+  practices: { key: string; label: string }[];
+  items: SessionItem[];
+};
