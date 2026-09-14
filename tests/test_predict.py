@@ -193,6 +193,18 @@ class LevelTests(unittest.TestCase):
 
     def test_the_families_keep_their_own_order(self) -> None:
         """Sorting by level interleaves them, so the family list has to
-        come from the file rather than from the sorted puzzles."""
-        self.assertEqual(predict_families()[0], "Mutation")
-        self.assertEqual(predict_families()[-1], "Objects and arrays")
+        come from the file rather than from the sorted puzzles.
+
+        This used to name the first and last families, which tested the
+        content rather than the rule: adding a family to the end broke
+        it while nothing about the ordering had changed. What it means
+        to say is that the families come out in the order they are
+        first written, and that is what it says now — which still fails
+        if the list is ever built from the level-sorted puzzles, since
+        those interleave.
+        """
+        in_file: list[str] = []
+        for p in PUZZLES:
+            if p.family not in in_file:
+                in_file.append(p.family)
+        self.assertEqual(list(predict_families()), in_file)
