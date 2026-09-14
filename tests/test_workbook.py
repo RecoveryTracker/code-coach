@@ -773,11 +773,18 @@ class LanguageReachTests(unittest.TestCase):
         language the workbook covers, so that is what is asserted, and it
         needs no editing when a sixth language gets there.
         """
-        # DEEP, not EVERY_PAGE. EVERY_PAGE is the languages that receive
-        # every shared page, which excludes C for a reason that has nothing
-        # to do with this rule. DEEP is every language with a workbook, and
-        # another test holds it against the real language list.
-        allowed = set(self.DEEP) | {"sql"}
+        # Asked of the workbook rather than listed. This was
+        # `set(self.DEEP) | {"sql"}`, and the literal on the end is the
+        # third time this rule has gone stale in exactly the way its own
+        # docstring warns about: PostgreSQL arrived with seven
+        # intermediate pages and failed a test about which languages are
+        # allowed to have them, for no reason except that nobody had
+        # added a second literal. "A language the workbook covers" is
+        # what the rule means, and has_workbook is what knows.
+        from code_coach.languages import LANGUAGES
+        from code_coach.workbook import has_workbook
+
+        allowed = {lang.id for lang in LANGUAGES if has_workbook(lang.id)}
         for p in pages():
             if p.tier != "intermediate":
                 continue

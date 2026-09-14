@@ -1,28 +1,65 @@
 # Code Coach
 
-A local, coach-first environment for learning Python by typing real code. It
-watches what you write, checks it as you go, and explains what's wrong in terms
-of the line you actually got wrong.
+A local practice environment for learning to program by doing the same things
+many times. It runs your code, checks it against answers that were worked out
+independently rather than asserted, and tells you which line went wrong.
 
-Two tracks:
+Everything runs on your machine. No API keys, no cloud calls, no account.
 
-- **Fundamentals** — Foundations, Decisions, Loops.
-- **LeetCode patterns** — 52 solutions across 13 patterns (Two Pointers, Hash
-  Maps, Sliding Window, Binary Search, Tree DFS/BFS, Graphs, Backtracking,
-  Heaps, Topological Sort, DP, and more), drilled as verbatim typing practice
-  for muscle memory.
+The method is repetition. Nothing here is "completed" — every mode counts how
+many goes you have had at each item and offers you whatever you have done least
+and longest ago.
 
-Everything runs on your machine. No API keys, no cloud calls.
+---
+
+## What is in it
+
+Thirteen modes, all sharing one row of names at the top of every screen.
+
+| Mode | What you do |
+|------|-------------|
+| **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
+| **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
+| **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
+| **Forms** | Write a function; it is called with inputs you have not seen. 60 across 9 families |
+| **Trace** | Stop a program part way and say what a variable holds, then step through and watch |
+| **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? |
+| **Magnets** | The lines of a working program, shuffled. Put them back |
+| **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |
+| **HTML & CSS** | Read it: what does the browser compute? Type it: copy the markup and watch what you typed render |
+| **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
+| **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
+| **Concepts** | The questions an interview asks that are not coding problems |
+| **Reference** | Cheat sheets and flashcards for the language you are in |
+
+### Languages
+
+Twenty are offered, and they are not equally finished.
+
+- **Python, JavaScript, Dart** — everything: workbook, taught course,
+  reference, and the tracer behind *Watch it run*.
+- **TypeScript** — the same, apart from the tracer.
+- **C, C++, Rust** — workbook, taught course, reference, and structural
+  checks; no tracer.
+- **SQL, PostgreSQL** — their own workbooks and runners. SQL is SQLite and
+  needs nothing installed; PostgreSQL is a real server (see below).
+- **Go, PHP, Lua, Ruby, Zig, Java, C#, Kotlin, Swift, Common Lisp, Odin** —
+  workbook pages and typing material, added for the drill screens rather
+  than for the taught course.
+
+The language picker says what each one actually has, so nothing opens an empty
+screen. Several need their own toolchain on your PATH to *run* anything — the
+drills still work without it.
 
 ---
 
 ## Setup
 
-> **On Windows 11?** Follow **[SETUP-WINDOWS.md](SETUP-WINDOWS.md)** instead —
-> step-by-step from a machine with nothing installed, including troubleshooting.
+> **On Windows?** Follow **[SETUP-WINDOWS.md](SETUP-WINDOWS.md)** — step by step
+> from a machine with nothing installed, including troubleshooting.
 
 You need **Python 3.10+** and **Node 18+**. On Windows, tick *"Add to PATH"* in
-both installers, then open a **new** terminal so the PATH change takes effect.
+both installers, then open a **new** terminal so the change takes effect.
 
 ```bash
 git clone https://github.com/RecoveryTracker/code-coach.git
@@ -40,6 +77,30 @@ python -m venv .venv && .venv\Scripts\pip install -r requirements.txt && cd web 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd web && npm install
 ```
+
+### PostgreSQL (optional)
+
+Everything else works without this. PostgreSQL is the one language that needs a
+real server, because the things worth practising in it — `RETURNING`, `ILIKE`,
+`::` casts, `ON CONFLICT`, arrays, JSONB — are exactly the ones SQLite cannot
+fake.
+
+Download the Windows or macOS **binaries zip** (no installer, no admin rights)
+from [EnterpriseDB](https://www.enterprisedb.com/download-postgresql-binaries),
+who publish them for postgresql.org. Put the `pgsql` folder it contains at
+`.tools/pgsql`, then:
+
+```bash
+.venv/bin/python tools/get_postgres.py
+```
+
+That creates a cluster in `.tools/pgdata`, loads the sample tables and runs a
+query to prove it works. It listens on **127.0.0.1:55432** — deliberately not
+5432, so a PostgreSQL installed for work is never blocked by this one. Run it
+again any time to reset the practice data. Undoing all of it is deleting
+`.tools/pgdata`.
+
+---
 
 ## Running it
 
@@ -72,98 +133,65 @@ cd web && npm run dev
 
 ---
 
-## How practice works
+## How the checking works
 
-Navigation is a breadcrumb: **Class › Lesson › Exercise**, with one back/forward
-pair that walks the whole curriculum in order — at the end of a lesson it rolls
-into the next one.
+The rule the whole project is built on: **the expected answer has to come from
+somewhere other than the thing being checked.** A test that compares a function
+with what that function returned passes just as happily when the function is
+wrong.
 
-Each class has three lessons:
+So each mode gets its answers from a different place, on purpose:
 
-| Lesson | What you do | How it's checked |
-|--------|-------------|------------------|
-| **1 · Type-along** | Copy exactly what's shown. Never ends — new material keeps loading. | Verbatim, indentation included |
-| **2 · Full solutions** | Type each solution start to finish | Verbatim |
-| **3 · Build from memory** | Write it yourself from the idea alone | AST structural checks, not string matching |
-
-**Chunk size** (on the Type this panel, lesson 1 only) sets how much you type
-before it's checked — a single line up to a whole function.
-
-Nothing auto-advances. When your code is right, **Continue** lights up and waits,
-so the finished code stays on screen to read.
-
-### When you get it wrong
-
-The coach names the line, not the whole block:
-
-```
-Not yet — line 8 doesn't match.
-should be:  return []
-you typed:  return[]
-                  ^ here (character 7)
-```
-
-Indentation mistakes are called out separately, since stripped of whitespace the
-two lines look identical.
-
-### Checking your own work
-
-On LeetCode problems the **Problem** panel carries the question restated in
-plain words, worked examples, the pattern's template and pitfalls, and two
-buttons:
-
-- **Check my work** — diffs your whole attempt against the real solution and
-  points at the first line that differs. Works even with scratch code around it.
-- **Show answer** — the full reference solution, hidden until you ask.
-
-### Layout
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ Explain · Ask coach · status · Continue    Code Coach    Save … Run  │
-│ Hash Maps › 1. Type-along › 3 / 8   ‹ ›                              │
-│ ┌──────────────────────────────────────────────────────────────────┐ │
-│ │ coach message — fixed height, never shifts the editor            │ │
-│ └──────────────────────────────────────────────────────────────────┘ │
-├────────────────────────────────────┬─────────────────────────────────┤
-│                                    │  TYPE THIS      Chunk: [ … ]    │
-│  EDITOR (Monaco, Python)           ├─────────────────────────────────┤
-│                                    │  PROBLEM  + Check my work       │
-├────────────────────────────────────┴─────────────────────────────────┤
-│  TERMINAL — Run output / errors                                      │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-Every divider drags, and each pane keeps a minimum size so none can be hidden.
-Sizes persist.
-
-**Other controls:** **Run** (or `Ctrl`/`⌘`+`Enter`), **Explain my code** for a
-line-by-line walkthrough, **Free mode** to switch the coach off, **Save / Load…**
-for named scripts, **Start over** to clear a lesson.
+- **Workbook** — the expected output is worked out in Python; your code is run
+  by a real compiler or interpreter. Two implementations, so agreeing means
+  something. The SQL and PostgreSQL pages compute from a hand-written mirror of
+  the rows rather than by running the query.
+- **Forms** — a reference implementation computes the answers, and a person
+  hand-writes some of them at awkward inputs, because a reference can be wrong.
+- **Predict** and **Trace** — the engine and the tracer are the authority on
+  what a program prints or holds; the hand-written copy is what catches a
+  puzzle that has stopped demonstrating its own point.
+- **Errors** — both halves of the answer are the engine's own report: the
+  message it printed and the line it blamed.
+- **HTML & CSS** — there is no browser engine in the project, so the answers
+  were measured in real Chromium by `tools/verify_css.py` and recorded with a
+  hash of the exact document measured. Change a quiz without re-measuring and
+  the suite fails.
+- **Magnets** — marked by running what you arranged, not by comparing your line
+  order with the reference, because more than one order is usually correct.
 
 ### Where your work is kept
 
-- **Code you type** — browser `localStorage`, one buffer per exercise per chunk
-  size. Your position in each lesson is restored when you come back.
-- **Progress and XP** — `~/.code_coach/student_progress.json`.
+- **Code you type** — browser `localStorage`, per exercise.
+- **Progress** — `~/.code_coach/student_progress.json`. Counts of goes and when,
+  per item, per mode.
 
-Clearing site data wipes typed work; **Save** exports anything you want to keep.
+Clearing site data wipes typed drafts; **Save** exports anything you want to
+keep.
 
 ---
 
 ## Security
 
 **The server executes the code in your editor.** It writes it to a temp file and
-runs it as a real subprocess with a 3-second timeout — no sandbox. That's the
-point of the app, but it means anyone who can reach the server can run arbitrary
-code on your machine.
+runs it as a real subprocess — no sandbox. That is the point of the app, and it
+means anyone who can reach the server can run arbitrary code as you.
 
 So it binds to `127.0.0.1` only, and rejects any request whose `Host` header
-isn't localhost (that check stops DNS-rebinding, which CORS alone won't).
+isn't localhost (that check stops DNS rebinding, which CORS alone won't). There
+is no authentication, because there is nothing safe to authenticate *to*.
 
-**Don't expose this to the internet** — not via a tunnel, not on `0.0.0.0` on an
-untrusted network. Sharing it safely means sandboxing the executor first. If a
-friend wants to try it, have them clone and run their own copy.
+The wall-clock timeout and output cap apply everywhere. The CPU and memory caps
+are POSIX-only, and `RLIMIT_AS` is ignored on macOS — those are guards against
+runaway programs, not against attacks.
+
+**Don't expose this to the internet** — not through a tunnel, not on `0.0.0.0`,
+not "just for a friend". A secure Wi-Fi network does not help: port forwarding
+routes around it, and exposed ports are found by mass scanners within minutes.
+Sharing safely would mean sandboxing the executor in a container first.
+
+**If a friend wants to try it, have them clone and run their own copy.** That is
+what the app is built for — everything is local, and their progress is theirs.
 
 ---
 
@@ -173,17 +201,20 @@ All local, `127.0.0.1:8765`.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| `GET`  | `/api/health` | version check |
-| `GET`  | `/api/skills` | list skills |
+| `GET`  | `/api/health` · `/api/languages` | version check; what each language has |
 | `GET` · `PUT` | `/api/progress` | read / update settings |
-| `GET`  | `/api/curriculum` | Class → Lesson tree |
-| `GET`  | `/api/practice/current` | active session (steps, study payload, position) |
-| `POST` | `/api/practice/evaluate` | `{drill_id, code, run?, exercise_index?}` → checks + coach message |
-| `POST` | `/api/practice/check-answer` | `{code, pattern_id, problem_number}` → diff against the real solution |
-| `POST` | `/api/practice/navigate` · `goto-lesson` · `more` · `review` · `back` | move around |
-| `POST` | `/api/practice/complete` | mark done + advance |
-| `POST` | `/api/explain` | `{code}` → line-by-line walkthrough |
-| `POST` | `/api/chat` | local keyboard/Python FAQ bot |
+| `GET`  | `/api/session?size=` | the next things to do, across every practice |
+| `GET` · `POST` | `/api/workbook` · `/api/workbook/check` | pages; check an exercise |
+| `GET` · `POST` | `/api/kata` · `/api/kata/check` · `/api/kata/answer` | Forms |
+| `GET` · `POST` | `/api/predict` · `/api/predict/check` | Predict |
+| `GET` · `POST` | `/api/trace` · `/api/trace/check` | Trace |
+| `GET` · `POST` | `/api/errors` · `/api/errors/check` | Errors |
+| `GET` · `POST` | `/api/magnets` · `/api/magnets/check` | Magnets |
+| `GET` · `POST` | `/api/css` · `/api/css/check` | HTML & CSS, the reading half |
+| `GET` · `POST` | `/api/drills` · `/api/drills/check` | HTML & CSS, the typing half |
+| `GET`  | `/api/curriculum` · `/api/practice/current` | LeetCode: tree, active session |
+| `POST` | `/api/practice/evaluate` · `check-answer` · `navigate` · `complete` | LeetCode: the workspace |
+| `POST` | `/api/explain` · `/api/visualize` | walkthrough; step-by-step values |
 
 ---
 
@@ -191,30 +222,35 @@ All local, `127.0.0.1:8765`.
 
 ```text
 code-coach/
-  start.bat               # Windows: both servers + browser
-  scripts/dev.sh          # macOS/Linux equivalent
+  start.bat                 # Windows: both servers + browser
+  scripts/dev.sh            # macOS/Linux equivalent
+  tools/
+    get_postgres.py         # set up the local PostgreSQL
+    verify_css.py           # measure every CSS answer in a real browser
   code_coach/
-    cli.py                # file-watch CLI (separate from the web app)
-    engine.py             # runs student code in a temp file
-    checks.py             # AST predicates for build lessons
-    explain.py            # plain-English walkthrough (AST + traced run)
-    curriculum/           # Class → Lesson catalog + navigation
-    dictation/bank.py     # type-along generators, verbatim + diff logic
-    leetcode/
-      problems.py         # 52 solutions across 13 patterns
-      bank.py             # solutions → exercises
-      study.py            # problem briefs + pattern lessons
-    practice/             # scoring + coach messages
-    progress/store.py     # atomic JSON persistence
-    api/server.py         # FastAPI
+    engine.py               # runs student code; timeouts and caps
+    visualize.py            # the tracer
+    _js_trace_runner.js     # JavaScript tracing, through Node's inspector
+    sql_runner.py           # SQLite, for the SQL pages
+    pg_server.py            # the local PostgreSQL, started on demand
+    pg_runner.py            # queries, each in a transaction that is rolled back
+    languages.py            # what each language actually has
+    workbook/               # 600 pages: shapes, per-language emitters, content
+    kata/                   # Forms, Fix the bug, Finish the program, Predict
+    css/                    # HTML & CSS quizzes, answers measured in Chromium
+    markup/                 # HTML & CSS typing drills
+    magnets/                # shuffled-program puzzles
+    errors/                 # crashes, their messages and what they mean
+    trace/                  # one moment in a program, one variable
+    session/                # the cross-practice queue
+    leetcode/               # 104 problems across 13 patterns
+    progress/store.py       # atomic JSON persistence
+    api/server.py           # FastAPI
   web/src/
-    App.tsx               # layout, resizing, draft persistence
-    components/
-      CurriculumNav.tsx   # breadcrumb navigation
-      TypeTarget.tsx      # "Type this" panel
-      StudyPanel.tsx      # problem + pattern lesson + self-check
-      EditorPane.tsx      # Monaco
-  tests/                  # stdlib unittest (no pytest)
+    App.tsx                 # the shell and the mode switching
+    components/ModeBar.tsx  # the row of names every screen wears
+    components/             # one per mode
+  tests/                    # unittest classes; pytest optional
 ```
 
 ---
@@ -222,19 +258,46 @@ code-coach/
 ## Develop
 
 ```bash
-.venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m pytest -q
+```
+
+`pytest` is not in `requirements.txt` — install it with `pip install pytest`.
+Plain `python -m unittest discover -s tests` also works and gives plainer
+output.
+
+Whichever you use, the suite writes to a throwaway progress file rather than
+your real one. That redirect lives in `tests/__init__.py` specifically so it
+does not depend on the runner: it used to be in `conftest.py`, which only
+pytest loads, and running the suite under unittest silently recorded real
+practice into a real progress file with everything green. `SandboxTests` in
+`test_progress_migration.py` asserts it, because that failure has no other
+symptom.
+
+**The full suite takes about an hour** — it executes every workbook
+exercise in every language it has a compiler for, which is over 120,000 checks.
+Most changes do not need it. Useful subsets:
+
+```bash
+.venv/bin/python -m pytest tests/test_kata.py tests/test_predict.py -q
 ```
 
 ```bash
-.venv/bin/python -m ruff check code_coach tests
+cd web && npm run build
+```
+
+Lint and typecheck:
+
+```bash
+.venv/bin/python -m ruff check code_coach tests tools
 ```
 
 ```bash
 cd web && npx tsc --noEmit
 ```
 
-The LeetCode solutions are covered by tests that actually execute them against
-real cases — if you add a problem, add its test.
+If you add content, add the check that would catch it being wrong — and then
+break it on purpose to confirm the check fails. Every mode in this project has
+shipped at least one bug that a green suite was quietly ignoring.
 
 ### CLI
 

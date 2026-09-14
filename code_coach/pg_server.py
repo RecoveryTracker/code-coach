@@ -97,6 +97,13 @@ def env() -> dict:
         **os.environ,
         "PGPASSWORD": PASSWORD,
         "PGCLIENTENCODING": "UTF8",
+        # Without this, a timestamptz prints in whatever timezone the
+        # machine is set to — so the same query gives 09:30+00 here and
+        # 01:30-08 there, and every exercise with a time in it becomes
+        # a test of where you live. UTC is the only answer that is the
+        # same everywhere, and "stored in UTC, shown in a zone" is the
+        # thing about timestamptz worth learning anyway.
+        "PGTZ": "UTC",
     }
 
 

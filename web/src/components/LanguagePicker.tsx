@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { fetchLanguages, updateProgress } from "../api";
 import type { LanguageInfo } from "../types";
 
@@ -18,6 +18,16 @@ export function LanguagePicker({ current, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const wrap = useRef<HTMLDivElement | null>(null);
+  const menu = useRef<HTMLDivElement | null>(null);
+  /* Where the menu sits, in viewport coordinates.
+     It used to be absolutely positioned with right: 0, which pins its
+     right edge to the button's and lets it hang 270px off to the left.
+     That is invisible until the button is near the left edge of a
+     narrow window — on a half-screen app the whole menu was off the
+     side of the screen and unreadable. Measuring and clamping is the
+     only version that survives the button being anywhere, which it is:
+     the row wraps, so the picker moves with the window. */
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +43,42 @@ export function LanguagePicker({ current, onChanged }: Props) {
       cancelled = true;
     };
   }, []);
+
+  /* Put it where it fits: below the button, right edges aligned when
+     there is room, and nudged back inside when there is not. Measured
+     rather than guessed, because the menu's width comes from CSS and
+     guessing it here would be two places to change it. */
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const button = wrap.current?.getBoundingClientRect();
+      if (!button) return;
+      const width = menu.current?.offsetWidth ?? 270;
+      const height = menu.current?.offsetHeight ?? 0;
+      const edge = 8;
+      const wanted = button.right - width;
+      const left = Math.min(
+        Math.max(edge, wanted),
+        Math.max(edge, window.innerWidth - width - edge),
+      );
+      // Below normally, above when below would run off the bottom —
+      // which happens on a short window long before it happens on a
+      // tall one.
+      const below = button.bottom + 5;
+      const top =
+        below + height > window.innerHeight - edge && button.top - height > edge
+          ? button.top - height - 5
+          : below;
+      setAt({ left, top });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, langs.length]);
 
   // Click outside / Escape closes it.
   useEffect(() => {
@@ -93,7 +139,18 @@ export function LanguagePicker({ current, onChanged }: Props) {
       </button>
 
       {open ? (
-        <div className="lang-menu" role="menu">
+        <div
+          className="lang-menu"
+          role="menu"
+          ref={menu}
+          /* Hidden until it has been measured, so it cannot be seen in
+             the wrong place first. */
+          style={
+            at
+              ? { left: at.left, top: at.top }
+              : { left: -9999, top: 0, visibility: "hidden" }
+          }
+        >
           <div className="lang-menu-title">Language</div>
           {langs.map((lang) => (
             <button

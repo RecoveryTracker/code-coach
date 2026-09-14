@@ -47,6 +47,7 @@ from code_coach.workbook.content_algo import ALGO_PAGES
 from code_coach.workbook.content_algo2 import ALGO_PAGES_2
 from code_coach.workbook.content_algo3 import ALGO_PAGES_3
 from code_coach.workbook.content_algo4 import ALGO_PAGES_4
+from code_coach.workbook.content_pg import PG_PAGES
 from code_coach.workbook.content_sql import SQL_PAGES
 from code_coach.workbook.content_nodes import NODE_PAGES
 from code_coach.workbook.content_graph import GRAPH_PAGES
@@ -695,6 +696,7 @@ _BASE_PAGES = (
     + ALGO_PAGES_3
     + ALGO_PAGES_4
     + SQL_PAGES
+    + PG_PAGES
     + NODE_PAGES
     + GRAPH_PAGES
     + C_PAGES

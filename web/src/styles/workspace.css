@@ -183,12 +183,20 @@
   }
 }
 
+/* Fixed, and placed by the component.
+
+   This was absolute with right: 0, which anchors the menu's right edge
+   to the button's — fine while the button is on the right of a wide
+   window, and off the side of the screen once the app is half width and
+   the button has wrapped to the left. The position is measured and
+   clamped in LanguagePicker now; the size still lives here. */
 .lang-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 5px);
+  position: fixed;
   z-index: 40;
   width: 270px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
   padding: 7px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;

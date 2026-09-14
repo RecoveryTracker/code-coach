@@ -176,3 +176,42 @@ class CounterRoundTripTests(unittest.TestCase):
 
                 back = getattr(store.load(), name)
                 self.assertTrue(back["thing"].last_at)
+
+
+class SandboxTests(unittest.TestCase):
+    """The suite must not be able to touch the real progress file.
+
+    This is the guard on the guard. The isolation used to live only in
+    conftest.py, which pytest loads and `python -m unittest` does not —
+    so running the suite the way the README recommended wrote real
+    entries into a real progress file, silently, with everything green.
+
+    It is asserted here rather than trusted because the failure has no
+    symptom inside the suite at all: every test still passes. The only
+    evidence is somebody's practice history quietly growing.
+    """
+
+    def test_the_active_store_is_not_the_real_one(self) -> None:
+        from pathlib import Path
+
+        from code_coach.progress.store import active_store
+
+        path = Path(active_store().path).resolve()
+        real = (Path.home() / ".code_coach").resolve()
+        self.assertFalse(
+            str(path).startswith(str(real)),
+            f"the suite is writing to the real progress store at {path}")
+
+    def test_recording_lands_somewhere_disposable(self) -> None:
+        """Not just a different path — a temporary one. A store inside
+        the repo would be just as wrong in a different way."""
+        import tempfile
+        from pathlib import Path
+
+        from code_coach.progress.store import active_store
+
+        path = Path(active_store().path).resolve()
+        temp = Path(tempfile.gettempdir()).resolve()
+        self.assertTrue(
+            str(path).startswith(str(temp)),
+            f"the suite's store is at {path}, which is not a temp dir")

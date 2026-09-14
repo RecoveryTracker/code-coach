@@ -565,6 +565,7 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_algo,
         emit_algo2,
         emit_algo3,
+        emit_pg,
         emit_sql,
         emit_algo4,
         emit_nodes,
@@ -587,6 +588,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_rust3,
     )
 
+    if emit_pg.handles(shape):
+        return emit_pg.solution(language, shape, args)
     if emit_dart2.handles(shape):
         return emit_dart2.solution(language, shape, args)
     if emit_newlang.handles(shape) and language in emit_newlang.RUNNABLE:
@@ -726,17 +729,26 @@ def supports(language: str) -> bool:
     SQL is not in _EMITTERS because it shares no shapes with the others —
     it does not print, so none of the printing shapes can be written in it.
     Its pages come from emit_sql, which is asked before that table.
+    PostgreSQL is the same case again, with its own pages for the places
+    it differs from SQLite.
 
     The four newest languages are the same case for the opposite reason:
     they share exactly one shape and none of the rest, so they have their
     own emitter and would otherwise be reported as unsupported while
     happily answering the page they do have.
+
+    The two database dialects are asked for their own LANGUAGES rather
+    than named here. This was `language == "sql"` until PostgreSQL
+    arrived and quietly had no workbook despite having seven pages of
+    one — a second literal would have been a second thing to remember,
+    and there will be a third dialect one day.
     """
-    from code_coach.workbook import emit_newlang
+    from code_coach.workbook import emit_newlang, emit_pg, emit_sql
 
     return (
         language in _EMITTERS
-        or language == "sql"
+        or language in emit_sql.LANGUAGES
+        or language in emit_pg.LANGUAGES
         or language in emit_newlang.RUNNABLE
     )
 
@@ -795,6 +807,7 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_js9,
         emit_dart2,
         emit_cpp2,
+        emit_pg,
         emit_sql2,
         emit_sql3,
         emit_webnodes,
@@ -857,6 +870,7 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_dart2.SHAPE_IDS
         + emit_cpp2.SHAPE_IDS
         + emit_sql2.SHAPE_IDS
+        + emit_pg.SHAPE_IDS
         + emit_sql3.SHAPE_IDS
         + emit_webnodes.SHAPE_IDS
         + emit_topup.SHAPE_IDS

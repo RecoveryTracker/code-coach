@@ -37,6 +37,27 @@ from code_coach.sql_runner import MAX_ROWS, _as_table
 #: and ugly on purpose: it has to be something no query would produce.
 MARKER = "<<<CODE_COACH_PG_NEXT>>>"
 
+#: Put every sequence back where the data ends, so the next id an
+#: INSERT is handed is the same one on every go. Asked of
+#: pg_get_serial_sequence rather than named, so adding a table to the
+#: practice data does not mean editing this too.
+RESET_SEQUENCES = """
+DO $$
+DECLARE
+    seq text;
+    tbl text;
+BEGIN
+    FOREACH tbl IN ARRAY ARRAY['users', 'orders'] LOOP
+        seq := pg_get_serial_sequence(tbl, 'id');
+        IF seq IS NOT NULL THEN
+            EXECUTE format(
+                'SELECT setval(%L, COALESCE((SELECT max(id) FROM %I), 1))',
+                seq, tbl);
+        END IF;
+    END LOOP;
+END $$;
+"""
+
 #: How long any one script gets. Generous next to the three seconds a
 #: program gets — a first connection to a cold server is most of it —
 #: and still far short of forever.
@@ -128,7 +149,20 @@ def run_postgres(script: str) -> tuple[str, str, int]:
         return "", "psql is missing from the PostgreSQL install.", 1
 
     # BEGIN and ROLLBACK around the lot: practice cannot outlive its go.
-    lines = ["BEGIN;"]
+    #
+    # The sequence needs saying separately, because a sequence is the
+    # one thing a rollback does not undo. That is deliberate in
+    # PostgreSQL — two sessions inserting at once must never be handed
+    # the same id, so nextval stands outside the transaction — and it
+    # means an INSERT practised twenty times hands back a different id
+    # every go while the table itself never changes. An exercise cannot
+    # have an answer under those conditions.
+    #
+    # So every go starts by putting the sequences back where the data
+    # ends, which makes the database identical at the start of each run
+    # rather than nearly identical. Its own statement, and its output is
+    # dropped below, so nobody has to look at the plumbing.
+    lines = ["BEGIN;", RESET_SEQUENCES, f"\\echo {MARKER}"]
     for i, statement in enumerate(statements):
         if i:
             lines.append(f"\\echo {MARKER}")
@@ -166,7 +200,8 @@ def run_postgres(script: str) -> tuple[str, str, int]:
     if done.returncode != 0:
         return "", _tidy_error(done.stderr), 1
 
-    chunks = (done.stdout or "").split(MARKER)
+    # The first chunk is the sequence reset above, which is plumbing.
+    chunks = (done.stdout or "").split(MARKER)[1:]
     tables = [_table_from_csv(chunk) for chunk in chunks]
     shown = [t for t in tables if t]
     if not shown:

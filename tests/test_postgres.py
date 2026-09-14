@@ -252,14 +252,132 @@ class LanguageTests(unittest.TestCase):
         self.assertEqual(entry["name"], "PostgreSQL")
 
     def test_it_claims_only_what_it_has(self) -> None:
-        """It has a runner and nothing else yet — no workbook pages, no
-        cheat sheet, no taught course. Claiming otherwise in the picker
-        is how somebody opens an empty screen."""
+        """Whatever the picker claims has to actually be there.
+
+        This pinned the claim to exactly {"runner"} while that was the
+        truth, and then failed the moment the pages landed — which was
+        testing the content rather than the rule. What it means to say
+        is that a claim in the picker is a promise, and opening an empty
+        screen is what a broken one looks like. So each claim is now
+        checked against the thing it claims.
+        """
         from code_coach.languages import LANGUAGES
+        from code_coach.workbook import pages
 
         entry = next(x for x in LANGUAGES if x.id == "postgresql")
-        self.assertEqual(set(entry.ready), {"runner"})
+        claims = set(entry.ready)
+        self.assertIn("runner", claims)
+
+        has_pages = bool(pages("postgresql"))
+        self.assertEqual(
+            "workbook" in claims, has_pages,
+            "the picker and the workbook disagree about whether there "
+            "are pages")
+
+        # The ones it does not have, so a claim cannot be added without
+        # the thing arriving alongside it.
+        for absent in ("fundamentals", "reference", "typing"):
+            self.assertNotIn(absent, claims)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAS_SERVER, WHY_NOT)
+class WorkbookTests(unittest.TestCase):
+    """Every page's reference query, run against the real database.
+
+    This is the load-bearing test of the PostgreSQL pages, and it is
+    load-bearing in a particular way: the expected output is computed in
+    Python from a hand-written mirror of the rows, and the query is
+    executed by PostgreSQL. Two genuinely different implementations, so
+    agreement means something — where "the query, compared against what
+    the query returned" would mean nothing at all and would pass just as
+    happily with every answer wrong.
+
+    It has already earned its keep twice. It caught that a sequence is
+    not rolled back, so every RETURNING exercise was handing back a
+    different id each go and could not have an answer; and it caught two
+    exercises where the item name had been passed where the price
+    belonged, on a page where fourteen of sixteen never printed the
+    price and hid it.
+    """
+
+    def _exercises(self):
+        from code_coach.workbook import pages
+
+        return [(page, ex) for page in pages("postgresql")
+                for ex in page.exercises]
+
+    def test_there_are_pages(self) -> None:
+        from code_coach.workbook import pages
+
+        found = pages("postgresql")
+        self.assertGreaterEqual(len(found), 7)
+        for page in found:
+            with self.subTest(page=page.id):
+                self.assertGreaterEqual(len(page.exercises), 10)
+
+    def test_every_reference_returns_what_is_expected(self) -> None:
+        from code_coach.engine import run_code
+
+        for page, ex in self._exercises():
+            with self.subTest(exercise=ex.id):
+                query = ex.answer("postgresql")
+                self.assertTrue(query, f"{ex.id} has no reference query")
+                out, err, code = run_code(query, language="postgresql")
+                self.assertEqual(code, 0, f"{query}\n{err}")
+                self.assertEqual(
+                    out.strip(), ex.expect.strip(),
+                    f"{ex.id}: {query}")
+
+    def test_the_mirror_matches_the_real_rows(self) -> None:
+        """The Python copy of the data has to be the data.
+
+        Everything above rests on it, and it is written out by hand — so
+        if the schema in tools/get_postgres.py ever changes and this does
+        not, every expectation silently describes a database that is not
+        there.
+        """
+        from code_coach.engine import run_code
+        from code_coach.workbook.emit_pg import USERS, pg_text
+
+        out, err, code = run_code(
+            "SELECT id, name, city, age, email, active, joined, tags, "
+            "profile FROM users ORDER BY id;",
+            language="postgresql")
+        self.assertEqual(code, 0, err)
+        lines = out.strip().splitlines()[2:]   # past header and rule
+        self.assertEqual(len(lines), len(USERS))
+        for row, user in zip(lines, USERS):
+            with self.subTest(user=user["id"]):
+                for field in ("name", "city", "age", "joined"):
+                    self.assertIn(pg_text(user[field]), row)
+
+    def test_a_write_page_gives_the_same_id_every_go(self) -> None:
+        """The RETURNING page is only answerable because the sequence is
+        put back at the start of each run. Without that the id climbs,
+        and an exercise whose answer changes every time cannot be
+        practised — which is the whole point of the mode."""
+        from code_coach.engine import run_code
+        from code_coach.workbook import pages
+
+        page = next(p for p in pages("postgresql") if p.id == "pg-returning")
+        query = page.exercises[0].answer("postgresql")
+        seen = set()
+        for _ in range(3):
+            out, err, code = run_code(query, language="postgresql")
+            self.assertEqual(code, 0, err)
+            seen.add(out.strip())
+        self.assertEqual(len(seen), 1, f"the answer changed between goes: {seen}")
+
+    def test_the_pages_are_only_the_differences(self) -> None:
+        """If a page here teaches plain SELECT or GROUP BY, it belongs in
+        the SQL pages and is twenty exercises of something already
+        taught."""
+        from code_coach.workbook import pages
+
+        names = " ".join(p.name.lower() for p in pages("postgresql"))
+        for already_taught in ("group by", "join", "order by"):
+            self.assertNotIn(already_taught, names)

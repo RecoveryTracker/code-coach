@@ -119,9 +119,11 @@ LANGUAGES: tuple[Language, ...] = (
             "so RETURNING, ILIKE, ::casts, arrays and JSONB all work. "
             "Every go runs in a transaction that is rolled back, so a "
             "stray UPDATE shows you exactly what it did and then undoes "
-            "it. Needs the local server — see tools/get_postgres.py."
+            "it. The workbook pages are the seven places it differs from "
+            "SQLite rather than the whole of SQL again. Needs the local "
+            "server — see tools/get_postgres.py."
         ),
-        ready=("runner",),
+        ready=("runner", "workbook"),
     ),
     Language(
         id="c",
