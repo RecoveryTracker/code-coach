@@ -595,11 +595,23 @@ class CurriculumCodeThemeTests(unittest.TestCase):
 
         themed = {t.id for t in THEMES}
         for language in LANGUAGES:
+            # Being in the picker is not the claim. `ready` is — it is
+            # how the app says what each language actually has, and the
+            # picker shows it so nothing opens empty.
+            #
+            # This walked every language instead, which was the same
+            # thing while all nineteen claimed typing. PostgreSQL is the
+            # first that does not: it has a runner and a workbook and
+            # says so, and was failing a test for not having material it
+            # never claimed. Nineteen languages still have to have a
+            # theme, so the rule keeps its teeth.
+            if "typing" not in language.ready:
+                continue
             expected = self.ABBREVIATED.get(language.id, language.id + "code")
             with self.subTest(language=language.id):
                 self.assertIn(
                     expected, themed,
-                    f"{language.id} is offered in the picker but has no "
+                    f"{language.id} claims typing material but has no "
                     f"code theme called {expected}")
 
     def test_a_code_theme_never_serves_another_language(self) -> None:

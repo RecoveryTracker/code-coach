@@ -238,6 +238,39 @@ SQL_CODE: tuple[Passage, ...] = (
     _s("BEGIN; UPDATE accounts SET balance = balance - 10; COMMIT;", "all or nothing"),
 )
 
+
+#: PostgreSQL, and only the parts that are PostgreSQL.
+#:
+#: SQL_CODE above already drills SELECT, JOIN, GROUP BY and the rest,
+#: and those are identical in both — typing them again under a second
+#: name would be the same keystrokes with a different label on the
+#: screen. What is here is the dialect: the punctuation your hands have
+#: to learn separately, which is most of why writing PostgreSQL feels
+#: different from writing SQL.
+POSTGRES_CODE: tuple[Passage, ...] = (
+    _s("SELECT '42'::int + 8 AS answer;", "a cast, said out loud"),
+    _s("SELECT name FROM users WHERE name ILIKE 'a%';", "case does not matter"),
+    _s("INSERT INTO orders (item, price) VALUES ('Cable', 9.99)",
+       "the write half of a RETURNING"),
+    _s("RETURNING id, item;", "and what it hands back"),
+    _s("ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
+       "insert, or update if it is already there"),
+    _s("SELECT n, n * n FROM generate_series(1, 10) AS n;",
+       "rows out of nothing"),
+    _s("WHERE 'admin' = ANY(tags)", "is it in the array"),
+    _s("SELECT tags[1] FROM users;", "arrays count from one"),
+    _s("SELECT profile->>'plan' FROM users;", "text out of a document"),
+    _s("WHERE profile @> '{\"plan\": \"pro\"}'", "does the document contain this"),
+    _s("rank() OVER (PARTITION BY city ORDER BY age DESC)",
+       "a window, partitioned"),
+    _s("SELECT date_trunc('month', joined) AS month", "to the start of the month"),
+    _s("COALESCE(email, 'none') AS email", "a value when there is none"),
+    _s("CREATE TABLE notes (id integer GENERATED ALWAYS AS IDENTITY);",
+       "how PostgreSQL spells autoincrement"),
+    _s("WITH recent AS (SELECT * FROM orders ORDER BY placed DESC LIMIT 5)",
+       "a common table expression"),
+)
+
 ALL_SNIPPETS = (
     SCHOOL
     + TRICKS
@@ -248,4 +281,5 @@ ALL_SNIPPETS = (
     + JAVASCRIPT_CODE
     + DART_CODE
     + SQL_CODE
+    + POSTGRES_CODE
 )

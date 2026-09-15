@@ -46,6 +46,7 @@ from code_coach.typing.snippets import (
     JAVASCRIPT_CODE,
     PYTHON_CODE,
     SCHOOL,
+    POSTGRES_CODE,
     SQL_CODE,
     TRICKS,
     USEFUL,
@@ -540,6 +541,13 @@ THEMES: tuple[Theme, ...] = (
         "Selects, joins, grouping and the odd transaction.",
         passages=code_lines_for("sql", curated=SQL_CODE),
         blocks=code_blocks_for("sql"),
+    ),
+    Theme(
+        "postgresqlcode", "PostgreSQL Code",
+        "Casts, ILIKE, RETURNING, upserts, arrays and JSONB — the "
+        "punctuation that is PostgreSQL's rather than SQL's.",
+        passages=code_lines_for("postgresql", curated=POSTGRES_CODE),
+        blocks=code_blocks_for("postgresql"),
     ),
     Theme(
         "ccode", "C Code",

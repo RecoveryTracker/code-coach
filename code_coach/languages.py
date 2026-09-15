@@ -123,7 +123,7 @@ LANGUAGES: tuple[Language, ...] = (
             "SQLite rather than the whole of SQL again. Needs the local "
             "server — see tools/get_postgres.py."
         ),
-        ready=("runner", "workbook"),
+        ready=("runner", "workbook", "typing"),
     ),
     Language(
         id="c",

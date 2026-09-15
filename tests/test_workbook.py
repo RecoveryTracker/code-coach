@@ -322,6 +322,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_cpp2 import SHAPE_IDS as CPP2_SHAPES
         from code_coach.workbook.emit_sql2 import SHAPE_IDS as SQL2_SHAPES
         from code_coach.workbook.emit_sql3 import SHAPE_IDS as SQL3_SHAPES
+        from code_coach.workbook.emit_pg import SHAPE_IDS as PG_SHAPES
         from code_coach.workbook.emit_webnodes import SHAPE_IDS as WEB_SHAPES
         from code_coach.workbook.emit_topup import SHAPE_IDS as TOPUP_SHAPES
         from code_coach.workbook.emit_rust3 import SHAPE_IDS as RUST3_SHAPES
@@ -377,6 +378,9 @@ class ReferenceRunTests(unittest.TestCase):
             | set(CPP2_SHAPES)
             | set(SQL2_SHAPES)
             | set(SQL3_SHAPES)
+            # PostgreSQL's, for the same reason as SQL's: a dialect page
+            # is one language's and Dart was never going to answer it.
+            | set(PG_SHAPES)
             | set(WEB_SHAPES)
             # dart_more is dart's, but the other three in this block
             # are not, and the roster is what dart does not have.

@@ -15,7 +15,12 @@ import unittest
 from code_coach.engine import run_code, typescript_available
 from code_coach.leetcode.problems_ts import PATTERNS as TS_PATTERNS
 
-from test_js_solutions import CHECKS, HARNESS, REPORT
+# Through the package, not bare. A bare `test_js_solutions` worked only
+# while tests/ was a directory pytest put on sys.path; tests/ is a
+# package now — so that the progress-store redirect cannot be skipped by
+# running the suite with unittest — and a package's modules are imported
+# through it.
+from tests.test_js_solutions import CHECKS, HARNESS, REPORT
 
 PATTERNS_BY_ID = {p.id: p for p in TS_PATTERNS}
 

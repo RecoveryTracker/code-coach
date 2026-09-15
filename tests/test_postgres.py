@@ -274,9 +274,21 @@ class LanguageTests(unittest.TestCase):
             "the picker and the workbook disagree about whether there "
             "are pages")
 
-        # The ones it does not have, so a claim cannot be added without
-        # the thing arriving alongside it.
-        for absent in ("fundamentals", "reference", "typing"):
+        from code_coach.typing.drills import THEMES
+
+        has_theme = any(t.id == "postgresqlcode" for t in THEMES)
+        self.assertEqual(
+            "typing" in claims, has_theme,
+            "the picker and the typing themes disagree about whether "
+            "there is material to type")
+
+        # The ones it genuinely does not have. Listed rather than
+        # derived, so adding a claim means the thing has to arrive with
+        # it — but only for the two that have not arrived. This said
+        # "typing" too, which was true when it was written and became a
+        # test of the content rather than of the rule the moment the
+        # snippets landed.
+        for absent in ("fundamentals", "reference"):
             self.assertNotIn(absent, claims)
 
 
