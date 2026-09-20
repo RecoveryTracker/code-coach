@@ -147,8 +147,28 @@ def start() -> tuple[bool, str]:
                 "-l", str(data_dir() / "server.log"),
                 "start",
             ],
-            capture_output=True, timeout=START_TIMEOUT, text=True,
-            errors="replace",
+            # Not capture_output, and this is the whole bug.
+            #
+            # pg_ctl starts the server and exits. The server inherits
+            # whatever handles pg_ctl had, so with pipes here the server
+            # holds the write end open for as long as it runs — which is
+            # the point of a server. communicate() then waits for an EOF
+            # that is never coming, and `timeout` does not save it: the
+            # timeout fires, Python goes to join the reader threads, and
+            # those threads are the ones blocked on the pipe.
+            #
+            # It hung the whole suite three times and looked random,
+            # because it only happens when the server was not already
+            # running — every other call finds it up and returns in a
+            # tenth of a second.
+            #
+            # Nothing is lost by discarding the output: -l already sends
+            # the server's log to a file, and pg_ctl's own chatter is
+            # "waiting for server to start.... done".
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            timeout=START_TIMEOUT,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return False, f"Could not start PostgreSQL: {exc}"

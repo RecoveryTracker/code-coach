@@ -34,11 +34,68 @@ one you stop believing.
 
 from __future__ import annotations
 
+import faulthandler
 import os
 import tempfile
 from pathlib import Path
 
 import pytest
+
+
+#: How long one test may take before the run is treated as hung.
+#:
+#: Generous, because it has to clear the slowest honest test in here:
+#: running every workbook exercise in one language is a single test and
+#: takes about a quarter of an hour. Anything past half an hour is not
+#: slow, it is stuck.
+WATCHDOG_SECONDS = float(os.environ.get("CODE_COACH_WATCHDOG", "1800"))
+
+#: Where a hang leaves its evidence. Rewritten at the start of every
+#: test, so afterwards it either holds a traceback and the name of the
+#: test that hung, or just the line saying nothing did.
+HANG_REPORT = Path(tempfile.gettempdir()) / "code-coach-hang.txt"
+
+
+@pytest.fixture(autouse=True)
+def _never_hang_silently(request):
+    """Turn a hang into a traceback instead of a wait.
+
+    A test that blocks forever is the worst failure this suite can
+    have, because it does not look like a failure. The run simply stops
+    printing, and whoever started it keeps waiting — an hour, in the
+    case that prompted this.
+
+    It happened three times, always in the same place, and was
+    diagnosed only by attaching faulthandler by hand. So faulthandler
+    is attached always: if a single test outlives the budget, the
+    process dumps every thread's stack, naming the file and line that
+    is stuck, and exits. A dead run with a traceback can be read. A
+    live run with nothing in it cannot.
+
+    The dump goes to a file rather than to stderr, which is the part
+    that had to be learned by getting it wrong. faulthandler exits the
+    process the instant it fires; pytest is capturing output at the
+    time; the captured buffer dies with the process. So the run ended —
+    good — with nothing whatsoever to read, which is most of the value
+    gone. A file survives.
+
+    Set CODE_COACH_WATCHDOG to change the budget, or to something small
+    to check the watchdog itself still works.
+    """
+    HANG_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    with HANG_REPORT.open("w", encoding="utf-8") as report:
+        report.write(
+            f"A traceback below means a test outlived "
+            f"{WATCHDOG_SECONDS:.0f}s and the run was stopped.\n"
+            f"The test was: {request.node.nodeid}\n\n"
+        )
+        report.flush()
+        faulthandler.dump_traceback_later(
+            WATCHDOG_SECONDS, exit=True, file=report)
+        try:
+            yield
+        finally:
+            faulthandler.cancel_dump_traceback_later()
 
 
 @pytest.fixture(autouse=True, scope="session")

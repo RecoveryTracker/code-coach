@@ -393,3 +393,53 @@ class WorkbookTests(unittest.TestCase):
         names = " ".join(p.name.lower() for p in pages("postgresql"))
         for already_taught in ("group by", "join", "order by"):
             self.assertNotIn(already_taught, names)
+
+
+@unittest.skipUnless(HAS_SERVER, WHY_NOT)
+class ColdStartTests(unittest.TestCase):
+    """Starting the server when it is not already running.
+
+    This is the path that hung the whole suite three times, and it hung
+    invisibly: every other call finds the server up and returns in a
+    tenth of a second, so the bug only appeared on the first Postgres
+    test after a stop, which looked like randomness.
+
+    pg_ctl starts the server and exits, and the server inherits
+    whatever handles pg_ctl had. With pipes on those handles the server
+    holds the write end open for as long as it runs, communicate()
+    waits for an EOF that is never coming, and `timeout` does not help
+    — the timeout fires and Python then blocks joining the reader
+    threads, which are the threads stuck on the pipe.
+
+    So this test stops the server and starts it, which is the only
+    arrangement that can catch it coming back.
+    """
+
+    def tearDown(self) -> None:
+        # Leave it as it was found: up, so the rest of the suite is not
+        # paying a cold start each time.
+        pg_server.start()
+
+    def test_starting_a_stopped_server_returns(self) -> None:
+        import time
+
+        pg_server.stop()
+        self.assertFalse(pg_server.running(), "the server did not stop")
+
+        began = time.time()
+        ok, why = pg_server.start()
+        took = time.time() - began
+
+        self.assertTrue(ok, why)
+        self.assertTrue(pg_server.running())
+        # Generous, and still nowhere near forever. The point is that it
+        # returns at all; before the fix this never did.
+        self.assertLess(
+            took, pg_server.START_TIMEOUT + 10,
+            f"starting the server took {took:.0f}s")
+
+    def test_a_query_works_straight_after_a_cold_start(self) -> None:
+        pg_server.stop()
+        out, err, code = run_postgres("SELECT count(*) AS n FROM users;")
+        self.assertEqual(code, 0, err)
+        self.assertIn("5", out)
