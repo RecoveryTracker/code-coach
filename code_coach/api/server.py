@@ -1615,6 +1615,11 @@ def magnet_list() -> dict:
                         "note": m.note,
                         "language": m.language,
                         "pieces": list(m.shuffled()),
+                        # Labels only. The counts stay on the server:
+                        # "this stage holds three lines" answers a good
+                        # part of the puzzle, and a subgoal label is a
+                        # scaffold rather than an answer.
+                        "labels": list(m.labels),
                         "done": counts.get(m.id, 0),
                         "last": last.get(m.id, ""),
                         "level": m.level,
@@ -1682,15 +1687,25 @@ def magnet_check(body: MagnetCheckRequest) -> MagnetCheckResponse:
 
 
 def _tidy_magnet_error(detail: str) -> str:
-    """Take the scratch file out of an error.
+    """Take the scratch file and the runtime's sign-off out of an error.
 
-    Same reason as the kata marker: the path is true and unhelpful, and
-    naming a file in the system temp directory reads as though the
-    mistake is somewhere the person has never been.
+    The path goes for the same reason as in the kata marker: it is true
+    and unhelpful, and naming a file in the system temp directory reads
+    as though the mistake is somewhere the person has never been.
+
+    The trailer goes because a misplaced line here is a normal event
+    rather than a crash — this is the mode where putting a line in the
+    wrong stage is supposed to fail — and "Node.js v26.6.0" under the
+    message makes an ordinary wrong answer look like the tool broke.
+    What is worth reading is the line and the reason.
     """
     from code_coach.kata import _tidy
 
-    return _tidy(detail)
+    keep = [
+        line for line in _tidy(detail).splitlines()
+        if not line.strip().startswith("Node.js v")
+    ]
+    return "\n".join(keep).strip()
 
 
 @app.get("/api/errors")

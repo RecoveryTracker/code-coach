@@ -60,11 +60,46 @@ class Magnet:
     language: str = "javascript"
     #: 1 to 5: how much the order matters, easiest first in a family.
     level: int = 2
+    #: What the program does, in stages: (label, how many lines).
+    #:
+    #: These are subgoal labels, and they are the best-evidenced thing
+    #: in this file. Students given subgoal labels on a Parsons problem
+    #: do measurably better than students asked to invent their own or
+    #: given none — better immediately, better a week later, and better
+    #: on a task they have not seen. So they are given rather than
+    #: asked for.
+    #:
+    #: A count rather than a list of line numbers, because that makes a
+    #: stage a run of consecutive lines by construction. The program is
+    #: its stages in order, so a stage scattered through the file would
+    #: be one the board could not put back together.
+    plan: tuple[tuple[str, int], ...] = ()
 
     @property
     def pieces(self) -> tuple[str, ...]:
         """The magnets, in the order that works."""
         return tuple(self.code.split("\n"))
+
+    @property
+    def stages(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
+        """Each label with the lines it covers, in order."""
+        out: list[tuple[str, tuple[str, ...]]] = []
+        lines = self.pieces
+        at = 0
+        for label, count in self.plan:
+            out.append((label, lines[at:at + count]))
+            at += count
+        return tuple(out)
+
+    @property
+    def labels(self) -> tuple[str, ...]:
+        """Just the labels — what the board shows.
+
+        The counts stay behind. Telling somebody a stage holds three
+        lines answers a good part of the question for them, and a label
+        is meant to be a scaffold rather than an answer.
+        """
+        return tuple(label for label, _ in self.plan)
 
     def shuffled(self, seed: int | None = None) -> tuple[str, ...]:
         """The magnets, jumbled.

@@ -783,6 +783,11 @@ export type MagnetPuzzle = {
   language: string;
   /** The lines, jumbled by the server. The finished order never leaves it. */
   pieces: string[];
+  /** The stages of the program, in order — subgoal labels, given rather
+   *  than asked for, because that is what the evidence supports. How
+   *  many lines each holds is not served: that would be half the
+   *  answer. */
+  labels: string[];
   done: number;
   last: string;
   level: number;

@@ -514,3 +514,61 @@
   opacity: 0.6;
   max-width: 60ch;
 }
+
+/* ── Magnets: the labelled stages ── */
+
+/* A stage is a bin with a name on it. The selected one is where the next
+   magnet lands, so it has to be obvious at a glance which that is —
+   clicking a magnet and watching it appear somewhere unexpected is the
+   one way this interface can feel broken. */
+.magnet-stage {
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.magnet-stage.on {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.magnet-stage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  background: rgb(255 255 255 / 0.03);
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.magnet-stage.on .magnet-stage-head {
+  background: rgb(110 168 254 / 0.12);
+}
+
+/* Sentence case and a normal weight: a subgoal label is a description of
+   what happens next, not a heading to be skimmed past. */
+.magnet-stage-name {
+  font-weight: 500;
+}
+
+.magnet-stage-note {
+  font-size: 11px;
+  color: var(--accent, #6ea8fe);
+  white-space: nowrap;
+}
+
+.magnet-stage .magnet-program {
+  padding: 6px;
+  gap: 4px;
+}
+
+.magnet-stage .magnet-program li {
+  border-color: transparent;
+  background: rgb(255 255 255 / 0.02);
+}

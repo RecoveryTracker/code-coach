@@ -251,3 +251,105 @@ class MarkingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SubgoalTests(unittest.TestCase):
+    """The labels the board is divided into.
+
+    Subgoal labels are the one thing in this project with direct
+    research behind them: given them, students do better on a Parsons
+    problem immediately, a week later, and on a task they have not
+    seen, than students who invent their own or get none. Which is why
+    they are given — and why they have to actually describe the
+    program rather than being three words that sound structural.
+
+    The structural half is checked here. The describing half cannot be,
+    and is why `test_a_label_is_a_description_not_a_line` exists: a
+    label that is a paraphrase of one line of code is a label that has
+    stopped scaffolding and started answering.
+    """
+
+    def test_every_puzzle_has_stages(self) -> None:
+        for m in magnets():
+            with self.subTest(magnet=m.id):
+                self.assertGreaterEqual(
+                    len(m.plan), 2,
+                    f"{m.id} has no stages to divide the board into")
+
+    def test_the_stages_cover_every_line_exactly_once(self) -> None:
+        """The program is the stages read in order, so a line in no
+        stage could never be placed and a line in two would be typed
+        twice."""
+        for m in magnets():
+            with self.subTest(magnet=m.id):
+                counted = sum(count for _, count in m.plan)
+                self.assertEqual(
+                    counted, len(m.pieces),
+                    f"{m.id}: stages cover {counted} lines of "
+                    f"{len(m.pieces)}")
+                placed = [line for _, lines in m.stages for line in lines]
+                self.assertEqual(placed, list(m.pieces))
+
+    def test_no_stage_is_empty(self) -> None:
+        for m in magnets():
+            for label, count in m.plan:
+                with self.subTest(magnet=m.id, label=label):
+                    self.assertGreater(count, 0)
+
+    def test_the_labels_are_distinct_within_a_puzzle(self) -> None:
+        """Two stages with the same name is two bins nobody can tell
+        apart, and the board keys on the label."""
+        for m in magnets():
+            with self.subTest(magnet=m.id):
+                self.assertEqual(len(set(m.labels)), len(m.labels))
+
+    def test_a_label_is_a_description_not_a_line(self) -> None:
+        """Plain words. A label carrying code has stopped describing
+        the stage and started giving away what goes in it."""
+        for m in magnets():
+            for label in m.labels:
+                with self.subTest(magnet=m.id, label=label):
+                    self.assertLessEqual(len(label), 48)
+                    self.assertTrue(label[0].isupper(), "starts as a sentence")
+                    for giveaway in ("(", ")", ";", "{", "=>", "const "):
+                        self.assertNotIn(giveaway, label)
+
+    def test_the_stages_are_in_program_order(self) -> None:
+        """Reading the labels top to bottom has to describe the program
+        top to bottom, because that is literally how it is rebuilt."""
+        for m in magnets():
+            with self.subTest(magnet=m.id):
+                rebuilt = "\n".join(
+                    line for _, lines in m.stages for line in lines)
+                self.assertEqual(rebuilt, m.code)
+
+
+class SubgoalRouteTests(unittest.TestCase):
+    def test_the_labels_are_served(self) -> None:
+        from code_coach.api import server
+
+        served = server.magnet_list()
+        for family in served["families"]:
+            for row in family["magnets"]:
+                with self.subTest(magnet=row["id"]):
+                    self.assertGreaterEqual(len(row["labels"]), 2)
+
+    def test_how_many_lines_each_stage_holds_is_not_served(self) -> None:
+        """A count is half the answer. Knowing a stage takes three
+        lines narrows the puzzle far more than the label does, so the
+        counts stay on the server.
+        """
+        from code_coach.api import server
+        from code_coach.magnets import magnet as find
+
+        served = server.magnet_list()
+        for family in served["families"]:
+            for row in family["magnets"]:
+                with self.subTest(magnet=row["id"]):
+                    self.assertNotIn("plan", row)
+                    self.assertNotIn("stages", row)
+                    real = find(row["id"])
+                    assert real is not None
+                    self.assertEqual(row["labels"], list(real.labels))
+                    for value in row["labels"]:
+                        self.assertIsInstance(value, str)

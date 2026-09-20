@@ -21,6 +21,10 @@ from code_coach.magnets import Magnet, _m
 FUNCTIONS: tuple[Magnet, ...] = (
     _m(
         id="magnet-greet",
+        plan=(
+            ("Define the function", 3),
+            ("Call it and show the answer", 1),
+        ),
         level=1,
         name="Say hello",
         family="Functions and scope",
@@ -40,6 +44,10 @@ FUNCTIONS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-default-param",
+        plan=(
+            ("Define the function with its fallback", 3),
+            ("Call it both ways", 2),
+        ),
         level=2,
         name="A parameter with a fallback",
         family="Functions and scope",
@@ -60,6 +68,11 @@ FUNCTIONS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-rest-spread",
+        plan=(
+            ("Define the function that gathers", 3),
+            ("Make the array", 1),
+            ("Spread it into the call", 1),
+        ),
         level=3,
         name="Gathering and spreading",
         family="Functions and scope",
@@ -80,6 +93,11 @@ FUNCTIONS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-closure-counter",
+        plan=(
+            ("The factory and its private count", 2),
+            ("The inner function that changes it", 5),
+            ("Use the counter twice", 3),
+        ),
         level=4,
         name="A counter that remembers",
         family="Functions and scope",
@@ -112,6 +130,11 @@ FUNCTIONS: tuple[Magnet, ...] = (
 ARRAYS: tuple[Magnet, ...] = (
     _m(
         id="magnet-find-some",
+        plan=(
+            ("Set up the data", 4),
+            ("Find one and show it", 2),
+            ("Ask about all of them", 1),
+        ),
         level=1,
         name="Finding one, asking about all",
         family="Arrays",
@@ -133,6 +156,11 @@ ARRAYS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-map-filter",
+        plan=(
+            ("Start with the data", 1),
+            ("Narrow it, then change it", 2),
+            ("Show the answer", 1),
+        ),
         level=2,
         name="Filter then map",
         family="Arrays",
@@ -152,6 +180,11 @@ ARRAYS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-sort-comparator",
+        plan=(
+            ("Start with the numbers", 1),
+            ("Sort them with a comparator", 1),
+            ("Show the answer", 1),
+        ),
         level=3,
         name="Sorting numbers properly",
         family="Arrays",
@@ -170,6 +203,11 @@ ARRAYS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-reduce-longest",
+        plan=(
+            ("Start with the words", 1),
+            ("Reduce them to one answer", 4),
+            ("Show it", 1),
+        ),
         level=4,
         name="Reduce to one answer",
         family="Arrays",
@@ -197,6 +235,11 @@ ARRAYS: tuple[Magnet, ...] = (
 OBJECTS: tuple[Magnet, ...] = (
     _m(
         id="magnet-destructure",
+        plan=(
+            ("Start with the object", 1),
+            ("Pull the fields out", 1),
+            ("Show them", 1),
+        ),
         level=2,
         name="Pulling fields out",
         family="Objects",
@@ -214,6 +257,11 @@ OBJECTS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-spread-merge",
+        plan=(
+            ("The defaults, then the overrides", 2),
+            ("Merge them", 1),
+            ("Show the answer", 1),
+        ),
         level=3,
         name="Defaults, then overrides",
         family="Objects",
@@ -233,6 +281,10 @@ OBJECTS: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-entries",
+        plan=(
+            ("Start with the object", 1),
+            ("Walk its pairs", 3),
+        ),
         level=4,
         name="Walking an object",
         family="Objects",
@@ -258,6 +310,10 @@ OBJECTS: tuple[Magnet, ...] = (
 ASYNC: tuple[Magnet, ...] = (
     _m(
         id="magnet-then-chain",
+        plan=(
+            ("Build the chain", 3),
+            ("And the line that is not in it", 1),
+        ),
         level=3,
         name="A chain, and the line after it",
         family="Async",
@@ -278,6 +334,10 @@ ASYNC: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-async-await",
+        plan=(
+            ("Define the async function", 5),
+            ("Call it, and carry on", 2),
+        ),
         level=4,
         name="await hands control back",
         family="Async",
@@ -301,6 +361,11 @@ ASYNC: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-promise-all",
+        plan=(
+            ("Make the promises", 2),
+            ("Wait for both, then show them", 3),
+            ("And the line that does not wait", 1),
+        ),
         level=4,
         name="Waiting for both",
         family="Async",
@@ -322,6 +387,10 @@ ASYNC: tuple[Magnet, ...] = (
     ),
     _m(
         id="magnet-catch",
+        plan=(
+            ("Define something that fails", 3),
+            ("Call it and handle the failure", 3),
+        ),
         level=5,
         name="Where the catch goes",
         family="Async",

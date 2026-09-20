@@ -1,30 +1,46 @@
 /**
  * Code magnets: the lines of a working program, shuffled.
  *
- * The katas ask you to write a function from nothing. The typing drills ask
+ * The forms ask you to write a function from nothing. The typing drills ask
  * you to copy a shape until your hands know it. This asks the thing in
  * between, which is oddly harder: here are the exact lines of a program that
  * works, in the wrong order — put them back.
  *
- * Placing rather than dragging. Drag and drop is the obvious interface and
- * it is the wrong one here: it needs a mouse, it needs aim, and getting a
- * line into position becomes a test of the pointer rather than of whether
- * you know where the line goes. Clicking a magnet in the tray appends it,
- * clicking one in the program takes it back, and the arrows move it. All of
- * which work from the keyboard, which matters in an app about typing.
+ * Built in labelled stages rather than one list
+ * ---------------------------------------------
+ * The program area is divided into the stages the program goes through —
+ * "define the function", "call it and show the answer" — and each line goes
+ * under the stage it belongs to.
  *
- * It is marked by running it, not by comparing your order with the
- * reference. There is always more than one arrangement that works — a
- * function declaration is hoisted, two independent statements can go either
- * way round — and marking those wrong would teach you to guess at the
- * author's preference rather than at what the language does.
+ * Those are subgoal labels, and they are the one part of this app with
+ * direct research behind them. Students given subgoal labels on a Parsons
+ * problem do measurably better than students asked to invent their own or
+ * given none: better immediately, better a week later, and better on a task
+ * they have not seen. So the labels are given rather than asked for.
+ *
+ * What is not given is how many lines a stage holds. The server sends the
+ * labels and keeps the counts, because "this one takes three lines" answers
+ * a good part of the puzzle. A stage takes as many as you put in it.
+ *
+ * Placing rather than dragging. Drag and drop is the obvious interface and
+ * the wrong one here: it needs a mouse and it needs aim, so getting a line
+ * into position becomes a test of the pointer rather than of whether you
+ * know where the line goes. Clicking a stage selects it, clicking a magnet
+ * drops it there, and the arrows move it within the stage — all of which
+ * work from the keyboard, which matters in an app about typing.
+ *
+ * Marked by running it, not by comparing your order with the reference.
+ * There is always more than one arrangement that works — a function
+ * declaration is hoisted, two independent statements can go either way round
+ * — and marking those wrong would teach you to guess at the author's
+ * preference rather than at what the language does.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkMagnet, fetchMagnets } from "../api";
-import type { MagnetCheck, MagnetList, MagnetPuzzle } from "../types";
 import { LAST_KEYS } from "../lastKeys";
+import type { MagnetCheck, MagnetList, MagnetPuzzle } from "../types";
 
 /** Which puzzle you were on. */
 const LAST_KEY = LAST_KEYS.magnets;
@@ -43,14 +59,18 @@ function nextUp<T extends { done: number; last: string }>(
   }, all[0]);
 }
 
-/** A magnet, wherever it currently sits. Index keeps duplicates apart. */
+/** A magnet, wherever it currently sits. The key keeps duplicates apart. */
 type Piece = { key: number; text: string };
+
+/** One stage of the program: its label, and what has been put under it. */
+type Bin = { label: string; pieces: Piece[] };
 
 export default function Magnets() {
   const [list, setList] = useState<MagnetList | null>(null);
   const [chosen, setChosen] = useState("");
   const [tray, setTray] = useState<Piece[]>([]);
-  const [program, setProgram] = useState<Piece[]>([]);
+  const [bins, setBins] = useState<Bin[]>([]);
+  const [active, setActive] = useState(0);
   const [result, setResult] = useState<MagnetCheck | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +112,8 @@ export default function Magnets() {
   useEffect(() => {
     if (!puzzle) return;
     setTray(puzzle.pieces.map((text, i) => ({ key: i, text })));
-    setProgram([]);
+    setBins(puzzle.labels.map((label) => ({ label, pieces: [] })));
+    setActive(0);
     setResult(null);
     try {
       localStorage.setItem(LAST_KEY, puzzle.id);
@@ -104,26 +125,44 @@ export default function Magnets() {
 
   const place = (piece: Piece) => {
     setTray((was) => was.filter((p) => p.key !== piece.key));
-    setProgram((was) => [...was, piece]);
+    setBins((was) =>
+      was.map((bin, i) =>
+        i === active ? { ...bin, pieces: [...bin.pieces, piece] } : bin,
+      ),
+    );
     setResult(null);
   };
 
   const takeBack = (piece: Piece) => {
-    setProgram((was) => was.filter((p) => p.key !== piece.key));
+    setBins((was) =>
+      was.map((bin) => ({
+        ...bin,
+        pieces: bin.pieces.filter((p) => p.key !== piece.key),
+      })),
+    );
     setTray((was) => [...was, piece]);
     setResult(null);
   };
 
-  const move = (index: number, by: number) => {
-    setProgram((was) => {
-      const to = index + by;
-      if (to < 0 || to >= was.length) return was;
-      const next = [...was];
-      [next[index], next[to]] = [next[to], next[index]];
-      return next;
-    });
+  const move = (binIndex: number, at: number, by: number) => {
+    setBins((was) =>
+      was.map((bin, i) => {
+        if (i !== binIndex) return bin;
+        const to = at + by;
+        if (to < 0 || to >= bin.pieces.length) return bin;
+        const next = [...bin.pieces];
+        [next[at], next[to]] = [next[to], next[at]];
+        return { ...bin, pieces: next };
+      }),
+    );
     setResult(null);
   };
+
+  /** Every line, stages read in order — which is the program. */
+  const assembled = useMemo(
+    () => bins.flatMap((bin) => bin.pieces.map((p) => p.text)),
+    [bins],
+  );
 
   const check = useCallback(async () => {
     if (!puzzle || checking) return;
@@ -132,7 +171,7 @@ export default function Magnets() {
     try {
       const got = await checkMagnet({
         magnet_id: puzzle.id,
-        lines: program.map((p) => p.text),
+        lines: assembled,
       });
       setResult(got);
       if (got.passed) {
@@ -157,7 +196,7 @@ export default function Magnets() {
     } finally {
       setChecking(false);
     }
-  }, [puzzle, program, checking]);
+  }, [puzzle, assembled, checking]);
 
   /* Another go means another jumble, which has to come from the server —
      the finished order is not in the payload, and a reshuffle on this side
@@ -186,8 +225,9 @@ export default function Magnets() {
         <h2>Magnets</h2>
         <p className="lessons-intro">
           The lines of a program that works, in the wrong order. Put them
-          back. It is marked by running what you built, so any arrangement
-          that prints the right thing is right.
+          back under the stage each one belongs to. It is marked by running
+          what you built, so any arrangement that prints the right thing is
+          right.
         </p>
         {leastDone && leastDone.id !== chosen ? (
           <button
@@ -252,7 +292,11 @@ export default function Magnets() {
                   type="button"
                   className="magnet"
                   onClick={() => place(piece)}
-                  title="Put this at the bottom of the program"
+                  title={
+                    bins.length
+                      ? `Put this under "${bins[active]?.label}"`
+                      : "Place this line"
+                  }
                 >
                   <code>{piece.text}</code>
                 </button>
@@ -266,51 +310,71 @@ export default function Magnets() {
           </div>
 
           <div className="magnet-side">
-            <p className="wb-prompt">Your program</p>
-            <ol className="magnet-program">
-              {program.map((piece, i) => (
-                <li key={piece.key}>
-                  <span className="magnet-num">{i + 1}</span>
-                  <code className="magnet-line">{piece.text}</code>
-                  <span className="magnet-controls">
-                    <button
-                      type="button"
-                      className="ws-btn magnet-move"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      title="Move up"
-                      aria-label={`Move line ${i + 1} up`}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="ws-btn magnet-move"
-                      onClick={() => move(i, 1)}
-                      disabled={i === program.length - 1}
-                      title="Move down"
-                      aria-label={`Move line ${i + 1} down`}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="ws-btn magnet-move"
-                      onClick={() => takeBack(piece)}
-                      title="Take it back"
-                      aria-label={`Remove line ${i + 1}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                </li>
-              ))}
-              {!program.length ? (
-                <li className="magnet-empty">
-                  Click a magnet to start the program.
-                </li>
-              ) : null}
-            </ol>
+            <p className="wb-prompt">Your program, stage by stage</p>
+            {bins.map((bin, binIndex) => (
+              <section
+                key={bin.label}
+                className={`magnet-stage${binIndex === active ? " on" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="magnet-stage-head"
+                  onClick={() => setActive(binIndex)}
+                  aria-pressed={binIndex === active}
+                  title="Put the next magnet here"
+                >
+                  <span className="magnet-stage-name">{bin.label}</span>
+                  {binIndex === active ? (
+                    <span className="magnet-stage-note">next goes here</span>
+                  ) : null}
+                </button>
+                <ol className="magnet-program">
+                  {bin.pieces.map((piece, i) => (
+                    <li key={piece.key}>
+                      <code className="magnet-line">{piece.text}</code>
+                      <span className="magnet-controls">
+                        <button
+                          type="button"
+                          className="ws-btn magnet-move"
+                          onClick={() => move(binIndex, i, -1)}
+                          disabled={i === 0}
+                          title="Move up"
+                          aria-label={`Move ${piece.text} up`}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="ws-btn magnet-move"
+                          onClick={() => move(binIndex, i, 1)}
+                          disabled={i === bin.pieces.length - 1}
+                          title="Move down"
+                          aria-label={`Move ${piece.text} down`}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="ws-btn magnet-move"
+                          onClick={() => takeBack(piece)}
+                          title="Take it back"
+                          aria-label={`Remove ${piece.text}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                  {!bin.pieces.length ? (
+                    <li className="magnet-empty">
+                      {binIndex === active
+                        ? "Click a magnet to put it here."
+                        : "Nothing here yet."}
+                    </li>
+                  ) : null}
+                </ol>
+              </section>
+            ))}
           </div>
         </div>
 
@@ -319,7 +383,7 @@ export default function Magnets() {
             type="button"
             className="ws-btn primary"
             onClick={() => void check()}
-            disabled={checking || tray.length > 0 || !program.length}
+            disabled={checking || tray.length > 0 || !assembled.length}
             title={
               tray.length
                 ? "Every magnet has to be placed first"
@@ -342,15 +406,7 @@ export default function Magnets() {
 
         {result ? (
           <div className="kata-result">
-            <p
-              className={
-                result.passed
-                  ? "wb-verdict ok"
-                  : result.broke
-                    ? "wb-verdict bad"
-                    : "wb-verdict bad"
-              }
-            >
+            <p className={result.passed ? "wb-verdict ok" : "wb-verdict bad"}>
               {result.passed
                 ? `That runs and prints exactly that. Done ${result.done}×.`
                 : result.broke
