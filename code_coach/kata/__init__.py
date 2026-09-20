@@ -421,13 +421,14 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
     from code_coach.kata.js import JS_KATAS
+    from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
     everything = (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
-        + JS_KATAS + STUBS
+        + JS_KATAS + STUBS + ODIN
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -444,13 +445,14 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
     from code_coach.kata.js import JS_KATAS
+    from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
     return (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
-        + JS_KATAS + STUBS
+        + JS_KATAS + STUBS + ODIN
     )
 
 
