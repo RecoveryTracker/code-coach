@@ -21,12 +21,12 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 60 across 9 families |
-| **Trace** | Stop a program part way and say what a variable holds, then step through and watch |
-| **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? |
-| **Magnets** | The lines of a working program, shuffled. Put them back |
+| **Forms** | Write a function; it is called with inputs you have not seen. 70 across 10 families, including The Odin Project's computer science section |
+| **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 9 moments |
+| **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 11 of them |
+| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
 | **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |
-| **HTML & CSS** | Read it: what does the browser compute? Type it: copy the markup and watch what you typed render |
+| **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
 | **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Concepts** | The questions an interview asks that are not coding problems |
@@ -158,7 +158,9 @@ So each mode gets its answers from a different place, on purpose:
   hash of the exact document measured. Change a quiz without re-measuring and
   the suite fails.
 - **Magnets** — marked by running what you arranged, not by comparing your line
-  order with the reference, because more than one order is usually correct.
+  order with the reference, because more than one order is usually correct. The
+  stage labels are subgoal labels: given rather than asked for, because that is
+  what the research on Parsons problems supports.
 
 ### Where your work is kept
 
@@ -168,6 +170,35 @@ So each mode gets its answers from a different place, on purpose:
 
 Clearing site data wipes typed drafts; **Save** exports anything you want to
 keep.
+
+---
+
+## Known limits
+
+Worth knowing before you file a bug, because these are decisions rather
+than accidents.
+
+**The HTML & CSS answers were measured in Chromium.** Every expected value
+in that mode came out of a real Chromium run, recorded with a hash of the
+document measured. Most are the same in any browser; a few are not — the
+default font size of a `<button>` differs between Chrome and Firefox, for
+instance. If a quiz marks you wrong in Firefox and you are sure you are
+right, that is probably why. The rest of the app is browser-agnostic.
+
+**Some languages need their own toolchain to run anything.** The picker
+says which. Without the toolchain the drills still work — only Run does
+not. Python, JavaScript and SQL need nothing beyond the setup above.
+
+**The full test suite takes about an hour.** It executes every workbook
+exercise in every language it has a compiler for. You do not need to run
+it to use the app.
+
+**PostgreSQL is opt-in** and needs a 300MB download. Everything else works
+without it, and the picker will tell you the server is not there rather
+than failing oddly.
+
+**Progress is per-machine.** It lives in `~/.code_coach/student_progress.json`
+and is yours — nothing is uploaded, and there is no account to make.
 
 ---
 
