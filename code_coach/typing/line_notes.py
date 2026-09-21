@@ -281,6 +281,133 @@ def _javascript(line: str) -> str | None:
     return None
 
 
+def _assembly(line: str) -> str | None:
+    """x86-64, Intel syntax, NASM — the dialect the theme is written in.
+
+    Assembly is where the "never assert what the line does not say"
+    rule earns its keep, because the meaning of an instruction depends
+    on state the line cannot see. `jne .loop` jumps when the last
+    comparison came out unequal, and which comparison that was is not
+    in this line. So the flag-readers describe the test they perform,
+    never the value they are testing, and nothing here claims to know
+    what is in a register.
+
+    Two-operand arithmetic reads destination-first, per Intel syntax.
+    An AT&T-syntax line would be described backwards by these rules,
+    which is exactly why the theme is one dialect and says so.
+    """
+    s = line.strip()
+    if s.startswith(";"):
+        return None
+
+    # A label is a name for an address, and the colon is the whole tell.
+    m = re.match(r"^(\.?[\w$]+):$", s)
+    if m:
+        return f"somewhere to jump to, named {m.group(1)}"
+
+    m = re.match(r"^(\w+)\s+(.+)$", s)
+    op = m.group(1).lower() if m else s.lower()
+    rest = m.group(2).strip() if m else ""
+    pair = [part.strip() for part in rest.split(",")] if rest else []
+    first = pair[0] if pair else ""
+    second = pair[1] if len(pair) > 1 else ""
+
+    # Moves. The zero idioms are worth naming as themselves, because
+    # that is how they are read by anyone who knows the language.
+    if op in {"xor", "sub"} and first and first == second:
+        return f"set {first} to zero, the short way"
+    if op == "mov" and second:
+        return f"put {second} into {first}"
+    if op in {"movzx", "movsx"} and second:
+        return f"put {second} into {first}, widened to fit"
+    if op == "lea" and second:
+        return f"work out the address {second} and put it in {first}"
+
+    two_operand = {
+        "add": "add {b} to {a}",
+        "sub": "take {b} off {a}",
+        "and": "keep in {a} only the bits also set in {b}",
+        "or": "set in {a} every bit set in {b}",
+        "xor": "flip in {a} the bits set in {b}",
+        "imul": "multiply {a} by {b}, signed",
+        "shl": "shift {a} left by {b}",
+        "shr": "shift {a} right by {b}",
+        "sar": "shift {a} right by {b}, keeping the sign",
+    }
+    if op in two_operand and second:
+        return two_operand[op].format(a=first, b=second)
+
+    one_operand = {
+        "inc": "add one to {a}",
+        "dec": "take one off {a}",
+        "neg": "flip the sign of {a}",
+        "not": "flip every bit of {a}",
+        "push": "save {a} on the stack",
+        "pop": "take the top of the stack back into {a}",
+        "idiv": "divide by {a}, signed",
+        "div": "divide by {a}, unsigned",
+    }
+    if op in one_operand and first and not second:
+        return one_operand[op].format(a=first)
+
+    # Comparisons set flags and produce nothing. Saying they "check
+    # whether x equals y" would be asserting the outcome; they perform
+    # the test and leave the answer in the flags.
+    if op == "cmp" and second:
+        return f"compare {first} with {second}, leaving the answer in the flags"
+    if op == "test" and second:
+        return f"test the bits of {first} against {second}, setting the flags"
+
+    jumps = {
+        "jmp": "go to {a}, no test",
+        "je": "go to {a} if the last comparison was equal",
+        "jz": "go to {a} if the zero flag is set",
+        "jne": "go to {a} if the last comparison was not equal",
+        "jnz": "go to {a} if the zero flag is clear",
+        "jl": "go to {a} if it was less",
+        "jle": "go to {a} if it was less or equal",
+        "jg": "go to {a} if it was greater",
+        "jge": "go to {a} if it was greater or equal",
+        "loop": "count down and go to {a} until the counter runs out",
+    }
+    if op in jumps and first:
+        return jumps[op].format(a=first)
+
+    if op == "call" and first:
+        return f"save where we are and go to {first}"
+    if op == "ret":
+        return "go back to whoever called, popping the address"
+    if op == "syscall":
+        return "hand over to the kernel"
+    if op == "int" and first:
+        return f"hand over to the kernel, the older way, through {first}"
+    if op == "leave":
+        return "undo the stack frame in one instruction"
+    if op == "nop":
+        return "do nothing, deliberately"
+    if op == "cqo":
+        return "widen the sign across, which the signed divide needs first"
+
+    # Directives, which are instructions to the assembler rather than
+    # to the processor. Worth distinguishing: they never run.
+    if op == "section" and first:
+        return f"everything after this goes in the {first} section"
+    if op in {"global", "extern"} and first:
+        return (
+            f"let the linker see {first}"
+            if op == "global"
+            else f"{first} is defined somewhere else"
+        )
+    if op in {"db", "dw", "dd", "dq"} and rest:
+        return f"lay down {rest} in the program's own bytes"
+    if op in {"resb", "resw", "resd", "resq"} and rest:
+        return f"reserve room for {rest}, filled in at run time"
+    if op == "align" and first:
+        return f"pad until the address divides by {first}"
+
+    return None
+
+
 #: Which describer to use. Dialects that are close enough to share one
 #: are listed against it rather than given a near-copy, because a
 #: near-copy is the thing that goes stale.
@@ -288,6 +415,7 @@ _BY_LANGUAGE = {
     "python": _python,
     "javascript": _javascript,
     "typescript": _javascript,
+    "assembly": _assembly,
 }
 
 

@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
-from code_coach.typing import blends
+from code_coach.typing import asmlore, blends
 from code_coach.typing import langhistory, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
 from code_coach.typing import blocks_new, rails, rails2, snippets3
@@ -208,6 +208,14 @@ class Theme:
     # at a time drills the punctuation; a block drills the shape — what sits
     # under what, and Enter as part of writing code.
     blocks: tuple[Passage, ...] = field(default_factory=tuple)
+    # Which language these lines are written in, for the things that have
+    # to parse them. Empty for prose themes, which is the honest answer:
+    # the Zen of Python is not Python.
+    #
+    # Set here rather than derived from the id. "pycode" -> "python" would
+    # be a sixth hand-maintained mapping keyed on language, and the five
+    # before it all broke the first time a dialect was added.
+    language: str = ""
 
 
 THEMES: tuple[Theme, ...] = (
@@ -384,8 +392,13 @@ THEMES: tuple[Theme, ...] = (
     ),
     Theme(
         "assembly", "Assembly Lore",
-        "What every other language on this list turns into.",
-        passages=langlore4.ASSEMBLY,
+        "What every other language on this list turns into, and who wrote "
+        "the first one.",
+        passages=(
+            langlore4.ASSEMBLY
+            + asmlore.ASSEMBLY_STORY
+            + asmlore.ASSEMBLY_IN_USE
+        ),
     ),
     Theme(
         "gocode", "Go Code",
@@ -491,7 +504,11 @@ THEMES: tuple[Theme, ...] = (
         "assemblycode", "Assembly Code",
         "mov, cmp, jne, syscall.",
         passages=snippets2.BY_LANGUAGE["assembly"]
-        + snippets3.BY_LANGUAGE["assembly"],
+        + snippets3.BY_LANGUAGE["assembly"]
+        + asmlore.ASSEMBLY_CODE_MORE,
+        # Tagged so Same Shape can group these, and so the describer
+        # uses the x86 rules rather than declining to say anything.
+        language="assembly",
     ),
     # The nine with a toolchain here also carry blocks — whole programs,
     # every one of them run. The other seven have lines only: a block
@@ -529,30 +546,35 @@ THEMES: tuple[Theme, ...] = (
         "Real Python lines, plus every solution the curriculum teaches.",
         passages=code_lines_for("python", curated=PYTHON_CODE),
         blocks=code_blocks_for("python"),
+        language="python",
     ),
     Theme(
         "jscode", "JavaScript Code",
         "Destructuring, arrows and promises, plus the JavaScript solutions.",
         passages=code_lines_for("javascript", curated=JAVASCRIPT_CODE),
         blocks=code_blocks_for("javascript"),
+        language="javascript",
     ),
     Theme(
         "tscode", "TypeScript Code",
         "Typed signatures, generics and the solutions written out in them.",
         passages=code_lines_for("typescript"),
         blocks=code_blocks_for("typescript"),
+        language="typescript",
     ),
     Theme(
         "dartcode", "Dart Code",
         "Null-safe declarations and futures, plus the Dart solutions.",
         passages=code_lines_for("dart", curated=DART_CODE),
         blocks=code_blocks_for("dart"),
+        language="dart",
     ),
     Theme(
         "sqlcode", "SQL Code",
         "Selects, joins, grouping and the odd transaction.",
         passages=code_lines_for("sql", curated=SQL_CODE),
         blocks=code_blocks_for("sql"),
+        language="sql",
     ),
     Theme(
         "postgresqlcode", "PostgreSQL Code",
@@ -560,24 +582,28 @@ THEMES: tuple[Theme, ...] = (
         "punctuation that is PostgreSQL's rather than SQL's.",
         passages=code_lines_for("postgresql", curated=POSTGRES_CODE),
         blocks=code_blocks_for("postgresql"),
+        language="postgresql",
     ),
     Theme(
         "ccode", "C Code",
         "Pointers, structs and the loops they hang off.",
         passages=code_lines_for("c"),
         blocks=code_blocks_for("c"),
+        language="c",
     ),
     Theme(
         "cppcode", "C++ Code",
         "The standard library shapes, and the punctuation that comes with them.",
         passages=code_lines_for("cpp"),
         blocks=code_blocks_for("cpp"),
+        language="cpp",
     ),
     Theme(
         "rustcode", "Rust Code",
         "Ownership, matches and the question mark.",
         passages=code_lines_for("rust"),
         blocks=code_blocks_for("rust"),
+        language="rust",
     ),
     Theme(
         "school", "First Code",
@@ -737,6 +763,10 @@ MODES: tuple[Mode, ...] = (
     Mode(
         "blocks", "Whole Functions",
         "A whole solution at a time — Enter for the next line, indentation and all.",
+    ),
+    Mode(
+        "reps", "Same Shape",
+        "One kind of line, over and over, with only the middle changing.",
     ),
     Mode(
         "teach", "Learn and Type",
@@ -1019,6 +1049,14 @@ def build_drill(
             )
         scoring = "wpm"
 
+    elif mode.id == "reps":
+        # Deliberately the opposite of every other mode here. The rest
+        # vary what comes next, because recognising an unfamiliar line
+        # is its own skill; this one holds the frame still so the
+        # punctuation stops being a decision. Both are worth doing.
+        targets = _same_shape(theme, rng, count)
+        scoring = "wpm"
+
     else:  # speed
         for passage in _speed_passages(section, theme, rng):
             targets.append(
@@ -1218,7 +1256,74 @@ def _theme_fits(theme: Theme, mode: Mode) -> bool:
         # Only the code themes have whole functions to give. Prose has
         # paragraphs, which is a different idea and not this one.
         return bool(theme.blocks)
+    if mode.id == "reps":
+        # Needs a language the describer has rules for, and enough real
+        # lines sharing a shape. Asked rather than assumed: a theme can
+        # be code and still have nothing repeated often enough, and a
+        # drill that silently fell back would be the wrong language
+        # under the right name.
+        return bool(_shape_sets(theme))
     return True
+
+
+#: Worked out once per theme. Keyed on id rather than the Theme itself,
+#: which is frozen but holds a dict and so cannot be hashed.
+_shape_cache: dict[str, list[tuple[str, str, list[Passage]]]] = {}
+
+
+def _shape_sets(theme: Theme) -> list[tuple[str, str, list[Passage]]]:
+    """This theme's drillable shapes, or nothing.
+
+    A blend is several languages at once, so each part is grouped in
+    its own language and the results are concatenated - grouping
+    JavaScript lines with Python's rules would put them in shapes they
+    do not have.
+    """
+    from code_coach.typing.shapes import drillable_shapes
+
+    # Cached by id because the answer is a pure function of material
+    # that is fixed at import, and working it out means running the
+    # describer over every line in the theme - 14ms, which is nothing
+    # once and noticeable on every keystroke-adjacent request.
+    if theme.id in _shape_cache:
+        return _shape_cache[theme.id]
+
+    parts = [THEMES_BY_ID[p] for p in blends.split_id(theme.id) if p in THEMES_BY_ID]
+    out: list[tuple[str, str, list[Passage]]] = []
+    for part in parts or [theme]:
+        if part.language:
+            out.extend(drillable_shapes(part.passages, part.language))
+    out.sort(key=lambda item: (-len(item[2]), item[1]))
+    _shape_cache[theme.id] = out
+    return out
+
+
+def _same_shape(theme: Theme, rng: random.Random, count: int) -> list[Target]:
+    """One shape, many times, with only the payload moving.
+
+    One shape per drill rather than a few of each: the point is that
+    the frame stops being a decision, and that only happens if the
+    frame does not change. Which shape you get is the draw, and the
+    commonest shapes are the ones with the most lines, so they come up
+    most often - which is what was wanted, the lines you write most.
+    """
+    sets = _shape_sets(theme)
+    if not sets:
+        return []
+    weights = [len(lines) for _, _, lines in sets]
+    key, label, lines = rng.choices(sets, weights=weights, k=1)[0]
+    pool = tuple(lines)
+    chosen = _deal(f"reps:{theme.id}:{key}", pool, rng, count)
+    return [
+        Target(
+            text=p.text,
+            prompt=p.text,
+            # The shape is named once, by example, so it is clear what
+            # is being drilled and what is only the payload.
+            note=f"{p.source}" if p.source else label,
+        )
+        for p in chosen
+    ]
 
 
 def resolve_theme(theme_id: str) -> Theme:
@@ -1252,6 +1357,12 @@ def _fallback_theme(mode: Mode) -> Theme:
     if mode.id == "define":
         return THEMES_BY_ID["vocab"]
     if mode.id == "blocks":
+        return THEMES_BY_ID["pycode"]
+    if mode.id == "reps":
+        # Without this the fallback is the default prose theme, which
+        # has no shapes either, and the drill comes back empty - a
+        # blank screen rather than a wrong one, which is worse because
+        # it looks like the app broke.
         return THEMES_BY_ID["pycode"]
     return DEFAULT_THEME
 
@@ -1417,6 +1528,10 @@ def _mode_fits(mode: Mode, section: Section) -> bool:
     # Learn and Type asks for a sentence and then a line of code, so it needs
     # everything a code section needs plus ordinary prose punctuation.
     if mode.id == "teach" and not _can_type_code(section):
+        return False
+    # Same Shape groups real lines by the shape the describer gives them,
+    # so it needs a section that can type source at all.
+    if mode.id == "reps" and not _can_type_code(section):
         return False
     return True
 

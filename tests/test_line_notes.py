@@ -29,6 +29,16 @@ from code_coach.typing.drills import THEMES_BY_ID
 from code_coach.typing.line_notes import describe, note_for
 
 
+#: Every pool the describer claims to handle. Adding a language here
+#: is how a new describer gets held to the same rule as the old ones -
+#: which is the whole reason this is a list rather than two literals
+#: repeated in each test.
+POOLS = (
+    ("pycode", "python"),
+    ("jscode", "javascript"),
+    ("assemblycode", "assembly"),
+)
+
 #: Every English word the descriptions are allowed to use.
 ALLOWED = {
     "a", "about", "add", "afterwards", "again", "all", "and", "anything",
@@ -49,6 +59,20 @@ ALLOWED = {
     "worked", "would", "you", "your", "side", "something", "nothing",
     "block", "allowed", "fail", "failed", "offer", "pull", "name", "names",
     "reported", "counting", "got", "not", "no", "onto", "take", "these",
+    # Added when the x86 describer arrived. Every one was checked to be
+    # ordinary English rather than an identifier smuggled in - that
+    # check is the reason this list is edited by hand.
+    "across", "address", "after", "against", "also", "answer", "are",
+    "bit", "bits", "bytes", "called", "compare", "comparison", "counter",
+    "defined", "divide", "divides", "down", "else", "equal", "everything",
+    "filled", "first", "fit", "flag", "flags", "flip", "frame", "goes",
+    "greater", "if", "instruction", "jump", "keeping", "kernel", "lay",
+    "leaving", "left", "less", "let", "linker", "multiply", "named",
+    "needs", "older", "own", "pad", "popping", "program", "reserve",
+    "right", "room", "run", "s", "save", "see", "setting", "shift",
+    "short", "sign", "signed", "somewhere", "stack", "time", "top",
+    "undo", "until", "was", "way", "we", "where", "widen", "widened",
+    "work", "zero",
 }
 
 #: Words that carry meaning and must therefore come from the line.
@@ -72,8 +96,7 @@ class DescriberHonestyTests(unittest.TestCase):
     def test_every_described_word_came_from_the_line(self) -> None:
         """The rule the whole feature rests on, checked against every
         line in both curricula rather than against examples."""
-        for theme_id, language in (("pycode", "python"),
-                                   ("jscode", "javascript")):
+        for theme_id, language in POOLS:
             for passage in self._pool(theme_id):
                 described = describe(passage.text, language)
                 if described is None:
@@ -87,8 +110,7 @@ class DescriberHonestyTests(unittest.TestCase):
                         )
 
     def test_a_description_is_one_readable_line(self) -> None:
-        for theme_id, language in (("pycode", "python"),
-                                   ("jscode", "javascript")):
+        for theme_id, language in POOLS:
             for passage in self._pool(theme_id):
                 described = describe(passage.text, language)
                 if described is None:
@@ -128,8 +150,7 @@ class DescriberUsefulnessTests(unittest.TestCase):
     """
 
     def test_most_curriculum_lines_get_a_caption(self) -> None:
-        for theme_id, language in (("pycode", "python"),
-                                   ("jscode", "javascript")):
+        for theme_id, language in POOLS:
             passages = THEMES_BY_ID[theme_id].passages
             described = sum(
                 1 for p in passages if describe(p.text, language)
