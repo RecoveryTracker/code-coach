@@ -1,16 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchTypingCatalog, fetchTypingDrill, submitTypingRun } from "../api";
+import {
+  fetchTypingCatalog,
+  fetchTypingDrill,
+  fetchTypingShapes,
+  submitTypingRun,
+} from "../api";
 import type {
   TypingCatalog,
   TypingDrill,
   TypingRunResult,
   TypingSection,
+  TypingShape,
 } from "../types";
 import TypingCoursePanel from "./TypingCourse";
 import TypingGuidePanel from "./TypingGuide";
 import TypingKeyboard, { type KeyStat } from "./TypingKeyboard";
 import TypingRecords from "./TypingRecords";
+import { ShapePicker } from "./ShapePicker";
 import { TextPicker, splitThemeId } from "./TextPicker";
 
 /**
@@ -141,6 +148,16 @@ export default function TypingTrainer() {
   const [modeId, setModeId] = useState(() => loadSettings().mode);
   // What the words say, which is a separate choice from which keys they use.
   const [themeId, setThemeId] = useState(() => loadSettings().theme);
+  /* Which shape Same Shape is pinned to, "" for the weighted draw.
+     Not persisted: the shapes a theme has depend on the theme, so a
+     remembered id is wrong as often as it is right, and being handed
+     a drill you did not choose is worse than choosing again. */
+  const [shapeId, setShapeId] = useState("");
+  const shapeRef = useRef("");
+  const [shapes, setShapes] = useState<TypingShape[]>([]);
+  useEffect(() => {
+    shapeRef.current = shapeId;
+  }, [shapeId]);
   const [drill, setDrill] = useState<TypingDrill | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Practice is the front door — a drill is already loaded and waiting. The
@@ -241,7 +258,12 @@ export default function TypingTrainer() {
   }, []);
 
   const loadDrill = useCallback(
-    async (nextSection: string, nextMode: string, nextTheme: string) => {
+    async (
+      nextSection: string,
+      nextMode: string,
+      nextTheme: string,
+      nextShape?: string,
+    ) => {
       setError(null);
       try {
         const next = await fetchTypingDrill(
@@ -249,6 +271,12 @@ export default function TypingTrainer() {
           nextMode,
           String(Date.now()),
           nextTheme,
+          30,
+          // The ref, not the state, so this callback keeps its
+          // identity - it is in the dependency list of half the
+          // effects in this file, and rebuilding it on every shape
+          // change would reload the drill twice.
+          nextShape ?? shapeRef.current,
         );
         submitted.current = false;
         setDrill(next);
@@ -309,6 +337,47 @@ export default function TypingTrainer() {
       void loadDrill(sectionId, next, theme);
     },
     [catalog, loadDrill, sectionId, themeId],
+  );
+
+  /* The shapes depend on the text, so they are fetched when it
+     changes rather than shipped with the catalogue - see the endpoint
+     for why that is not a catalogue field. Only while the mode that
+     uses them is selected, so the ordinary drills cost no request. */
+  useEffect(() => {
+    if (modeId !== "reps") {
+      setShapes([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const got = await fetchTypingShapes(themeId);
+        if (!cancelled) setShapes(got.shapes);
+      } catch {
+        /* the picker just stays empty and the draw decides */
+        if (!cancelled) setShapes([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modeId, themeId]);
+
+  /* A shape belongs to the text it came from. Changing the text
+     leaves the old id pointing at nothing, and the server would
+     quietly fall back to the draw - which looks like the picker
+     being ignored. Clearing it says what happened. */
+  useEffect(() => {
+    if (shapeId && !shapes.some((s) => s.id === shapeId)) setShapeId("");
+  }, [shapes, shapeId]);
+
+  const chooseShape = useCallback(
+    (next: string) => {
+      setShapeId(next);
+      shapeRef.current = next;
+      void loadDrill(sectionId, modeId, themeId, next);
+    },
+    [loadDrill, modeId, sectionId, themeId],
   );
 
   const chooseTheme = useCallback(
@@ -686,19 +755,15 @@ export default function TypingTrainer() {
   const byName = mode?.by_name ?? false;
   const revealKey = !byName || flash?.ok === false || reviewing;
 
-  // Which drills actually read from a text source, and so have something for
-  // the theme to change. Whole Functions belongs here above all: it is how you
-  // choose the language, and hiding it left you typing code with nothing on
-  // screen saying which language it was.
-  const usesText = [
-    "random",
-    "words",
-    "define",
-    "speed",
-    "perfect",
-    "blocks",
-    "teach",
-  ].includes(modeId);
+  /* Which drills read from a text source, and so have something for
+     the theme picker to change.
+     
+     Asked of the mode rather than listed here. The list used to live
+     in this file and went stale twice in the same way: Whole
+     Functions was added and left you typing code with nothing on
+     screen saying which language it was, and then Same Shape was
+     added and did it again. The mode declares it now. */
+  const usesText = mode?.uses_text ?? false;
 
   /**
    * Learn and Type teaches one language, and the theme slot is how you say
@@ -991,6 +1056,17 @@ export default function TypingTrainer() {
                     onChange={chooseTheme}
                   />
                 )
+              )}
+
+              {/* Only for the one mode it means anything to. Beside
+                  the text picker because the two read together:
+                  which lines, then which kind of line. */}
+              {modeId === "reps" && (
+                <ShapePicker
+                  value={shapeId}
+                  shapes={shapes}
+                  onChange={chooseShape}
+                />
               )}
 
               <button

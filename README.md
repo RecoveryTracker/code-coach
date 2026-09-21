@@ -133,6 +133,48 @@ cd web && npm run dev
 
 ---
 
+## Getting a newer version
+
+```bash
+git pull
+```
+
+Then **restart the API**. On Windows that is `restart-api.bat`; by hand it is
+stopping the uvicorn process and starting it again.
+
+```bash
+restart-api.bat
+```
+
+Finally reload the browser tab. The UI reloads itself as files change, but a
+tab that was already open can be holding an older bundle.
+
+**Do not use `start.bat` for this.** It checks whether port 8765 is already
+listening and says "API already running" if it is — so after a pull you would
+keep running the old Python while the new UI talked to it, which looks like
+the new feature being broken rather than absent. The API deliberately runs
+without `--reload`, because uvicorn's reloader wedges on some machines: it
+logs "Reloading..." and then never restarts, and the app serves stale code
+while looking perfectly healthy. A restart you have to ask for is slower than
+one that works and far faster than one that lies.
+
+Reinstalling dependencies is only needed when they actually change:
+
+```bash
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+```bash
+cd web && npm install
+```
+
+`git log --oneline -- requirements.txt web/package.json` says whether either
+has moved since the version you had. Nothing else needs doing — your progress
+lives in `~/.code_coach/` and the PostgreSQL cluster in `.tools/`, and neither
+is in the repo, so a pull cannot touch them.
+
+---
+
 ## How the checking works
 
 The rule the whole project is built on: **the expected answer has to come from

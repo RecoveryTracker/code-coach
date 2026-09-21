@@ -15,6 +15,10 @@ export type TypingMode = {
   /** Show only the current target — nothing coming up next. */
   hidden: boolean;
   by_name: boolean;
+  /** Whether it reads from a text source, and so has something for the
+   *  theme picker to change. Comes from the server because this list
+   *  used to be kept here as well and went stale twice. */
+  uses_text?: boolean;
 };
 
 export type TypingSection = {
@@ -25,6 +29,17 @@ export type TypingSection = {
 };
 
 /** What the words and lines say — a separate choice from which keys. */
+/** One kind of line a Same Shape drill can be pinned to. */
+export type TypingShape = {
+  id: string;
+  /** A real line that has this shape — it names the drill better than
+   *  any description would. */
+  example: string;
+  /** How many real lines share it: the honest measure of how common
+   *  the shape is, which is why anyone would pick one. */
+  count: number;
+};
+
 export type TypingTheme = {
   id: string;
   name: string;

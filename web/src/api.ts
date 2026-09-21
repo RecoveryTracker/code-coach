@@ -32,6 +32,7 @@ import type {
   TypingGuide,
   TypingRecord,
   TypingRunResult,
+  TypingShape,
   VisualizeResult,
   WorkbookCheck,
   WorkbookData,
@@ -398,12 +399,20 @@ export function fetchTypingCatalog(): Promise<TypingCatalog> {
 }
 
 /** One generated run. The seed varies the draw, so "again" isn't a repeat. */
+export function fetchTypingShapes(
+  theme: string,
+): Promise<{ theme: string; shapes: TypingShape[] }> {
+  const query = new URLSearchParams({ theme });
+  return request(`/api/typing/shapes?${query}`);
+}
+
 export function fetchTypingDrill(
   section: string,
   mode: string,
   seed: string,
   theme = "mixed",
   count = 30,
+  shape = "",
 ): Promise<TypingDrill> {
   const query = new URLSearchParams({
     section,
@@ -412,6 +421,9 @@ export function fetchTypingDrill(
     seed,
     count: String(count),
   });
+  // Left out entirely when empty, so the URL of an ordinary drill is
+  // unchanged and nothing downstream has to treat "" as a value.
+  if (shape) query.set("shape", shape);
   return request(`/api/typing/drill?${query}`);
 }
 

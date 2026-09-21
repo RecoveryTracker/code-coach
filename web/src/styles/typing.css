@@ -1346,6 +1346,7 @@
   padding: 0.55rem;
 }
 .text-pick-hint {
+  flex: none;
   margin: 0 0 0.45rem;
   padding: 0 0.25rem;
   font-size: 0.75rem;
@@ -1353,9 +1354,12 @@
   color: #8194ad;
 }
 .text-pick-list {
-  /* Sixty-odd themes will not fit on a short window, and a menu that
-     runs off the bottom is the same bug the language picker had. */
-  max-height: min(24rem, 55vh);
+  /* No fixed height any more. The menu is capped to the room that is
+     actually beside the button, measured at open time, and the list
+     takes what is left of that - a vh limit knew nothing about where
+     the button was and let the menu run off the bottom anyway. */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 .text-pick-row {
@@ -1393,4 +1397,115 @@
 }
 .text-pick-row.on .text-pick-name {
   color: #cfe0ff;
+}
+
+/* ── Which kind of line Same Shape drills ───────────────────
+   Rows show a real line rather than a description of one: "show X" is
+   what the grouping calls the shape internally and tells you nothing,
+   where console.log(label(7)); is the thing you are about to type
+   twenty times. The count is how many real lines it can draw from,
+   which is the reason to pick one shape over another. */
+
+.shape-pick-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.shape-pick-caption {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7f8ea8;
+}
+.shape-pick-button {
+  background: #121821;
+  border: 1px solid #2a3442;
+  color: #dbe6f5;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  cursor: pointer;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shape-pick-button:hover:not(:disabled) {
+  border-color: #3d4a5c;
+}
+.shape-pick-button.on {
+  border-color: #5570b8;
+  color: #fff;
+}
+.shape-pick-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.shape-pick-menu {
+  z-index: 60;
+  width: 25rem;
+  max-width: calc(100vw - 16px);
+  background: #0f151d;
+  border: 1px solid #2a3442;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 0.55rem;
+}
+.shape-pick-hint {
+  flex: none;
+  margin: 0 0 0.45rem;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #8194ad;
+}
+.shape-pick-list {
+  /* No fixed height any more. The menu is capped to the room that is
+     actually beside the button, measured at open time, and the list
+     takes what is left of that - a vh limit knew nothing about where
+     the button was and let the menu run off the bottom anyway. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.shape-pick-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 0.34rem 0.4rem;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.shape-pick-row:hover {
+  background: #161e29;
+}
+.shape-pick-row.on {
+  background: #17202e;
+}
+.shape-pick-example {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  color: #c6d3e6;
+}
+.shape-pick-row.on .shape-pick-example {
+  color: #cfe0ff;
+}
+.shape-pick-count {
+  flex: none;
+  font-size: 0.72rem;
+  color: #6f7f96;
+  font-variant-numeric: tabular-nums;
 }

@@ -372,6 +372,11 @@ class TypingModeInfo(BaseModel):
     description: str
     hidden: bool
     by_name: bool
+    # Whether the mode reads from a text source, so the picker knows
+    # to offer the theme control. Declared by the mode rather than
+    # listed again in the front end, which is where it went stale
+    # twice - see the field on Mode for both times.
+    uses_text: bool = False
 
 
 class TypingSectionInfo(BaseModel):
@@ -389,6 +394,24 @@ class TypingThemeInfo(BaseModel):
     has_words: bool
     has_passages: bool
     has_blocks: bool = False
+
+
+class TypingShapeInfo(BaseModel):
+    """One kind of line a Same Shape drill can be pinned to."""
+
+    id: str
+    # A real line that has this shape, which names the drill better
+    # than any description of it would.
+    example: str
+    # How many real lines share it. Shown because it is the honest
+    # measure of how common the shape is, which is the whole reason
+    # somebody would pick one.
+    count: int
+
+
+class TypingShapesResponse(BaseModel):
+    theme: str
+    shapes: list[TypingShapeInfo]
 
 
 class HintsRequest(BaseModel):

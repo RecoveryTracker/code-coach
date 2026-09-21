@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+
+import { menuStyle, useDismiss, useMenuPlacement } from "./menuPlacement";
 import type { TypingTheme } from "../types";
 
 type Props = {
@@ -47,58 +49,15 @@ export function TextPicker({ value, choices, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement | null>(null);
   const menu = useRef<HTMLDivElement | null>(null);
-  /* Viewport coordinates, measured. Same reason as the language menu:
-     this row wraps on a narrow window, so the button can be anywhere,
-     and anchoring the panel's right edge to the button's sends it off
-     the side of a half-width screen. */
-  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  /* Shared with the other menus in this row. Placement is three
+     bugs deep and all three only appear on a small window, so there
+     is one copy of it - see menuPlacement.ts. */
+  const at = useMenuPlacement(open, wrap, menu, [choices.length]);
+  useDismiss(open, wrap, () => setOpen(false));
 
   const picked = splitThemeId(value);
   const pickedSet = new Set(picked);
 
-  useLayoutEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const button = wrap.current?.getBoundingClientRect();
-      if (!button) return;
-      const width = menu.current?.offsetWidth ?? 300;
-      const height = menu.current?.offsetHeight ?? 0;
-      const edge = 8;
-      const left = Math.min(
-        Math.max(edge, button.left),
-        Math.max(edge, window.innerWidth - width - edge),
-      );
-      const below = button.bottom + 5;
-      const top =
-        below + height > window.innerHeight - edge && button.top - height > edge
-          ? button.top - height - 5
-          : below;
-      setAt({ left, top });
-    };
-    place();
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [open, choices.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("pointerdown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   /** Click the row: this one, on its own. */
   function only(id: string) {
@@ -154,11 +113,7 @@ export function TextPicker({ value, choices, onChange }: Props) {
         <div
           className="text-pick-menu"
           ref={menu}
-          style={
-            at
-              ? { position: "fixed", left: at.left, top: at.top }
-              : { position: "fixed", visibility: "hidden" }
-          }
+          style={menuStyle(at)}
         >
           <p className="text-pick-hint">
             Click a name for just that one. Tick to add it to the mix.

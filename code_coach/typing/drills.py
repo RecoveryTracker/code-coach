@@ -709,12 +709,24 @@ class Mode:
     hidden: bool = False
     # Prompt with the character's name rather than the character.
     by_name: bool = False
+    # Whether this mode reads from a text source, and so has something
+    # for the theme picker to change.
+    #
+    # Declared here and served in the catalogue because the front end
+    # used to keep its own list of the same modes. That list went stale
+    # twice: once when Whole Functions was added, which left you typing
+    # code with nothing on screen saying which language it was, and
+    # again when Same Shape was, in exactly the same way. A mode
+    # declares this beside itself now, so there is nowhere for a copy
+    # to drift.
+    uses_text: bool = False
 
 
 MODES: tuple[Mode, ...] = (
     Mode(
         "random", "Random",
         "An ordinary mix from these keys — words, runs and lines, shuffled.",
+        uses_text=True,
     ),
     Mode(
         "whack", "Whack-a-Key",
@@ -743,6 +755,7 @@ MODES: tuple[Mode, ...] = (
     Mode(
         "words", "Words",
         "Real words built from this section's keys.",
+        uses_text=True,
     ),
     Mode(
         "common", "Common Words",
@@ -755,22 +768,27 @@ MODES: tuple[Mode, ...] = (
     Mode(
         "perfect", "No Mistakes",
         "One wrong key and the line starts again. Builds accuracy, tests nerve.",
+        uses_text=True,
     ),
     Mode(
         "speed", "Speed Run",
         "A full passage. Accuracy first — the speed follows.",
+        uses_text=True,
     ),
     Mode(
         "blocks", "Whole Functions",
         "A whole solution at a time — Enter for the next line, indentation and all.",
+        uses_text=True,
     ),
     Mode(
         "reps", "Same Shape",
         "One kind of line, over and over, with only the middle changing.",
+        uses_text=True,
     ),
     Mode(
         "teach", "Learn and Type",
         "Type the idea, then type the code it describes. Reading, but slower on purpose.",
+        uses_text=True,
     ),
     Mode(
         "chain", "Word Chain",
@@ -781,6 +799,7 @@ MODES: tuple[Mode, ...] = (
         "A definition and a row of blanks: work out the word, then type it.",
         hidden=True,
         by_name=True,
+        uses_text=True,
     ),
 )
 
@@ -880,14 +899,11 @@ def build_drill(
     theme_id: str = "mixed",
     seed: str = "typing",
     count: int = 30,
+    shape_id: str = "",
 ) -> TypingDrill:
     section = SECTIONS_BY_ID.get(section_id) or SECTIONS[0]
     mode = MODES_BY_ID.get(mode_id) or MODES[0]
-    theme = resolve_theme(theme_id)
-    # A theme with nothing usable for this mode would give an empty drill, so
-    # fall back rather than hand back a blank screen.
-    if not _theme_fits(theme, mode):
-        theme = _fallback_theme(mode)
+    theme = theme_for(theme_id, mode)
     rng = _rng(f"{section.id}:{mode.id}:{theme.id}:{seed}")
     targets: list[Target] = []
     scoring = "reaction"
@@ -1054,7 +1070,7 @@ def build_drill(
         # vary what comes next, because recognising an unfamiliar line
         # is its own skill; this one holds the frame still so the
         # punctuation stops being a decision. Both are worth doing.
-        targets = _same_shape(theme, rng, count)
+        targets = _same_shape(theme, rng, count, shape_id)
         scoring = "wpm"
 
     else:  # speed
@@ -1298,7 +1314,9 @@ def _shape_sets(theme: Theme) -> list[tuple[str, str, list[Passage]]]:
     return out
 
 
-def _same_shape(theme: Theme, rng: random.Random, count: int) -> list[Target]:
+def _same_shape(
+    theme: Theme, rng: random.Random, count: int, wanted: str = ""
+) -> list[Target]:
     """One shape, many times, with only the payload moving.
 
     One shape per drill rather than a few of each: the point is that
@@ -1307,11 +1325,22 @@ def _same_shape(theme: Theme, rng: random.Random, count: int) -> list[Target]:
     commonest shapes are the ones with the most lines, so they come up
     most often - which is what was wanted, the lines you write most.
     """
+    from code_coach.typing.shapes import shape_id as slug_of
+
     sets = _shape_sets(theme)
     if not sets:
         return []
-    weights = [len(lines) for _, _, lines in sets]
-    key, label, lines = rng.choices(sets, weights=weights, k=1)[0]
+    picked = None
+    if wanted:
+        # Asked for by name. An id that is not in this theme falls back
+        # to the draw rather than erroring: the theme can be changed
+        # while a shape is still selected, and losing the shape is the
+        # right cost for that, not losing the drill.
+        picked = next((item for item in sets if slug_of(item[0]) == wanted), None)
+    if picked is None:
+        weights = [len(lines) for _, _, lines in sets]
+        picked = rng.choices(sets, weights=weights, k=1)[0]
+    key, label, lines = picked
     pool = tuple(lines)
     chosen = _deal(f"reps:{theme.id}:{key}", pool, rng, count)
     return [
@@ -1345,6 +1374,48 @@ def resolve_theme(theme_id: str) -> Theme:
     if not parts:
         return DEFAULT_THEME
     return blends.blend(parts)
+
+
+def theme_for(theme_id: str, mode: Mode) -> Theme:
+    """The theme a drill will really use, fallback included.
+
+    Extracted so the Same Shape picker and the drill cannot disagree.
+    They did: asking for reps on a prose theme fell back to Python and
+    drilled Python shapes, while the picker asked about the prose
+    theme, found nothing, and showed "No shapes" - describing a pool
+    the drill was not using. One function, so that cannot recur.
+    """
+    theme = resolve_theme(theme_id)
+    # A theme with nothing usable for this mode would give an empty
+    # drill, so fall back rather than hand back a blank screen.
+    if not _theme_fits(theme, mode):
+        theme = _fallback_theme(mode)
+    return theme
+
+
+def shape_catalog(theme_id: str) -> list[dict]:
+    """The shapes this theme can drill, commonest first.
+
+    Per theme rather than global, because which shapes exist depends
+    entirely on the material: JavaScript has a counting loop and Python
+    does not, and Assembly has neither.
+    """
+    from code_coach.typing.shapes import shape_id as slug_of
+
+    return [
+        {
+            "id": slug_of(key),
+            # The label is a real line from the shape, which says what
+            # the drill is far better than a description would.
+            "example": label,
+            "count": len(lines),
+        }
+        # theme_for, not resolve_theme: this has to list the shapes
+        # the drill will actually serve, fallback and all.
+        for key, label, lines in _shape_sets(
+            theme_for(theme_id, MODES_BY_ID["reps"])
+        )
+    ]
 
 
 def theme_name_for(theme_id: str) -> str:
@@ -1578,6 +1649,7 @@ def catalog() -> list[dict]:
                     "description": m.description,
                     "hidden": m.hidden,
                     "by_name": m.by_name,
+                    "uses_text": m.uses_text,
                 }
                 for m in MODES
                 if _mode_fits(m, s)

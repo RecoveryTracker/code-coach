@@ -93,6 +93,19 @@ def shape_key(line: str, language: str) -> str | None:
     return collapsed.strip()
 
 
+def shape_id(key: str) -> str:
+    """A short, stable, URL-safe name for a shape.
+
+    Readable on purpose - "add-x-onto-the-end-of-x" in a query string
+    says what went wrong when something does, where a hash would not.
+    Derived from the key rather than stored, so it cannot fall out of
+    step with it, and checked for collisions by the tests rather than
+    assumed.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", key.lower()).strip("-")
+    return slug or "shape"
+
+
 def shape_label(lines: list[str], language: str) -> str:
     """A name for a shape, taken from the shortest line that has it.
 

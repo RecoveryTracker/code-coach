@@ -97,6 +97,8 @@ from code_coach.api.schemas import (
     TypingModeInfo,
     TypingSectionInfo,
     TypingTargetInfo,
+    TypingShapeInfo,
+    TypingShapesResponse,
     TypingThemeInfo,
 )
 from code_coach.typing.blends import split_id as split_theme_id
@@ -109,6 +111,7 @@ from code_coach.typing.drills import (
     teach_languages as typing_teach_languages,
     theme_catalog as typing_themes,
     theme_name_for,
+    shape_catalog as typing_shape_catalog,
 )
 from code_coach.typing.guide import guide_payload
 from code_coach.typing.records import Record, RecordStore
@@ -406,6 +409,27 @@ def typing_guide() -> TypingGuideResponse:
     return TypingGuideResponse(**guide_payload())
 
 
+@app.get("/api/typing/shapes", response_model=TypingShapesResponse)
+def typing_shapes(theme: str = "pycode") -> TypingShapesResponse:
+    """Which shapes this theme can drill, for the Same Shape picker.
+
+    Its own endpoint rather than a field on the catalogue, because the
+    answer depends on the theme and the theme changes while the app is
+    open. Folding it into the catalogue would mean either shipping the
+    shapes of all sixty-odd themes on every load, or a catalogue that
+    goes stale the moment somebody changes the text.
+    """
+    for part in split_theme_id(theme):
+        if part not in TYPING_THEMES_BY_ID:
+            raise HTTPException(
+                status_code=404, detail=f"no typing theme {part!r}"
+            )
+    return TypingShapesResponse(
+        theme=theme,
+        shapes=[TypingShapeInfo(**s) for s in typing_shape_catalog(theme)],
+    )
+
+
 @app.get("/api/typing/drill", response_model=TypingDrillResponse)
 def typing_drill(
     section: str,
@@ -413,6 +437,7 @@ def typing_drill(
     theme: str = "mixed",
     seed: str = "typing",
     count: int = 30,
+    shape: str = "",
 ) -> TypingDrillResponse:
     """One generated run. `seed` varies the draw, so a retry isn't identical."""
     if section not in TYPING_SECTIONS_BY_ID:
@@ -429,7 +454,13 @@ def typing_drill(
                 status_code=404, detail=f"no typing theme {part!r}"
             )
     drill = build_typing_drill(
-        section, mode, theme_id=theme, seed=seed, count=max(4, min(count, 120))
+        section, mode, theme_id=theme, seed=seed,
+        count=max(4, min(count, 120)),
+        # Not validated against the theme here. A shape that this theme
+        # does not have falls back to the draw, because the picker can
+        # hold a stale id for a second after the text is changed and a
+        # 404 mid-drill would be the wrong answer to that.
+        shape_id=shape,
     )
     return TypingDrillResponse(
         id=drill.id,
