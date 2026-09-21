@@ -73,6 +73,9 @@ ALLOWED = {
     "short", "sign", "signed", "somewhere", "stack", "time", "top",
     "undo", "until", "was", "way", "we", "where", "widen", "widened",
     "work", "zero",
+    # Reached once assembly gained enough lines to exercise the jnz
+    # and div rules. Both plain English, checked as always.
+    "clear", "unsigned",
 }
 
 #: Words that carry meaning and must therefore come from the line.

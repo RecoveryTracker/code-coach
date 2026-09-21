@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
-from code_coach.typing import asmlore, blends
+from code_coach.typing import asm_drills, asmlore, blends
 from code_coach.typing import langhistory, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
 from code_coach.typing import blocks_new, rails, rails2, snippets3
@@ -505,7 +505,8 @@ THEMES: tuple[Theme, ...] = (
         "mov, cmp, jne, syscall.",
         passages=snippets2.BY_LANGUAGE["assembly"]
         + snippets3.BY_LANGUAGE["assembly"]
-        + asmlore.ASSEMBLY_CODE_MORE,
+        + asmlore.ASSEMBLY_CODE_MORE
+        + asm_drills.ASSEMBLY_DRILLS,
         # Tagged so Same Shape can group these, and so the describer
         # uses the x86 rules rather than declining to say anything.
         language="assembly",

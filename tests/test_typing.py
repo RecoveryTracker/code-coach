@@ -1277,3 +1277,37 @@ class LanguageHistoryTests(unittest.TestCase):
             for passage in group:
                 with self.subTest(theme=theme_id, text=passage.text[:40]):
                     self.assertIn(passage.text, in_theme)
+
+
+class NoDuplicateMaterialTests(unittest.TestCase):
+    """A line that appears twice in one theme is a bug, not a choice.
+
+    It is the kind that hides: the drill still serves real code and
+    reads correctly, you just meet the same line twice as often as the
+    ones beside it, and in Same Shape - where one shape is served over
+    and over from a small pool - a duplicate is a line you type twice
+    in a run of ten.
+
+    Written after adding assembly material and finding nineteen lines
+    that already existed elsewhere in the same theme. Nothing caught
+    it, because each source tuple was internally fine and the theme
+    just concatenated them.
+    """
+
+    def test_no_theme_serves_the_same_line_twice(self) -> None:
+        from code_coach.typing.drills import THEMES
+
+        for theme in THEMES:
+            texts = [p.text for p in theme.passages]
+            seen: set[str] = set()
+            dupes = sorted({t for t in texts if t in seen or seen.add(t)})
+            with self.subTest(theme=theme.id):
+                self.assertEqual(dupes, [], f"{theme.id} repeats: {dupes}")
+
+    def test_no_theme_serves_the_same_block_twice(self) -> None:
+        from code_coach.typing.drills import THEMES
+
+        for theme in THEMES:
+            texts = [p.text for p in theme.blocks]
+            with self.subTest(theme=theme.id):
+                self.assertEqual(len(texts), len(set(texts)))
