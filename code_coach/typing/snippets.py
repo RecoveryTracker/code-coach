@@ -13,6 +13,7 @@ one that makes reviewing someone else's work fast.
 
 from __future__ import annotations
 
+from code_coach.typing.snippets_more import JAVASCRIPT_MORE, PYTHON_MORE
 from code_coach.typing.texts import Passage
 
 
@@ -170,7 +171,7 @@ PYTHON_CODE: tuple[Passage, ...] = (
     _s("value = config.get('retries', 3)", "a default that can't fail"),
     _s("yield from children", "delegate to another generator"),
     _s("text = ' '.join(str(n) for n in nums)", "numbers into a line"),
-)
+) + PYTHON_MORE
 
 JAVASCRIPT_CODE: tuple[Passage, ...] = (
     _s("const { a, b, ...rest } = props;", "pull fields out, keep the rest"),
@@ -195,7 +196,7 @@ JAVASCRIPT_CODE: tuple[Passage, ...] = (
     _s("document.querySelectorAll('.item').forEach(hide);", "act on every match"),
     _s("class ListNode { constructor(val) { this.val = val; } }", "a node type"),
     _s("module.exports = { parse, format };", "what this file offers"),
-)
+) + JAVASCRIPT_MORE
 
 DART_CODE: tuple[Passage, ...] = (
     _s("void main() { runApp(const MyApp()); }", "where a Flutter app starts"),

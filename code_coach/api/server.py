@@ -99,6 +99,7 @@ from code_coach.api.schemas import (
     TypingTargetInfo,
     TypingThemeInfo,
 )
+from code_coach.typing.blends import split_id as split_theme_id
 from code_coach.typing.drills import (
     MODES_BY_ID as TYPING_MODES_BY_ID,
     SECTIONS_BY_ID as TYPING_SECTIONS_BY_ID,
@@ -107,6 +108,7 @@ from code_coach.typing.drills import (
     catalog as typing_sections,
     teach_languages as typing_teach_languages,
     theme_catalog as typing_themes,
+    theme_name_for,
 )
 from code_coach.typing.guide import guide_payload
 from code_coach.typing.records import Record, RecordStore
@@ -417,8 +419,15 @@ def typing_drill(
         raise HTTPException(status_code=404, detail=f"no typing section {section!r}")
     if mode not in TYPING_MODES_BY_ID:
         raise HTTPException(status_code=404, detail=f"no typing mode {mode!r}")
-    if theme not in TYPING_THEMES_BY_ID:
-        raise HTTPException(status_code=404, detail=f"no typing theme {theme!r}")
+    # A theme may name several, comma separated, which is how the
+    # picker asks for Python lore and Python code in one pool. Every
+    # named part has to exist; an unknown one is still a 404, because
+    # silently dropping it would serve a drill nobody asked for.
+    for part in split_theme_id(theme):
+        if part not in TYPING_THEMES_BY_ID:
+            raise HTTPException(
+                status_code=404, detail=f"no typing theme {part!r}"
+            )
     drill = build_typing_drill(
         section, mode, theme_id=theme, seed=seed, count=max(4, min(count, 120))
     )
@@ -429,7 +438,9 @@ def typing_drill(
         mode=drill.mode,
         mode_name=TYPING_MODES_BY_ID[drill.mode].name,
         theme=drill.theme,
-        theme_name=TYPING_THEMES_BY_ID[drill.theme].name,
+        # Not a lookup: a blended drill's theme id is not a key in the
+        # catalogue, and the drill already knows what it is called.
+        theme_name=theme_name_for(drill.theme),
         description=drill.description,
         hidden=drill.hidden,
         scoring=drill.scoring,  # type: ignore[arg-type]

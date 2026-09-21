@@ -1171,3 +1171,109 @@ class ThemePoolTests(unittest.TestCase):
                 theme = by_id.get(language + "code")
                 self.assertIsNotNone(theme, f"no theme for {language}")
                 self.assertGreaterEqual(len(theme.passages), 25)
+
+
+class LanguageHistoryTests(unittest.TestCase):
+    """The rules the history lore has to keep, not the facts it contains.
+
+    Pinning the facts here would be the mistake this project keeps
+    making: a test that lists what is currently in a file and then
+    checks the file still contains it proves only that nobody edited
+    it. These check the standard the module's docstring sets, so a line
+    added later has to meet it too.
+    """
+
+    def _lore(self):
+        from code_coach.typing import langhistory
+
+        return (
+            ("PYTHON_STORY", langhistory.PYTHON_STORY),
+            ("PYTHON_IN_USE", langhistory.PYTHON_IN_USE),
+            ("JAVASCRIPT_STORY", langhistory.JAVASCRIPT_STORY),
+            ("JAVASCRIPT_IN_USE", langhistory.JAVASCRIPT_IN_USE),
+        )
+
+    def test_history_lore_reaches_the_language_themes(self) -> None:
+        """Written and then never wired up is the failure mode that has
+        cost this project the most time. Every group has to be findable
+        from the theme a person actually opens."""
+        from code_coach.typing.drills import THEMES_BY_ID
+
+        for name, group in self._lore():
+            theme_id = "python" if name.startswith("PYTHON") else "javascript"
+            in_theme = {p.text for p in THEMES_BY_ID[theme_id].passages}
+            with self.subTest(group=name):
+                self.assertTrue(group)
+                for passage in group:
+                    self.assertIn(passage.text, in_theme)
+
+    def test_every_claim_is_stated_rather_than_hedged(self) -> None:
+        """A fact nobody checked reads as 'reportedly'. The module says
+        anything unconfirmed was left out, so the hedge words are the
+        tell that something got written from memory and softened."""
+        hedges = (
+            "reportedly", "apparently", "supposedly", "allegedly",
+            "probably", "roughly speaking", "some say", "it is said",
+            "rumour", "rumor", "i think", "believed to be",
+        )
+        for name, group in self._lore():
+            for passage in group:
+                lowered = passage.text.lower()
+                for hedge in hedges:
+                    with self.subTest(group=name, hedge=hedge):
+                        self.assertNotIn(hedge, lowered, passage.text)
+
+    def test_years_are_plausible_and_in_the_past(self) -> None:
+        """A typo in a date is invisible to a reader who does not
+        already know the answer, which is everyone this is written
+        for."""
+        import datetime
+        import re
+
+        this_year = datetime.date.today().year
+        for name, group in self._lore():
+            for passage in group:
+                for found in re.findall(r"\b(1[89]\d\d|20\d\d)\b", passage.text):
+                    with self.subTest(group=name, year=found):
+                        self.assertGreaterEqual(int(found), 1940, passage.text)
+                        self.assertLessEqual(int(found), this_year, passage.text)
+
+    def test_each_line_is_one_typeable_passage_with_a_source(self) -> None:
+        for name, group in self._lore():
+            for passage in group:
+                with self.subTest(group=name, text=passage.text[:40]):
+                    self.assertNotIn("\n", passage.text)
+                    self.assertTrue(passage.source.strip())
+                    self.assertGreater(len(passage.text), 40)
+                    self.assertLess(len(passage.text), 240)
+
+    def test_the_new_code_lines_are_single_lines_with_notes(self) -> None:
+        from code_coach.typing.snippets_more import (
+            JAVASCRIPT_MORE,
+            PYTHON_MORE,
+        )
+
+        for name, group in (("PYTHON_MORE", PYTHON_MORE),
+                            ("JAVASCRIPT_MORE", JAVASCRIPT_MORE)):
+            texts = [p.text for p in group]
+            with self.subTest(group=name):
+                self.assertEqual(len(texts), len(set(texts)))
+            for passage in group:
+                with self.subTest(group=name, text=passage.text[:40]):
+                    self.assertNotIn("\n", passage.text)
+                    self.assertTrue(passage.source.strip())
+                    self.assertTrue(passage.text.strip())
+
+    def test_the_new_code_lines_reach_their_language_theme(self) -> None:
+        from code_coach.typing.drills import THEMES_BY_ID
+        from code_coach.typing.snippets_more import (
+            JAVASCRIPT_MORE,
+            PYTHON_MORE,
+        )
+
+        for theme_id, group in (("pycode", PYTHON_MORE),
+                                ("jscode", JAVASCRIPT_MORE)):
+            in_theme = {p.text for p in THEMES_BY_ID[theme_id].passages}
+            for passage in group:
+                with self.subTest(theme=theme_id, text=passage.text[:40]):
+                    self.assertIn(passage.text, in_theme)

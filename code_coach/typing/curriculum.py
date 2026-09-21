@@ -16,6 +16,7 @@ the line above it didn't already, and a comment is prose, not code.
 
 from __future__ import annotations
 
+from code_coach.typing.line_notes import note_for
 from code_coach.typing.texts import Passage
 
 # Below this a line is punctuation and a keyword — the shape is already in the
@@ -73,7 +74,7 @@ def fundamentals_lines(language: str) -> list[Passage]:
     for class_id in CLASS_IDS:
         for snippet in snippets_for(language, class_id, 5):
             for line in _lines_of(snippet.code):
-                out.append(Passage(line, snippet.tip))
+                out.append(Passage(line, note_for(line, language, snippet.tip)))
     return out
 
 
@@ -87,11 +88,15 @@ def leetcode_lines(language: str) -> list[Passage]:
     for pattern in patterns_for_language(language):
         for block in pattern.preamble:
             for line in _lines_of(block):
-                out.append(Passage(line, f"{pattern.name} setup"))
+                setup = f"{pattern.name} setup"
+                out.append(Passage(line, note_for(line, language, setup)))
         for problem in pattern.problems:
+            # The problem is where the line is from; the description is
+            # what the line itself is doing. Shown together, because a
+            # solution sliced into lines is otherwise a shuffle.
             note = f"#{problem.number} {problem.title}"
             for line in _lines_of(problem.code):
-                out.append(Passage(line, note))
+                out.append(Passage(line, note_for(line, language, note)))
     return out
 
 

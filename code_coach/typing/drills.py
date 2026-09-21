@@ -16,7 +16,8 @@ import re
 from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
-from code_coach.typing import langlore2, langlore3, langlore4
+from code_coach.typing import blends
+from code_coach.typing import langhistory, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
@@ -267,13 +268,24 @@ THEMES: tuple[Theme, ...] = (
     # Per-language material: syntax, design decisions, and the traps.
     Theme(
         "python", "Python Lore",
-        "How Python is put together — including the Zen, which it ships with.",
-        passages=langlore.PYTHON,
+        "How Python is put together, where it came from, and what runs on it.",
+        # Three sources in one theme rather than three themes, because
+        # switching theme is the thing the trainer makes easy and having
+        # to hunt for the history would mean never seeing it.
+        passages=(
+            langlore.PYTHON
+            + langhistory.PYTHON_STORY
+            + langhistory.PYTHON_IN_USE
+        ),
     ),
     Theme(
         "javascript", "JavaScript Lore",
         "Ten days in 1995, and everything that followed from it.",
-        passages=langlore.JAVASCRIPT,
+        passages=(
+            langlore.JAVASCRIPT
+            + langhistory.JAVASCRIPT_STORY
+            + langhistory.JAVASCRIPT_IN_USE
+        ),
     ),
     Theme(
         "dart", "Dart Lore",
@@ -841,7 +853,7 @@ def build_drill(
 ) -> TypingDrill:
     section = SECTIONS_BY_ID.get(section_id) or SECTIONS[0]
     mode = MODES_BY_ID.get(mode_id) or MODES[0]
-    theme = THEMES_BY_ID.get(theme_id) or DEFAULT_THEME
+    theme = resolve_theme(theme_id)
     # A theme with nothing usable for this mode would give an empty drill, so
     # fall back rather than hand back a blank screen.
     if not _theme_fits(theme, mode):
@@ -1207,6 +1219,32 @@ def _theme_fits(theme: Theme, mode: Mode) -> bool:
         # paragraphs, which is a different idea and not this one.
         return bool(theme.blocks)
     return True
+
+
+def resolve_theme(theme_id: str) -> Theme:
+    """A theme id into a Theme, where the id may name several.
+
+    One id behaves exactly as it always did. Several are blended into a
+    single Theme, so nothing downstream needs to know the difference —
+    see blends.py for why that is the whole design.
+
+    Unknown parts are dropped rather than refused: a settings file that
+    remembers a theme which has since been renamed should cost you the
+    part that went away, not the whole drill.
+    """
+    parts = [
+        THEMES_BY_ID[part]
+        for part in blends.split_id(theme_id)[: blends.MAX_PARTS]
+        if part in THEMES_BY_ID
+    ]
+    if not parts:
+        return DEFAULT_THEME
+    return blends.blend(parts)
+
+
+def theme_name_for(theme_id: str) -> str:
+    """The display name for an id, blended or not."""
+    return resolve_theme(theme_id).name
 
 
 def _fallback_theme(mode: Mode) -> Theme:

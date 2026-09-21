@@ -11,6 +11,7 @@ import TypingCoursePanel from "./TypingCourse";
 import TypingGuidePanel from "./TypingGuide";
 import TypingKeyboard, { type KeyStat } from "./TypingKeyboard";
 import TypingRecords from "./TypingRecords";
+import { TextPicker, splitThemeId } from "./TextPicker";
 
 /**
  * The typing trainer.
@@ -339,9 +340,15 @@ export default function TypingTrainer() {
     const mode = found.modes.some((m) => m.id === modeId)
       ? modeId
       : found.modes[0].id;
-    const theme = catalog.themes.some((t) => t.id === themeId)
-      ? themeId
-      : DEFAULTS.theme;
+    // Every part has to be known, because an id may now name several.
+    // Checking the whole string against the catalogue would treat
+    // "python,pycode" as unknown and quietly reset it to English prose.
+    const parts = splitThemeId(themeId);
+    const theme =
+      parts.length > 0 &&
+      parts.every((part) => catalog.themes.some((t) => t.id === part))
+        ? themeId
+        : DEFAULTS.theme;
     if (found.id !== sectionId) setSectionId(found.id);
     if (mode !== modeId) setModeId(mode);
     if (theme !== themeId) setThemeId(theme);
@@ -960,25 +967,30 @@ export default function TypingTrainer() {
               {/* Only the text-based drills have text to theme. Offering it
                   on Whack-a-Key would be a control that does nothing. */}
               {usesText && (
-                <label className="typing-field">
-                  <span>{isTeach ? "Language" : "Text"}</span>
-                  <select
-                    value={isTeach ? teachLanguage : themeId}
-                    onChange={(e) => chooseTheme(e.target.value)}
-                  >
-                    {isTeach
-                      ? teachLanguages.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.name}
-                          </option>
-                        ))
-                      : themeChoices.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                  </select>
-                </label>
+                isTeach ? (
+                  <label className="typing-field">
+                    <span>Language</span>
+                    <select
+                      value={teachLanguage}
+                      onChange={(e) => chooseTheme(e.target.value)}
+                    >
+                      {teachLanguages.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  /* Not a <select>: one is exactly "pick one", and the
+                     thing asked for was Python's code and Python's lore
+                     at the same time. */
+                  <TextPicker
+                    value={themeId}
+                    choices={themeChoices}
+                    onChange={chooseTheme}
+                  />
+                )
               )}
 
               <button
