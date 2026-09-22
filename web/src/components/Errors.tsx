@@ -212,7 +212,15 @@ export default function Errors() {
         <p className="wb-walkthrough-note">What it printed</p>
         <pre className="err-message">{item.message}</pre>
 
-        <p className="wb-prompt">Which line caused it?</p>
+        {/* The code block was labelled only with the question, so it did
+            not read as "here is the program that ran" — a person could
+            see the numbered lines and not register them as the code at
+            all. Name it, and say the lines are clickable, because
+            nothing else on screen said so. */}
+        <p className="wb-walkthrough-note">The program that ran</p>
+        <p className="wb-prompt">
+          Which line caused it? <span className="err-tap">Click the line.</span>
+        </p>
         <ol className="err-code">
           {codeLines.map((text, i) => {
             const n = i + 1;

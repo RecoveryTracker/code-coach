@@ -320,12 +320,17 @@
   white-space: pre;
 }
 
-.err-line:hover:not(:disabled) {
-  border-color: var(--line, #333);
-}
-
-.err-line.on {
+/* The picked line, before answering. Written as .on:not(:disabled) so
+   its three-part specificity beats the resting .err-line:not(:disabled)
+   rule further down — without that, the resting border overwrote the
+   accent one and picking a line looked like nothing happened. Strong
+   on purpose: a thick left bar and a real fill, the same selected
+   language the answer choices use. */
+.err-line.on:not(:disabled) {
   border-color: var(--accent, #6ea8fe);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--accent, #6ea8fe) 26%, var(--bg-elevated, #131a24));
+  color: #fff;
 }
 
 .err-line.ok {
@@ -571,4 +576,42 @@
 .magnet-stage .magnet-program li {
   border-color: transparent;
   background: rgb(255 255 255 / 0.02);
+}
+
+/* The code lines are the answer control, but a transparent border made
+   them look like static text until you happened to hover. A faint
+   resting border says "these are clickable" without shouting, and the
+   hover then reads as a response rather than the first sign of it. */
+.err-line:not(:disabled) {
+  border-color: var(--line, #2a3442);
+  background: rgb(255 255 255 / 0.02);
+}
+.err-line:hover:not(:disabled) {
+  border-color: var(--accent, #6ea8fe);
+  background: rgb(110 168 254 / 0.08);
+}
+
+/* The "Click the line" nudge next to the question, quiet enough not to
+   compete with it. */
+.err-tap {
+  font-weight: 400;
+  font-size: 0.85em;
+  color: var(--accent, #6ea8fe);
+  margin-left: 0.35em;
+}
+
+/* The picked answer, made obvious.
+   The generic .ws-btn.on gives an accent border, bold text and a
+   background that is only 16% accent mixed into the panel — which on
+   these wide, dark choice rows is nearly invisible, so a click looked
+   like it did nothing. Both the Errors screen and the HTML/CSS quiz
+   use this control (both sit in a .css-choices container), so the
+   stronger selected state lives here and covers both. Specificity of
+   three classes beats .ws-btn.on regardless of stylesheet order. */
+.css-choices .css-choice.on:not(.ok):not(.bad) {
+  border-color: var(--accent, #6ea8fe);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--accent, #6ea8fe) 30%, var(--bg-elevated, #131a24));
+  color: #fff;
+  font-weight: 600;
 }
