@@ -443,3 +443,87 @@ class ColdStartTests(unittest.TestCase):
         out, err, code = run_postgres("SELECT count(*) AS n FROM users;")
         self.assertEqual(code, 0, err)
         self.assertIn("5", out)
+
+
+class LogPlacementTests(unittest.TestCase):
+    """The cause of a failed start, pinned where it cannot come back.
+
+    Needs no server: it is a fact about two paths, and it is the one
+    fact that decided whether the first start after a crash worked.
+    """
+
+    def test_the_log_is_not_inside_the_data_directory(self) -> None:
+        """After an unclean shutdown PostgreSQL syncs every file in its
+        data directory before it accepts a connection. A log held open
+        by the running server made that sync hit a sharing violation on
+        Windows and retry for thirty seconds - longer than a start was
+        allowed - so the app reported "Could not start PostgreSQL" while
+        the server was in fact coming up."""
+        data = pg_server.data_dir().resolve()
+        log = pg_server.log_file().resolve()
+        self.assertNotEqual(log.parent, data)
+        self.assertNotIn(data, log.parents)
+
+
+@unittest.skipUnless(HAS_SERVER, WHY_NOT)
+class CrashRecoveryTests(unittest.TestCase):
+    """The first start after the server was killed rather than stopped.
+
+    Which is what happens whenever the machine is shut down, restarts
+    for an update, or loses power with the practice database running -
+    so it is the ordinary case for anyone who does not stop it by hand,
+    not an exotic one. It failed every time before the log moved, after
+    about twenty-seven seconds, and nothing else in the suite caught it
+    because every other test finds the server already up or stops it
+    cleanly first.
+    """
+
+    def tearDown(self) -> None:
+        pg_server.start()
+
+    def _kill_hard(self) -> None:
+        """Kill the server the way a power cut would: no shutdown."""
+        import os
+        import signal
+        import time
+
+        pid_file = pg_server.data_dir() / "postmaster.pid"
+        pid = int(pid_file.read_text(encoding="utf-8").splitlines()[0])
+        # On Windows os.kill with SIGTERM is TerminateProcess: immediate,
+        # no chance to write a clean shutdown - which is the point.
+        os.kill(pid, signal.SIGTERM)
+        deadline = time.time() + 20
+        while time.time() < deadline and pg_server.running():
+            time.sleep(0.3)
+
+    def test_the_first_start_after_a_crash_succeeds(self) -> None:
+        import time
+
+        ok, why = pg_server.start()
+        self.assertTrue(ok, why)
+        self._kill_hard()
+        self.assertFalse(pg_server.running(), "the server did not go down")
+
+        began = time.time()
+        ok, why = pg_server.start()
+        took = time.time() - began
+
+        self.assertTrue(ok, f"after {took:.0f}s: {why}")
+        self.assertTrue(pg_server.running())
+        # Succeeding is not enough on its own. With the start now polling
+        # rather than trusting pg_ctl, a start that stalls for thirty
+        # seconds on the log would still succeed - late - and pass the
+        # line above. Recovery takes a few seconds; the stall took thirty.
+        # Twenty sits between them, so the old cause coming back fails
+        # here rather than just making every morning slower.
+        self.assertLess(
+            took, 20,
+            f"the first start after a crash took {took:.0f}s - is the log "
+            f"back inside the data directory?")
+
+    def test_a_query_works_after_a_crash(self) -> None:
+        pg_server.start()
+        self._kill_hard()
+        out, err, code = run_postgres("SELECT count(*) AS n FROM users;")
+        self.assertEqual(code, 0, err)
+        self.assertIn("5", out)

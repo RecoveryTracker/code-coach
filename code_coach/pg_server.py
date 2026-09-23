@@ -41,10 +41,14 @@ USER = "coach"
 PASSWORD = "coach"
 DATABASE = "coach"
 
-#: How long to wait for the server to answer before giving up. Starting
-#: it is a second or two cold; anything past this is a real failure and
-#: waiting longer only delays saying so.
-START_TIMEOUT = 25.0
+#: How long to wait for the server to answer before giving up.
+#:
+#: Starting it is a second or two cold. The long case is the first start
+#: after the machine went down with the server running, when it replays
+#: its log and syncs its files before accepting anyone - usually a few
+#: seconds more, longer on a slow disk. That is a start that is working,
+#: not a failure, so the budget covers it; past this it really is stuck.
+START_TIMEOUT = 60.0
 
 
 def home() -> Path | None:
@@ -74,6 +78,22 @@ def _binary(name: str) -> Path | None:
 
 def data_dir() -> Path:
     return TOOLS / "pgdata"
+
+
+def log_file() -> Path:
+    """Where the server writes its log - beside the data, never in it.
+
+    It used to be pgdata/server.log, and that cost a failed start every
+    time the machine went down with the server still running. After an
+    unclean shutdown PostgreSQL syncs every file in its data directory
+    before it will accept a connection. On Windows the log is held open
+    by the server writing it, so the sync hit a sharing violation on it
+    and retried for thirty seconds - longer than the start was allowed
+    to take. The server did come up, just after the app had given up
+    and reported "Could not start PostgreSQL". Outside the directory,
+    the sync never touches it.
+    """
+    return TOOLS / "pgdata.log"
 
 
 def available() -> bool:
@@ -144,7 +164,15 @@ def start() -> tuple[bool, str]:
             [
                 str(ctl), "-D", str(data_dir()),
                 "-o", f"-p {PORT} -h {HOST}",
-                "-l", str(data_dir() / "server.log"),
+                "-l", str(log_file()),
+                # Launch and return, rather than have pg_ctl wait for
+                # the server itself. Its wait has its own clock that
+                # knows nothing about ours: a start that ran long - a
+                # recovery after a crash - came back as a timeout from
+                # pg_ctl while the server was still happily coming up.
+                # Asking the server whether it is ready, below, is the
+                # only answer that means anything.
+                "-W",
                 "start",
             ],
             # Not capture_output, and this is the whole bug.
@@ -180,7 +208,10 @@ def start() -> tuple[bool, str]:
         if running():
             return True, ""
         time.sleep(0.3)
-    return False, "PostgreSQL did not start in time."
+    return False, (
+        f"PostgreSQL did not start within {START_TIMEOUT:.0f} seconds. "
+        f"Its log is {log_file()}, and the last lines say why."
+    )
 
 
 def stop() -> None:
