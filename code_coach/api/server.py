@@ -97,6 +97,13 @@ from code_coach.api.schemas import (
     TypingModeInfo,
     TypingSectionInfo,
     TypingTargetInfo,
+    BugHuntCauseRequest,
+    BugHuntFixRequest,
+    BugHuntFixResponse,
+    BugHuntLineRequest,
+    BugHuntStepResponse,
+    BugHuntTryRequest,
+    BugHuntTryResponse,
     TypingShapeInfo,
     TypingShapesResponse,
     TypingThemeInfo,
@@ -1821,6 +1828,151 @@ def error_check(body: ErrorCheckRequest) -> ErrorCheckResponse:
         meaning=found.meaning,
         fix=found.fix,
     )
+
+
+def _hunt_or_404(hunt_id: str):
+    from code_coach.bughunt import hunt as find_hunt
+
+    found = find_hunt(hunt_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown hunt {hunt_id}")
+    return found
+
+
+def _show_call(found, args: tuple) -> str:
+    """The call as it would be written in the hunt's own language."""
+    import json as _json
+
+    if found.language == "python":
+        shown = ", ".join(repr(a) for a in args)
+    else:
+        shown = ", ".join(_json.dumps(a) for a in args)
+    return f"{found.name}({shown})"
+
+
+@app.get("/api/bughunt")
+def bughunt_list() -> dict:
+    """Every hunt: the report and the program, and none of the answers.
+
+    The report, the program and the explanations on offer are the
+    question. The fixed program, the line it changes, the cause and the
+    lesson are the answer, and none of them are here - the fixed program
+    in particular is the whole answer in one field, which is the easy
+    one to leave in by accident.
+    """
+    from code_coach.bughunt import hunt_families, hunts
+
+    saved = _store.load()
+    counts, last = saved.bughunt_counts(), saved.bughunt_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "hunts": [
+                    {
+                        "id": h.id,
+                        "title": h.title,
+                        "language": h.language,
+                        "level": h.level,
+                        "report": h.report,
+                        "name": h.name,
+                        "signature": h.signature,
+                        "arity": len(h.params),
+                        "code": h.start,
+                        "choices": list(h.choices),
+                        "hint": h.hint,
+                        "cases": len(h.cases),
+                        "done": counts.get(h.id, 0),
+                        "last": last.get(h.id, ""),
+                    }
+                    for h in hunts(family)
+                ],
+            }
+            for family in hunt_families()
+        ]
+    }
+
+
+@app.post("/api/bughunt/try", response_model=BugHuntTryResponse)
+def bughunt_try(body: BugHuntTryRequest) -> BugHuntTryResponse:
+    """Call the broken program with an input, and say if the bug shows.
+
+    The engine decides, not a list of accepted answers: the broken
+    program runs, the oracle is asked, and the two are compared. Any
+    input that shows the bug counts, which is how reproducing works for
+    real - there is no single right input to guess.
+    """
+    from code_coach.bughunt import BadInput, parse_args, try_input
+
+    found = _hunt_or_404(body.hunt_id)
+    try:
+        args = parse_args(body.args, len(found.params), found.name)
+        attempt = try_input(found, args)
+    except BadInput as problem:
+        return BugHuntTryResponse(problem=str(problem))
+    return BugHuntTryResponse(
+        reproduced=attempt.reproduced,
+        got=attempt.got,
+        want=attempt.want,
+        error=attempt.error,
+        changed=attempt.changed,
+        call=_show_call(found, args),
+    )
+
+
+@app.post("/api/bughunt/line", response_model=BugHuntStepResponse)
+def bughunt_line(body: BugHuntLineRequest) -> BugHuntStepResponse:
+    """Whether this is the line the fix changes. Line 0 asks to be shown."""
+    found = _hunt_or_404(body.hunt_id)
+    if body.line == 0:
+        return BugHuntStepResponse(right=False, reveal=list(found.bug_lines))
+    return BugHuntStepResponse(right=body.line in found.bug_lines)
+
+
+@app.post("/api/bughunt/cause", response_model=BugHuntStepResponse)
+def bughunt_cause(body: BugHuntCauseRequest) -> BugHuntStepResponse:
+    """Whether this is what is actually wrong. Empty asks to be shown."""
+    found = _hunt_or_404(body.hunt_id)
+    if not body.cause.strip():
+        return BugHuntStepResponse(right=False, reveal=found.cause)
+    return BugHuntStepResponse(right=body.cause.strip() == found.cause)
+
+
+@app.post("/api/bughunt/fix", response_model=BugHuntFixResponse)
+def bughunt_fix(body: BugHuntFixRequest) -> BugHuntFixResponse:
+    """Run the fixed program against every case, the old ones included."""
+    from code_coach.bughunt import run_cases
+
+    found = _hunt_or_404(body.hunt_id)
+    outcome = run_cases(found, body.code)
+    done = 0
+    if outcome.passed:
+        progress = _store.load()
+        done = progress.record_bughunt(found.id)
+        _store.save(progress)
+    return BugHuntFixResponse(
+        passed=outcome.passed,
+        count=outcome.count,
+        total=len(found.cases),
+        broke=outcome.broke,
+        results=[
+            KataCaseResult(
+                args=list(r.args), want=r.want, got=r.got,
+                error=r.error, passed=r.passed, changed=r.changed,
+            )
+            for r in outcome.results
+        ],
+        cause=found.cause if outcome.passed else "",
+        lesson=found.lesson if outcome.passed else "",
+        done=done,
+    )
+
+
+@app.get("/api/bughunt/answer")
+def bughunt_answer(hunt_id: str = "") -> dict:
+    """The fixed program, asked for rather than shipped with the list."""
+    found = _hunt_or_404(hunt_id)
+    return {"code": found.fixed}
 
 
 @app.get("/api/trace")

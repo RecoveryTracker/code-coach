@@ -916,3 +916,58 @@ export type SessionQueue = {
   practices: { key: string; label: string }[];
   items: SessionItem[];
 };
+
+// ── Bug Hunt ────────────────────────────────────────────────
+
+/** One hunt as the list sends it: the question, none of the answers. */
+export type BugHunt = {
+  id: string;
+  title: string;
+  language: string;
+  level: number;
+  /** The bug report, saying what went wrong but never where. */
+  report: string;
+  name: string;
+  signature: string;
+  arity: number;
+  /** The whole program, bug and all. */
+  code: string;
+  /** The explanations on offer, in an order that says nothing. */
+  choices: string[];
+  hint: string;
+  cases: number;
+  done: number;
+  last: string;
+};
+
+export type BugHuntFamily = { name: string; hunts: BugHunt[] };
+export type BugHuntList = { families: BugHuntFamily[] };
+
+/** One call of the broken program, next to what it should have given. */
+export type BugHuntTry = {
+  reproduced: boolean;
+  got: unknown;
+  want: unknown;
+  error: string;
+  changed: boolean;
+  /** Why the input could not be tried at all. */
+  problem: string;
+  call: string;
+};
+
+export type BugHuntStep = {
+  right: boolean;
+  /** Only when asked to be shown. */
+  reveal: unknown;
+};
+
+export type BugHuntFix = {
+  passed: boolean;
+  count: number;
+  total: number;
+  broke: string;
+  results: KataCaseResult[];
+  cause: string;
+  lesson: string;
+  done: number;
+};

@@ -153,6 +153,7 @@ class StudentProgress:
     magnet_done: dict[str, DrillRecord] = field(default_factory=dict)
     error_done: dict[str, DrillRecord] = field(default_factory=dict)
     trace_done: dict[str, DrillRecord] = field(default_factory=dict)
+    bughunt_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -241,6 +242,17 @@ class StudentProgress:
 
     def error_counts(self) -> dict[str, int]:
         return {k: v.count for k, v in self.error_done.items()}
+
+    def record_bughunt(self, hunt_id: str) -> int:
+        return _bump(self.bughunt_done, hunt_id)
+
+    def bughunt_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.bughunt_done.items()}
+
+    def bughunt_last(self) -> dict[str, str]:
+        return {
+            k: v.last_at for k, v in self.bughunt_done.items() if v.last_at
+        }
 
     def record_trace(self, trace_id: str) -> int:
         return _bump(self.trace_done, trace_id)
@@ -396,6 +408,7 @@ class StudentProgress:
             magnet_done=_records(raw.get("magnet_done")),
             error_done=_records(raw.get("error_done")),
             trace_done=_records(raw.get("trace_done")),
+            bughunt_done=_records(raw.get("bughunt_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

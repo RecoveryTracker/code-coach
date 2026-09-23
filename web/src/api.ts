@@ -33,6 +33,10 @@ import type {
   TypingRecord,
   TypingRunResult,
   TypingShape,
+  BugHuntFix,
+  BugHuntList,
+  BugHuntStep,
+  BugHuntTry,
   VisualizeResult,
   WorkbookCheck,
   WorkbookData,
@@ -209,6 +213,49 @@ export function checkError(body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/** Every bug hunt: the reports and programs, none of the answers. */
+export function fetchBugHunts(): Promise<BugHuntList> {
+  return request("/api/bughunt");
+}
+
+/** Call the broken program with some arguments; the engine says if the
+ *  bug showed. */
+export function tryBugHunt(huntId: string, args: string): Promise<BugHuntTry> {
+  return request("/api/bughunt/try", {
+    method: "POST",
+    body: JSON.stringify({ hunt_id: huntId, args }),
+  });
+}
+
+/** Whether a line is the one the fix changes. Line 0 asks to be shown. */
+export function checkBugHuntLine(huntId: string, line: number): Promise<BugHuntStep> {
+  return request("/api/bughunt/line", {
+    method: "POST",
+    body: JSON.stringify({ hunt_id: huntId, line }),
+  });
+}
+
+/** Whether an explanation is the real cause. Empty asks to be shown. */
+export function checkBugHuntCause(huntId: string, cause: string): Promise<BugHuntStep> {
+  return request("/api/bughunt/cause", {
+    method: "POST",
+    body: JSON.stringify({ hunt_id: huntId, cause }),
+  });
+}
+
+/** Run a fixed program against every case. */
+export function fixBugHunt(huntId: string, code: string): Promise<BugHuntFix> {
+  return request("/api/bughunt/fix", {
+    method: "POST",
+    body: JSON.stringify({ hunt_id: huntId, code }),
+  });
+}
+
+/** The fixed program, asked for rather than shipped with the list. */
+export function fetchBugHuntAnswer(huntId: string): Promise<{ code: string }> {
+  return request(`/api/bughunt/answer?hunt_id=${encodeURIComponent(huntId)}`);
 }
 
 /** Every magnet puzzle, with its lines jumbled afresh by the server. */

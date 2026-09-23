@@ -69,9 +69,12 @@ class QueueTests(unittest.TestCase):
         """A queue of twenty katas is a worse session than a mixed one,
         and on a fresh profile a pure sort gives exactly that — nothing
         has been done, so the tie breaks on source order."""
-        first_seven = queue(self.progress, 7)
+        # One round of the deal is one item per practice. It was written
+        # as a literal 7, which was the number of practices at the time;
+        # adding the eighth broke the test without breaking the rule.
+        first_round = queue(self.progress, len(SOURCES))
         self.assertEqual(
-            len({item["practice"] for item in first_seven}), len(SOURCES))
+            len({item["practice"] for item in first_round}), len(SOURCES))
 
     def test_nothing_is_offered_twice(self) -> None:
         picked = [(i["practice"], i["id"]) for i in queue(self.progress, 40)]
@@ -167,3 +170,41 @@ class RouteTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrowserAgreesTests(unittest.TestCase):
+    """The server deals the queue; the browser has to know every kind.
+
+    Each card names a practice, and the browser turns that into the key
+    the screen reads on the way in and the screen to open. Those live in
+    web/src/lastKeys.ts, whose own comment says the two sides must agree
+    - and until this test nothing checked that they did. A source the
+    server deals and the browser does not know is a card that opens the
+    wrong screen, or nothing, with no error anywhere.
+    """
+
+    def _block(self, name: str) -> str:
+        from pathlib import Path
+        import re
+
+        text = (Path(__file__).resolve().parent.parent
+                / "web" / "src" / "lastKeys.ts").read_text(encoding="utf-8")
+        m = re.search(rf"{name}[^=]*=\s*\{{(.*?)\}}", text, flags=re.S)
+        self.assertIsNotNone(m, f"no {name} in lastKeys.ts")
+        return m.group(1)
+
+    def test_every_source_has_a_last_key(self) -> None:
+        import re
+
+        known = set(re.findall(r"^\s*(\w+):", self._block("LAST_KEYS"), re.M))
+        for source in SOURCES:
+            with self.subTest(source=source.key):
+                self.assertIn(source.key, known)
+
+    def test_every_source_has_a_screen(self) -> None:
+        import re
+
+        known = set(re.findall(r"^\s*(\w+):", self._block("MODE_FOR"), re.M))
+        for source in SOURCES:
+            with self.subTest(source=source.key):
+                self.assertIn(source.key, known)

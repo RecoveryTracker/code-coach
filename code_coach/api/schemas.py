@@ -780,3 +780,65 @@ class TraceCheckResponse(BaseModel):
     expect: str = ""
     answer: str = ""
     why: str = ""
+
+
+# ── Bug Hunt ─────────────────────────────────────────────────
+
+
+class BugHuntTryRequest(BaseModel):
+    """One hunt, and the arguments typed to call its function with."""
+
+    hunt_id: str = ""
+    args: str = ""
+
+
+class BugHuntTryResponse(BaseModel):
+    #: Whether this input shows the bug - decided by running the broken
+    #: program and the correct answer and comparing them.
+    reproduced: bool = False
+    #: What the broken program gave, and what it should have given.
+    got: Any = None
+    want: Any = None
+    #: An error the broken program raised on this input, if any.
+    error: str = ""
+    #: The call changed its argument when it should not have.
+    changed: bool = False
+    #: Why the input could not be tried at all - a typing mistake, or a
+    #: value the function was never meant to take.
+    problem: str = ""
+    #: The arguments as they were read, for showing back.
+    call: str = ""
+
+
+class BugHuntLineRequest(BaseModel):
+    hunt_id: str = ""
+    line: int = 0
+
+
+class BugHuntCauseRequest(BaseModel):
+    hunt_id: str = ""
+    cause: str = ""
+
+
+class BugHuntStepResponse(BaseModel):
+    right: bool = False
+    #: Only filled when asked to show the answer, never on a wrong guess:
+    #: telling you the line after one miss is the step done for you.
+    reveal: Any = None
+
+
+class BugHuntFixRequest(BaseModel):
+    hunt_id: str = ""
+    code: str = ""
+
+
+class BugHuntFixResponse(BaseModel):
+    passed: bool = False
+    count: int = 0
+    total: int = 0
+    broke: str = ""
+    results: list[KataCaseResult] = Field(default_factory=list)
+    #: What was wrong, and the general lesson - sent once it passes.
+    cause: str = ""
+    lesson: str = ""
+    done: int = 0

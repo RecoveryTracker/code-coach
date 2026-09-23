@@ -23,6 +23,7 @@ export const LAST_KEYS = {
   magnets: "code-coach:magnet-last",
   errors: "code-coach:error-last",
   trace: "code-coach:trace-last",
+  bughunt: "code-coach:bughunt-last",
 } as const;
 
 export type Practice = keyof typeof LAST_KEYS;
@@ -42,6 +43,7 @@ export const MODE_FOR: Record<Practice, Mode> = {
   magnets: "magnets",
   errors: "errors",
   trace: "trace",
+  bughunt: "bughunt",
 };
 
 /** The HTML & CSS screen's own tab, which the drills live behind. */

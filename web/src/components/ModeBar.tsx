@@ -65,6 +65,11 @@ export const MODES = [
     title: "Read the message, find the line, say what it is telling you",
   },
   {
+    id: "bughunt",
+    label: "Bug Hunt",
+    title: "A bug report and a program: reproduce it, find it, explain it, fix it",
+  },
+  {
     id: "magnets",
     label: "Magnets",
     title:

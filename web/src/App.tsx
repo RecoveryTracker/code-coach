@@ -36,6 +36,7 @@ import { ModeButtons, isMode } from "./components/ModeBar";
 import type { Mode } from "./components/ModeBar";
 import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
+import BugHunt from "./components/BugHunt";
 import Errors from "./components/Errors";
 import TraceValue from "./components/TraceValue";
 import Session from "./components/Session";
@@ -239,6 +240,7 @@ export default function App() {
   const katasOpen = mode === "katas";
   const magnetsOpen = mode === "magnets";
   const errorsOpen = mode === "errors";
+  const bughuntOpen = mode === "bughunt";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
   const workbookOpen = mode === "workbook";
@@ -1225,6 +1227,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Errors />
+      </div>
+    );
+  }
+
+  if (bughuntOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <BugHunt />
       </div>
     );
   }

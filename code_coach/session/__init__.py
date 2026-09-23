@@ -80,6 +80,12 @@ def _error_items() -> list[tuple[str, str]]:
     return [(c.id, c.name) for c in crashes()]
 
 
+def _hunt_items() -> list[tuple[str, str]]:
+    from code_coach.bughunt import hunts
+
+    return [(h.id, h.title) for h in hunts()]
+
+
 def _trace_items() -> list[tuple[str, str]]:
     from code_coach.trace import traces
 
@@ -97,6 +103,8 @@ SOURCES: tuple[Source, ...] = (
     Source("forms", "Forms", _kata_items, "kata_counts", "kata_last"),
     Source("trace", "Trace", _trace_items, "trace_counts", "trace_last"),
     Source("errors", "Errors", _error_items, "error_counts", "error_last"),
+    Source("bughunt", "Bug Hunt", _hunt_items,
+           "bughunt_counts", "bughunt_last"),
     Source("magnets", "Magnets", _magnet_items,
            "magnet_counts", "magnet_last"),
     Source("predict", "Predict", _predict_items,
