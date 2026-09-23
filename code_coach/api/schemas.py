@@ -658,6 +658,8 @@ class KataCheckResponse(BaseModel):
     # own mistake after finding it is what makes it the last time;
     # naming it beforehand is just giving the answer away.
     bug: str = ""
+    # What a Change it drill's change was, sent once every case passes.
+    change: str = ""
     # How many times this one has been got right, counting this go. The
     # point of the number is that it is not a tick: these are practised
     # rather than finished.

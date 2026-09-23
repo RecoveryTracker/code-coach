@@ -1328,6 +1328,9 @@ def kata_list() -> dict:
                         # Filled in for the broken ones, empty for the
                         # rest, which is what the screen keys off.
                         "start": k.start,
+                        # What the program does today, for a Change it
+                        # drill - the request means nothing without it.
+                        "was": k.was,
                         "done": counts.get(k.id, 0),
                         "last": last.get(k.id, ""),
                         "level": k.level,
@@ -1391,6 +1394,9 @@ def kata_check(body: KataCheckRequest) -> KataCheckResponse:
         broke=outcome.broke,
         stdout=theirs,
         bug=found.bug if outcome.passed else "",
+        # Held back until it passes, like the name of a bug: reading why
+        # the change had to be that way before making it gives it away.
+        change=found.change if outcome.passed else "",
         done=done,
         results=[
             KataCaseResult(

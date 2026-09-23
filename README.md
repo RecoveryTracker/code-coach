@@ -21,7 +21,7 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 70 across 10 families, including The Odin Project's computer science section |
+| **Forms** | Write a function; it is called with inputs you have not seen. 82 across 12 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python and JavaScript |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 9 moments |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 11 of them |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
@@ -31,6 +31,8 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Concepts** | The questions an interview asks that are not coding problems |
 | **Reference** | Cheat sheets and flashcards for the language you are in |
+
+The look is a choice: the swatch button in the top bar switches the whole app between Original, Dark, Light, Northern Lights and Arcade, and remembers it per browser.
 
 ### Languages
 

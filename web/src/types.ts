@@ -613,6 +613,8 @@ export type KataSummary = {
    * what tells the two apart on screen.
    */
   start: string;
+  /** For a Change it drill: what the program does today. */
+  was?: string;
   /**
    * How many times this one has been got right.
    *
@@ -678,6 +680,8 @@ export type KataCheck = {
   stdout: string;
   /** What the bug was. Only sent once every case passes. */
   bug: string;
+  /** What a Change it drill's change was, and why. Only sent on a pass. */
+  change?: string;
   /** Goes at this one that came out right, counting this one. */
   done: number;
 };

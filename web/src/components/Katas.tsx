@@ -472,6 +472,14 @@ print(${asCall(kata.name, pick.args)})
               </span>
             </span>
           </h3>
+          {/* A change request means nothing without the thing being
+              changed, so a Change it drill says what the code does
+              today before it says what to do. */}
+          {kata.was ? (
+            <p className="kata-was">
+              <strong>What it does now:</strong> {kata.was}
+            </p>
+          ) : null}
           <p className="lessons-blurb">{kata.brief}</p>
           {kata.example ? (
             <p className="wb-example">{kata.example}</p>
@@ -689,6 +697,13 @@ print(${asCall(kata.name, pick.args)})
               {result.bug ? (
                 <p className="kata-bug">
                   <strong>What it was:</strong> {result.bug}
+                </p>
+              ) : null}
+              {/* The same idea for a change: why it had to be made that
+                  way, once you have made it. */}
+              {result.change ? (
+                <p className="kata-bug">
+                  <strong>The change:</strong> {result.change}
                 </p>
               ) : null}
               {result.stdout.trim() ? (

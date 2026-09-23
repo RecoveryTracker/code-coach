@@ -1020,3 +1020,21 @@
   padding: 5px 10px;
   font-size: 12px;
 }
+
+/* What a Change it drill's code does today, above the request. Quiet
+   and neutral - it is context, not an instruction - and written in the
+   palette variables so every skin carries it. */
+.kata-was {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.kata-was strong {
+  color: var(--text);
+}

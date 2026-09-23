@@ -126,6 +126,22 @@ class Kata:
     #: the suite stay green. An answer typed out by a person is the only
     #: thing in the file that did not come from the code being checked.
     checks: tuple[tuple[tuple, Any], ...] = field(default_factory=tuple)
+    #: For a Change it drill: what the program does today, shown above
+    #: the request. A change request means nothing without it.
+    was: str = ""
+    #: For a Change it drill: the old requirement, as an oracle. The
+    #: starting code must pass every case under this - that is what
+    #: makes it working code to change rather than broken code to fix.
+    before: Callable[..., Any] | None = None
+    #: For a Change it drill: the start with the change made, which is
+    #: what Show answer hands over. Shown instead of `solve` because the
+    #: lesson is the edit, and `solve` is written for the oracle, not
+    #: as the smallest change to the code in the box.
+    after: str = ""
+    #: For a Change it drill: what the change was and why it had to be
+    #: that way, shown once it passes - the same role `bug` plays for a
+    #: broken one.
+    change: str = ""
 
     @property
     def signature(self) -> str:
@@ -168,6 +184,8 @@ class Kata:
         import inspect
         import textwrap
 
+        if self.after:
+            return self.after.strip()
         if self.language == "javascript":
             return self.js_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
@@ -423,12 +441,13 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
+    from code_coach.kata.modify import JAVASCRIPT_MODIFY, PYTHON_MODIFY
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
     everything = (
-        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
-        + JS_KATAS + STUBS + ODIN
+        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
+        + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -447,12 +466,13 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
+    from code_coach.kata.modify import JAVASCRIPT_MODIFY, PYTHON_MODIFY
     from code_coach.kata.projects import PROJECTS
     from code_coach.kata.projects2 import PROJECTS2
 
     return (
-        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2
-        + JS_KATAS + STUBS + ODIN
+        KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
+        + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
     )
 
 

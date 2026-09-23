@@ -481,8 +481,19 @@ class BrokenExerciseTests(unittest.TestCase):
         other family starts empty, and the exemption is a list here
         rather than a condition per kata so that adding a third one is
         a decision somebody makes on purpose.
+
+        It was made once, on purpose, for "Change it": code that is
+        right for yesterday's requirement, and a request to change it.
+        That is the modify step of PRIMM, which this app had nothing
+        for, and it cannot be done from an empty box - the code being
+        changed is the exercise. test_modify.py holds those drills to
+        the rules that make them changes rather than disguised bug
+        fixes.
         """
-        allowed = {"Fix the bug", "Finish the program"}
+        allowed = {
+            "Fix the bug", "Finish the program",
+            "Change it", "Change it: JavaScript",
+        }
         for k in katas():
             if k.family in allowed:
                 continue
@@ -494,7 +505,10 @@ class BrokenExerciseTests(unittest.TestCase):
         """The other half of the rule above: a family that ships code in
         the box must be one of the two, so a new family cannot quietly
         acquire pre-filled starts by being written that way."""
-        named = {"Fix the bug", "Finish the program"}
+        named = {
+            "Fix the bug", "Finish the program",
+            "Change it", "Change it: JavaScript",
+        }
         for k in katas():
             if k.start.strip():
                 with self.subTest(kata=k.id):
