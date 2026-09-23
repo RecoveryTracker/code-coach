@@ -9,8 +9,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #0e1116;
-  color: #e6edf3;
+  background: var(--c-bg-0e1116);
+  color: var(--c-text-e6edf3);
   overflow: auto;
 
   /* One monospace stack for the whole trainer. Chosen for open, wide
@@ -37,7 +37,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #222a35;
+  border-bottom: 1px solid var(--c-border-222a35);
   flex: 0 0 auto;
 }
 
@@ -62,10 +62,10 @@
 .typing-loading,
 .typing-error {
   padding: 2rem;
-  color: #9aa7b6;
+  color: var(--c-text-muted-9aa7b6);
 }
 .typing-error {
-  color: #ff8f8f;
+  color: var(--c-danger-ff8f8f);
 }
 
 /* ── Tabs ───────────────────────────────────────────────── */
@@ -73,24 +73,24 @@
 .typing-tabs {
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid #1c232d;
+  border-bottom: 1px solid var(--c-bg-elevated-1c232d);
 }
 
 .typing-tab {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   padding: 0.45rem 1rem;
   font-size: 0.9rem;
   cursor: pointer;
 }
 .typing-tab:hover {
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 .typing-tab.on {
-  color: #e6edf3;
-  border-bottom-color: #2f6feb;
+  color: var(--c-text-e6edf3);
+  border-bottom-color: var(--c-accent-strong-2f6feb);
 }
 
 /* ── Picker ─────────────────────────────────────────────── */
@@ -110,34 +110,34 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.75rem;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 .typing-toggle button {
-  background: #171c24;
-  border: 1px solid #262f3b;
-  color: #8b97a5;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-262f3b);
+  color: var(--c-text-muted-8b97a5);
   border-radius: 4px;
   padding: 0.2rem 0.6rem;
   font-size: 0.75rem;
   cursor: pointer;
 }
 .typing-toggle button.on {
-  background: #253449;
-  border-color: #2f6feb;
-  color: #cdd9e5;
+  background: var(--c-border-253449);
+  border-color: var(--c-accent-strong-2f6feb);
+  color: var(--c-text-cdd9e5);
 }
 
 /* "hyphen, then equals" — how to produce the target, in words. */
 .typing-spelled {
   margin: 0;
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
   font-size: 0.85rem;
   letter-spacing: 0.03em;
 }
 
 .typing-fix {
   margin: 0;
-  color: #ff9d95;
+  color: var(--c-danger-ff9d95);
   font-size: 0.8rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -159,16 +159,16 @@
   justify-content: center;
 }
 .tr-best {
-  background: #3d2f0c;
-  border: 1px solid #7a5c11;
-  color: #ffd166;
+  background: var(--c-warning-soft-3d2f0c);
+  border: 1px solid var(--c-warning-soft-7a5c11);
+  color: var(--c-warning-ffd166);
   border-radius: 999px;
   padding: 0.2rem 0.7rem;
   font-size: 0.75rem;
   letter-spacing: 0.04em;
 }
 .tr-prev {
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font-size: 0.8rem;
 }
 
@@ -182,18 +182,18 @@
 .tr-totals {
   display: flex;
   gap: 2rem;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.85rem;
 }
 .tr-totals strong {
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
   font-size: 1.15rem;
   font-variant-numeric: tabular-nums;
 }
 
 .tr-group h4 {
   margin: 0 0 0.35rem;
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -209,37 +209,37 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
   padding: 0.2rem 0.5rem;
-  border-bottom: 1px solid #1c232d;
+  border-bottom: 1px solid var(--c-bg-elevated-1c232d);
 }
 .tr-table td {
   padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid #161c24;
-  color: #b9c4d0;
+  border-bottom: 1px solid var(--c-bg-elevated-161c24);
+  color: var(--c-text-b9c4d0);
 }
 .tr-table td.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 .tr-table td.strong {
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
   font-weight: 600;
 }
 .tr-table td.dim {
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
 }
 .tr-table tr.clickable {
   cursor: pointer;
 }
 .tr-table tr.clickable:hover td {
-  background: #171c24;
-  color: #e6edf3;
+  background: var(--c-bg-elevated-171c24);
+  color: var(--c-text-e6edf3);
 }
 
 .tr-empty {
   padding: 2rem 0;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
 }
 
 /* ── Guide ──────────────────────────────────────────────── */
@@ -260,7 +260,7 @@
 .tg-lede,
 .tg-caption,
 .tg-hint {
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.85rem;
   margin: 0 0 0.75rem;
 }
@@ -286,7 +286,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
   margin-bottom: 0.4rem;
 }
 /* Fingers hang from a common knuckle line, so their different lengths read
@@ -298,10 +298,10 @@
 }
 .tg-finger {
   width: 2.1rem;
-  border: 1px solid #262f3b;
+  border: 1px solid var(--c-border-262f3b);
   border-radius: 1rem 1rem 0.3rem 0.3rem;
-  background: #171c24;
-  color: #b9c4d0;
+  background: var(--c-bg-elevated-171c24);
+  color: var(--c-text-b9c4d0);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -312,13 +312,13 @@
   transition: background 0.12s, transform 0.12s;
 }
 .tg-finger:hover {
-  background: #1e2530;
+  background: var(--c-border-1e2530);
   transform: translateY(-2px);
 }
 .tg-finger.open {
-  background: #1d3a5c;
-  color: #fff;
-  box-shadow: 0 0 0 2px #2f6feb;
+  background: var(--c-accent-soft-1d3a5c);
+  color: var(--c-text-strong-fff);
+  box-shadow: 0 0 0 2px var(--c-accent-strong-2f6feb);
 }
 .tg-finger-home {
   font-family: var(--tk-mono);
@@ -327,17 +327,17 @@
 .tg-finger-keys {
   font-family: var(--tk-mono);
   font-size: 0.55rem;
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
   writing-mode: vertical-rl;
   letter-spacing: 0.1em;
 }
 .tg-palm {
   width: 9.6rem;
   height: 2.2rem;
-  border: 1px solid #262f3b;
+  border: 1px solid var(--c-border-262f3b);
   border-top: none;
   border-radius: 0 0 1.2rem 1.2rem;
-  background: #12171e;
+  background: var(--c-bg-panel-12171e);
 }
 
 .tg-thumb-row {
@@ -346,25 +346,25 @@
   margin-top: 0.6rem;
 }
 .tg-thumb {
-  background: #171c24;
-  border: 1px solid #262f3b;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-262f3b);
   border-radius: 999px;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   padding: 0.3rem 1.4rem;
   font-size: 0.78rem;
   cursor: pointer;
 }
 .tg-thumb.open {
-  background: #1d3a5c;
-  color: #fff;
-  box-shadow: 0 0 0 2px #2f6feb;
+  background: var(--c-accent-soft-1d3a5c);
+  color: var(--c-text-strong-fff);
+  box-shadow: 0 0 0 2px var(--c-accent-strong-2f6feb);
 }
 
 .tg-detail {
   margin-top: 1rem;
   padding: 0.85rem 1rem;
-  background: #12171e;
-  border: 1px solid #1c232d;
+  background: var(--c-bg-panel-12171e);
+  border: 1px solid var(--c-bg-elevated-1c232d);
   border-radius: 8px;
 }
 .tg-detail h4 {
@@ -373,17 +373,17 @@
 }
 .tg-detail p {
   margin: 0.35rem 0 0;
-  color: #b9c4d0;
+  color: var(--c-text-b9c4d0);
   font-size: 0.85rem;
   line-height: 1.55;
 }
 .tg-detail-keys {
   font-family: var(--tk-mono);
   font-size: 0.78rem;
-  color: #7ee2a8 !important;
+  color: var(--c-success-7ee2a8) !important;
 }
 .tg-detail code {
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 
 .tg-homerow {
@@ -399,15 +399,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #171c24;
-  border: 1px solid #262f3b;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-262f3b);
   border-bottom-width: 2px;
   border-radius: 6px;
   font-family: var(--tk-mono);
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 .tg-homekey.anchor {
-  color: #ffd166;
+  color: var(--c-warning-ffd166);
 }
 .tg-bump {
   position: absolute;
@@ -415,7 +415,7 @@
   width: 0.7rem;
   height: 2px;
   border-radius: 2px;
-  background: #ffd166;
+  background: var(--c-warning-ffd166);
 }
 
 .tg-tips {
@@ -424,30 +424,30 @@
   gap: 0.75rem;
 }
 .tg-tip {
-  background: #12171e;
-  border: 1px solid #1c232d;
+  background: var(--c-bg-panel-12171e);
+  border: 1px solid var(--c-bg-elevated-1c232d);
   border-radius: 8px;
   padding: 0.75rem 0.9rem;
 }
 .tg-tip h4 {
   margin: 0 0 0.3rem;
   font-size: 0.85rem;
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
 }
 .tg-tip p {
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.55;
-  color: #b9c4d0;
+  color: var(--c-text-b9c4d0);
 }
 
 .tg-faq {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid #1c232d;
+  border-top: 1px solid var(--c-bg-elevated-1c232d);
 }
 .tg-q {
-  border-bottom: 1px solid #1c232d;
+  border-bottom: 1px solid var(--c-bg-elevated-1c232d);
 }
 .tg-q button {
   width: 100%;
@@ -457,27 +457,27 @@
   gap: 1rem;
   background: none;
   border: none;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
   text-align: left;
   padding: 0.65rem 0;
   font-size: 0.88rem;
   cursor: pointer;
 }
 .tg-q button:hover {
-  color: #fff;
+  color: var(--c-text-strong-fff);
 }
 .tg-q.open button {
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
 }
 .tg-caret {
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
   font-size: 1rem;
   flex: 0 0 auto;
 }
 .tg-q p {
   margin: 0 0 0.85rem;
   padding-right: 2rem;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.84rem;
   line-height: 1.6;
 }
@@ -506,12 +506,12 @@
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 .typing-field select {
-  background: #171c24;
-  color: #e6edf3;
-  border: 1px solid #2a333f;
+  background: var(--c-bg-elevated-171c24);
+  color: var(--c-text-e6edf3);
+  border: 1px solid var(--c-border-2a333f);
   border-radius: 6px;
   padding: 0.32rem 0.6rem;
   font-size: 0.88rem;
@@ -519,21 +519,21 @@
   cursor: pointer;
 }
 .typing-field select:hover {
-  border-color: #2f6feb;
+  border-color: var(--c-accent-strong-2f6feb);
 }
 
 .typing-restart {
-  background: #171c24;
-  color: #b9c4d0;
-  border: 1px solid #2a333f;
+  background: var(--c-bg-elevated-171c24);
+  color: var(--c-text-b9c4d0);
+  border: 1px solid var(--c-border-2a333f);
   border-radius: 6px;
   padding: 0.34rem 0.9rem;
   font-size: 0.82rem;
   cursor: pointer;
 }
 .typing-restart:hover {
-  background: #1e2530;
-  color: #e6edf3;
+  background: var(--c-border-1e2530);
+  color: var(--c-text-e6edf3);
 }
 
 /* ── Course ─────────────────────────────────────────────── */
@@ -559,7 +559,7 @@
 }
 .tc-headline p {
   margin: 0;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.85rem;
   max-width: 30rem;
   line-height: 1.5;
@@ -578,19 +578,19 @@
   font-variant-numeric: tabular-nums;
 }
 .tc-count span {
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font-size: 0.8rem;
 }
 .tc-bar {
   margin-top: 0.35rem;
   height: 5px;
   border-radius: 3px;
-  background: #1c232d;
+  background: var(--c-bg-elevated-1c232d);
   overflow: hidden;
 }
 .tc-bar-fill {
   height: 100%;
-  background: #2ea043;
+  background: var(--c-success-2ea043);
   transition: width 0.3s ease-out;
 }
 
@@ -602,25 +602,25 @@
   gap: 0.15rem;
   width: 100%;
   text-align: left;
-  background: #1d3a5c;
-  border: 1px solid #2f6feb;
+  background: var(--c-accent-soft-1d3a5c);
+  border: 1px solid var(--c-accent-strong-2f6feb);
   border-radius: 10px;
   padding: 0.8rem 1.1rem;
   cursor: pointer;
   transition: background 0.12s;
 }
 .tc-continue:hover {
-  background: #234a76;
+  background: var(--c-accent-strong-234a76);
 }
 .tc-continue-label {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9fc4ff;
+  color: var(--c-accent-9fc4ff);
 }
 .tc-continue-title {
   font-size: 1.05rem;
-  color: #fff;
+  color: var(--c-text-strong-fff);
 }
 
 .tc-list {
@@ -638,19 +638,19 @@
   gap: 0.8rem;
   width: 100%;
   text-align: left;
-  background: #12171e;
-  border: 1px solid #1c232d;
+  background: var(--c-bg-panel-12171e);
+  border: 1px solid var(--c-bg-elevated-1c232d);
   border-radius: 8px;
   padding: 0.6rem 0.8rem;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
 .tc-lesson > button:hover {
-  background: #171c24;
-  border-color: #2a333f;
+  background: var(--c-bg-elevated-171c24);
+  border-color: var(--c-border-2a333f);
 }
 .tc-lesson.current > button {
-  border-color: #2f6feb;
+  border-color: var(--c-accent-strong-2f6feb);
 }
 .tc-lesson.done > button {
   opacity: 0.62;
@@ -663,18 +663,18 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #1c232d;
-  color: #8b97a5;
+  background: var(--c-bg-elevated-1c232d);
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 .tc-lesson.done .tc-num {
-  background: #1b4a2c;
-  color: #7ee2a8;
+  background: var(--c-success-soft-1b4a2c);
+  color: var(--c-success-7ee2a8);
 }
 .tc-lesson.current .tc-num {
-  background: #2f6feb;
-  color: #fff;
+  background: var(--c-accent-strong-2f6feb);
+  color: var(--c-on-strong-fff);
 }
 
 .tc-body {
@@ -684,26 +684,26 @@
   min-width: 0;
 }
 .tc-title {
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
   font-size: 0.92rem;
 }
 .tc-why {
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.8rem;
   line-height: 1.45;
 }
 .tc-meta {
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
   font-size: 0.72rem;
 }
 .tc-meta em {
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
   font-style: normal;
 }
 
 .typing-blurb {
   margin: 0;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.85rem;
 }
 
@@ -717,8 +717,8 @@
   align-items: center;
   gap: 1rem;
   padding: 0.5rem 0;
-  border-top: 1px solid #1c232d;
-  border-bottom: 1px solid #1c232d;
+  border-top: 1px solid var(--c-bg-elevated-1c232d);
+  border-bottom: 1px solid var(--c-bg-elevated-1c232d);
 }
 .typing-hud-stats {
   display: flex;
@@ -740,31 +740,31 @@
   font-size: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 .typing-stat.big .typing-stat-value {
   font-size: 2rem;
 }
 .typing-stat.hot .typing-stat-value {
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 .typing-stat-label {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 /* "paused" sits beside the label rather than replacing the number, so the
    speed you had is still readable while the clock is stopped. */
 .typing-stat-note {
   margin-left: 0.4em;
-  color: #7d8aa0;
-  background: #232c38;
+  color: var(--c-text-muted-7d8aa0);
+  background: var(--c-border-232c38);
   border-radius: 3px;
   padding: 0 0.35em;
 }
 .typing-stat.noted .typing-stat-value {
-  color: #8b98a8;
+  color: var(--c-text-muted-8b98a8);
 }
 
 /* ── The target ─────────────────────────────────────────── */
@@ -784,7 +784,7 @@
 
 .typing-start {
   margin: 0;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font-size: 0.9rem;
 }
 
@@ -798,7 +798,7 @@
   font-size: clamp(3rem, 12vw, 6rem);
   font-weight: 700;
   line-height: 1;
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
   font-family: Consolas, "DejaVu Sans Mono", "Liberation Mono", "Menlo",
     ui-monospace, monospace;
   animation: typing-pop 0.16s ease-out;
@@ -806,12 +806,12 @@
 
 /* And named underneath, because no font makes a lone character certain. */
 .typing-bigkey-name {
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.9rem;
   letter-spacing: 0.06em;
 }
 .typing-bigkey.wrong {
-  color: #ff7b72;
+  color: var(--c-danger-ff7b72);
   animation: typing-shake 0.16s ease-out;
 }
 
@@ -840,7 +840,7 @@
 }
 
 .typing-shift {
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
   font-size: 0.85rem;
   letter-spacing: 0.05em;
 }
@@ -849,7 +849,7 @@
    doesn't say. */
 .typing-task {
   margin: 0;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -857,7 +857,7 @@
 
 .typing-cue {
   margin: 0;
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
   font-size: 1.1rem;
 }
 
@@ -897,35 +897,35 @@
    ten-line block doesn't read as having a symbol at the end of every line —
    until the cursor lands on one, which is exactly when it matters. */
 .typing-text .nl {
-  color: #4a5566;
+  color: var(--c-text-dim-4a5566);
 }
 .typing-text .nl.at {
-  color: #0d1117;
+  color: var(--c-on-accent-0d1117);
 }
 .typing-text .nl.done {
-  color: #39424e;
+  color: var(--c-border-strong-39424e);
 }
 
 .typing-text .done {
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 .typing-text .todo {
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 /* A character you typed wrong and haven't backed out yet. */
 .typing-text .bad {
-  color: #ff7b72;
-  background: #3d1a17;
+  color: var(--c-danger-ff7b72);
+  background: var(--c-danger-soft-3d1a17);
   border-radius: 2px;
 }
 .typing-text.bad .at {
-  background: #b5342b;
+  background: var(--c-danger-b5342b);
 }
 /* The cursor is a block behind the next character, not a thin line — at this
    size a caret disappears against the monospace grid. */
 .typing-text .at {
-  background: #2f6feb;
-  color: #fff;
+  background: var(--c-accent-strong-2f6feb);
+  color: var(--c-on-strong-fff);
   border-radius: 2px;
 }
 
@@ -934,7 +934,7 @@
    footnote. */
 .typing-note {
   margin: 0;
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
   font-size: 0.88rem;
   max-width: 44rem;
   line-height: 1.5;
@@ -954,13 +954,13 @@
 .typing-progress {
   width: min(40rem, 100%);
   height: 3px;
-  background: #1c232d;
+  background: var(--c-bg-elevated-1c232d);
   border-radius: 2px;
   overflow: hidden;
 }
 .typing-progress-fill {
   height: 100%;
-  background: #2ea043;
+  background: var(--c-success-2ea043);
   transition: width 0.15s ease-out;
 }
 
@@ -979,7 +979,7 @@
   font-weight: 600;
 }
 .typing-results h4 {
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1004,22 +1004,22 @@
   align-items: center;
   min-width: 3.4rem;
   padding: 0.4rem 0.5rem;
-  background: #171c24;
-  border: 1px solid #2a333f;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-2a333f);
   border-radius: 6px;
 }
 .typing-weak-char {
   font-family: var(--tk-mono);
   font-size: 1.1rem;
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 .typing-weak-num {
   font-size: 0.78rem;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 .typing-weak-ms {
   font-size: 0.68rem;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* Move between targets by hand: back to see what you just did, skip to pass
@@ -1030,23 +1030,23 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.78rem;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   flex: 0 0 auto;
 }
 /* Same shape as the New set button above them — they're the same kind of
    control and looked like two different apps. */
 .typing-steps button {
-  background: #171c24;
-  border: 1px solid #2a333f;
-  color: #b9c4d0;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-2a333f);
+  color: var(--c-text-b9c4d0);
   border-radius: 6px;
   padding: 0.34rem 0.9rem;
   font-size: 0.82rem;
   cursor: pointer;
 }
 .typing-steps button:hover:not(:disabled) {
-  background: #1e2530;
-  color: #e6edf3;
+  background: var(--c-border-1e2530);
+  color: var(--c-text-e6edf3);
 }
 .typing-steps button:disabled {
   opacity: 0.4;
@@ -1063,7 +1063,7 @@
 
 .typing-reviewing {
   margin: 0;
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -1073,7 +1073,7 @@
 .typing-answer {
   font-family: var(--tk-mono);
   font-size: 2.4rem;
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
 }
 
 .typing-result-actions {
@@ -1085,23 +1085,23 @@
 }
 .typing-review {
   margin-top: 0.5rem;
-  background: #171c24;
-  color: #b9c4d0;
-  border: 1px solid #2a333f;
+  background: var(--c-bg-elevated-171c24);
+  color: var(--c-text-b9c4d0);
+  border: 1px solid var(--c-border-2a333f);
   border-radius: 6px;
   padding: 0.5rem 1.1rem;
   font-size: 0.9rem;
   cursor: pointer;
 }
 .typing-review:hover {
-  background: #1e2530;
-  color: #e6edf3;
+  background: var(--c-border-1e2530);
+  color: var(--c-text-e6edf3);
 }
 
 .typing-again {
   margin-top: 0.5rem;
-  background: #2f6feb;
-  color: #fff;
+  background: var(--c-accent-strong-2f6feb);
+  color: var(--c-on-strong-fff);
   border: none;
   border-radius: 6px;
   padding: 0.5rem 1.4rem;
@@ -1109,7 +1109,7 @@
   cursor: pointer;
 }
 .typing-again:hover {
-  background: #4184ff;
+  background: var(--c-accent-strong-4184ff);
 }
 
 /* ── Keyboard ───────────────────────────────────────────── */
@@ -1150,18 +1150,18 @@
   gap: 0.18rem;
   padding: 0.2rem 0;
   border-radius: 6px;
-  background: #171c24;
-  border: 1px solid #262f3b;
+  background: var(--c-bg-elevated-171c24);
+  border: 1px solid var(--c-border-262f3b);
   border-bottom-width: 2px;
   font-family: var(--tk-mono);
   font-size: 0.9rem;
-  color: #b9c4d0;
+  color: var(--c-text-b9c4d0);
   transition: transform 0.08s, background 0.08s, box-shadow 0.08s;
 }
 
 .tk-shifted {
   font-size: 0.62rem;
-  color: #7d8898;
+  color: var(--c-text-muted-7d8898);
   line-height: 1;
 }
 .tk-char {
@@ -1200,7 +1200,7 @@
   flex: 1;
   font-size: 0.7rem;
   letter-spacing: 0.12em;
-  color: #5b6675;
+  color: var(--c-text-dim-5b6675);
 }
 .tk-row-space {
   padding: 0 12rem;
@@ -1245,30 +1245,30 @@
 /* The key being asked for. The pulse keeps it findable in peripheral vision,
    which is the whole point of a reaction drill. */
 .tk-target {
-  background: #1d3a5c;
-  color: #fff;
-  box-shadow: 0 0 0 2px #2f6feb, 0 0 1.2rem rgba(47, 111, 235, 0.55);
+  background: var(--c-accent-soft-1d3a5c);
+  color: var(--c-text-strong-fff);
+  box-shadow: 0 0 0 2px var(--c-accent-strong-2f6feb), 0 0 1.2rem var(--c-accent-strong-ba-47-111-235-0_55);
   animation: tk-pulse 0.9s ease-in-out infinite;
 }
 
 @keyframes tk-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 2px #2f6feb, 0 0 0.8rem rgba(47, 111, 235, 0.4);
+    box-shadow: 0 0 0 2px var(--c-accent-strong-2f6feb), 0 0 0.8rem var(--c-accent-strong-ba-47-111-235-0_4);
   }
   50% {
-    box-shadow: 0 0 0 2px #4184ff, 0 0 1.6rem rgba(65, 132, 255, 0.75);
+    box-shadow: 0 0 0 2px var(--c-accent-strong-4184ff), 0 0 1.6rem var(--c-accent-strong-ba-65-132-255-0_75);
   }
 }
 
 .tk-hit {
-  background: #1b4a2c;
-  color: #7ee2a8;
+  background: var(--c-success-soft-1b4a2c);
+  color: var(--c-success-7ee2a8);
   transform: translateY(2px);
 }
 .tk-miss {
-  background: #4a1f1c;
-  color: #ff9d95;
+  background: var(--c-danger-soft-4a1f1c);
+  color: var(--c-danger-ff9d95);
   transform: translateY(2px);
 }
 
@@ -1276,13 +1276,13 @@
   align-self: center;
   margin-top: 0.35rem;
   font-size: 0.78rem;
-  color: #3a4451;
+  color: var(--c-border-strong-3a4451);
   opacity: 0;
   transition: opacity 0.12s;
 }
 .tk-shift-hint.on {
   opacity: 1;
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 
 @media (max-width: 720px) {
@@ -1311,12 +1311,12 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #7f8ea8;
+  color: var(--c-text-muted-7f8ea8);
 }
 .text-pick-button {
-  background: #121821;
-  border: 1px solid #2a3442;
-  color: #dbe6f5;
+  background: var(--c-bg-panel-121821);
+  border: 1px solid var(--c-border-2a3442);
+  color: var(--c-text-dbe6f5);
   border-radius: 6px;
   padding: 0.3rem 0.6rem;
   font: inherit;
@@ -1328,19 +1328,19 @@
   white-space: nowrap;
 }
 .text-pick-button:hover {
-  border-color: #3d4a5c;
+  border-color: var(--c-border-strong-3d4a5c);
 }
 .text-pick-button.on {
-  border-color: #5570b8;
-  color: #fff;
+  border-color: var(--c-accent-strong-5570b8);
+  color: var(--c-text-strong-fff);
 }
 
 .text-pick-menu {
   z-index: 60;
   width: 19rem;
   max-width: calc(100vw - 16px);
-  background: #0f151d;
-  border: 1px solid #2a3442;
+  background: var(--c-bg-panel-0f151d);
+  border: 1px solid var(--c-border-2a3442);
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   padding: 0.55rem;
@@ -1351,7 +1351,7 @@
   padding: 0 0.25rem;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #8194ad;
+  color: var(--c-text-muted-8194ad);
 }
 .text-pick-list {
   /* No fixed height any more. The menu is capped to the room that is
@@ -1370,22 +1370,22 @@
   border-radius: 5px;
 }
 .text-pick-row:hover {
-  background: #161e29;
+  background: var(--c-bg-elevated-161e29);
 }
 .text-pick-row.on {
-  background: #17202e;
+  background: var(--c-bg-elevated-17202e);
 }
 .text-pick-row input {
   flex: none;
   cursor: pointer;
-  accent-color: #5570b8;
+  accent-color: var(--c-accent-strong-5570b8);
 }
 .text-pick-name {
   flex: 1;
   text-align: left;
   background: none;
   border: none;
-  color: #c6d3e6;
+  color: var(--c-text-c6d3e6);
   font: inherit;
   font-size: 0.86rem;
   padding: 0.28rem 0.2rem;
@@ -1393,10 +1393,10 @@
   border-radius: 4px;
 }
 .text-pick-name:hover {
-  color: #fff;
+  color: var(--c-text-strong-fff);
 }
 .text-pick-row.on .text-pick-name {
-  color: #cfe0ff;
+  color: var(--c-accent-cfe0ff);
 }
 
 /* ── Which kind of line Same Shape drills ───────────────────
@@ -1415,12 +1415,12 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #7f8ea8;
+  color: var(--c-text-muted-7f8ea8);
 }
 .shape-pick-button {
-  background: #121821;
-  border: 1px solid #2a3442;
-  color: #dbe6f5;
+  background: var(--c-bg-panel-121821);
+  border: 1px solid var(--c-border-2a3442);
+  color: var(--c-text-dbe6f5);
   border-radius: 6px;
   padding: 0.3rem 0.6rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1432,11 +1432,11 @@
   white-space: nowrap;
 }
 .shape-pick-button:hover:not(:disabled) {
-  border-color: #3d4a5c;
+  border-color: var(--c-border-strong-3d4a5c);
 }
 .shape-pick-button.on {
-  border-color: #5570b8;
-  color: #fff;
+  border-color: var(--c-accent-strong-5570b8);
+  color: var(--c-text-strong-fff);
 }
 .shape-pick-button:disabled {
   opacity: 0.45;
@@ -1447,8 +1447,8 @@
   z-index: 60;
   width: 25rem;
   max-width: calc(100vw - 16px);
-  background: #0f151d;
-  border: 1px solid #2a3442;
+  background: var(--c-bg-panel-0f151d);
+  border: 1px solid var(--c-border-2a3442);
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   padding: 0.55rem;
@@ -1459,7 +1459,7 @@
   padding: 0 0.25rem;
   font-size: 0.75rem;
   line-height: 1.45;
-  color: #8194ad;
+  color: var(--c-text-muted-8194ad);
 }
 .shape-pick-list {
   /* No fixed height any more. The menu is capped to the room that is
@@ -1485,10 +1485,10 @@
   font: inherit;
 }
 .shape-pick-row:hover {
-  background: #161e29;
+  background: var(--c-bg-elevated-161e29);
 }
 .shape-pick-row.on {
-  background: #17202e;
+  background: var(--c-bg-elevated-17202e);
 }
 .shape-pick-example {
   flex: 1;
@@ -1498,14 +1498,14 @@
   white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
-  color: #c6d3e6;
+  color: var(--c-text-c6d3e6);
 }
 .shape-pick-row.on .shape-pick-example {
-  color: #cfe0ff;
+  color: var(--c-accent-cfe0ff);
 }
 .shape-pick-count {
   flex: none;
   font-size: 0.72rem;
-  color: #6f7f96;
+  color: var(--c-text-dim-6f7f96);
   font-variant-numeric: tabular-nums;
 }

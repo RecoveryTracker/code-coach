@@ -21,6 +21,7 @@ import {
 import { AdaptiveCoach } from "./components/AdaptiveCoach";
 import { EditorPane } from "./components/EditorPane";
 import { LanguagePicker } from "./components/LanguagePicker";
+import { SkinPicker } from "./components/SkinPicker";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
@@ -1074,7 +1075,7 @@ export default function App() {
       <ModeButtons mode={mode} onPick={go} />
       <button
         type="button"
-        className={`ws-btn${progressOpen ? " primary" : ""}`}
+        className={`ws-btn row-btn${progressOpen ? " primary" : ""}`}
         onClick={() => setProgressOpen((o) => !o)}
         title="Skills, type-along lines, and what's due for review"
       >
@@ -1082,7 +1083,7 @@ export default function App() {
       </button>
       <button
         type="button"
-        className={`ws-btn${freeMode ? " primary" : ""}`}
+        className={`ws-btn row-btn${freeMode ? " primary" : ""}`}
         onClick={openFreeMode}
         aria-pressed={freeMode}
         title={
@@ -1106,6 +1107,10 @@ export default function App() {
         current={session?.language ?? "python"}
         onChanged={onLanguageChanged}
       />
+      {/* Here as well as in the top bar the other screens wear. The
+          editor has its own toolbar, and a skin you can only change
+          from some screens is a skin you cannot change from this one. */}
+      <SkinPicker />
       <ScriptLibrary
         source={freeMode ? "free" : "lesson"}
         getCode={() => codeRef.current}
@@ -1173,6 +1178,7 @@ export default function App() {
       <span className="ws-brand-inline">Code Coach</span>
       <div className="panel-actions">
         {panelLanguage}
+        <SkinPicker />
         {moduleRow}
       </div>
     </div>

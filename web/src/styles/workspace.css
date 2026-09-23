@@ -288,7 +288,7 @@
 .ws-btn.danger {
   background: var(--danger);
   border-color: transparent;
-  color: #2a0d0b;
+  color: var(--c-on-accent-2a0d0b);
   font-weight: 650;
 }
 
@@ -319,7 +319,7 @@
 .ws-btn.primary {
   background: var(--accent);
   border-color: transparent;
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
   font-weight: 600;
 }
 
@@ -549,7 +549,7 @@ body.is-resizing .ws-split-row {
 .lesson-nav-btn.primary-next {
   background: var(--accent);
   border-color: transparent;
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
 }
 
 .lesson-nav-btn:hover {
@@ -558,8 +558,8 @@ body.is-resizing .ws-split-row {
 }
 
 .lesson-nav-btn.primary-next:hover {
-  background: #8bbbff;
-  color: #0b1020;
+  background: var(--c-accent-8bbbff);
+  color: var(--c-on-accent-0b1020);
   border-color: transparent;
 }
 
@@ -596,13 +596,13 @@ body.is-resizing .ws-split-row {
   min-width: 0;
   margin: 0;
   padding: 8px 12px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   border: 1px solid var(--border);
   border-radius: 8px;
   font-family: var(--mono);
   font-size: 16px;
   line-height: 1.35;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre;
   overflow-x: auto;
 }
@@ -611,7 +611,7 @@ body.is-resizing .ws-split-row {
   flex-shrink: 0;
   border: none;
   background: var(--accent);
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
   font-weight: 650;
   border-radius: 8px;
   padding: 8px 14px;
@@ -637,7 +637,7 @@ body.is-resizing .ws-split-row {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   border-top: 1px solid var(--border);
 }
 
@@ -646,7 +646,7 @@ body.is-resizing .ws-split-row {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  background: #12151c;
+  background: var(--c-bg-panel-12151c);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -660,7 +660,7 @@ body.is-resizing .ws-split-row {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #3a4256;
+  background: var(--c-border-strong-3a4256);
 }
 
 .term-dots span:nth-child(1) {
@@ -712,7 +712,7 @@ body.is-resizing .ws-split-row {
 .term-out {
   margin: 0;
   white-space: pre-wrap;
-  color: #c8d0e0;
+  color: var(--c-text-c8d0e0);
 }
 
 .term-out.idle {
@@ -832,7 +832,7 @@ body.is-resizing .ws-split-row {
   background: var(--accent);
 }
 .coach-live-status.good {
-  border-color: rgba(61, 214, 140, 0.4);
+  border-color: var(--c-success-ba-61-214-140-0_4);
   color: var(--success);
   background: var(--success-soft);
 }
@@ -840,7 +840,7 @@ body.is-resizing .ws-split-row {
   background: var(--success);
 }
 .coach-live-status.bad {
-  border-color: rgba(255, 123, 114, 0.45);
+  border-color: var(--c-danger-ba-255-123-114-0_45);
   color: var(--danger);
   background: var(--danger-soft);
 }
@@ -857,17 +857,17 @@ body.is-resizing .ws-split-row {
   padding: 14px;
   border-radius: 10px;
   background: var(--accent-soft);
-  border: 1px solid rgba(110, 168, 254, 0.3);
+  border: 1px solid var(--c-accent-ba-110-168-254-0_3);
 }
 
 .coach-type-card.bad {
   background: var(--danger-soft);
-  border-color: rgba(255, 123, 114, 0.35);
+  border-color: var(--c-danger-ba-255-123-114-0_35);
 }
 
 .coach-type-card.good {
   background: var(--success-soft);
-  border-color: rgba(61, 214, 140, 0.35);
+  border-color: var(--c-success-ba-61-214-140-0_35);
 }
 
 .coach-type-label {
@@ -980,20 +980,20 @@ body.is-resizing .ws-split-row {
 .coach-example {
   margin: 0;
   padding: 10px 12px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   border-radius: 8px;
   border: 1px solid var(--border);
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.45;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre-wrap;
 }
 
 .coach-continue {
   border: none;
   background: var(--accent);
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
   font-weight: 650;
   border-radius: 8px;
   padding: 10px 14px;
@@ -1265,7 +1265,7 @@ body.is-resizing .coach-explain-grip {
 }
 
 .explain-note.bad {
-  color: #f28b82;
+  color: var(--c-danger-f28b82);
 }
 
 /* ── Build-goal requirements checklist ── */
@@ -1449,7 +1449,7 @@ body.is-resizing .coach-explain-grip {
 .coach-chat-form button {
   border: none;
   background: var(--accent);
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
   font-weight: 600;
   border-radius: 6px;
   padding: 6px 10px;
@@ -1463,7 +1463,7 @@ body.is-resizing .coach-explain-grip {
   margin: 0;
   padding: 8px 12px;
   background: var(--accent-soft);
-  border: 1px solid rgba(110, 168, 254, 0.28);
+  border: 1px solid var(--c-accent-ba-110-168-254-0_28);
   border-radius: 8px;
   font-size: 15px;
   font-weight: 600;
@@ -1494,7 +1494,7 @@ body.is-resizing .coach-explain-grip {
   min-width: 260px;
   max-width: 420px;
   padding: 10px 12px;
-  background: #12151c;
+  background: var(--c-bg-panel-12151c);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -1512,12 +1512,12 @@ body.is-resizing .coach-explain-grip {
 .hint-popover-code {
   margin: 0 0 8px;
   padding: 8px 10px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   border-radius: 6px;
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.45;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre-wrap;
 }
 
@@ -1778,7 +1778,7 @@ body.is-resizing .coach-explain-grip {
 }
 
 .tt-src {
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre;
 }
 
@@ -1828,7 +1828,7 @@ body.is-resizing .coach-explain-grip {
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--accent);
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
 }
 
 .tt-scroll-wrap.has-more .tt-more-hint {
@@ -1948,8 +1948,8 @@ body.is-resizing .coach-explain-grip {
 }
 
 .study-diff.medium {
-  background: rgba(240, 180, 90, 0.14);
-  color: #f0b45a;
+  background: var(--c-warning-ba-240-180-90-0_14);
+  color: var(--c-warning-f0b45a);
 }
 
 .study-diff.hard {
@@ -1988,7 +1988,7 @@ body.is-resizing .coach-explain-grip {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.45;
@@ -2102,11 +2102,11 @@ body.is-resizing .coach-explain-grip {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.5;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre;
   overflow-x: auto;
 }
@@ -2289,11 +2289,11 @@ body.is-resizing .coach-explain-grip {
   color: var(--text);
 }
 
-.viz-prim.viz-str { color: #a5d6a7; }
+.viz-prim.viz-str { color: var(--c-success-a5d6a7); }
 .viz-prim.viz-int,
-.viz-prim.viz-float { color: #ffcc80; }
+.viz-prim.viz-float { color: var(--c-warning-ffcc80); }
 .viz-prim.viz-bool,
-.viz-prim.viz-none { color: #ce93d8; }
+.viz-prim.viz-none { color: var(--c-accent-ce93d8); }
 
 .viz-empty {
   font-size: 11px;
@@ -2369,7 +2369,7 @@ body.is-resizing .coach-explain-grip {
 }
 
 .vd-circle.on + .vd-val {
-  fill: #0b1020;
+  fill: var(--c-bg-panel-0b1020);
 }
 
 .vd-val {
@@ -2506,7 +2506,7 @@ body.is-resizing .coach-explain-grip {
   font-size: 11.5px;
 }
 
-.viz-map-key { color: #a5d6a7; }
+.viz-map-key { color: var(--c-success-a5d6a7); }
 .viz-map-arrow { color: var(--text-dim); }
 .viz-map-val { color: var(--text); }
 
@@ -2602,7 +2602,7 @@ body.is-resizing .coach-explain-grip {
   margin: 0;
   padding: 5px 7px;
   border-radius: 5px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.4;
@@ -2669,14 +2669,14 @@ body.is-resizing .coach-explain-grip {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 
 .free-hint-line {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .free-hints-toggle {
@@ -2686,7 +2686,7 @@ body.is-resizing .coach-explain-grip {
   border: 1px solid var(--border, #232c38);
   border-radius: 5px;
   background: none;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font: inherit;
   font-size: 11px;
   white-space: nowrap;
@@ -2694,13 +2694,13 @@ body.is-resizing .coach-explain-grip {
 }
 
 .free-hints-toggle:hover {
-  background: #1a222c;
-  color: #cdd9e5;
+  background: var(--c-bg-elevated-1a222c);
+  color: var(--c-text-cdd9e5);
 }
 
 .free-hints-toggle.on {
-  border-color: #2b3a4d;
-  color: #9ff0c0;
+  border-color: var(--c-border-2b3a4d);
+  color: var(--c-success-9ff0c0);
 }
 
 /* ── Pane switches ─────────────────────────────────────────
@@ -2717,7 +2717,7 @@ body.is-resizing .coach-explain-grip {
   padding: 3px;
   border: 1px solid var(--border, #232c38);
   border-radius: 7px;
-  background: rgba(13, 17, 23, 0.94);
+  background: var(--c-bg-ba-13-17-23-0_94);
   /* Faint until wanted: it sits over the terminal, and it is a control you
      reach for occasionally rather than read. */
   opacity: 0.45;
@@ -2734,7 +2734,7 @@ body.is-resizing .coach-explain-grip {
   border: 1px solid transparent;
   border-radius: 5px;
   background: none;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font: inherit;
   font-size: 10.5px;
   line-height: 1.4;
@@ -2743,15 +2743,15 @@ body.is-resizing .coach-explain-grip {
 }
 
 .ws-pane-btn:hover {
-  background: #1a222c;
-  color: #cdd9e5;
+  background: var(--c-bg-elevated-1a222c);
+  color: var(--c-text-cdd9e5);
 }
 
 /* On means the pane is showing. */
 .ws-pane-btn.on {
-  border-color: #2b3a4d;
-  background: #172029;
-  color: #9ff0c0;
+  border-color: var(--c-border-2b3a4d);
+  background: var(--c-bg-elevated-172029);
+  color: var(--c-success-9ff0c0);
 }
 
 /* The editor and the right column share a row; when one of them is gone the
@@ -2786,9 +2786,9 @@ body.is-resizing .coach-explain-grip {
   margin: 4px 0 14px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid #7ee2a8;
+  border-left: 3px solid var(--c-success-7ee2a8);
   border-radius: 6px;
-  background: #0c1015;
+  background: var(--c-bg-0c1015);
 }
 
 .study-worked-tag {
@@ -2797,7 +2797,7 @@ body.is-resizing .coach-explain-grip {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .study-worked-try,
@@ -2812,12 +2812,12 @@ body.is-resizing .coach-explain-grip {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.55;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 /* The one that pays for the other two. */
 .study-worked-insight p {
-  color: #9ff0c0;
+  color: var(--c-success-9ff0c0);
 }
 
 .study-worked-stages {
@@ -2833,7 +2833,7 @@ body.is-resizing .coach-explain-grip {
   margin: 0 0 5px;
   font-size: 12.5px;
   line-height: 1.55;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 .study-worked-code {
@@ -2841,11 +2841,11 @@ body.is-resizing .coach-explain-grip {
   padding: 7px 9px;
   border: 1px solid var(--border);
   border-radius: 5px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono);
   font-size: 11.5px;
   line-height: 1.5;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   /* Long lines scroll here rather than widening the whole panel. */
   overflow-x: auto;
   white-space: pre;
@@ -2862,11 +2862,11 @@ body.is-resizing .coach-explain-grip {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.5;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   white-space: pre;
   overflow-x: auto;
 }
@@ -3018,7 +3018,7 @@ body.is-resizing .coach-msg-grip {
   border: none;
   border-radius: 999px;
   background: var(--success);
-  color: #06231a;
+  color: var(--c-on-accent-06231a);
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.01em;
@@ -3037,13 +3037,13 @@ body.is-resizing .coach-msg-grip {
 
 @keyframes cur-nav-continue-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(61, 214, 140, 0.5);
+    box-shadow: 0 0 0 0 var(--c-success-ba-61-214-140-0_5);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(61, 214, 140, 0);
+    box-shadow: 0 0 0 8px var(--c-success-ba-61-214-140-0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(61, 214, 140, 0);
+    box-shadow: 0 0 0 0 var(--c-success-ba-61-214-140-0);
   }
 }
 
@@ -3169,7 +3169,7 @@ body.is-resizing .coach-msg-grip {
   width: min(360px, 90vw);
   max-height: 280px;
   overflow: auto;
-  background: #12151c;
+  background: var(--c-bg-panel-12151c);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(0,0,0,0.5);

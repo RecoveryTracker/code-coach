@@ -39,12 +39,12 @@
 }
 
 .lessons-item:hover {
-  background: #151b23;
+  background: var(--c-bg-elevated-151b23);
 }
 
 .lessons-item.on {
-  border-color: #2b3a4d;
-  background: #172029;
+  border-color: var(--c-border-2b3a4d);
+  background: var(--c-bg-elevated-172029);
 }
 
 .lessons-item-n {
@@ -53,11 +53,11 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   line-height: 1.5;
-  color: #5c6a7a;
+  color: var(--c-text-dim-5c6a7a);
 }
 
 .lessons-item.on .lessons-item-n {
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
 }
 
 .lessons-item-body {
@@ -69,14 +69,14 @@
 
 .lessons-item-name {
   font-size: 13px;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 /* The tell, not the summary: what makes you reach for this one. */
 .lessons-item-tell {
   font-size: 11px;
   line-height: 1.4;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* ── The lesson ───────────────────────────────────────── */
@@ -95,14 +95,14 @@
   margin: 0 0 6px;
   font-size: 22px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 
 .lessons-blurb {
   margin: 0;
   font-size: 14px;
   line-height: 1.65;
-  color: #b6c2cf;
+  color: var(--c-text-b6c2cf);
 }
 
 .lessons-block {
@@ -116,14 +116,14 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .lessons-block p {
   margin: 0 0 8px;
   font-size: 13.5px;
   line-height: 1.65;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 /* ── The worked lesson ────────────────────────────────── */
@@ -131,18 +131,18 @@
 .lessons-worked {
   padding: 16px 18px;
   border: 1px solid var(--border, #232c38);
-  border-left: 3px solid #7ee2a8;
+  border-left: 3px solid var(--c-success-7ee2a8);
   border-radius: 8px;
-  background: #0c1015;
+  background: var(--c-bg-0c1015);
 }
 
 .lessons-worked h3 {
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
 }
 
 .lessons-statement {
   margin-bottom: 16px !important;
-  color: #b6c2cf !important;
+  color: var(--c-text-b6c2cf) !important;
 }
 
 .lessons-note {
@@ -155,28 +155,28 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* The one the other two are there to set up. */
 .lessons-note.is-move p {
-  color: #9ff0c0;
+  color: var(--c-success-9ff0c0);
 }
 
 .lessons-reveal {
   margin-top: 6px;
   padding: 8px 14px;
-  border: 1px solid #2b3a4d;
+  border: 1px solid var(--c-border-2b3a4d);
   border-radius: 6px;
-  background: #141c25;
-  color: #9ff0c0;
+  background: var(--c-bg-elevated-141c25);
+  color: var(--c-success-9ff0c0);
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
 }
 
 .lessons-reveal:hover {
-  background: #18222d;
+  background: var(--c-bg-elevated-18222d);
 }
 
 .lessons-stages {
@@ -198,11 +198,11 @@
   padding: 9px 11px;
   border: 1px solid var(--border, #232c38);
   border-radius: 6px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12px;
   line-height: 1.55;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   /* Long lines scroll in place rather than stretching the column. */
   overflow-x: auto;
   white-space: pre;
@@ -219,7 +219,7 @@
   margin-bottom: 6px;
   font-size: 13.5px;
   line-height: 1.6;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 /* ── What to practise ─────────────────────────────────── */
@@ -235,7 +235,7 @@
   grid-template-columns: 62px minmax(0, 1fr);
   gap: 4px 10px;
   padding: 8px 0;
-  border-top: 1px solid #1b2430;
+  border-top: 1px solid var(--c-bg-elevated-1b2430);
 }
 
 .lessons-diff {
@@ -248,18 +248,18 @@
 }
 
 .lessons-diff.easy {
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
 }
 .lessons-diff.medium {
-  color: #ffb454;
+  color: var(--c-warning-ffb454);
 }
 .lessons-diff.hard {
-  color: #ff7b72;
+  color: var(--c-danger-ff7b72);
 }
 
 .lessons-prob-name {
   font-size: 13px;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 /* A button, because it navigates rather than links out; styled as a link
@@ -268,7 +268,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   font: inherit;
   font-size: 13px;
   text-align: left;
@@ -276,19 +276,19 @@
 }
 
 .lessons-prob-open:hover {
-  color: #b6d4ff;
+  color: var(--c-accent-b6d4ff);
   text-decoration: underline;
 }
 
 .lessons-prob-idea {
   font-size: 12px;
   line-height: 1.5;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .lessons-empty {
   padding: 40px;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* One column on a narrow window: the list becomes a strip along the top
@@ -444,7 +444,7 @@
   padding: 0 9px;
   font-size: 15px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 
 .lessons-intro {
@@ -452,7 +452,7 @@
   padding: 0 9px;
   font-size: 11.5px;
   line-height: 1.55;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .lessons-pick {
@@ -470,23 +470,23 @@
 }
 
 .lessons-pick:hover {
-  background: #151b23;
+  background: var(--c-bg-elevated-151b23);
 }
 
 .lessons-pick.on {
-  border-color: #2b3a4d;
-  background: #172029;
+  border-color: var(--c-border-2b3a4d);
+  background: var(--c-bg-elevated-172029);
 }
 
 .lessons-pick-name {
   font-size: 13px;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 .lessons-pick-blurb {
   font-size: 11px;
   line-height: 1.4;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* The reading column. The padding is the fix the screen was missing: the
@@ -506,7 +506,7 @@
   margin: 0 0 6px;
   font-size: 22px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 
 /* A measure, not the full width. A 1400px line of prose is hard to track back
@@ -527,12 +527,12 @@
 .wb-example {
   margin: 10px 0 0;
   padding: 10px 12px;
-  border-left: 2px solid #2b3a4d;
-  background: #141a21;
+  border-left: 2px solid var(--c-border-2b3a4d);
+  background: var(--c-bg-panel-141a21);
   border-radius: 0 6px 6px 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #b6c2cf;
+  color: var(--c-text-b6c2cf);
 }
 
 /* One dot per exercise, so how far through you are is a glance rather than a
@@ -548,30 +548,30 @@
 .wb-dot {
   width: 26px;
   height: 26px;
-  border: 1px solid #2a3340;
+  border: 1px solid var(--c-border-2a3340);
   border-radius: 6px;
-  background: #131920;
-  color: #6e7b8b;
+  background: var(--c-bg-panel-131920);
+  color: var(--c-text-dim-6e7b8b);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
 }
 
 .wb-dot.done {
-  border-color: #2f6f47;
-  background: #16281d;
-  color: #7ee2a8;
+  border-color: var(--c-success-soft-2f6f47);
+  background: var(--c-success-soft-16281d);
+  color: var(--c-success-7ee2a8);
 }
 
 .wb-dot.on {
-  border-color: #4a9eff;
-  color: #cdd9e5;
+  border-color: var(--c-accent-strong-4a9eff);
+  color: var(--c-text-cdd9e5);
 }
 
 .wb-count {
   margin-left: 8px;
   font-size: 11px;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font-variant-numeric: tabular-nums;
 }
 
@@ -579,7 +579,7 @@
   margin: 0 0 12px;
   font-size: 17px;
   line-height: 1.5;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 
 .wb-code {
@@ -590,10 +590,10 @@
      scrolls while you are still typing into it. */
   min-height: 12rem;
   padding: 12px 14px;
-  border: 1px solid #2a3340;
+  border: 1px solid var(--c-border-2a3340);
   border-radius: 8px;
-  background: #0d1117;
-  color: #cdd9e5;
+  background: var(--c-bg-0d1117);
+  color: var(--c-text-cdd9e5);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 14px;
   line-height: 1.6;
@@ -604,15 +604,15 @@
 
 .wb-code:focus {
   outline: none;
-  border-color: #4a9eff;
+  border-color: var(--c-accent-strong-4a9eff);
 }
 
 .wb-code.ok {
-  border-color: #2f6f47;
+  border-color: var(--c-success-soft-2f6f47);
 }
 
 .wb-code.bad {
-  border-color: #7a3b3b;
+  border-color: var(--c-danger-soft-7a3b3b);
 }
 
 .wb-actions {
@@ -633,7 +633,7 @@
 
 .wb-chord {
   font-size: 11px;
-  color: #5c6a7a;
+  color: var(--c-text-dim-5c6a7a);
 }
 
 /* What it has to print, shown before you start rather than only after you get
@@ -641,11 +641,11 @@
 .wb-wanted {
   margin: 14px 0 0;
   font-size: 12.5px;
-  color: #8b97a5;
+  color: var(--c-text-muted-8b97a5);
 }
 
 .wb-wanted code {
-  color: #9fb4ff;
+  color: var(--c-accent-9fb4ff);
 }
 
 .wb-verdict {
@@ -658,15 +658,15 @@
 }
 
 .wb-verdict.ok {
-  border-color: #2f6f47;
-  background: #121d16;
-  color: #a8e6c0;
+  border-color: var(--c-success-soft-2f6f47);
+  background: var(--c-success-soft-121d16);
+  color: var(--c-success-a8e6c0);
 }
 
 .wb-verdict.bad {
-  border-color: #6b3a3a;
-  background: #1c1416;
-  color: #e6b6b6;
+  border-color: var(--c-danger-soft-6b3a3a);
+  background: var(--c-danger-soft-1c1416);
+  color: var(--c-danger-e6b6b6);
 }
 
 /* Side by side, because "wrong" tells you nothing and the two columns tell
@@ -685,7 +685,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .wb-diff pre,
@@ -694,8 +694,8 @@
   margin: 0;
   padding: 9px 11px;
   border-radius: 6px;
-  background: #0d1117;
-  color: #cdd9e5;
+  background: var(--c-bg-0d1117);
+  color: var(--c-text-cdd9e5);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12.5px;
   line-height: 1.55;
@@ -705,7 +705,7 @@
 
 .wb-stderr {
   margin-top: 8px;
-  color: #e6b6b6;
+  color: var(--c-danger-e6b6b6);
 }
 
 .wb-answer {
@@ -720,18 +720,18 @@
 .wb-cost {
   margin: 16px 0 0;
   padding: 10px 12px;
-  border-left: 2px solid #3d5a3f;
-  background: #131a15;
+  border-left: 2px solid var(--c-border-strong-3d5a3f);
+  background: var(--c-bg-panel-131a15);
   border-radius: 0 6px 6px 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #b0c2b4;
+  color: var(--c-text-b0c2b4);
 }
 
 /* Holds the step-through panel, which brings its own layout. */
 .wb-viz {
   margin: 16px 0 0;
-  border: 1px solid #2b3a4d;
+  border: 1px solid var(--c-border-2b3a4d);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -743,15 +743,15 @@
 .wb-walkthrough {
   margin: 16px 0 0;
   padding: 12px 14px;
-  border: 1px solid #2b3a4d;
+  border: 1px solid var(--c-border-2b3a4d);
   border-radius: 8px;
-  background: #10161d;
+  background: var(--c-bg-panel-10161d);
 }
 
 .wb-walkthrough-summary {
   margin: 0 0 10px;
   font-size: 13px;
-  color: #c9d6e2;
+  color: var(--c-text-c9d6e2);
 }
 
 .wb-walkthrough-lines {
@@ -765,12 +765,12 @@
 .wb-walkthrough-lines li {
   font-size: 12.5px;
   line-height: 1.6;
-  color: #9fb0c0;
+  color: var(--c-text-muted-9fb0c0);
 }
 
 .wb-walkthrough-lines code {
   display: block;
-  color: #cfe3f5;
+  color: var(--c-text-cfe3f5);
   font-family: var(--mono, ui-monospace, monospace);
 }
 
@@ -778,20 +778,20 @@
   margin: 10px 0 0;
   font-size: 12.5px;
   line-height: 1.6;
-  color: #9fd39a;
+  color: var(--c-success-9fd39a);
 }
 
 .wb-walkthrough-error {
   margin: 10px 0 0;
   font-size: 12.5px;
-  color: #e6a1a1;
+  color: var(--c-danger-e6a1a1);
 }
 
 /* Says why there is already code in the box on an exercise you have done. */
 .wb-restored {
   margin: 12px 0 0;
   font-size: 12.5px;
-  color: #7d8f9e;
+  color: var(--c-text-muted-7d8f9e);
 }
 
 /* ── The workbook's sections ──────────────────────────────
@@ -813,14 +813,14 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #7ee2a8;
+  color: var(--c-success-7ee2a8);
 }
 
 .wb-section-count {
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
-  color: #5c6a7a;
+  color: var(--c-text-dim-5c6a7a);
 }
 
 .wb-section-blurb {
@@ -828,7 +828,7 @@
   padding: 0 9px;
   font-size: 11px;
   line-height: 1.45;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* ── Katas ───────────────────────────────────────────────────
@@ -843,7 +843,7 @@
 
 .kata-signature {
   font-family: var(--mono, ui-monospace, monospace);
-  color: #9ecbff;
+  color: var(--c-accent-9ecbff);
 }
 
 .kata-result {
@@ -867,7 +867,7 @@
   padding: 7px 10px;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: #0d1117;
+  background: var(--c-bg-0d1117);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12.5px;
   line-height: 1.5;
@@ -876,14 +876,14 @@
 /* A pass is present but quiet: you are counting them, not reading them.
    A failure is the thing on the screen worth looking at. */
 .kata-case.ok {
-  color: #7d8894;
-  border-color: #1c2430;
+  color: var(--c-text-muted-7d8894);
+  border-color: var(--c-bg-elevated-1c2430);
 }
 
 .kata-case.bad {
-  color: #e6b6b6;
-  border-color: #6b3a3a;
-  background: #1c1416;
+  color: var(--c-danger-e6b6b6);
+  border-color: var(--c-danger-soft-6b3a3a);
+  background: var(--c-danger-soft-1c1416);
 }
 
 .kata-case code {
@@ -892,7 +892,7 @@
 }
 
 .kata-case.bad code {
-  color: #f0d0d0;
+  color: var(--c-text-f0d0d0);
 }
 
 .kata-case-got {
@@ -914,9 +914,9 @@
   margin: 12px 0 0;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #2f6f47;
-  background: #121d16;
-  color: #a8e6c0;
+  border: 1px solid var(--c-success-soft-2f6f47);
+  background: var(--c-success-soft-121d16);
+  color: var(--c-success-a8e6c0);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -935,9 +935,9 @@
   margin: 12px 0 0;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid #2a3b52;
-  background: #0d1117;
-  color: #cdd9e5;
+  border: 1px solid var(--c-border-strong-2a3b52);
+  background: var(--c-bg-0d1117);
+  color: var(--c-text-cdd9e5);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 13px;
   line-height: 1.65;
@@ -982,12 +982,12 @@
   margin-left: 10px;
   font-size: 11px;
   letter-spacing: 2px;
-  color: #6aa1d8;
+  color: var(--c-accent-strong-6aa1d8);
   vertical-align: middle;
 }
 
 .kata-level-rest {
-  color: #2a3b52;
+  color: var(--c-border-strong-2a3b52);
 }
 
 /* Which language the open snippet is in. Worth saying plainly: reading
@@ -997,9 +997,9 @@
   margin-left: 10px;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid #2a3b52;
-  background: #0d1117;
-  color: #9ecbff;
+  border: 1px solid var(--c-border-strong-2a3b52);
+  background: var(--c-bg-0d1117);
+  color: var(--c-accent-9ecbff);
   font-size: 11px;
   font-weight: 500;
   vertical-align: middle;

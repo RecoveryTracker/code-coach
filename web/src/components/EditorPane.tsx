@@ -1,5 +1,7 @@
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
+
+import { defineEditorThemes, editorThemeFor, useSkin } from "../skins";
 
 type Props = {
   /** Intentional buffer content (day load / reset). Not updated on each keystroke. */
@@ -175,6 +177,12 @@ export function EditorPane({
     editor.focus();
   };
 
+  // The editor has its own theme system, separate from the page's CSS,
+  // so it has to be told about the skin. Themes are registered before
+  // mount so the first paint is already the right one.
+  const skin = useSkin();
+  const beforeMount: BeforeMount = (monaco) => defineEditorThemes(monaco);
+
   return (
     <section className="iae-pane">
       <div className="iae-pane-header">
@@ -188,8 +196,9 @@ export function EditorPane({
           height="100%"
           language={language}
           defaultLanguage="python"
-          theme="vs-dark"
+          theme={editorThemeFor(skin)}
           defaultValue={code}
+          beforeMount={beforeMount}
           onMount={handleMount}
           onChange={(v) => onChangeRef.current(v ?? "")}
           options={EDITOR_OPTIONS}

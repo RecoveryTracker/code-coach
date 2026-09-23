@@ -28,13 +28,13 @@
 }
 
 .css-choice.ok {
-  border-color: #2f9e57;
-  color: #2f9e57;
+  border-color: var(--c-success-2f9e57);
+  color: var(--c-success-2f9e57);
 }
 
 .css-choice.bad {
-  border-color: #c4443a;
-  color: #c4443a;
+  border-color: var(--c-danger-c4443a);
+  color: var(--c-danger-c4443a);
 }
 
 /* Disabled after answering, but the right one still has to read as the
@@ -283,9 +283,9 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: #ff8b7a;
-  background: #1a1113;
-  border: 1px solid #4a2a2a;
+  color: var(--c-danger-ff8b7a);
+  background: var(--c-danger-soft-1a1113);
+  border: 1px solid var(--c-border-4a2a2a);
   border-radius: 6px;
   padding: 10px 12px;
   white-space: pre-wrap;
@@ -330,17 +330,17 @@
   border-color: var(--accent, #6ea8fe);
   border-left-width: 4px;
   background: color-mix(in srgb, var(--accent, #6ea8fe) 26%, var(--bg-elevated, #131a24));
-  color: #fff;
+  color: var(--c-text-strong-fff);
 }
 
 .err-line.ok {
-  border-color: #2f9e57;
-  background: rgb(47 158 87 / 0.12);
+  border-color: var(--c-success-2f9e57);
+  background: var(--c-success-b-47-158-87-0_12);
 }
 
 .err-line.bad {
-  border-color: #c4443a;
-  background: rgb(196 68 58 / 0.12);
+  border-color: var(--c-danger-c4443a);
+  background: var(--c-danger-b-196-68-58-0_12);
 }
 
 /* Answered lines stay legible: dimming the one you are meant to be
@@ -381,11 +381,11 @@
 }
 
 .err-halves .ok {
-  color: #2f9e57;
+  color: var(--c-success-2f9e57);
 }
 
 .err-halves .bad {
-  color: #c4443a;
+  color: var(--c-danger-c4443a);
 }
 
 /* ── Trace ── */
@@ -402,7 +402,7 @@
    different job from the one being practised. */
 .trace-line.here {
   border-color: var(--accent, #6ea8fe);
-  background: rgb(110 168 254 / 0.10);
+  background: var(--c-accent-b-110-168-254-0_10);
 }
 
 .trace-marker {
@@ -477,7 +477,7 @@
 /* The one you would do next, so the eye lands on it without reading. */
 .session-item.next {
   border-color: var(--accent, #6ea8fe);
-  background: rgb(110 168 254 / 0.08);
+  background: var(--c-accent-b-110-168-254-0_08);
 }
 
 .session-item.seen {
@@ -546,14 +546,14 @@
   text-align: left;
   padding: 6px 10px;
   border: none;
-  background: rgb(255 255 255 / 0.03);
+  background: var(--c-overlay-b-255-255-255-0_03);
   color: inherit;
   cursor: pointer;
   font-size: 12px;
 }
 
 .magnet-stage.on .magnet-stage-head {
-  background: rgb(110 168 254 / 0.12);
+  background: var(--c-accent-b-110-168-254-0_12);
 }
 
 /* Sentence case and a normal weight: a subgoal label is a description of
@@ -575,7 +575,7 @@
 
 .magnet-stage .magnet-program li {
   border-color: transparent;
-  background: rgb(255 255 255 / 0.02);
+  background: var(--c-overlay-b-255-255-255-0_02);
 }
 
 /* The code lines are the answer control, but a transparent border made
@@ -584,11 +584,11 @@
    hover then reads as a response rather than the first sign of it. */
 .err-line:not(:disabled) {
   border-color: var(--line, #2a3442);
-  background: rgb(255 255 255 / 0.02);
+  background: var(--c-overlay-b-255-255-255-0_02);
 }
 .err-line:hover:not(:disabled) {
   border-color: var(--accent, #6ea8fe);
-  background: rgb(110 168 254 / 0.08);
+  background: var(--c-accent-b-110-168-254-0_08);
 }
 
 /* The "Click the line" nudge next to the question, quiet enough not to
@@ -612,6 +612,6 @@
   border-color: var(--accent, #6ea8fe);
   border-left-width: 4px;
   background: color-mix(in srgb, var(--accent, #6ea8fe) 30%, var(--bg-elevated, #131a24));
-  color: #fff;
+  color: var(--c-text-strong-fff);
   font-weight: 600;
 }

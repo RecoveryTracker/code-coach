@@ -1,0 +1,318 @@
+/* Skins: the same app in a different palette.
+
+   Original is not in this file on purpose. With no data-skin attribute
+   every colour resolves to the value it always had - skin-tokens.css
+   defaults each token to the literal it replaced, and that equivalence
+   is checked by putting every token back and diffing against git. So
+   Original cannot drift because somebody tuned a skin.
+
+   Role colours are set on [data-skin="..."] rather than only on the
+   root, so the picker can draw a swatch of any skin just by putting the
+   attribute on a small element - the swatch is the real palette, not a
+   copy of it.
+
+   A skin sets about twenty role colours (--r-*). Everything else is
+   routed to those roles in skin-tokens.css, which is why a new skin is
+   twenty lines rather than a hundred and forty-six.
+
+   What does not change with the skin, deliberately:
+   - the finger colours on the keyboard, which are a code for which
+     finger moves rather than decoration;
+   - the white page behind the HTML & CSS previews, which is showing
+     what a browser draws and would be lying on any other colour;
+   - the three window-control dots. */
+
+/* ── Shared routing: the old palette tokens, from roles ──────── */
+
+:root[data-skin] {
+  --bg: var(--r-bg);
+  --bg-panel: var(--r-bg-panel);
+  --bg-elevated: var(--r-bg-elevated);
+  --border: var(--r-border);
+  --border-strong: var(--r-border-strong);
+  --line: var(--r-border);
+  --text: var(--r-text);
+  --text-muted: var(--r-text-muted);
+  --text-dim: var(--r-text-dim);
+  --accent: var(--r-accent);
+  --accent-soft: color-mix(in srgb, var(--r-accent) 14%, transparent);
+  --success: var(--r-success);
+  --success-soft: color-mix(in srgb, var(--r-success) 14%, transparent);
+  --danger: var(--r-danger);
+  --danger-soft: color-mix(in srgb, var(--r-danger) 14%, transparent);
+}
+
+/* ── Original, for the picker's swatch only ─────────────────────
+   The page never carries data-skin="original" - choosing Original
+   removes the attribute, which is what keeps Original exact. These are
+   here so the swatch in the picker can be drawn from the same kind of
+   rule as every other skin's, rather than from a list of hex codes in
+   the component that would drift from what the app really shows. */
+
+[data-skin="original"] {
+  --r-bg: #0f1115;
+  --r-bg-panel: #151820;
+  --r-bg-elevated: #1b1f2a;
+  --r-border: #2a3040;
+  --r-text: #e8eaef;
+  --r-text-muted: #9aa3b5;
+  --r-accent: #6ea8fe;
+  --r-accent-strong: #2f6feb;
+  --r-success: #3dd68c;
+  --r-danger: #ff7b72;
+  --r-warning: #ffb454;
+}
+
+/* ── Dark: deeper than Original, neutral rather than blue-grey ── */
+
+[data-skin="dark"] {
+  color-scheme: dark;
+  --r-bg-sunken: #000000;
+  --r-bg: #0a0a0b;
+  --r-bg-panel: #111113;
+  --r-bg-elevated: #1a1a1d;
+  --r-border: #27272c;
+  --r-border-strong: #3b3b43;
+  --r-text-dim: #75757f;
+  --r-text-muted: #a4a4ad;
+  --r-text: #ececef;
+  --r-text-strong: #ffffff;
+  --r-accent: #86b4ff;
+  --r-accent-strong: #2563eb;
+  --r-accent-soft: #15243f;
+  --r-on-accent: #06101f;
+  --r-on-strong: #ffffff;
+  --r-success: #4ade80;
+  --r-success-soft: #0f2a1a;
+  --r-danger: #ff6b6b;
+  --r-danger-soft: #2e1111;
+  --r-warning: #fbbf24;
+  --r-warning-soft: #2e2208;
+}
+
+/* ── Light: the conventional daytime look ───────────────────── */
+
+[data-skin="light"] {
+  color-scheme: light;
+  --r-bg-sunken: #eef1f5;
+  --r-bg: #f7f8fa;
+  --r-bg-panel: #ffffff;
+  --r-bg-elevated: #eef2f7;
+  --r-border: #d8dee6;
+  --r-border-strong: #b6c0cc;
+  --r-text-dim: #6f7a89;
+  --r-text-muted: #4d5866;
+  --r-text: #1c2530;
+  --r-text-strong: #0a0f15;
+  --r-accent: #1560d4;
+  --r-accent-strong: #0f55c2;
+  --r-accent-soft: #dde9fb;
+  --r-on-accent: #ffffff;
+  --r-on-strong: #ffffff;
+  --r-success: #13803f;
+  --r-success-soft: #dcf2e4;
+  --r-danger: #c5302a;
+  --r-danger-soft: #fbe2df;
+  --r-warning: #955700;
+  --r-warning-soft: #fcefd6;
+}
+
+/* ── Northern Lights: a night sky with the aurora in it ──────── */
+
+[data-skin="aurora"] {
+  color-scheme: dark;
+  --r-bg-sunken: #030811;
+  --r-bg: #060d1a;
+  --r-bg-panel: #0a1526;
+  --r-bg-elevated: #0f1f36;
+  --r-border: #173050;
+  --r-border-strong: #23466c;
+  --r-text-dim: #6583a0;
+  --r-text-muted: #98b2ca;
+  --r-text: #dcebf5;
+  --r-text-strong: #ffffff;
+  --r-accent: #6cf2b8;
+  --r-accent-strong: #1fc98c;
+  --r-accent-soft: #0f3833;
+  --r-on-accent: #02140d;
+  --r-on-strong: #02140d;
+  --r-success: #c4f27a;
+  --r-success-soft: #1f3413;
+  --r-danger: #ff7aa8;
+  --r-danger-soft: #3a1426;
+  --r-warning: #ffd37a;
+  --r-warning-soft: #3a2f10;
+}
+
+/* The aurora itself: green and violet light low across the top of the
+   screen, behind the bar you navigate with. Kept to that strip, because
+   a glow behind the code would be a glow behind the thing you read. */
+:root[data-skin="aurora"] .mode-bar {
+  background:
+    radial-gradient(ellipse 60% 140% at 18% 0%, rgb(108 242 184 / 0.22), transparent 70%),
+    radial-gradient(ellipse 55% 140% at 62% 0%, rgb(160 120 255 / 0.2), transparent 70%),
+    radial-gradient(ellipse 45% 120% at 92% 0%, rgb(80 220 230 / 0.16), transparent 70%),
+    var(--r-bg-panel);
+}
+
+/* ── Arcade: bright primaries on a sky-blue day ──────────────── */
+
+[data-skin="arcade"] {
+  color-scheme: light;
+  --r-bg-sunken: #c9e3ff;
+  --r-bg: #d8ecff;
+  --r-bg-panel: #ffffff;
+  --r-bg-elevated: #fff3c4;
+  --r-border: #b3d3f0;
+  --r-border-strong: #e0853a;
+  --r-text-dim: #5f7089;
+  --r-text-muted: #3a4860;
+  --r-text: #141e36;
+  --r-text-strong: #000000;
+  --r-accent: #0a6fd6;
+  --r-accent-strong: #065cb5;
+  --r-accent-soft: #cfe5ff;
+  --r-on-accent: #ffffff;
+  --r-on-strong: #ffffff;
+  --r-success: #15803d;
+  --r-success-soft: #d6f5da;
+  --r-danger: #e0241e;
+  --r-danger-soft: #ffe0dd;
+  --r-warning: #8a6000;
+  --r-warning-soft: #fff0b8;
+}
+
+/* The loud part: a red bar across the top with white on it, and the
+   module you are in picked out in yellow. Red is kept to the bar
+   rather than made the accent, because the accent marks what you have
+   selected, and a red selection reads as a wrong answer. */
+:root[data-skin="arcade"] .mode-bar {
+  background: #e52521;
+  border-bottom-color: #b51a17;
+}
+:root[data-skin="arcade"] .mode-bar .ws-brand-inline {
+  color: #ffffff;
+}
+:root[data-skin="arcade"] .mode-bar .mode-btn,
+:root[data-skin="arcade"] .mode-bar .ws-btn {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.35);
+  color: #ffffff;
+}
+:root[data-skin="arcade"] .mode-bar .mode-btn.on,
+:root[data-skin="arcade"] .mode-bar .ws-btn.on {
+  background: #fbd000;
+  border-color: #fbd000;
+  color: #141e36;
+}
+
+/* The editor screen has no top bar - its module buttons ride in the
+   toolbar beside the lesson instructions, and painting that whole strip
+   red would put the instructions on red. So the buttons carry the
+   colour instead, which keeps Arcade recognisably Arcade on every
+   screen. Inside the red bar the rules above win, being more specific. */
+/* Progress and Free mode sit in the same row but are toggles rather
+   than modules, so they carry .row-btn instead of .mode-btn. Nothing
+   outside this skin targets that class, which is what keeps Original
+   untouched by adding it. */
+:root[data-skin="arcade"] .row-btn,
+:root[data-skin="arcade"] .mode-btn {
+  background: #e52521;
+  border-color: #b51a17;
+  color: #ffffff;
+}
+:root[data-skin="arcade"] .row-btn.primary,
+:root[data-skin="arcade"] .mode-btn.on {
+  background: #fbd000;
+  border-color: #d9a900;
+  color: #141e36;
+}
+
+/* ── The picker ──────────────────────────────────────────────
+   Written in the palette variables rather than fixed colours, so the
+   picker itself changes with the skin it is choosing - which is also
+   the quickest way to see that a skin reached everything. */
+
+.skin-pick-wrap {
+  position: relative;
+}
+.skin-pick-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.skin-pick-menu {
+  z-index: 60;
+  width: 22rem;
+  max-width: calc(100vw - 16px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  padding: 0.55rem;
+}
+.skin-pick-hint {
+  flex: none;
+  margin: 0 0 0.45rem;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.skin-pick-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.skin-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.skin-pick-row:hover {
+  background: var(--bg-elevated);
+}
+.skin-pick-row.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.skin-pick-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.skin-pick-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.skin-pick-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Five stripes: background, panel, accent, right, wrong. */
+.skin-swatch {
+  display: inline-flex;
+  flex: none;
+  width: 3.4rem;
+  height: 1.6rem;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+}
+.skin-swatch > span {
+  flex: 1;
+}
+.skin-swatch.small {
+  width: 1.7rem;
+  height: 0.85rem;
+  border-radius: 3px;
+}

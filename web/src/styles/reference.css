@@ -26,21 +26,21 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: none;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
 }
 
 .ref-mode:hover {
-  background: #151b23;
-  color: #cdd9e5;
+  background: var(--c-bg-elevated-151b23);
+  color: var(--c-text-cdd9e5);
 }
 
 .ref-mode.on {
-  border-color: #2b3a4d;
-  background: #172029;
-  color: #9ff0c0;
+  border-color: var(--c-border-2b3a4d);
+  background: var(--c-bg-elevated-172029);
+  color: var(--c-success-9ff0c0);
 }
 
 .ref-lang {
@@ -48,7 +48,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* ── The sheet ─────────────────────────────────────────── */
@@ -72,7 +72,7 @@
   padding: 12px 14px;
   border: 1px solid var(--border, #232c38);
   border-radius: 8px;
-  background: #0c1015;
+  background: var(--c-bg-0c1015);
 }
 
 .ref-card h3 {
@@ -81,14 +81,14 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #9ff0c0;
+  color: var(--c-success-9ff0c0);
 }
 
 .ref-card-blurb {
   margin: 0 0 10px;
   font-size: 11.5px;
   line-height: 1.45;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .ref-card dl {
@@ -100,7 +100,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   padding: 4px 0;
-  border-top: 1px solid #161d26;
+  border-top: 1px solid var(--c-bg-elevated-161d26);
 }
 
 .ref-row:first-child {
@@ -117,7 +117,7 @@
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12px;
   line-height: 1.5;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   /* Multi-line entries keep their shape; long ones scroll in place. */
   white-space: pre;
   overflow-x: auto;
@@ -127,7 +127,7 @@
   margin: 0;
   font-size: 11.5px;
   line-height: 1.45;
-  color: #7d8b9c;
+  color: var(--c-text-muted-7d8b9c);
 }
 
 /* ── Flashcards ────────────────────────────────────────── */
@@ -155,8 +155,8 @@
   padding: 5px 8px;
   border: 1px solid var(--border, #232c38);
   border-radius: 6px;
-  background: #0c1015;
-  color: #cdd9e5;
+  background: var(--c-bg-0c1015);
+  color: var(--c-text-cdd9e5);
   font: inherit;
   font-size: 12.5px;
 }
@@ -164,7 +164,7 @@
 .ref-score {
   margin-left: auto;
   font-size: 12px;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 .ref-card-face {
@@ -173,7 +173,7 @@
   padding: 26px 24px;
   border: 1px solid var(--border, #232c38);
   border-radius: 10px;
-  background: #0c1015;
+  background: var(--c-bg-0c1015);
   text-align: center;
 }
 
@@ -183,7 +183,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 /* The prompt is the note, because that is the direction you need it in:
@@ -192,7 +192,7 @@
   margin: 0 0 22px;
   font-size: 17px;
   line-height: 1.5;
-  color: #e6edf3;
+  color: var(--c-text-e6edf3);
 }
 
 .ref-answer {
@@ -200,11 +200,11 @@
   padding: 12px 14px;
   border: 1px solid var(--border, #232c38);
   border-radius: 7px;
-  background: #0a0c10;
+  background: var(--c-bg-sunken-0a0c10);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 13.5px;
   line-height: 1.55;
-  color: #8bbbff;
+  color: var(--c-accent-8bbbff);
   text-align: left;
   white-space: pre;
   overflow-x: auto;
@@ -214,10 +214,10 @@
 .ref-card-actions button,
 .ref-done button {
   padding: 9px 18px;
-  border: 1px solid #2b3a4d;
+  border: 1px solid var(--c-border-2b3a4d);
   border-radius: 7px;
-  background: #141c25;
-  color: #cdd9e5;
+  background: var(--c-bg-elevated-141c25);
+  color: var(--c-text-cdd9e5);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -226,7 +226,7 @@
 .ref-show:hover,
 .ref-card-actions button:hover,
 .ref-done button:hover {
-  background: #18222d;
+  background: var(--c-bg-elevated-18222d);
 }
 
 .ref-card-actions {
@@ -237,19 +237,19 @@
 
 .ref-card-actions .primary,
 .ref-done .primary {
-  border-color: #2f5a41;
-  color: #9ff0c0;
+  border-color: var(--c-border-strong-2f5a41);
+  color: var(--c-success-9ff0c0);
 }
 
 .ref-done {
   padding: 40px 20px;
   text-align: center;
-  color: #cdd9e5;
+  color: var(--c-text-cdd9e5);
 }
 
 .ref-empty {
   padding: 40px;
-  color: #6e7b8b;
+  color: var(--c-text-dim-6e7b8b);
 }
 
 @media (max-width: 700px) {

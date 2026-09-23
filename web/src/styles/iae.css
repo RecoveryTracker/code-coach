@@ -146,14 +146,14 @@ select {
   padding: 12px;
   border-radius: var(--radius);
   background: var(--accent-soft);
-  border: 1px solid rgba(110, 168, 254, 0.28);
+  border: 1px solid var(--c-accent-ba-110-168-254-0_28);
   font-size: 14px;
   line-height: 1.4;
 }
 
 .do-now-card.done {
   background: var(--success-soft);
-  border-color: rgba(61, 214, 140, 0.3);
+  border-color: var(--c-success-ba-61-214-140-0_3);
 }
 
 .do-now-card strong {
@@ -220,7 +220,7 @@ select {
 
 .coach-focus-card.kind-goal {
   background: var(--accent-soft);
-  border-color: rgba(110, 168, 254, 0.3);
+  border-color: var(--c-accent-ba-110-168-254-0_3);
   border-left-color: var(--accent);
 }
 
@@ -352,7 +352,7 @@ select {
 
 .pc-mode.active {
   background: var(--accent-soft);
-  border-color: rgba(110, 168, 254, 0.35);
+  border-color: var(--c-accent-ba-110-168-254-0_35);
   color: var(--accent);
   font-weight: 600;
 }
@@ -455,7 +455,7 @@ select {
 }
 
 .iae-btn:hover:not(:disabled) {
-  background: #232836;
+  background: var(--c-border-232836);
   border-color: var(--border-strong);
 }
 
@@ -467,12 +467,12 @@ select {
 .iae-btn-primary {
   background: var(--accent);
   border-color: transparent;
-  color: #0b1020;
+  color: var(--c-on-accent-0b1020);
   font-weight: 600;
 }
 
 .iae-btn-primary:hover:not(:disabled) {
-  background: #8bbbff;
+  background: var(--c-accent-8bbbff);
   border-color: transparent;
 }
 
@@ -636,7 +636,7 @@ body.is-resizing .monaco-editor {
 .waypoint-item.current {
   color: var(--text);
   background: var(--accent-soft);
-  outline: 1px solid rgba(110, 168, 254, 0.25);
+  outline: 1px solid var(--c-accent-ba-110-168-254-0_25);
 }
 
 .waypoint-mark {
@@ -777,7 +777,7 @@ body.is-resizing .monaco-editor {
 
 .coach-log-entry.kind-goal.latest {
   background: var(--accent-soft);
-  border-color: rgba(110, 168, 254, 0.28);
+  border-color: var(--c-accent-ba-110-168-254-0_28);
 }
 
 .coach-log-entry.kind-done {
