@@ -208,6 +208,23 @@ class DrillTests(unittest.TestCase):
             self.assertEqual(entry["has_words"], bool(theme.words))
             self.assertEqual(entry["has_passages"], bool(theme.passages))
 
+    def test_each_languages_code_sits_right_under_its_lore(self) -> None:
+        """Asked for directly: JavaScript Lore next to JavaScript Code, not
+        thirty rows apart. A new code theme has to be given a place in
+        BESIDE_LORE, or it would quietly land back in a block of its own."""
+        from code_coach.typing.drills import BESIDE_LORE
+
+        ids = [t.id for t in THEMES]
+        placed = {code for codes in BESIDE_LORE.values() for code in codes}
+        for theme in THEMES:
+            if theme.id.endswith("code") and theme.language:
+                with self.subTest(theme=theme.id):
+                    self.assertIn(theme.id, placed)
+        for lore, codes in BESIDE_LORE.items():
+            with self.subTest(lore=lore):
+                at = ids.index(lore)
+                self.assertEqual(ids[at + 1:at + 1 + len(codes)], list(codes))
+
     def test_mixed_is_the_default_and_brings_no_content_of_its_own(self) -> None:
         self.assertEqual(THEMES[0].id, "mixed")
         self.assertFalse(THEMES[0].passages)

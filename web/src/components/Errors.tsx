@@ -202,7 +202,7 @@ export default function Errors() {
           <h3>
             {item.name}
             <span className="predict-lang">
-              {item.language === "javascript" ? "JavaScript" : "Python"}
+              {({ javascript: "JavaScript", python: "Python", dart: "Dart" } as Record<string, string>)[item.language] ?? item.language}
             </span>
           </h3>
         </header>

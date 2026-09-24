@@ -27,6 +27,7 @@ nothing except that the author had not run it. It is not in the file.
 from __future__ import annotations
 
 from code_coach.kata.predict_js import JS_PUZZLES
+from code_coach.kata.predict_dart import DART_PUZZLES
 from code_coach.kata.predict_js2 import JS_PUZZLES_2
 from code_coach.kata.puzzle import Puzzle, _p
 
@@ -553,7 +554,7 @@ FLOW: tuple[Puzzle, ...] = (
 
 PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
-    + JS_PUZZLES_2
+    + JS_PUZZLES_2 + DART_PUZZLES
 )
 
 

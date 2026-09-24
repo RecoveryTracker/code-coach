@@ -386,3 +386,13 @@ int partTwo(String commands) {
 """,
     ),
 }
+
+
+def _merge() -> None:
+    # The later puzzles keep their Dart answers beside them in dart2.py.
+    from code_coach.puzzles.dart2 import DART_2
+
+    DART.update(DART_2)
+
+
+_merge()

@@ -266,9 +266,10 @@ def _all() -> tuple[Hunt, ...]:
     from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
     from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
     from code_coach.bughunt.content3 import DART_HUNTS
+    from code_coach.bughunt.content4 import DART_HUNTS_2
 
     return (PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS
-            + JAVASCRIPT_HUNTS_2 + DART_HUNTS)
+            + JAVASCRIPT_HUNTS_2 + DART_HUNTS + DART_HUNTS_2)
 
 
 def hunt(hunt_id: str) -> Hunt | None:

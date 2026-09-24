@@ -197,7 +197,7 @@ export default function TraceValue() {
           <h3>
             {moment.name}
             <span className="predict-lang">
-              {moment.language === "javascript" ? "JavaScript" : "Python"}
+              {({ javascript: "JavaScript", python: "Python", dart: "Dart" } as Record<string, string>)[moment.language] ?? moment.language}
             </span>
           </h3>
         </header>

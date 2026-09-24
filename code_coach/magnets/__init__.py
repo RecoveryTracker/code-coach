@@ -131,8 +131,9 @@ def _m(**kw) -> Magnet:
 def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     """Every puzzle, or one family's, easiest first within the family."""
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
+    from code_coach.magnets.content_dart import DART_MAGNETS
 
-    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC)
+    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *DART_MAGNETS)
     if family is not None:
         everything = tuple(m for m in everything if m.family == family)
     return tuple(sorted(everything, key=lambda m: m.level))
@@ -140,9 +141,10 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
 
 def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
+    from code_coach.magnets.content_dart import DART_MAGNETS
 
     seen: list[str] = []
-    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC):
+    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *DART_MAGNETS):
         if m.family not in seen:
             seen.append(m.family)
     return tuple(seen)

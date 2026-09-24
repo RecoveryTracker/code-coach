@@ -63,10 +63,15 @@ class ShapeTests(unittest.TestCase):
                 self.assertGreater(len(set(levels)), 1)
 
 
+from code_coach.engine import dart_available
+
+
 class TracerTests(unittest.TestCase):
     def test_the_tracer_says_exactly_this(self) -> None:
         """The one everything rests on."""
         for t in traces():
+            if t.language == "dart" and not dart_available():
+                continue  # Dart comes with Flutter; skipped, not failed
             with self.subTest(trace=t.id):
                 got = value_at(
                     t.code, t.at_line, t.occurrence, t.variable, t.language)
@@ -78,6 +83,8 @@ class TracerTests(unittest.TestCase):
         """A line that is never reached, or a loop that does not go
         round that many times, is a question with no answer."""
         for t in traces():
+            if t.language == "dart" and not dart_available():
+                continue  # Dart comes with Flutter; skipped, not failed
             with self.subTest(trace=t.id):
                 got = value_at(
                     t.code, t.at_line, t.occurrence, t.variable, t.language)

@@ -100,18 +100,26 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
         return "", 0
 
     message, line = "", 0
+    previous = ""
     for raw in err.splitlines():
         text = raw.strip()
         if not text:
             continue
+        # Dart prints "Unhandled exception:" on a line of its own and the
+        # message on the next, and its messages need not say Error at all.
+        if not message and previous == "Unhandled exception:":
+            message = text
+        previous = text
         # Node prints the offending file and line before the message,
         # then the message, then its own stack frames. Python prints the
         # frames first and the message last. Taking the first line that
         # names an error and is not a stack frame works for both.
         if not message and "Error" in text and not text.startswith("at "):
             message = text
-        if not line:
-            for suffix in (".js:", ".py\", line ", ".py:"):
+        # Dart's first frames can be the SDK's own - (dart:collection/...)
+        # - which are not a line of the program.
+        if not line and "(dart:" not in text:
+            for suffix in (".js:", ".py\", line ", ".py:", ".dart:"):
                 if suffix in text:
                     after = text.split(suffix, 1)[1]
                     digits = ""
@@ -129,8 +137,9 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
 def crashes(family: str | None = None) -> tuple[Crash, ...]:
     """Every one, or one family's, easiest first within the family."""
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
+    from code_coach.errors.content_dart import DART_CRASHES
 
-    everything = (*MISSING, *NAMES, *WRONG_KIND)
+    everything = (*MISSING, *NAMES, *WRONG_KIND, *DART_CRASHES)
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
     return tuple(sorted(everything, key=lambda c: c.level))
@@ -138,9 +147,10 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
 
 def crash_families() -> tuple[str, ...]:
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
+    from code_coach.errors.content_dart import DART_CRASHES
 
     seen: list[str] = []
-    for c in (*MISSING, *NAMES, *WRONG_KIND):
+    for c in (*MISSING, *NAMES, *WRONG_KIND, *DART_CRASHES):
         if c.family not in seen:
             seen.append(c.family)
     return tuple(seen)

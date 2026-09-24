@@ -195,8 +195,8 @@ export default function Predict() {
         <h2>Predict</h2>
         <p className="lessons-intro">
           Read it, say what it prints, then find out. Every one of these is
-          correct Python that does something most people get wrong first
-          time.
+          correct code - Python, JavaScript or Dart - that does something
+          most people get wrong first time.
         </p>
         {leastDone && leastDone.id !== chosen ? (
           <button
@@ -218,7 +218,7 @@ export default function Predict() {
             <h4 className="wb-section-head">
               {family.name}
               <span className="wb-section-count">
-                {family.language === "javascript" ? "JS" : "Py"} ·{" "}
+                {({ javascript: "JS", dart: "Dart", python: "Py" } as Record<string, string>)[family.language] ?? family.language} ·{" "}
                 {family.puzzles.length}
               </span>
             </h4>
@@ -246,7 +246,7 @@ export default function Predict() {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {language === "javascript" ? "JavaScript" : "Python"}
+              {({ javascript: "JavaScript", dart: "Dart", python: "Python" } as Record<string, string>)[language] ?? language}
             </span>
           </h3>
         </header>

@@ -272,7 +272,7 @@ export default function Magnets() {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {puzzle.language === "javascript" ? "JavaScript" : "Python"}
+              {({ javascript: "JavaScript", python: "Python", dart: "Dart" } as Record<string, string>)[puzzle.language] ?? puzzle.language}
             </span>
           </h3>
         </header>

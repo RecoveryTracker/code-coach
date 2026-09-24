@@ -633,6 +633,55 @@ THEMES: tuple[Theme, ...] = (
     ),
 )
 
+#: Each language's code themes, in the order they sit after its lore.
+#:
+#: The list above was written as two blocks - every language's lore, then
+#: every language's code - which put JavaScript Lore thirty rows away from
+#: JavaScript Code. Somebody learning a language wants both, and ticks
+#: them together, so they sit together: the lore first, then its code,
+#: then its close relatives (TypeScript after JavaScript, PostgreSQL
+#: after SQL, C++ after C, Rails after Ruby).
+BESIDE_LORE: dict[str, tuple[str, ...]] = {
+    "python": ("pycode",),
+    "javascript": ("jscode", "tscode"),
+    "dart": ("dartcode",),
+    "sql": ("sqlcode", "postgresqlcode"),
+    "clang": ("ccode", "cppcode"),
+    "rust": ("rustcode",),
+    "go": ("gocode",),
+    "java": ("javacode",),
+    "kotlin": ("kotlincode",),
+    "ruby": ("rubycode", "rails", "railscode"),
+    "php": ("phpcode",),
+    "lua": ("luacode",),
+    "haskell": ("haskellcode",),
+    "ocaml": ("ocamlcode",),
+    "scala": ("scalacode",),
+    "elixir": ("elixircode",),
+    "lisp": ("lispcode",),
+    "csharp": ("csharpcode",),
+    "swift": ("swiftcode",),
+    "zig": ("zigcode",),
+    "odin": ("odincode",),
+    "assembly": ("assemblycode",),
+}
+
+
+def _beside_their_lore(themes: tuple[Theme, ...]) -> tuple[Theme, ...]:
+    """The same themes, each language's code moved up to sit under its lore."""
+    by_id = {t.id: t for t in themes}
+    moved = {code for codes in BESIDE_LORE.values() for code in codes}
+    out: list[Theme] = []
+    for theme in themes:
+        if theme.id in moved:
+            continue
+        out.append(theme)
+        out.extend(by_id[code] for code in BESIDE_LORE.get(theme.id, ()))
+    return tuple(out)
+
+
+THEMES = _beside_their_lore(THEMES)
+
 THEMES_BY_ID = {t.id: t for t in THEMES}
 DEFAULT_THEME = THEMES[0]
 
