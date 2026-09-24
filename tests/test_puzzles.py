@@ -23,7 +23,14 @@ from code_coach.puzzles import (
     supports,
 )
 
-LANGUAGES = ("python", "javascript")
+from code_coach.engine import dart_available
+
+LANGUAGES = ("python", "javascript", "dart")
+#: The ones this machine can run. Dart comes with Flutter and is not
+#: everywhere; a machine without it skips the Dart runs rather than
+#: failing them, because a red suite for a missing optional toolchain
+#: trains people to ignore red.
+RUNNABLE = tuple(lang for lang in LANGUAGES if lang != "dart" or dart_available())
 
 
 class CollectionTests(unittest.TestCase):
@@ -89,7 +96,7 @@ class AnswerTests(unittest.TestCase):
     def test_each_answer_passes_its_part_in_both_languages(self) -> None:
         for p in puzzles():
             for n in (1, 2):
-                for language in LANGUAGES:
+                for language in RUNNABLE:
                     with self.subTest(puzzle=p.id, part=n, language=language):
                         outcome = run_part(p, n, answer_for(p, n, language), language)
                         self.assertEqual(outcome.broke, "")
@@ -102,7 +109,7 @@ class TheTwistTests(unittest.TestCase):
 
     def test_part_ones_answer_fails_part_two(self) -> None:
         for p in puzzles():
-            for language in LANGUAGES:
+            for language in RUNNABLE:
                 renamed = answer_for(p, 1, language).replace(
                     function_name(language, 1), function_name(language, 2))
                 with self.subTest(puzzle=p.id, language=language):
@@ -113,6 +120,48 @@ class TheTwistTests(unittest.TestCase):
                     self.assertFalse(
                         outcome.passed,
                         f"{p.id}: part one's answer already solves part two")
+
+
+class DartTests(unittest.TestCase):
+    """Dart is typed, so every puzzle needs its types written down, and
+    the driver has to turn JSON into them."""
+
+    def test_every_puzzle_has_dart_types_for_every_parameter(self) -> None:
+        from code_coach.puzzles import dart_signature
+
+        for p in puzzles():
+            for n in (1, 2):
+                with self.subTest(puzzle=p.id, part=n):
+                    types, returns = dart_signature(p, n)
+                    self.assertEqual(len(types), len(p.part(n).params))
+                    self.assertTrue(returns)
+                    self.assertIn(f"{returns} {function_name('dart', n)}(",
+                                  answer_for(p, n, "dart"))
+
+    @unittest.skipUnless(dart_available(), "needs dart (it comes with Flutter)")
+    def test_a_missing_function_is_named_not_counted_as_failures(self) -> None:
+        p = puzzles()[0]
+        outcome = run_part(p, 1, "int partUno(List<String> log) => 0;", "dart")
+        self.assertIn("no function called partOne", outcome.broke)
+
+    @unittest.skipUnless(dart_available(), "needs dart (it comes with Flutter)")
+    def test_an_empty_list_arrives_typed(self) -> None:
+        """[] decoded from JSON is a List<dynamic>; handed straight to a
+        List<String> parameter it is a type error before any student
+        code runs. Every puzzle has an empty-list case, so this is the
+        conversion the whole mode leans on."""
+        p = next(p for p in puzzles() if ([],) in p.one.cases)
+        outcome = run_part(p, 1, answer_for(p, 1, "dart"), "dart")
+        self.assertEqual(outcome.broke, "")
+        self.assertTrue(outcome.passed)
+
+    @unittest.skipUnless(dart_available(), "needs dart (it comes with Flutter)")
+    def test_a_compile_error_points_at_the_line_in_the_box(self) -> None:
+        """The driver adds an import; it goes on the student's first line
+        so Dart's line numbers still match what they typed."""
+        code = "int partOne(List<String> log) {\n  var n = 0;\n  return 'x';\n}"
+        outcome = run_part(puzzles()[0], 1, code, "dart")
+        self.assertIn("Line 3:", outcome.broke)
 
 
 class RouteTests(unittest.TestCase):

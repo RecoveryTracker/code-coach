@@ -9,7 +9,7 @@ tests the claim. The examples here are this project's own.
 Where the answers come from
 ---------------------------
 The engine. Your pattern is run by the real regex engine of the language
-you are learning - Python's re, or JavaScript's RegExp - never by a
+you are learning - Python's re, JavaScript's RegExp or Dart's RegExp - never by a
 translation of it, because the two differ in the corners and a pattern
 that works in one is not promised to work in the other.
 
@@ -109,14 +109,49 @@ console.log({marker} + JSON.stringify({{ results: out, groups }}));
 """
 
 
+#: Dart's RegExp, for Flutter learners. Dart's engine follows
+#: JavaScript's rules, but it is its own implementation, so a Dart
+#: learner is checked in Dart. The payload arrives base64-encoded: a
+#: pattern is arbitrary text, and pasting it into a Dart string literal
+#: would let a pattern containing quotes end the literal early.
+DART_DRIVER = """
+import 'dart:convert';
+
+void main() {
+  final data = jsonDecode(utf8.decode(base64.decode('__PAYLOAD__')))
+      as Map<String, dynamic>;
+  final source = data['pattern'] as String;
+  final RegExp pattern;
+  final int groups;
+  try {
+    pattern = RegExp(source);
+    groups = RegExp('(?:' + source + ')|').firstMatch('')!.groupCount;
+  } on FormatException catch (error) {
+    print('__MARKER__' + jsonEncode({'error': error.message}));
+    return;
+  }
+  final out = [];
+  for (final text in (data['strings'] as List).cast<String>()) {
+    final m = pattern.firstMatch(text);
+    final group = m != null && groups >= 1 ? m.group(1) : null;
+    out.add({'found': m != null, 'group': group});
+  }
+  print('__MARKER__' + jsonEncode({'results': out, 'groups': groups}));
+}
+"""
+
+
 def engine_for(language: str) -> str:
     """Which regex engine a language's learner is checked against.
 
-    JavaScript and TypeScript share RegExp. Everything else is checked
-    with Python's re, and the screen says so rather than pretending the
-    pattern was tried in, say, Rust's regex crate.
+    JavaScript and TypeScript share RegExp, Dart has its own RegExp.
+    Everything else is checked with Python's re, and the screen says so
+    rather than pretending the pattern was tried in, say, Rust's regex
+    crate.
     """
-    return "javascript" if language in ("javascript", "typescript") else "python"
+    if language in ("javascript", "typescript"):
+        return "javascript"
+    return "dart" if language == "dart" else "python"
 
 
 @dataclass(frozen=True)
@@ -140,6 +175,11 @@ def run_pattern(pattern: str, strings: list[str], engine: str) -> dict:
     payload = json.dumps({"pattern": pattern, "strings": list(strings)})
     if engine == "javascript":
         code = JS_DRIVER.format(payload=json.dumps(payload), marker=json.dumps(MARKER))
+    elif engine == "dart":
+        import base64
+
+        encoded = base64.b64encode(payload.encode("utf-8")).decode("ascii")
+        code = DART_DRIVER.replace("__PAYLOAD__", encoded).replace("__MARKER__", MARKER)
     else:
         code = PY_DRIVER.format(payload=payload, marker=MARKER)
     out, err, exit_code = run_code(code, language=engine)

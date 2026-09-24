@@ -150,6 +150,10 @@ class ReferenceTests(unittest.TestCase):
         time this ran.
         """
         for k in katas():
+            if k.language == "dart":
+                # Run in test_dart_katas, which skips them cleanly on a
+                # machine without Dart instead of failing here.
+                continue
             with self.subTest(kata=k.id):
                 out, err, code = run_code(
                     harness(k, _as_student(k)), language=k.language)
@@ -174,11 +178,10 @@ class ReferenceTests(unittest.TestCase):
         for k in katas():
             with self.subTest(kata=k.id):
                 shown = k.reference()
-                opener = (
-                    f"function {k.name}("
-                    if k.language == "javascript"
-                    else f"def {k.name}("
-                )
+                opener = {
+                    "javascript": f"function {k.name}(",
+                    "dart": f"{k.returns} {k.name}(",
+                }.get(k.language, f"def {k.name}(")
                 self.assertIn(opener, shown)
                 self.assertNotIn(f"def {k.solve.__name__}(", shown)
                 self.assertFalse(
@@ -360,8 +363,11 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(served, len(katas()))
         for family in payload["families"]:
             for entry in family["katas"]:
+                # Python and JavaScript open with a keyword; Dart opens
+                # with the return type, so it ends with the brace instead.
                 self.assertTrue(
-                    entry["signature"].startswith(("def ", "function ")))
+                    entry["signature"].startswith(("def ", "function "))
+                    or entry["signature"].endswith(") {"))
                 self.assertGreater(entry["cases"], 0)
 
     def test_the_answer_is_served_for_one_kata_at_a_time(self) -> None:
@@ -493,6 +499,7 @@ class BrokenExerciseTests(unittest.TestCase):
         allowed = {
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
+            "Fix the bug: Dart", "Change it: Dart",
         }
         for k in katas():
             if k.family in allowed:
@@ -508,6 +515,7 @@ class BrokenExerciseTests(unittest.TestCase):
         named = {
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
+            "Fix the bug: Dart", "Change it: Dart",
         }
         for k in katas():
             if k.start.strip():
@@ -819,6 +827,9 @@ class JavaScriptTests(unittest.TestCase):
                 if k.language == "javascript":
                     self.assertTrue(k.signature.startswith("function "))
                     self.assertTrue(k.signature.endswith("{"))
+                elif k.language == "dart":
+                    self.assertTrue(k.signature.startswith(f"{k.returns} {k.name}("))
+                    self.assertTrue(k.signature.endswith("{"))
                 else:
                     self.assertTrue(k.signature.startswith("def "))
 
@@ -906,9 +917,12 @@ class RouteLanguageTests(unittest.TestCase):
         without touching the route would otherwise fail silently in
         exactly the same way.
         """
+        from code_coach.engine import dart_available
         from code_coach.kata import languages
 
         for language in languages():
+            if language == "dart" and not dart_available():
+                continue
             with self.subTest(language=language):
                 first = next(
                     k for k in katas() if k.language == language)

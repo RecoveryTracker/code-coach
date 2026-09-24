@@ -89,6 +89,11 @@ class Hunt:
     #: Answers worked out by hand, as (arguments, answer). The only
     #: values here that did not come out of the code being checked.
     checks: tuple[tuple[tuple, Any], ...] = field(default_factory=tuple)
+    #: For a Dart hunt: each parameter's type and the return type, so the
+    #: driver can hand the function a List<String> rather than JSON's
+    #: List<dynamic>. See Kata.types.
+    types: tuple[str, ...] = ()
+    returns: str = ""
 
     @property
     def lines(self) -> tuple[str, ...]:
@@ -110,6 +115,9 @@ class Hunt:
 
     @property
     def signature(self) -> str:
+        if self.language == "dart":
+            typed = ", ".join(f"{k} {p}" for k, p in zip(self.types, self.params))
+            return f"{self.returns} {self.name}({typed})"
         return f"{self.name}({', '.join(self.params)})"
 
     def answer(self, args) -> Any:
@@ -187,6 +195,7 @@ def _as_kata(hunt: Hunt, cases: tuple[tuple, ...]):
     return Kata(
         id=hunt.id, name=hunt.name, brief="", params=hunt.params,
         cases=cases, solve=hunt.solve, language=hunt.language,
+        types=hunt.types, returns=hunt.returns,
     )
 
 
@@ -232,10 +241,7 @@ def try_input(hunt: Hunt, args: tuple) -> Attempt:
 
 def hunts(family: str | None = None) -> tuple[Hunt, ...]:
     """Every hunt, or one family's, easiest first."""
-    from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
-    from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
-
-    everything = PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS + JAVASCRIPT_HUNTS_2
+    everything = _all()
     if family is not None:
         everything = tuple(h for h in everything if h.family == family)
     return tuple(sorted(everything, key=lambda h: h.level))
@@ -248,14 +254,21 @@ def hunt_families() -> tuple[str, ...]:
     be whichever happened to hold the easiest hunt - the katas were
     bitten by exactly that.
     """
-    from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
-    from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
-
     seen: list[str] = []
-    for h in PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS + JAVASCRIPT_HUNTS_2:
+    for h in _all():
         if h.family not in seen:
             seen.append(h.family)
     return tuple(seen)
+
+
+def _all() -> tuple[Hunt, ...]:
+    """Every hunt in content order: Python, JavaScript, then Dart."""
+    from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
+    from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
+    from code_coach.bughunt.content3 import DART_HUNTS
+
+    return (PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS
+            + JAVASCRIPT_HUNTS_2 + DART_HUNTS)
 
 
 def hunt(hunt_id: str) -> Hunt | None:

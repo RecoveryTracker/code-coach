@@ -74,6 +74,16 @@ class Kata:
     #: through the same driver a student's code goes through, which is
     #: also what proves it agrees with the Python oracle.
     js_answer: str = ""
+    #: For Dart: one type per parameter, like "List<String>", and the
+    #: return type. Dart is typed, so the driver has to turn the JSON
+    #: inputs into those types - a List<dynamic> handed to a function
+    #: that takes List<String> is a type error before a line of the
+    #: student's code runs. Left empty, the arguments go in untyped.
+    types: tuple[str, ...] = ()
+    returns: str = ""
+    #: The worked answer in Dart, for a kata written in it. Checked the
+    #: same way as js_answer: run through the driver against the oracle.
+    dart_answer: str = ""
     #: How hard this one is, 1 to 5, and the order a family is read in.
     #:
     #: A judgement rather than anything derivable — there is no measure
@@ -152,6 +162,10 @@ class Kata:
         and the box had to be emptied before a word could be typed.
         """
         joined = ", ".join(self.params)
+        if self.language == "dart":
+            typed = ", ".join(
+                f"{kind} {name}" for kind, name in zip(self.types, self.params))
+            return f"{self.returns or 'dynamic'} {self.name}({typed or joined}) {{"
         if self.language == "javascript":
             return f"function {self.name}({joined}) {{"
         return f"def {self.name}({joined}):"
@@ -188,6 +202,8 @@ class Kata:
             return self.after.strip()
         if self.language == "javascript":
             return self.js_answer.strip()
+        if self.language == "dart":
+            return self.dart_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
         return source.replace(
             f"def {self.solve.__name__}", f"def {self.name}", 1)
@@ -286,8 +302,84 @@ JS_DRIVER = '''
 '''
 
 
+#: The same driver in Dart. Same marker, same one entry per case, same
+#: before-and-after check on the arguments, so `judge` reads it without
+#: knowing which language wrote the line.
+#:
+#: Two things differ, both because Dart is compiled and typed. The
+#: function is called by name directly, so a missing one is a compile
+#: error rather than a check at run time - `judge` recognises that
+#: error and reports it the same way. And each argument is converted
+#: from JSON into its declared type first.
+DART_DRIVER = """
+
+// ── the marker ───────────────────────────────────────────────
+void main() {{
+  final cases = _kataJson.jsonDecode(r'''{cases}''') as List;
+  final results = <Object?>[];
+  for (final raw in cases) {{
+    final args = raw as List;
+{convert}
+    final before = _kataJson.jsonEncode([{names}]);
+    Object? got;
+    try {{
+      got = {name}({names});
+    }} catch (error) {{
+      // Most Dart errors already start with their type ("FormatException: ...");
+      // some do not ("Bad state: No element"). Name it only when missing.
+      final text = '$error';
+      final kind = '${{error.runtimeType}}';
+      results.add({{'error': text.startsWith(kind) ? text : '$kind: $text'}});
+      continue;
+    }}
+    final changed = _kataJson.jsonEncode([{names}]) != before;
+    try {{
+      _kataJson.jsonEncode(got);
+    }} catch (_) {{
+      got = got.toString();
+    }}
+    results.add({{'got': got, 'changed': changed}});
+  }}
+  print('<<<KATA>>>' + _kataJson.jsonEncode(results));
+}}
+"""
+
+#: Put on the same line as the student's first line, not above it, so
+#: the line numbers in Dart's errors are the ones in the box.
+DART_IMPORT = "import 'dart:convert' as _kataJson; "
+
+
+def _dart_value(kind: str, expr: str) -> str:
+    """A Dart expression turning decoded JSON `expr` into type `kind`."""
+    kind = kind.strip()
+    if kind in ("int", "String", "bool", "num"):
+        return f"({expr} as {kind})"
+    if kind == "double":
+        return f"({expr} as num).toDouble()"
+    if kind.startswith("List<") and kind.endswith(">"):
+        inner = _dart_value(kind[5:-1], "e")
+        return f"({expr} as List).map((e) => {inner}).toList()"
+    if kind.startswith("Map<String,") and kind.endswith(">"):
+        inner = _dart_value(kind[len("Map<String,"):-1], "v")
+        return f"({expr} as Map).map((k, v) => MapEntry(k as String, {inner}))"
+    return expr
+
+
+def _dart_harness(kata: Kata, code: str) -> str:
+    cases = json.dumps([list(case) for case in kata.cases])
+    names = [f"_arg{i}" for i in range(len(kata.params))]
+    kinds = list(kata.types) + [""] * (len(names) - len(kata.types))
+    convert = "\n".join(
+        f"    final {n} = {_dart_value(k, f'args[{i}]')};"
+        for i, (n, k) in enumerate(zip(names, kinds)))
+    return DART_IMPORT + code.strip() + "\n" + DART_DRIVER.format(
+        cases=cases, convert=convert, names=", ".join(names), name=kata.name)
+
+
 def harness(kata: Kata, code: str) -> str:
     """The student's code with a driver appended."""
+    if kata.language == "dart":
+        return _dart_harness(kata, code)
     driver = JS_DRIVER if kata.language == "javascript" else DRIVER
     return code.rstrip() + "\n" + driver.format(
         cases=json.dumps([list(case) for case in kata.cases]),
@@ -341,7 +433,7 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
     driver's line — so the results are taken from the marker onwards
     rather than from the whole of stdout.
     """
-    if NO_FUNCTION in stdout:
+    if NO_FUNCTION in stdout or _dart_missing(kata, stdout, stderr):
         return Outcome(
             broke=f"there is no function called {kata.name} — check the "
                   f"name against the signature above")
@@ -382,6 +474,20 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
     return Outcome(results=tuple(results))
 
 
+def _dart_missing(kata: Kata, stdout: str, stderr: str) -> bool:
+    """Dart's compile error for calling a function that is not there.
+
+    Dart names it at compile time, so the check the other drivers make
+    at run time happens here instead, from the error text.
+    """
+    if kata.language != "dart" or MARKER in stdout:
+        return False
+    return any(
+        phrase in (stderr or "")
+        for phrase in (f"Method not found: '{kata.name}'",
+                       f"Undefined name '{kata.name}'"))
+
+
 def _tidy(detail: str) -> str:
     """Take the temporary file out of a traceback.
 
@@ -405,6 +511,18 @@ def _tidy(detail: str) -> str:
         # Node's own frames, which are about Node and not about you.
         if line.lstrip().startswith("at "):
             continue
+        # Dart's stack frames: "#0  main (file:///.../x.dart:5:3)".
+        if re.match(r"\s*#\d+\s", line):
+            continue
+        # Dart puts the message on the same line as the place:
+        # <path>.dart:3:10: Error: ... - keep the message.
+        if ".dart:" in line:
+            after = line.split(".dart:", 1)[1]
+            found = re.match(r"(\d+):\d+: (.*)", after)
+            if found:
+                line = f"Line {found.group(1)}: {found.group(2)}"
+                out.append(line)
+                continue
         for suffix in (".js:", ".py:"):
             if suffix in line:
                 after = line.split(suffix, 1)[1]
@@ -438,6 +556,9 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
+    from code_coach.kata.dart_bugs import DART_BUGS
+    from code_coach.kata.dart_katas import DART_KATAS
+    from code_coach.kata.dart_modify import DART_MODIFY
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
@@ -448,6 +569,7 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     everything = (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
+        + DART_KATAS + DART_BUGS + DART_MODIFY
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -463,6 +585,9 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.content2 import MORE
+    from code_coach.kata.dart_bugs import DART_BUGS
+    from code_coach.kata.dart_katas import DART_KATAS
+    from code_coach.kata.dart_modify import DART_MODIFY
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
@@ -473,6 +598,7 @@ def _in_file_order() -> tuple[Kata, ...]:
     return (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
+        + DART_KATAS + DART_BUGS + DART_MODIFY
     )
 
 

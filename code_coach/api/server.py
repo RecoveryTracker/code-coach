@@ -2088,10 +2088,15 @@ def puzzle_list() -> dict:
     Part two's brief is sent too: the screen keeps it behind part one,
     and knowing the question early is no help with part one anyway.
     """
-    from code_coach.puzzles import NAMES, puzzles
+    from code_coach.puzzles import NAMES, dart_signature, puzzles
 
     saved = _store.load()
     counts, last = saved.puzzle_counts(), saved.puzzle_last()
+
+    def dart(p, n: int) -> dict:
+        types, returns = dart_signature(p, n)
+        return {"types": list(types), "returns": returns}
+
     return {
         "languages": list(NAMES),
         "names": {lang: list(names) for lang, names in NAMES.items()},
@@ -2103,8 +2108,8 @@ def puzzle_list() -> dict:
                 "story": p.story,
                 "parts": [
                     {"brief": part.brief, "example": part.example,
-                     "params": list(part.params)}
-                    for part in (p.one, p.two)
+                     "params": list(part.params), "dart": dart(p, n)}
+                    for n, part in ((1, p.one), (2, p.two))
                 ],
                 "done": counts.get(p.id, 0),
                 "last": last.get(p.id, ""),

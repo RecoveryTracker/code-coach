@@ -21,12 +21,12 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 82 across 12 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python and JavaScript |
+| **Forms** | Write a function; it is called with inputs you have not seen. 102 across 15 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript and Dart |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 9 moments |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 11 of them |
-| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 16 hunts, in Python and JavaScript |
-| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 6 puzzles, in Python and JavaScript |
-| **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re` or JavaScript's `RegExp`). 19 tasks |
+| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 21 hunts, in Python, JavaScript and Dart |
+| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 12 puzzles, in Python, JavaScript and Dart (typed signatures included) |
+| **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re`, JavaScript's `RegExp` or Dart's `RegExp`). 32 tasks, from single letters to lookarounds |
 | **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
 | **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |

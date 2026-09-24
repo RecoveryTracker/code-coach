@@ -51,6 +51,7 @@ const LANG_KEY = "code-coach:kata-language";
 const LANGUAGE_NAMES: Record<string, string> = {
   python: "Python",
   javascript: "JavaScript",
+  dart: "Dart",
 };
 
 function readDrafts(): Record<string, string> {
@@ -96,9 +97,35 @@ function asPython(value: unknown): string {
   return String(value);
 }
 
+/**
+ * A value as the kata's own language writes it.
+ *
+ * Python gets its repr. JavaScript and Dart both spell true, false and
+ * null in lower case; Dart writes strings in single quotes by habit and
+ * JavaScript in double, which is what JSON gives.
+ */
+function asValue(value: unknown, language: string): string {
+  if (language === "python") return asPython(value);
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "string") {
+    if (language === "dart" && !value.includes("'")) return `'${value}'`;
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => asValue(v, language)).join(", ")}]`;
+  }
+  if (typeof value === "object") {
+    const pairs = Object.entries(value as Record<string, unknown>).map(
+      ([k, v]) => `${asValue(k, language)}: ${asValue(v, language)}`,
+    );
+    return `{${pairs.join(", ")}}`;
+  }
+  return String(value);
+}
+
 /** `count_vowels('Apple')` — the call that failed, as you would type it. */
-function asCall(name: string, args: unknown[]): string {
-  return `${name}(${args.map(asPython).join(", ")})`;
+function asCall(name: string, args: unknown[], language = "python"): string {
+  return `${name}(${args.map((a) => asValue(a, language)).join(", ")})`;
 }
 
 /**
@@ -173,6 +200,15 @@ export default function Katas() {
     if (!only) return list.families;
     return list.families.filter((f) => f.language === only);
   }, [list, only]);
+
+  /** The language of the kata on screen, for writing values in it. */
+  const kataLanguage = useMemo(
+    () =>
+      list?.families.find((f) => f.katas.some((k) => k.id === chosen))
+        ?.language ?? "python",
+    [list, chosen],
+  );
+  const show = (value: unknown) => asValue(value, kataLanguage);
 
   const kata: KataSummary | null = useMemo(() => {
     if (!list) return null;
@@ -670,10 +706,12 @@ print(${asCall(kata.name, pick.args)})
                     key={i}
                     className={`kata-case${c.passed ? " ok" : " bad"}`}
                   >
-                    <code className="mono">{asCall(kata.name, c.args)}</code>
+                    <code className="mono">
+                      {asCall(kata.name, c.args, kataLanguage)}
+                    </code>
                     {c.passed ? (
                       <span className="kata-case-got">
-                        → {asPython(c.want)}
+                        → {show(c.want)}
                       </span>
                     ) : c.error ? (
                       <span className="kata-case-got">
@@ -682,10 +720,10 @@ print(${asCall(kata.name, pick.args)})
                     ) : (
                       <span className="kata-case-got">
                         {c.changed
-                          ? asPython(c.got) === asPython(c.want)
+                          ? show(c.got) === show(c.want)
                             ? "changed the list it was given — the answer is right, the damage is not"
-                            : `changed the list it was given, and gave ${asPython(c.got)}`
-                          : `gave ${asPython(c.got)}, wanted ${asPython(c.want)}`}
+                            : `changed the list it was given, and gave ${show(c.got)}`
+                          : `gave ${show(c.got)}, wanted ${show(c.want)}`}
                       </span>
                     )}
                   </li>

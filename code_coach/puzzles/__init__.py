@@ -9,8 +9,8 @@ a change to code you wrote yourself, which is the Change it idea turned
 on your own work: the helper you wrote for part one is either reusable
 or it is not, and finding out which is the lesson.
 
-Every puzzle can be written in Python or JavaScript and follows the
-language picker. The oracle is Python either way, for the reason the
+Every puzzle can be written in Python, JavaScript or Dart and follows
+the language picker. The oracle is Python either way, for the reason the
 katas give: the answers are numbers, strings, lists and booleans, which
 mean the same thing in both.
 
@@ -36,6 +36,7 @@ PARTS = (1, 2)
 NAMES = {
     "python": ("part_one", "part_two"),
     "javascript": ("partOne", "partTwo"),
+    "dart": ("partOne", "partTwo"),
 }
 
 
@@ -79,8 +80,20 @@ def function_name(language: str, n: int) -> str:
 
 
 def answer_for(puzzle: Puzzle, n: int, language: str) -> str:
+    if language == "dart":
+        from code_coach.puzzles.dart import DART
+
+        return DART[puzzle.id].answer(n).strip()
     part = puzzle.part(n)
     return (part.js_answer if language == "javascript" else part.py_answer).strip()
+
+
+def dart_signature(puzzle: Puzzle, n: int) -> tuple[tuple[str, ...], str]:
+    """Dart's parameter types and return type for one part."""
+    from code_coach.puzzles.dart import DART
+
+    found = DART[puzzle.id]
+    return found.types, found.returns[n - 1]
 
 
 def as_kata(puzzle: Puzzle, n: int, language: str):
@@ -92,10 +105,11 @@ def as_kata(puzzle: Puzzle, n: int, language: str):
     from code_coach.kata import Kata
 
     part = puzzle.part(n)
+    types, returns = dart_signature(puzzle, n) if language == "dart" else ((), "")
     return Kata(
         id=f"{puzzle.id}-{n}", name=function_name(language, n),
         brief=part.brief, params=part.params, cases=part.cases,
-        solve=part.solve, language=language,
+        solve=part.solve, language=language, types=types, returns=returns,
     )
 
 

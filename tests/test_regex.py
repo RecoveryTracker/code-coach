@@ -23,7 +23,11 @@ from code_coach.regex import (
     tasks,
 )
 
-ENGINES = ("python", "javascript")
+from code_coach.engine import dart_available
+
+#: Dart comes with Flutter and is not everywhere; without it the Dart
+#: engine is skipped rather than failed.
+ENGINES = ("python", "javascript") + (("dart",) if dart_available() else ())
 
 
 class EveryTaskIsHonestTests(unittest.TestCase):

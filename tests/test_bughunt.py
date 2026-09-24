@@ -37,10 +37,18 @@ from code_coach.bughunt import (
 MIN_LINES = 8
 
 
+def _runnable():
+    """The hunts this machine can run. Dart comes with Flutter and is not
+    everywhere; without it the Dart hunts are skipped rather than failed."""
+    from code_coach.engine import dart_available
+
+    return tuple(h for h in hunts() if h.language != "dart" or dart_available())
+
+
 class CollectionTests(unittest.TestCase):
 
-    def test_both_languages_have_some(self) -> None:
-        self.assertEqual(set(hunt_families()), {"Python", "JavaScript"})
+    def test_every_language_has_some(self) -> None:
+        self.assertEqual(set(hunt_families()), {"Python", "JavaScript", "Dart"})
         for family in hunt_families():
             with self.subTest(family=family):
                 self.assertGreaterEqual(len(hunts(family)), 3)
@@ -87,7 +95,7 @@ class TheOracleTests(unittest.TestCase):
 class TheBugIsRealTests(unittest.TestCase):
 
     def test_the_fixed_program_passes_every_case(self) -> None:
-        for h in hunts():
+        for h in _runnable():
             with self.subTest(hunt=h.id):
                 outcome = run_cases(h, h.fixed)
                 self.assertEqual(outcome.broke, "", h.id)
@@ -95,7 +103,7 @@ class TheBugIsRealTests(unittest.TestCase):
                 self.assertEqual(failed, [], f"{h.id}: {failed}")
 
     def test_the_broken_program_fails_some_case(self) -> None:
-        for h in hunts():
+        for h in _runnable():
             with self.subTest(hunt=h.id):
                 self.assertFalse(run_cases(h, h.start).passed, h.id)
 
@@ -110,7 +118,7 @@ class TheBugHidesTests(unittest.TestCase):
     """
 
     def test_some_cases_pass_on_the_broken_program(self) -> None:
-        for h in hunts():
+        for h in _runnable():
             with self.subTest(hunt=h.id):
                 outcome = run_cases(h, h.start)
                 passing = [r for r in outcome.results if r.passed]
@@ -134,14 +142,14 @@ class TheBugHidesTests(unittest.TestCase):
 class TheReportIsTrueTests(unittest.TestCase):
 
     def test_the_reported_input_reproduces_the_bug(self) -> None:
-        for h in hunts():
+        for h in _runnable():
             with self.subTest(hunt=h.id):
                 self.assertTrue(try_input(h, h.reported).reproduced, h.id)
 
     def test_a_passing_input_does_not_count_as_reproducing(self) -> None:
         """Any input that shows the bug counts - and one that does not
         must not, or the step says "found it" for nothing."""
-        for h in hunts():
+        for h in _runnable():
             outcome = run_cases(h, h.start)
             fine = next(r.args for r in outcome.results if r.passed)
             with self.subTest(hunt=h.id, args=fine):

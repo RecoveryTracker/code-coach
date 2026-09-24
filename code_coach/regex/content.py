@@ -20,7 +20,7 @@ REPEATS = "Sets and repeats"
 SHAPE = "Anchors and groups"
 REAL = "The real world"
 
-TASKS: tuple[RegexTask, ...] = (
+_FIRST: tuple[RegexTask, ...] = (
     # ── Letters and digits ──────────────────────────────────
     RegexTask(
         id="rx-literal",
@@ -322,3 +322,15 @@ TASKS: tuple[RegexTask, ...] = (
                r"through.",
     ),
 )
+
+
+def _all() -> tuple[RegexTask, ...]:
+    # The later tasks live in content2; merged by level so the list still
+    # reads easiest first. sorted() is stable, so within a level these
+    # keep their place ahead of the newer ones.
+    from code_coach.regex.content2 import MORE_TASKS
+
+    return tuple(sorted(_FIRST + MORE_TASKS, key=lambda t: t.level))
+
+
+TASKS: tuple[RegexTask, ...] = _all()

@@ -1010,7 +1010,13 @@ export type RegexCheck = {
 
 // ── Two-part puzzles ──
 
-export type PuzzlePartInfo = { brief: string; example: string; params: string[] };
+export type PuzzlePartInfo = {
+  brief: string;
+  example: string;
+  params: string[];
+  /** Dart is typed: each parameter's type, and what the part returns. */
+  dart: { types: string[]; returns: string };
+};
 
 export type PuzzleInfo = {
   id: string;

@@ -7,8 +7,8 @@
  * half of the claim that goes wrong.
  *
  * The pattern runs in the real engine of the language picked at the top:
- * Python's re, or JavaScript's RegExp. The screen says which, because the
- * two differ in the corners and a pattern is only promised to work in
+ * Python's re, JavaScript's RegExp or Dart's RegExp. The screen says which, because the
+ * engines differ in the corners and a pattern is only promised to work in
  * the engine it was checked in.
  */
 
@@ -129,7 +129,9 @@ export default function RegexMode({ language }: { language: string }) {
   const engineName =
     language === "javascript" || language === "typescript"
       ? "JavaScript's RegExp"
-      : "Python's re";
+      : language === "dart"
+        ? "Dart's RegExp"
+        : "Python's re";
   const rowsFor = (should: boolean) =>
     result?.rows.filter((r) => r.should_match === should) ?? [];
 

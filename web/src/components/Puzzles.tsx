@@ -7,15 +7,16 @@
  * is never taken away.
  *
  * Follows the language picked at the top. Puzzles have answers in
- * Python and JavaScript; in anything else the screen says so rather than
- * quietly handing over a different language.
+ * Python, JavaScript and Dart; in anything else the screen says so rather
+ * than quietly handing over a different language. Dart is typed, so its
+ * box opens on a signature with the types filled in.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkPuzzle, fetchPuzzleAnswer, fetchPuzzles } from "../api";
 import { LAST_KEYS } from "../lastKeys";
-import type { KataCaseResult, PuzzleCheck, PuzzleInfo, PuzzleList } from "../types";
+import type { KataCaseResult, PuzzleCheck, PuzzleInfo, PuzzleList, PuzzlePartInfo } from "../types";
 
 const LAST_KEY = LAST_KEYS.puzzles;
 const OPENED_KEY = "code-coach:puzzles-part-two";
@@ -28,13 +29,20 @@ function nextUp<T extends { done: number; last: string }>(all: T[]): T | null {
   }, all[0]);
 }
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  python: "Python",
+  javascript: "JavaScript",
+  dart: "Dart",
+};
+
 /** A value as it would be written in the language being practised. */
 function show(value: unknown, language: string): string {
   const py = language === "python";
   if (value === null || value === undefined) return py ? "None" : "null";
   if (typeof value === "boolean") return py ? (value ? "True" : "False") : String(value);
   if (typeof value === "string") {
-    if (!py) return JSON.stringify(value);
+    if (language === "javascript") return JSON.stringify(value);
+    // Python and Dart both write strings in single quotes by habit.
     return value.includes("'") ? JSON.stringify(value) : `'${value}'`;
   }
   if (Array.isArray(value)) return `[${value.map((v) => show(v, language)).join(", ")}]`;
@@ -47,10 +55,14 @@ function show(value: unknown, language: string): string {
   return String(value);
 }
 
-function stub(name: string, params: string[], language: string): string {
-  return language === "python"
-    ? `def ${name}(${params.join(", ")}):\n    pass\n`
-    : `function ${name}(${params.join(", ")}) {\n}\n`;
+function stub(name: string, part: PuzzlePartInfo, language: string): string {
+  const { params } = part;
+  if (language === "python") return `def ${name}(${params.join(", ")}):\n    pass\n`;
+  if (language === "dart") {
+    const typed = params.map((p, i) => `${part.dart.types[i]} ${p}`).join(", ");
+    return `${part.dart.returns} ${name}(${typed}) {\n}\n`;
+  }
+  return `function ${name}(${params.join(", ")}) {\n}\n`;
 }
 
 /** Puzzles whose part two is open, per language: "id:language". */
@@ -110,7 +122,7 @@ export default function Puzzles({ language }: { language: string }) {
   useEffect(() => {
     if (!item || !supported) return;
     setPart(1);
-    setCode(stub(names[0], item.parts[0].params, language));
+    setCode(stub(names[0], item.parts[0], language));
     setResult(null);
     setAnswer("");
     setError("");
@@ -129,7 +141,7 @@ export default function Puzzles({ language }: { language: string }) {
     setResult(null);
     setAnswer("");
     const already = from.includes(names[1]);
-    setCode(already ? from : `${from.trimEnd()}\n\n\n${stub(names[1], item.parts[1].params, language)}`);
+    setCode(already ? from : `${from.trimEnd()}\n\n\n${stub(names[1], item.parts[1], language)}`);
   };
 
   const run = useCallback(async () => {
@@ -174,8 +186,8 @@ export default function Puzzles({ language }: { language: string }) {
   if (!supported) {
     return (
       <div className="lessons-empty">
-        No puzzles in this language yet. There are puzzles in Python and
-        JavaScript — switch the language at the top to try them.
+        No puzzles in this language yet. There are puzzles in Python,
+        JavaScript and Dart — switch the language at the top to try them.
       </div>
     );
   }
@@ -225,7 +237,7 @@ export default function Puzzles({ language }: { language: string }) {
         <header>
           <h3>
             {item.title}
-            <span className="predict-lang">{language === "python" ? "Python" : "JavaScript"}</span>
+            <span className="predict-lang">{LANGUAGE_NAMES[language] ?? language}</span>
           </h3>
         </header>
         <p className="lessons-blurb">{item.story}</p>
@@ -252,7 +264,15 @@ export default function Puzzles({ language }: { language: string }) {
           <p className="wb-prompt">{brief.brief}</p>
           <pre className="pz-example">{brief.example}</pre>
           <p className="wb-walkthrough-note">
-            Write <code>{name}({brief.params.join(", ")})</code>.
+            Write{" "}
+            <code>
+              {language === "dart"
+                ? `${brief.dart.returns} ${name}(${brief.params
+                    .map((p, i) => `${brief.dart.types[i]} ${p}`)
+                    .join(", ")})`
+                : `${name}(${brief.params.join(", ")})`}
+            </code>
+            .
           </p>
           <textarea
             className="wb-code"
