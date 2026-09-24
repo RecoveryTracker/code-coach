@@ -104,6 +104,15 @@ from code_coach.api.schemas import (
     BugHuntStepResponse,
     BugHuntTryRequest,
     BugHuntTryResponse,
+    CaseAnswerRequest,
+    CaseAnswerResponse,
+    CaseQueryRequest,
+    CaseQueryResponse,
+    PuzzleCheckRequest,
+    PuzzleCheckResponse,
+    RegexCheckRequest,
+    RegexCheckResponse,
+    RegexRow,
     TypingShapeInfo,
     TypingShapesResponse,
     TypingThemeInfo,
@@ -1973,6 +1982,256 @@ def bughunt_answer(hunt_id: str = "") -> dict:
     """The fixed program, asked for rather than shipped with the list."""
     found = _hunt_or_404(hunt_id)
     return {"code": found.fixed}
+
+
+# ── Regex ────────────────────────────────────────────────────
+
+
+def _regex_or_404(task_id: str):
+    from code_coach.regex import task
+
+    found = task(task_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown regex task {task_id}")
+    return found
+
+
+@app.get("/api/regex")
+def regex_list() -> dict:
+    """Every task: the strings on both sides, and not the answer."""
+    from code_coach.regex import families, tasks
+
+    saved = _store.load()
+    counts, last = saved.regex_counts(), saved.regex_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "title": t.title,
+                        "level": t.level,
+                        "brief": t.brief,
+                        "match": list(t.match),
+                        "skip": list(t.skip),
+                        "capture": dict(t.capture),
+                        "hint": t.hint,
+                        "done": counts.get(t.id, 0),
+                        "last": last.get(t.id, ""),
+                    }
+                    for t in tasks(family)
+                ],
+            }
+            for family in families()
+        ]
+    }
+
+
+@app.post("/api/regex/check", response_model=RegexCheckResponse)
+def regex_check(body: RegexCheckRequest) -> RegexCheckResponse:
+    """Run the pattern in the real engine of the language picked."""
+    from code_coach.regex import check, engine_for
+
+    found = _regex_or_404(body.task_id)
+    engine = engine_for(body.language)
+    verdict = check(found, body.pattern, engine)
+    done = 0
+    if verdict.passed:
+        progress = _store.load()
+        done = progress.record_regex(found.id)
+        _store.save(progress)
+    return RegexCheckResponse(
+        passed=verdict.passed,
+        broke=verdict.broke,
+        rows=[
+            RegexRow(text=text, should_match=should, found=hit, group=group,
+                     want_group=want, right=right)
+            for text, should, hit, group, want, right in verdict.rows
+        ],
+        engine=engine,
+        lesson=found.lesson if verdict.passed else "",
+        done=done,
+    )
+
+
+@app.get("/api/regex/answer")
+def regex_answer(task_id: str = "") -> dict:
+    return {"answer": _regex_or_404(task_id).answer}
+
+
+# ── Two-part puzzles ─────────────────────────────────────────
+
+
+def _puzzle_or_404(puzzle_id: str):
+    from code_coach.puzzles import puzzle
+
+    found = puzzle(puzzle_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown puzzle {puzzle_id}")
+    return found
+
+
+def _puzzle_language(language: str) -> str:
+    from code_coach.puzzles import supports
+
+    if not supports(language):
+        raise HTTPException(
+            status_code=400, detail=f"Puzzles are not written in {language} yet")
+    return language
+
+
+@app.get("/api/puzzles")
+def puzzle_list() -> dict:
+    """Every puzzle, both parts' briefs, and none of the answers.
+
+    Part two's brief is sent too: the screen keeps it behind part one,
+    and knowing the question early is no help with part one anyway.
+    """
+    from code_coach.puzzles import NAMES, puzzles
+
+    saved = _store.load()
+    counts, last = saved.puzzle_counts(), saved.puzzle_last()
+    return {
+        "languages": list(NAMES),
+        "names": {lang: list(names) for lang, names in NAMES.items()},
+        "puzzles": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "level": p.level,
+                "story": p.story,
+                "parts": [
+                    {"brief": part.brief, "example": part.example,
+                     "params": list(part.params)}
+                    for part in (p.one, p.two)
+                ],
+                "done": counts.get(p.id, 0),
+                "last": last.get(p.id, ""),
+            }
+            for p in puzzles()
+        ],
+    }
+
+
+@app.post("/api/puzzles/check", response_model=PuzzleCheckResponse)
+def puzzle_check(body: PuzzleCheckRequest) -> PuzzleCheckResponse:
+    """Run one part's cases. The puzzle counts as done when part two passes."""
+    from code_coach.puzzles import run_part
+
+    found = _puzzle_or_404(body.puzzle_id)
+    language = _puzzle_language(body.language)
+    part = 2 if body.part == 2 else 1
+    outcome = run_part(found, part, body.code, language)
+    done = 0
+    if outcome.passed and part == 2:
+        progress = _store.load()
+        done = progress.record_puzzle(found.id)
+        _store.save(progress)
+    return PuzzleCheckResponse(
+        passed=outcome.passed,
+        count=outcome.count,
+        total=len(found.part(part).cases),
+        broke=outcome.broke,
+        results=[
+            KataCaseResult(
+                args=list(r.args), want=r.want, got=r.got,
+                error=r.error, passed=r.passed, changed=r.changed,
+            )
+            for r in outcome.results
+        ],
+        lesson=found.lesson if outcome.passed and part == 2 else "",
+        done=done,
+    )
+
+
+@app.get("/api/puzzles/answer")
+def puzzle_answer(puzzle_id: str = "", part: int = 1, language: str = "python") -> dict:
+    from code_coach.puzzles import answer_for
+
+    found = _puzzle_or_404(puzzle_id)
+    return {"code": answer_for(found, 2 if part == 2 else 1, _puzzle_language(language))}
+
+
+# ── SQL case files ───────────────────────────────────────────
+
+
+def _case_or_404(case_id: str):
+    from code_coach.casefiles import case
+
+    found = case(case_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown case {case_id}")
+    return found
+
+
+def _step_or_404(found, step: int):
+    if not 0 <= step < len(found.steps):
+        raise HTTPException(status_code=404, detail=f"No step {step + 1}")
+    return found.steps[step]
+
+
+@app.get("/api/cases")
+def case_list() -> dict:
+    """Every case: story, tables and questions. No answers, no queries."""
+    from code_coach.casefiles import cases, tables
+
+    saved = _store.load()
+    counts, last = saved.case_counts(), saved.case_last()
+    return {
+        "cases": [
+            {
+                "id": c.id,
+                "title": c.title,
+                "level": c.level,
+                "story": c.story,
+                "tables": tables(c),
+                "steps": [{"question": s.question, "hint": s.hint} for s in c.steps],
+                "done": counts.get(c.id, 0),
+                "last": last.get(c.id, ""),
+            }
+            for c in cases()
+        ]
+    }
+
+
+@app.post("/api/cases/query", response_model=CaseQueryResponse)
+def case_query(body: CaseQueryRequest) -> CaseQueryResponse:
+    """Any query against the case's own tables, rolled back afterwards."""
+    from code_coach.casefiles import run_query
+
+    out, err, _ = run_query(_case_or_404(body.case_id), body.sql)
+    return CaseQueryResponse(out=out, err=err)
+
+
+@app.post("/api/cases/answer", response_model=CaseAnswerResponse)
+def case_answer(body: CaseAnswerRequest) -> CaseAnswerResponse:
+    """One step's answer. The case counts as done when its last step is right."""
+    from code_coach.casefiles import same
+
+    found = _case_or_404(body.case_id)
+    step = _step_or_404(found, body.step)
+    if not same(body.answer, step.answer):
+        return CaseAnswerResponse(right=False)
+    last_step = body.step == len(found.steps) - 1
+    done = 0
+    if last_step:
+        progress = _store.load()
+        done = progress.record_case(found.id)
+        _store.save(progress)
+    return CaseAnswerResponse(
+        right=True,
+        lesson=step.lesson,
+        ending=found.ending if last_step else "",
+        done=done,
+    )
+
+
+@app.get("/api/cases/reveal")
+def case_reveal(case_id: str = "", step: int = 0) -> dict:
+    """A query that finds the step's answer, asked for rather than shipped."""
+    found = _case_or_404(case_id)
+    return {"query": _step_or_404(found, step).reference}
 
 
 @app.get("/api/trace")

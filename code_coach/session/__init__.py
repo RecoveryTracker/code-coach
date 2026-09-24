@@ -50,7 +50,8 @@ class Source:
     #: - the card says one hunt and you land on another. With it, the
     #: queue deals only what that screen will actually show. Left as
     #: None, a practice is dealt whole, which is how the rest still work.
-    languages: Callable[[], dict[str, str]] | None = None
+    #: An item written in several languages maps to all of them.
+    languages: Callable[[], dict[str, str | tuple[str, ...]]] | None = None
 
 
 def _kata_items() -> list[tuple[str, str]]:
@@ -101,6 +102,30 @@ def _hunt_languages() -> dict[str, str]:
     return {h.id: h.language for h in hunts()}
 
 
+def _regex_items() -> list[tuple[str, str]]:
+    from code_coach.regex import tasks
+
+    return [(t.id, t.title) for t in tasks()]
+
+
+def _puzzle_items() -> list[tuple[str, str]]:
+    from code_coach.puzzles import puzzles
+
+    return [(p.id, p.title) for p in puzzles()]
+
+
+def _puzzle_languages() -> dict[str, tuple[str, ...]]:
+    from code_coach.puzzles import NAMES, puzzles
+
+    return {p.id: tuple(NAMES) for p in puzzles()}
+
+
+def _case_items() -> list[tuple[str, str]]:
+    from code_coach.casefiles import cases
+
+    return [(c.id, c.title) for c in cases()]
+
+
 def _trace_items() -> list[tuple[str, str]]:
     from code_coach.trace import traces
 
@@ -120,6 +145,10 @@ SOURCES: tuple[Source, ...] = (
     Source("errors", "Errors", _error_items, "error_counts", "error_last"),
     Source("bughunt", "Bug Hunt", _hunt_items,
            "bughunt_counts", "bughunt_last", languages=_hunt_languages),
+    Source("puzzles", "Puzzles", _puzzle_items,
+           "puzzle_counts", "puzzle_last", languages=_puzzle_languages),
+    Source("regex", "Regex", _regex_items, "regex_counts", "regex_last"),
+    Source("cases", "Case files", _case_items, "case_counts", "case_last"),
     Source("magnets", "Magnets", _magnet_items,
            "magnet_counts", "magnet_last"),
     Source("predict", "Predict", _predict_items,
@@ -142,7 +171,14 @@ def dealable(source: Source, progress) -> list[tuple[str, str]]:
         return items
     language_of = source.languages()
     chosen = getattr(progress, "language", "") or "python"
-    return [(i, n) for i, n in items if language_of.get(i) == chosen]
+    return [(i, n) for i, n in items if _speaks(language_of.get(i), chosen)]
+
+
+def _speaks(entry, chosen: str) -> bool:
+    """Whether an item is in the chosen language - one, or one of several."""
+    if entry is None:
+        return False
+    return chosen == entry if isinstance(entry, str) else chosen in entry
 
 
 def _coldest(source: Source, progress) -> list[dict]:

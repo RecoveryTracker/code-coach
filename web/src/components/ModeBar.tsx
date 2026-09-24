@@ -70,6 +70,21 @@ export const MODES = [
     title: "A bug report and a program: reproduce it, find it, explain it, fix it",
   },
   {
+    id: "puzzles",
+    label: "Puzzles",
+    title: "Solve part one, and part two changes the rules - same input, new question",
+  },
+  {
+    id: "regex",
+    label: "Regex",
+    title: "Write a pattern that finds these strings and leaves those alone",
+  },
+  {
+    id: "cases",
+    label: "Case files",
+    title: "A mystery in a database - query real PostgreSQL to solve it",
+  },
+  {
     id: "magnets",
     label: "Magnets",
     title:

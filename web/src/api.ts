@@ -37,6 +37,12 @@ import type {
   BugHuntList,
   BugHuntStep,
   BugHuntTry,
+  CaseAnswer,
+  CaseList,
+  PuzzleCheck,
+  PuzzleList,
+  RegexCheck,
+  RegexList,
   VisualizeResult,
   WorkbookCheck,
   WorkbookData,
@@ -256,6 +262,74 @@ export function fixBugHunt(huntId: string, code: string): Promise<BugHuntFix> {
 /** The fixed program, asked for rather than shipped with the list. */
 export function fetchBugHuntAnswer(huntId: string): Promise<{ code: string }> {
   return request(`/api/bughunt/answer?hunt_id=${encodeURIComponent(huntId)}`);
+}
+
+/** Every regex task, both sides of it, and no answers. */
+export function fetchRegex(): Promise<RegexList> {
+  return request("/api/regex");
+}
+
+/** Run a pattern in the real engine of the language picked at the top. */
+export function checkRegex(taskId: string, pattern: string, language: string): Promise<RegexCheck> {
+  return request("/api/regex/check", {
+    method: "POST",
+    body: JSON.stringify({ task_id: taskId, pattern, language }),
+  });
+}
+
+export function fetchRegexAnswer(taskId: string): Promise<{ answer: string }> {
+  return request(`/api/regex/answer?task_id=${encodeURIComponent(taskId)}`);
+}
+
+/** Every two-part puzzle, with both briefs and no answers. */
+export function fetchPuzzles(): Promise<PuzzleList> {
+  return request("/api/puzzles");
+}
+
+export function checkPuzzle(
+  puzzleId: string,
+  part: number,
+  code: string,
+  language: string,
+): Promise<PuzzleCheck> {
+  return request("/api/puzzles/check", {
+    method: "POST",
+    body: JSON.stringify({ puzzle_id: puzzleId, part, code, language }),
+  });
+}
+
+export function fetchPuzzleAnswer(
+  puzzleId: string,
+  part: number,
+  language: string,
+): Promise<{ code: string }> {
+  const q = new URLSearchParams({ puzzle_id: puzzleId, part: String(part), language });
+  return request(`/api/puzzles/answer?${q}`);
+}
+
+/** Every SQL case file: story, tables and questions. */
+export function fetchCases(): Promise<CaseList> {
+  return request("/api/cases");
+}
+
+/** Any query against a case's own tables, rolled back afterwards. */
+export function queryCase(caseId: string, sql: string): Promise<{ out: string; err: string }> {
+  return request("/api/cases/query", {
+    method: "POST",
+    body: JSON.stringify({ case_id: caseId, sql }),
+  });
+}
+
+export function answerCase(caseId: string, step: number, answer: string): Promise<CaseAnswer> {
+  return request("/api/cases/answer", {
+    method: "POST",
+    body: JSON.stringify({ case_id: caseId, step, answer }),
+  });
+}
+
+export function revealCase(caseId: string, step: number): Promise<{ query: string }> {
+  const q = new URLSearchParams({ case_id: caseId, step: String(step) });
+  return request(`/api/cases/reveal?${q}`);
 }
 
 /** Every magnet puzzle, with its lines jumbled afresh by the server. */

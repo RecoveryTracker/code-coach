@@ -25,6 +25,9 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 9 moments |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 11 of them |
 | **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 16 hunts, in Python and JavaScript |
+| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 6 puzzles, in Python and JavaScript |
+| **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re` or JavaScript's `RegExp`). 19 tasks |
+| **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 2 cases, 8 steps. Needs the optional PostgreSQL below |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
 | **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
@@ -286,6 +289,9 @@ All local, `127.0.0.1:8765`.
 | `GET` · `POST` | `/api/trace` · `/api/trace/check` | Trace |
 | `GET` · `POST` | `/api/errors` · `/api/errors/check` | Errors |
 | `GET` · `POST` | `/api/magnets` · `/api/magnets/check` | Magnets |
+| `GET` · `POST` | `/api/puzzles` · `/api/puzzles/check` · `/api/puzzles/answer` | Puzzles |
+| `GET` · `POST` | `/api/regex` · `/api/regex/check` · `/api/regex/answer` | Regex |
+| `GET` · `POST` | `/api/cases` · `/api/cases/query` · `/api/cases/answer` · `/api/cases/reveal` | Case files |
 | `GET` · `POST` | `/api/css` · `/api/css/check` | HTML & CSS, the reading half |
 | `GET` · `POST` | `/api/drills` · `/api/drills/check` | HTML & CSS, the typing half |
 | `GET`  | `/api/curriculum` · `/api/practice/current` | LeetCode: tree, active session |

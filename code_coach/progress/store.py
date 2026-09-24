@@ -154,6 +154,9 @@ class StudentProgress:
     error_done: dict[str, DrillRecord] = field(default_factory=dict)
     trace_done: dict[str, DrillRecord] = field(default_factory=dict)
     bughunt_done: dict[str, DrillRecord] = field(default_factory=dict)
+    regex_done: dict[str, DrillRecord] = field(default_factory=dict)
+    puzzle_done: dict[str, DrillRecord] = field(default_factory=dict)
+    case_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -253,6 +256,33 @@ class StudentProgress:
         return {
             k: v.last_at for k, v in self.bughunt_done.items() if v.last_at
         }
+
+    def record_regex(self, item_id: str) -> int:
+        return _bump(self.regex_done, item_id)
+
+    def regex_counts(self) -> dict[str, int]:
+        return {i: v.count for i, v in self.regex_done.items()}
+
+    def regex_last(self) -> dict[str, str]:
+        return {i: v.last_at for i, v in self.regex_done.items() if v.last_at}
+
+    def record_puzzle(self, item_id: str) -> int:
+        return _bump(self.puzzle_done, item_id)
+
+    def puzzle_counts(self) -> dict[str, int]:
+        return {i: v.count for i, v in self.puzzle_done.items()}
+
+    def puzzle_last(self) -> dict[str, str]:
+        return {i: v.last_at for i, v in self.puzzle_done.items() if v.last_at}
+
+    def record_case(self, item_id: str) -> int:
+        return _bump(self.case_done, item_id)
+
+    def case_counts(self) -> dict[str, int]:
+        return {i: v.count for i, v in self.case_done.items()}
+
+    def case_last(self) -> dict[str, str]:
+        return {i: v.last_at for i, v in self.case_done.items() if v.last_at}
 
     def record_trace(self, trace_id: str) -> int:
         return _bump(self.trace_done, trace_id)
@@ -409,6 +439,9 @@ class StudentProgress:
             error_done=_records(raw.get("error_done")),
             trace_done=_records(raw.get("trace_done")),
             bughunt_done=_records(raw.get("bughunt_done")),
+            regex_done=_records(raw.get("regex_done")),
+            puzzle_done=_records(raw.get("puzzle_done")),
+            case_done=_records(raw.get("case_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

@@ -842,3 +842,82 @@ class BugHuntFixResponse(BaseModel):
     cause: str = ""
     lesson: str = ""
     done: int = 0
+
+
+# ── Regex ────────────────────────────────────────────────────
+
+
+class RegexCheckRequest(BaseModel):
+    task_id: str = ""
+    pattern: str = ""
+    #: Picks the engine: JavaScript's RegExp for javascript and
+    #: typescript, Python's re for everything else.
+    language: str = "python"
+
+
+class RegexRow(BaseModel):
+    text: str = ""
+    should_match: bool = False
+    found: bool = False
+    #: What group 1 captured, where the task asks for a capture.
+    group: str | None = None
+    want_group: str | None = None
+    right: bool = False
+
+
+class RegexCheckResponse(BaseModel):
+    passed: bool = False
+    broke: str = ""
+    rows: list[RegexRow] = Field(default_factory=list)
+    engine: str = ""
+    #: Only sent on a pass.
+    lesson: str = ""
+    done: int = 0
+
+
+# ── Two-part puzzles ─────────────────────────────────────────
+
+
+class PuzzleCheckRequest(BaseModel):
+    puzzle_id: str = ""
+    part: int = 1
+    code: str = ""
+    language: str = "python"
+
+
+class PuzzleCheckResponse(BaseModel):
+    passed: bool = False
+    count: int = 0
+    total: int = 0
+    broke: str = ""
+    results: list[KataCaseResult] = Field(default_factory=list)
+    #: What part two taught - only on a part-two pass.
+    lesson: str = ""
+    done: int = 0
+
+
+# ── SQL case files ───────────────────────────────────────────
+
+
+class CaseQueryRequest(BaseModel):
+    case_id: str = ""
+    sql: str = ""
+
+
+class CaseQueryResponse(BaseModel):
+    out: str = ""
+    err: str = ""
+
+
+class CaseAnswerRequest(BaseModel):
+    case_id: str = ""
+    step: int = 0
+    answer: str = ""
+
+
+class CaseAnswerResponse(BaseModel):
+    right: bool = False
+    #: Sent only when right: the lesson, and on the last step the ending.
+    lesson: str = ""
+    ending: str = ""
+    done: int = 0

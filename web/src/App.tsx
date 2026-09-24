@@ -37,6 +37,9 @@ import type { Mode } from "./components/ModeBar";
 import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
 import BugHunt from "./components/BugHunt";
+import CaseFiles from "./components/CaseFiles";
+import Puzzles from "./components/Puzzles";
+import RegexMode from "./components/RegexMode";
 import Errors from "./components/Errors";
 import TraceValue from "./components/TraceValue";
 import Session from "./components/Session";
@@ -241,6 +244,9 @@ export default function App() {
   const magnetsOpen = mode === "magnets";
   const errorsOpen = mode === "errors";
   const bughuntOpen = mode === "bughunt";
+  const puzzlesOpen = mode === "puzzles";
+  const regexOpen = mode === "regex";
+  const casesOpen = mode === "cases";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
   const workbookOpen = mode === "workbook";
@@ -1236,6 +1242,33 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <BugHunt language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (puzzlesOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Puzzles language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (regexOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <RegexMode language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (casesOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <CaseFiles />
       </div>
     );
   }

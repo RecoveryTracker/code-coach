@@ -246,3 +246,15 @@ class LanguageTests(unittest.TestCase):
         progress = StudentProgress()
         progress.language = "rust"
         self.assertEqual(len(queue(progress, 20)), 20)
+
+    def test_puzzles_are_dealt_in_every_language_they_are_written_in(self) -> None:
+        """A puzzle is written in both Python and JavaScript, so it is
+        dealt to either - and to neither when the picker says Rust."""
+        from code_coach.session import SOURCES
+
+        source = next(s for s in SOURCES if s.key == "puzzles")
+        progress = StudentProgress()
+        for language, want in (("python", True), ("javascript", True), ("rust", False)):
+            with self.subTest(language=language):
+                progress.language = language
+                self.assertEqual(bool(dealable(source, progress)), want)

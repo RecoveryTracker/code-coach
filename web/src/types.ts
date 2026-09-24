@@ -971,3 +971,90 @@ export type BugHuntFix = {
   lesson: string;
   done: number;
 };
+
+// ── Regex ──
+
+export type RegexTaskInfo = {
+  id: string;
+  title: string;
+  level: number;
+  brief: string;
+  match: string[];
+  skip: string[];
+  /** For capture tasks: string -> what group 1 should be. */
+  capture: Record<string, string>;
+  hint: string;
+  done: number;
+  last: string;
+};
+
+export type RegexList = { families: { name: string; tasks: RegexTaskInfo[] }[] };
+
+export type RegexRow = {
+  text: string;
+  should_match: boolean;
+  found: boolean;
+  group: string | null;
+  want_group: string | null;
+  right: boolean;
+};
+
+export type RegexCheck = {
+  passed: boolean;
+  broke: string;
+  rows: RegexRow[];
+  engine: string;
+  lesson: string;
+  done: number;
+};
+
+// ── Two-part puzzles ──
+
+export type PuzzlePartInfo = { brief: string; example: string; params: string[] };
+
+export type PuzzleInfo = {
+  id: string;
+  title: string;
+  level: number;
+  story: string;
+  parts: PuzzlePartInfo[];
+  done: number;
+  last: string;
+};
+
+export type PuzzleList = {
+  /** The languages puzzles have answers in. */
+  languages: string[];
+  /** Per language, the part one and part two function names. */
+  names: Record<string, string[]>;
+  puzzles: PuzzleInfo[];
+};
+
+export type PuzzleCheck = {
+  passed: boolean;
+  count: number;
+  total: number;
+  broke: string;
+  results: KataCaseResult[];
+  lesson: string;
+  done: number;
+};
+
+// ── SQL case files ──
+
+export type CaseTable = { name: string; columns: { name: string; type: string }[] };
+
+export type CaseInfo = {
+  id: string;
+  title: string;
+  level: number;
+  story: string;
+  tables: CaseTable[];
+  steps: { question: string; hint: string }[];
+  done: number;
+  last: string;
+};
+
+export type CaseList = { cases: CaseInfo[] };
+
+export type CaseAnswer = { right: boolean; lesson: string; ending: string; done: number };

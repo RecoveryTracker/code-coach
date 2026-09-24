@@ -24,6 +24,9 @@ export const LAST_KEYS = {
   errors: "code-coach:error-last",
   trace: "code-coach:trace-last",
   bughunt: "code-coach:bughunt-last",
+  regex: "code-coach:regex-last",
+  puzzles: "code-coach:puzzles-last",
+  cases: "code-coach:cases-last",
 } as const;
 
 export type Practice = keyof typeof LAST_KEYS;
@@ -44,6 +47,9 @@ export const MODE_FOR: Record<Practice, Mode> = {
   errors: "errors",
   trace: "trace",
   bughunt: "bughunt",
+  regex: "regex",
+  puzzles: "puzzles",
+  cases: "cases",
 };
 
 /** The HTML & CSS screen's own tab, which the drills live behind. */
