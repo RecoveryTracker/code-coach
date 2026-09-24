@@ -81,6 +81,15 @@ class LooseAnswerTests(unittest.TestCase):
             with self.subTest(given=given):
                 self.assertTrue(same(given, "Eve Lund"))
 
+    def test_numbers_compare_as_numbers(self) -> None:
+        """PostgreSQL prints money as 90.00; typing 90 is the same answer."""
+        for given in ("90", "90.0", "90.00", " 90 "):
+            with self.subTest(given=given):
+                self.assertTrue(same(given, "90.00"))
+        for given in ("90.01", "9", "900", "ninety"):
+            with self.subTest(given=given):
+                self.assertFalse(same(given, "90.00"))
+
     def test_a_different_answer_is_still_wrong(self) -> None:
         for given in ("Eve", "Eve Lunds", "", "  ", "''"):
             with self.subTest(given=given):

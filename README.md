@@ -27,7 +27,7 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 16 hunts, in Python and JavaScript |
 | **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 6 puzzles, in Python and JavaScript |
 | **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re` or JavaScript's `RegExp`). 19 tasks |
-| **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 2 cases, 8 steps. Needs the optional PostgreSQL below |
+| **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
 | **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |

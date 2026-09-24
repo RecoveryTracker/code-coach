@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 
 
 @dataclass(frozen=True)
@@ -71,7 +72,20 @@ def normal(text: str) -> str:
 
 
 def same(given: str, answer: str) -> bool:
-    return bool(normal(given)) and normal(given) == normal(answer)
+    """Whether a typed answer is the answer.
+
+    Numbers compare as numbers, because PostgreSQL prints a sum of money
+    as 90.00 and nobody should be marked wrong for typing 90.
+    """
+    given, answer = normal(given), normal(answer)
+    if not given:
+        return False
+    if given == answer:
+        return True
+    try:
+        return Decimal(given) == Decimal(answer)
+    except InvalidOperation:
+        return False
 
 
 _TABLE = re.compile(
@@ -88,7 +102,7 @@ def tables(case: Case) -> list[dict]:
     out = []
     for name, body in _TABLE.findall(case.setup):
         columns = []
-        for raw in body.split(","):
+        for raw in _top_level(body):
             words = raw.split()
             # Whole first word: a column called check_in is not a CHECK.
             if len(words) >= 2 and words[0].upper() not in (
@@ -96,6 +110,21 @@ def tables(case: Case) -> list[dict]:
                 columns.append({"name": words[0], "type": words[1].lower()})
         out.append({"name": name, "columns": columns})
     return out
+
+
+def _top_level(body: str) -> list[str]:
+    """Split a column list on the commas that separate columns - not the
+    one inside numeric(8, 2)."""
+    parts, depth, current = [], 0, []
+    for ch in body:
+        if ch == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+            continue
+        depth += (ch == "(") - (ch == ")")
+        current.append(ch)
+    parts.append("".join(current))
+    return parts
 
 
 def run_query(case: Case, sql: str) -> tuple[str, str, int]:
