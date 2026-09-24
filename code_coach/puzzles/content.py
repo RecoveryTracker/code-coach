@@ -566,4 +566,14 @@ CHAIN = Puzzle(
 )
 
 
-PUZZLES: tuple[Puzzle, ...] = (NIGHT, SORTING, PASSWORDS, GARDEN, BUS, CHAIN)
+def _all() -> tuple[Puzzle, ...]:
+    # The later ones live in content2; merged by level so the list
+    # still reads easiest first. sorted() is stable, so within a level
+    # the first six keep their place ahead of the newer ones.
+    from code_coach.puzzles.content2 import MORE_PUZZLES
+
+    first = (NIGHT, SORTING, PASSWORDS, GARDEN, BUS, CHAIN)
+    return tuple(sorted(first + MORE_PUZZLES, key=lambda p: p.level))
+
+
+PUZZLES: tuple[Puzzle, ...] = _all()
