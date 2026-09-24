@@ -31,7 +31,23 @@ STYLES = Path(__file__).resolve().parent.parent / "web" / "src" / "styles"
 CONVERTED = ("iae.css", "workspace.css", "typing.css", "lessons.css",
              "reference.css", "markup.css")
 
-SKINS = ("dark", "light", "aurora", "arcade")
+def _skins_from_app() -> tuple[str, ...]:
+    """The skins the app offers, read from skins.ts itself.
+
+    It was a hand-written tuple of four names. A fifth skin added to the
+    app would then have been skipped by every test here - contrast,
+    completeness, colour-scheme - with nothing failing to say so, which
+    is exactly the kind of list this project keeps getting bitten by.
+    Original is left out because it has no role colours of its own: it
+    is the absence of a skin, checked by the round-trip instead.
+    """
+    text = (STYLES.parent / "skins.ts").read_text(encoding="utf-8")
+    block = text.split("export const SKINS", 1)[1].split("];", 1)[0]
+    ids = tuple(re.findall(r'id:\s*"([\w-]+)"', block))
+    return tuple(i for i in ids if i != "original")
+
+
+SKINS = _skins_from_app()
 
 LITERAL = re.compile(r"#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\([^)]*\)")
 

@@ -42,6 +42,15 @@ class Source:
     #: The progress fields holding its counts and dates.
     counts_attr: str
     last_attr: str
+    #: For a practice whose screen follows the language picker: which
+    #: language each item is in, as {id: language}.
+    #:
+    #: Without it the queue deals items in every language, and a screen
+    #: that only shows the chosen language then opens on something else
+    #: - the card says one hunt and you land on another. With it, the
+    #: queue deals only what that screen will actually show. Left as
+    #: None, a practice is dealt whole, which is how the rest still work.
+    languages: Callable[[], dict[str, str]] | None = None
 
 
 def _kata_items() -> list[tuple[str, str]]:
@@ -86,6 +95,12 @@ def _hunt_items() -> list[tuple[str, str]]:
     return [(h.id, h.title) for h in hunts()]
 
 
+def _hunt_languages() -> dict[str, str]:
+    from code_coach.bughunt import hunts
+
+    return {h.id: h.language for h in hunts()}
+
+
 def _trace_items() -> list[tuple[str, str]]:
     from code_coach.trace import traces
 
@@ -104,7 +119,7 @@ SOURCES: tuple[Source, ...] = (
     Source("trace", "Trace", _trace_items, "trace_counts", "trace_last"),
     Source("errors", "Errors", _error_items, "error_counts", "error_last"),
     Source("bughunt", "Bug Hunt", _hunt_items,
-           "bughunt_counts", "bughunt_last"),
+           "bughunt_counts", "bughunt_last", languages=_hunt_languages),
     Source("magnets", "Magnets", _magnet_items,
            "magnet_counts", "magnet_last"),
     Source("predict", "Predict", _predict_items,
@@ -112,6 +127,22 @@ SOURCES: tuple[Source, ...] = (
     Source("styles", "HTML & CSS", _css_items, "css_counts", "css_last"),
     Source("drills", "Type it", _drill_items, "markup_counts", "markup_last"),
 )
+
+
+def dealable(source: Source, progress) -> list[tuple[str, str]]:
+    """The items this practice can deal to this person, as (id, name).
+
+    All of them, unless the practice follows the language picker, in
+    which case only the ones in the chosen language. One definition,
+    used by the queue and by anything that needs to know what the queue
+    could hand out - so the two cannot disagree about it.
+    """
+    items = source.items()
+    if source.languages is None:
+        return items
+    language_of = source.languages()
+    chosen = getattr(progress, "language", "") or "python"
+    return [(i, n) for i, n in items if language_of.get(i) == chosen]
 
 
 def _coldest(source: Source, progress) -> list[dict]:
@@ -123,6 +154,7 @@ def _coldest(source: Source, progress) -> list[dict]:
     """
     counts = getattr(progress, source.counts_attr)()
     last = getattr(progress, source.last_attr)()
+    items = dealable(source, progress)
     rows = [
         {
             "practice": source.key,
@@ -132,7 +164,7 @@ def _coldest(source: Source, progress) -> list[dict]:
             "done": counts.get(item_id, 0),
             "last": last.get(item_id, ""),
         }
-        for item_id, name in source.items()
+        for item_id, name in items
     ]
     rows.sort(key=lambda r: (r["done"], r["last"]))
     return rows

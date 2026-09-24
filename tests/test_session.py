@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 from code_coach.progress.store import ProgressStore, StudentProgress
-from code_coach.session import SOURCES, queue
+from code_coach.session import SOURCES, dealable, queue
 
 
 class SourceTests(unittest.TestCase):
@@ -99,8 +99,8 @@ class QueueTests(unittest.TestCase):
         """The smallest practice has far fewer items than the largest.
         Dealing round-robin without noticing would stop the whole queue
         when the shortest pile empties."""
-        smallest = min(len(s.items()) for s in SOURCES)
-        total = sum(len(s.items()) for s in SOURCES)
+        smallest = min(len(dealable(s, self.progress)) for s in SOURCES)
+        total = sum(len(dealable(s, self.progress)) for s in SOURCES)
         self.assertLess(smallest * len(SOURCES), total,
                         "the piles are all the same size, so this proves "
                         "nothing — pick a different check")
@@ -108,7 +108,7 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(len(queue(self.progress, wanted)), wanted)
 
     def test_asking_for_more_than_exists_gives_everything_once(self) -> None:
-        total = sum(len(s.items()) for s in SOURCES)
+        total = sum(len(dealable(s, self.progress)) for s in SOURCES)
         everything = queue(self.progress, total + 50)
         self.assertEqual(len(everything), total)
         picked = [(i["practice"], i["id"]) for i in everything]
@@ -208,3 +208,41 @@ class BrowserAgreesTests(unittest.TestCase):
         for source in SOURCES:
             with self.subTest(source=source.key):
                 self.assertIn(source.key, known)
+
+
+class LanguageTests(unittest.TestCase):
+    """Bug Hunt follows the language picker, so its cards have to.
+
+    The screen shows only the chosen language's hunts. A queue that
+    dealt every language would hand a Python learner a JavaScript card,
+    and the screen would then open on something else - the card and
+    the screen disagreeing, with no error anywhere.
+    """
+
+    def _hunt_languages(self, language: str) -> list[str]:
+        from code_coach.bughunt import hunt
+
+        progress = StudentProgress()
+        progress.language = language
+        return [
+            hunt(item["id"]).language
+            for item in queue(progress, 60)
+            if item["practice"] == "bughunt"
+        ]
+
+    def test_only_the_chosen_languages_hunts_are_dealt(self) -> None:
+        for language in ("python", "javascript"):
+            with self.subTest(language=language):
+                got = self._hunt_languages(language)
+                self.assertTrue(got, f"no {language} hunts dealt at all")
+                self.assertEqual(set(got), {language})
+
+    def test_a_language_with_no_hunts_gets_none_rather_than_wrong_ones(self) -> None:
+        self.assertEqual(self._hunt_languages("rust"), [])
+
+    def test_the_queue_is_still_full_when_a_practice_has_nothing(self) -> None:
+        """Rust has no hunts, and the session should fill from the rest
+        rather than come up short."""
+        progress = StudentProgress()
+        progress.language = "rust"
+        self.assertEqual(len(queue(progress, 20)), 20)

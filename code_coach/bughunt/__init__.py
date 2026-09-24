@@ -233,8 +233,9 @@ def try_input(hunt: Hunt, args: tuple) -> Attempt:
 def hunts(family: str | None = None) -> tuple[Hunt, ...]:
     """Every hunt, or one family's, easiest first."""
     from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
+    from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
 
-    everything = PYTHON_HUNTS + JAVASCRIPT_HUNTS
+    everything = PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS + JAVASCRIPT_HUNTS_2
     if family is not None:
         everything = tuple(h for h in everything if h.family == family)
     return tuple(sorted(everything, key=lambda h: h.level))
@@ -248,9 +249,10 @@ def hunt_families() -> tuple[str, ...]:
     bitten by exactly that.
     """
     from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
+    from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
 
     seen: list[str] = []
-    for h in PYTHON_HUNTS + JAVASCRIPT_HUNTS:
+    for h in PYTHON_HUNTS + PYTHON_HUNTS_2 + JAVASCRIPT_HUNTS + JAVASCRIPT_HUNTS_2:
         if h.family not in seen:
             seen.append(h.family)
     return tuple(seen)

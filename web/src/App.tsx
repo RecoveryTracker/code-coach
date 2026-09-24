@@ -1235,7 +1235,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <BugHunt />
+        <BugHunt language={viewingLanguage} />
       </div>
     );
   }

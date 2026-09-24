@@ -24,7 +24,7 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Forms** | Write a function; it is called with inputs you have not seen. 82 across 12 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python and JavaScript |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 9 moments |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 11 of them |
-| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 8 hunts, in Python and JavaScript |
+| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 16 hunts, in Python and JavaScript |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to |
 | **Predict** | Read the code, say what it prints. 56 puzzles, 29 of them JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
@@ -33,7 +33,7 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Concepts** | The questions an interview asks that are not coding problems |
 | **Reference** | Cheat sheets and flashcards for the language you are in |
 
-The look is a choice: the swatch button in the top bar switches the whole app between Original, Dark, Light, Northern Lights and Arcade, and remembers it per browser.
+The look is a choice: the swatch button in the top bar switches the whole app between Original, Dark, Purple, Light, Northern Lights and Arcade, and remembers it per browser.
 
 ### Languages
 

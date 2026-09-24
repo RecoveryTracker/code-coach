@@ -16,7 +16,13 @@
 import type { Monaco } from "@monaco-editor/react";
 import { useEffect, useState } from "react";
 
-export type SkinId = "original" | "dark" | "light" | "aurora" | "arcade";
+export type SkinId =
+  | "original"
+  | "dark"
+  | "purple"
+  | "light"
+  | "aurora"
+  | "arcade";
 
 export type Skin = {
   id: SkinId;
@@ -37,6 +43,12 @@ export const SKINS: Skin[] = [
     id: "dark",
     name: "Dark",
     hint: "Deeper and more neutral — near-black, plain greys.",
+    light: false,
+  },
+  {
+    id: "purple",
+    name: "Purple",
+    hint: "Dark, in violet and lavender.",
     light: false,
   },
   {

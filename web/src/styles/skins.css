@@ -90,6 +90,42 @@
   --r-warning-soft: #2e2208;
 }
 
+/* ── Purple: dark, in violet and lavender ────────────────────── */
+
+[data-skin="purple"] {
+  color-scheme: dark;
+  --r-bg-sunken: #0a0612;
+  --r-bg: #0f0a18;
+  --r-bg-panel: #150e21;
+  --r-bg-elevated: #1d152d;
+  --r-border: #2c2141;
+  --r-border-strong: #3f3159;
+  --r-text-dim: #857aa3;
+  --r-text-muted: #b6aad0;
+  --r-text: #ece6f7;
+  --r-text-strong: #ffffff;
+  --r-accent: #c4a1ff;
+  --r-accent-strong: #7c3aed;
+  --r-accent-soft: #2a1a47;
+  --r-on-accent: #1a0b33;
+  --r-on-strong: #ffffff;
+  --r-success: #6ee7a8;
+  --r-success-soft: #10291e;
+  --r-danger: #ff7a9c;
+  --r-danger-soft: #3a1224;
+  --r-warning: #ffd166;
+  --r-warning-soft: #33280c;
+}
+
+/* A faint violet glow along the top bar, kept to that strip for the same
+   reason as Northern Lights: never behind the code you are reading. */
+:root[data-skin="purple"] .mode-bar {
+  background:
+    radial-gradient(ellipse 70% 150% at 25% 0%, rgb(124 58 237 / 0.22), transparent 70%),
+    radial-gradient(ellipse 50% 130% at 80% 0%, rgb(196 161 255 / 0.14), transparent 70%),
+    var(--r-bg-panel);
+}
+
 /* ── Light: the conventional daytime look ───────────────────── */
 
 [data-skin="light"] {

@@ -76,7 +76,15 @@ function show(value: unknown, language: string): string {
   return String(value);
 }
 
-export default function BugHunt() {
+/**
+ * Only the language picked in the top bar.
+ *
+ * It showed Python and JavaScript side by side at first, which is two
+ * languages' worth of list for someone learning one. The picker at the
+ * top is where the language is chosen for every other screen, so this
+ * follows it rather than growing a picker of its own.
+ */
+export default function BugHunt({ language }: { language: string }) {
   const [list, setList] = useState<BugHuntList | null>(null);
   const [chosen, setChosen] = useState("");
   const [error, setError] = useState("");
@@ -107,7 +115,9 @@ export default function BugHunt() {
       .then((data) => {
         if (!alive) return;
         setList(data);
-        const all = data.families.flatMap((f) => f.hunts);
+        const all = data.families
+          .flatMap((f) => f.hunts)
+          .filter((h) => h.language === language);
         let last = "";
         try {
           last = localStorage.getItem(LAST_KEY) ?? "";
@@ -123,10 +133,32 @@ export default function BugHunt() {
     };
   }, []);
 
-  const hunt = useMemo(
-    () => list?.families.flatMap((f) => f.hunts).find((h) => h.id === chosen) ?? null,
-    [list, chosen],
+  /* The families as shown: only this language's hunts, and no empty
+     headings for the languages that were filtered away. */
+  const shown = useMemo(
+    () =>
+      (list?.families ?? [])
+        .map((f) => ({ ...f, hunts: f.hunts.filter((h) => h.language === language) }))
+        .filter((f) => f.hunts.length > 0),
+    [list, language],
   );
+
+  const hunt = useMemo(
+    () => shown.flatMap((f) => f.hunts).find((h) => h.id === chosen) ?? null,
+    [shown, chosen],
+  );
+
+  /* Switching language while a hunt is open: the open one is no longer
+     on the list, so move to this language's next one rather than leave
+     a hunt on screen that the list no longer admits to. */
+  useEffect(() => {
+    if (!list) return;
+    const here = shown.flatMap((f) => f.hunts);
+    if (!here.some((h) => h.id === chosen)) {
+      setChosen(nextUp(here)?.id ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, list]);
 
   /* Keyed on the id, not the object: the list is rebuilt after a pass,
      which changes identity, and resetting on that would wipe the result
@@ -257,14 +289,27 @@ export default function BugHunt() {
   }, [hunt]);
 
   const leastDone = useMemo(
-    () => nextUp(list?.families.flatMap((f) => f.hunts) ?? []),
-    [list],
+    () => nextUp(shown.flatMap((f) => f.hunts)),
+    [shown],
   );
 
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
   }
-  if (!list || !hunt) return <div className="lessons-empty">Loading…</div>;
+  if (!list) return <div className="lessons-empty">Loading…</div>;
+  if (!shown.length) {
+    /* Say which languages do have hunts, rather than an empty screen
+       that looks broken. The names come from the list itself, so this
+       cannot fall out of step with what exists. */
+    const have = list.families.map((f) => f.name).join(" and ");
+    return (
+      <div className="lessons-empty">
+        No bug hunts in this language yet. There are hunts in {have} —
+        switch the language at the top to try them.
+      </div>
+    );
+  }
+  if (!hunt) return <div className="lessons-empty">Loading…</div>;
 
   const lines = hunt.code.replace(/\n$/, "").split("\n");
   const lang = hunt.language;
@@ -287,7 +332,7 @@ export default function BugHunt() {
             Next up: {leastDone.title}
           </button>
         ) : null}
-        {list.families.map((family) => (
+        {shown.map((family) => (
           <div key={family.name} className="wb-section">
             <h4 className="wb-section-head">
               {family.name}
