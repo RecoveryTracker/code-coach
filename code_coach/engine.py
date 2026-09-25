@@ -741,6 +741,16 @@ def dart_available() -> bool:
     return dart_path() is not None
 
 
+def c_available() -> bool:
+    """Whether C can be compiled here: gcc or clang, or MSVC on Windows."""
+    return bool(shutil.which("gcc") or shutil.which("clang") or msvc_available())
+
+
+def if_c(items) -> tuple:
+    """The items, if a C compiler is installed - otherwise none of them."""
+    return tuple(items) if c_available() else ()
+
+
 def if_dart(items) -> tuple:
     """The items, if Dart is installed - otherwise none of them.
 

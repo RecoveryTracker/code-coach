@@ -131,10 +131,13 @@ def _m(**kw) -> Magnet:
 def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     """Every puzzle, or one family's, easiest first within the family."""
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
-    from code_coach.engine import if_dart
+    from code_coach.engine import if_c, if_dart
+    from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
+    from code_coach.magnets.content_dart2 import DART_MAGNETS_2
 
-    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS))
+    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+        *if_c(C_MAGNETS))
     if family is not None:
         everything = tuple(m for m in everything if m.family == family)
     return tuple(sorted(everything, key=lambda m: m.level))
@@ -142,11 +145,14 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
 
 def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
-    from code_coach.engine import if_dart
+    from code_coach.engine import if_c, if_dart
+    from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
+    from code_coach.magnets.content_dart2 import DART_MAGNETS_2
 
     seen: list[str] = []
-    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS)):
+    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+        *if_c(C_MAGNETS)):
         if m.family not in seen:
             seen.append(m.family)
     return tuple(seen)

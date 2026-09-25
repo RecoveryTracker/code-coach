@@ -514,15 +514,26 @@ def _tidy(detail: str) -> str:
         # Dart's stack frames: "#0  main (file:///.../x.dart:5:3)".
         if re.match(r"\s*#\d+\s", line):
             continue
-        # Dart puts the message on the same line as the place:
-        # <path>.dart:3:10: Error: ... - keep the message.
-        if ".dart:" in line:
-            after = line.split(".dart:", 1)[1]
-            found = re.match(r"(\d+):\d+: (.*)", after)
-            if found:
-                line = f"Line {found.group(1)}: {found.group(2)}"
-                out.append(line)
-                continue
+        # A C compiler that has lost track of the braces goes on to
+        # report dozens of errors inside the system headers, each under
+        # its full path. None of that is the learner's code, and the real
+        # error is always above it - so the report stops there.
+        if line.startswith("In file included from") or re.search(
+                r"\.h:\d+:\d+:", line):
+            break
+        # Dart and C compilers put the message on the same line as the
+        # place: <path>.dart:3:10: Error: ... - keep the message.
+        kept = False
+        for suffix in (".dart:", ".c:"):
+            if suffix in line:
+                after = line.split(suffix, 1)[1]
+                found = re.match(r"(\d+):\d+: (.*)", after)
+                if found:
+                    out.append(f"Line {found.group(1)}: {found.group(2)}")
+                    kept = True
+                break
+        if kept:
+            continue
         for suffix in (".js:", ".py:"):
             if suffix in line:
                 after = line.split(suffix, 1)[1]
@@ -558,9 +569,11 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.content2 import MORE
     from code_coach.engine import if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
+    from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
     from code_coach.kata.dart_katas2 import DART_KATAS_2
     from code_coach.kata.dart_modify import DART_MODIFY
+    from code_coach.kata.dart_modify2 import DART_MODIFY_2
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
@@ -571,7 +584,8 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     everything = (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
-        + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_MODIFY)
+        + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
+                  + DART_MODIFY + DART_MODIFY_2)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -589,9 +603,11 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.content2 import MORE
     from code_coach.engine import if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
+    from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
     from code_coach.kata.dart_katas2 import DART_KATAS_2
     from code_coach.kata.dart_modify import DART_MODIFY
+    from code_coach.kata.dart_modify2 import DART_MODIFY_2
     from code_coach.kata.js import JS_KATAS
     from code_coach.kata.js_odin import ODIN
     from code_coach.kata.js_stubs import STUBS
@@ -602,7 +618,8 @@ def _in_file_order() -> tuple[Kata, ...]:
     return (
         KATAS + MORE + PROJECTS + PROJECTS2 + BUGS + BUGS2 + PYTHON_MODIFY
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
-        + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_MODIFY)
+        + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
+                  + DART_MODIFY + DART_MODIFY_2)
     )
 
 

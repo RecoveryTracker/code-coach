@@ -27,6 +27,7 @@ nothing except that the author had not run it. It is not in the file.
 from __future__ import annotations
 
 from code_coach.kata.predict_js import JS_PUZZLES
+from code_coach.kata.predict_c import C_PUZZLES
 from code_coach.kata.predict_dart import DART_PUZZLES
 from code_coach.kata.predict_dart2 import DART_PUZZLES_2
 from code_coach.kata.predict_js2 import JS_PUZZLES_2
@@ -555,17 +556,20 @@ FLOW: tuple[Puzzle, ...] = (
 
 PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
-    + JS_PUZZLES_2 + DART_PUZZLES + DART_PUZZLES_2
+    + JS_PUZZLES_2 + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES
 )
 
 
 def _offered() -> tuple[Puzzle, ...]:
-    """PUZZLES, less the Dart ones on a machine without Dart."""
-    from code_coach.engine import dart_available
+    """PUZZLES, less any whose language this machine cannot run."""
+    from code_coach.engine import c_available, dart_available
 
-    if dart_available():
-        return PUZZLES
-    return tuple(p for p in PUZZLES if p.language != "dart")
+    missing = set()
+    if not dart_available():
+        missing.add("dart")
+    if not c_available():
+        missing.add("c")
+    return tuple(p for p in PUZZLES if p.language not in missing)
 
 
 def puzzles(family: str | None = None) -> tuple[Puzzle, ...]:

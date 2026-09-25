@@ -218,7 +218,7 @@ export default function Predict() {
             <h4 className="wb-section-head">
               {family.name}
               <span className="wb-section-count">
-                {({ javascript: "JS", dart: "Dart", python: "Py" } as Record<string, string>)[family.language] ?? family.language} ·{" "}
+                {({ javascript: "JS", dart: "Dart", python: "Py", c: "C" } as Record<string, string>)[family.language] ?? family.language} ·{" "}
                 {family.puzzles.length}
               </span>
             </h4>
@@ -246,7 +246,7 @@ export default function Predict() {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", dart: "Dart", python: "Python" } as Record<string, string>)[language] ?? language}
+              {({ javascript: "JavaScript", dart: "Dart", python: "Python", c: "C" } as Record<string, string>)[language] ?? language}
             </span>
           </h3>
         </header>
