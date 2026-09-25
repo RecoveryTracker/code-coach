@@ -588,7 +588,10 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.c_bugs import C_BUGS
+    from code_coach.kata.c_bugs2 import C_BUGS_2
     from code_coach.kata.c_katas import C_KATAS
+    from code_coach.kata.c_katas2 import C_KATAS_2
+    from code_coach.kata.c_modify import C_MODIFY
     from code_coach.kata.content2 import MORE
     from code_coach.engine import if_c, if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
@@ -609,7 +612,7 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
-        + if_c(C_KATAS + C_BUGS)
+        + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -625,7 +628,10 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
     from code_coach.kata.c_bugs import C_BUGS
+    from code_coach.kata.c_bugs2 import C_BUGS_2
     from code_coach.kata.c_katas import C_KATAS
+    from code_coach.kata.c_katas2 import C_KATAS_2
+    from code_coach.kata.c_modify import C_MODIFY
     from code_coach.kata.content2 import MORE
     from code_coach.engine import if_c, if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
@@ -646,7 +652,7 @@ def _in_file_order() -> tuple[Kata, ...]:
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
-        + if_c(C_KATAS + C_BUGS)
+        + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
     )
 
 

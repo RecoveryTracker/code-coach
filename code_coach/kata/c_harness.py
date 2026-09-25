@@ -166,6 +166,8 @@ def _print_result(kind: str) -> list[str]:
     ]
 
 
+HEADERS = "#include <stdbool.h>\n#include <stdio.h>\n#include <string.h>\n#line 1\n"
+
 PRELUDE = r"""
 
 /* ── the marker ─────────────────────────────────────────── */
@@ -195,8 +197,10 @@ int main(void) {
 def harness(kata, code: str) -> str:
     """The student's code, then a main() that calls it once per case.
 
-    The driver's includes come after the student's code, which C allows
-    at file scope, so the student's line numbers are the compiler's.
+    The usual headers go first, so bool, printf and strlen work without
+    the student remembering the include - and `#line 1` then tells the
+    compiler to count the student's first line as line 1, so its error
+    messages still point at the line in the box.
     """
     returns = (kata.returns or "int").strip()
     kinds = list(kata.types) + ["int"] * (len(kata.params) - len(kata.types))
@@ -222,7 +226,7 @@ def harness(kata, code: str) -> str:
         lines.append(f'printf("{CASE}");')
         lines += _print_result(returns)
         body.append("    {\n" + "\n".join("        " + line for line in lines) + "\n    }")
-    return (code.rstrip() + "\n" + PRELUDE + "\n".join(body)
+    return (HEADERS + code.rstrip() + "\n" + PRELUDE + "\n".join(body)
             + f'\n    printf("{DONE}\\n");\n    return 0;\n}}\n')
 
 

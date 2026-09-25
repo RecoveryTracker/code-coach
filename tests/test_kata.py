@@ -501,6 +501,7 @@ class BrokenExerciseTests(unittest.TestCase):
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
             "Fix the bug: Dart", "Change it: Dart", "Fix the bug: C",
+            "Change it: C",
         }
         for k in katas():
             if k.family in allowed:
@@ -517,6 +518,7 @@ class BrokenExerciseTests(unittest.TestCase):
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
             "Fix the bug: Dart", "Change it: Dart", "Fix the bug: C",
+            "Change it: C",
         }
         for k in katas():
             if k.start.strip():
