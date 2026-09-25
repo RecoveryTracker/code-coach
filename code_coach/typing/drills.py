@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing import asm_drills, asmlore, blends
-from code_coach.typing import langhistory, langlore2, langlore3, langlore4
+from code_coach.typing import langhistory, langhistory_dart, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
@@ -298,7 +298,11 @@ THEMES: tuple[Theme, ...] = (
     Theme(
         "dart", "Dart Lore",
         "Null safety, isolates, and a language built for interfaces.",
-        passages=langlore.DART,
+        passages=(
+            langlore.DART
+            + langhistory_dart.DART_STORY
+            + langhistory_dart.DART_IN_USE
+        ),
     ),
     Theme(
         "sql", "SQL Lore",

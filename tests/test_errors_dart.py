@@ -300,9 +300,11 @@ class RouteTests(unittest.TestCase):
             names = [f["name"] for f in served["families"]]
             self.assertEqual(names, list(errors_module.crash_families()))
             dart = next(f for f in served["families"] if f["name"] == "Dart")
-            self.assertEqual(
-                sorted(row["id"] for row in dart["crashes"]),
-                sorted(c.id for c in DART_CRASHES))
+            # Every one of these is served. Not "only these": later Dart
+            # sets join the same family.
+            self.assertLessEqual(
+                {c.id for c in DART_CRASHES},
+                {row["id"] for row in dart["crashes"]})
             for row in dart["crashes"]:
                 self.assertEqual(row["language"], "dart")
 

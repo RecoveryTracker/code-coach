@@ -183,8 +183,9 @@ def traces(family: str | None = None) -> tuple[Trace, ...]:
     from code_coach.trace.content import ALIASING, LOOPS, SCOPE
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
+    from code_coach.trace.content_dart2 import DART_TRACES_2
 
-    everything = (*ALIASING, *LOOPS, *SCOPE, *if_dart(DART_TRACES))
+    everything = (*ALIASING, *LOOPS, *SCOPE, *if_dart(DART_TRACES + DART_TRACES_2))
     if family is not None:
         everything = tuple(t for t in everything if t.family == family)
     return tuple(sorted(everything, key=lambda t: t.level))
@@ -194,9 +195,10 @@ def trace_families() -> tuple[str, ...]:
     from code_coach.trace.content import ALIASING, LOOPS, SCOPE
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
+    from code_coach.trace.content_dart2 import DART_TRACES_2
 
     seen: list[str] = []
-    for t in (*ALIASING, *LOOPS, *SCOPE, *if_dart(DART_TRACES)):
+    for t in (*ALIASING, *LOOPS, *SCOPE, *if_dart(DART_TRACES + DART_TRACES_2)):
         if t.family not in seen:
             seen.append(t.family)
     return tuple(seen)

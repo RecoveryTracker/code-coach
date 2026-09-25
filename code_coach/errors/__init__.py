@@ -139,8 +139,9 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
     from code_coach.engine import if_dart
     from code_coach.errors.content_dart import DART_CRASHES
+    from code_coach.errors.content_dart2 import DART_CRASHES_2
 
-    everything = (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES))
+    everything = (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES + DART_CRASHES_2))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
     return tuple(sorted(everything, key=lambda c: c.level))
@@ -150,9 +151,10 @@ def crash_families() -> tuple[str, ...]:
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
     from code_coach.engine import if_dart
     from code_coach.errors.content_dart import DART_CRASHES
+    from code_coach.errors.content_dart2 import DART_CRASHES_2
 
     seen: list[str] = []
-    for c in (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES)):
+    for c in (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES + DART_CRASHES_2)):
         if c.family not in seen:
             seen.append(c.family)
     return tuple(seen)
