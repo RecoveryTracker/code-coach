@@ -1181,15 +1181,36 @@ export default function App() {
      panes and pauses the exercise session, which means nothing on the
      other eight, and a button that does nothing on most screens is
      worse than one you have to go somewhere to find. */
+  // The Progress button is in this bar on every screen, so its panel has
+  // to come with the bar. It used to be drawn only by the LeetCode
+  // screen, which made the button do nothing everywhere else.
   const modeBar = (
-    <div className="typing-topbar mode-bar">
-      <span className="ws-brand-inline">Code Coach</span>
-      <div className="panel-actions">
-        {panelLanguage}
-        <SkinPicker />
-        {moduleRow}
+    <>
+      <div className="typing-topbar mode-bar">
+        <span className="ws-brand-inline">Code Coach</span>
+        <div className="panel-actions">
+          {panelLanguage}
+          <SkinPicker />
+          {moduleRow}
+        </div>
       </div>
-    </div>
+      {progressOpen && progress && session ? (
+        <ProgressPanel
+          progress={progress}
+          session={session}
+          onClose={() => setProgressOpen(false)}
+          onGotoClass={(id) => {
+            setProgressOpen(false);
+            go("leetcode");
+            void jumpTo({ class_id: id, lesson_number: 1 });
+          }}
+          onClearAll={() => {
+            clearAllDrafts();
+            void loadSession(session, true);
+          }}
+        />
+      ) : null}
+    </>
   );
 
   if (referenceOpen) {
