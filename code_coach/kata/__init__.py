@@ -84,6 +84,8 @@ class Kata:
     #: The worked answer in Dart, for a kata written in it. Checked the
     #: same way as js_answer: run through the driver against the oracle.
     dart_answer: str = ""
+    #: The worked answer in C. Run through kata/c_harness.py, the C driver.
+    c_answer: str = ""
     #: How hard this one is, 1 to 5, and the order a family is read in.
     #:
     #: A judgement rather than anything derivable — there is no measure
@@ -162,6 +164,10 @@ class Kata:
         and the box had to be emptied before a word could be typed.
         """
         joined = ", ".join(self.params)
+        if self.language == "c":
+            from code_coach.kata.c_harness import signature
+
+            return signature(self)
         if self.language == "dart":
             typed = ", ".join(
                 f"{kind} {name}" for kind, name in zip(self.types, self.params))
@@ -204,6 +210,8 @@ class Kata:
             return self.js_answer.strip()
         if self.language == "dart":
             return self.dart_answer.strip()
+        if self.language == "c":
+            return self.c_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
         return source.replace(
             f"def {self.solve.__name__}", f"def {self.name}", 1)
@@ -380,6 +388,10 @@ def harness(kata: Kata, code: str) -> str:
     """The student's code with a driver appended."""
     if kata.language == "dart":
         return _dart_harness(kata, code)
+    if kata.language == "c":
+        from code_coach.kata import c_harness
+
+        return c_harness.harness(kata, code)
     driver = JS_DRIVER if kata.language == "javascript" else DRIVER
     return code.rstrip() + "\n" + driver.format(
         cases=json.dumps([list(case) for case in kata.cases]),
@@ -433,6 +445,15 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
     driver's line — so the results are taken from the marker onwards
     rather than from the whole of stdout.
     """
+    if kata.language == "c":
+        # C prints a line per case so a crash can be pinned to its input;
+        # unpack turns those back into the one line read below.
+        from code_coach.kata import c_harness
+
+        if c_harness.missing(kata, stdout, stderr):
+            stdout = NO_FUNCTION
+        else:
+            stdout = c_harness.unpack(kata, stdout, stderr, exit_code, MARKER)
     if NO_FUNCTION in stdout or _dart_missing(kata, stdout, stderr):
         return Outcome(
             broke=f"there is no function called {kata.name} — check the "
@@ -566,8 +587,10 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.bugs import BUGS
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
+    from code_coach.kata.c_bugs import C_BUGS
+    from code_coach.kata.c_katas import C_KATAS
     from code_coach.kata.content2 import MORE
-    from code_coach.engine import if_dart
+    from code_coach.engine import if_c, if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
@@ -586,6 +609,7 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
+        + if_c(C_KATAS + C_BUGS)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -600,8 +624,10 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.bugs import BUGS
     from code_coach.kata.bugs2 import BUGS2
     from code_coach.kata.content import KATAS
+    from code_coach.kata.c_bugs import C_BUGS
+    from code_coach.kata.c_katas import C_KATAS
     from code_coach.kata.content2 import MORE
-    from code_coach.engine import if_dart
+    from code_coach.engine import if_c, if_dart
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
@@ -620,6 +646,7 @@ def _in_file_order() -> tuple[Kata, ...]:
         + JS_KATAS + STUBS + ODIN + JAVASCRIPT_MODIFY
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
+        + if_c(C_KATAS + C_BUGS)
     )
 
 

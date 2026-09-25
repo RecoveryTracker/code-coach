@@ -52,6 +52,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
   python: "Python",
   javascript: "JavaScript",
   dart: "Dart",
+  c: "C",
 };
 
 function readDrafts(): Record<string, string> {

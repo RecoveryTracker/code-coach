@@ -21,7 +21,7 @@ Thirteen modes, all sharing one row of names at the top of every screen.
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 124 across 15 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript and Dart |
+| **Forms** | Write a function; it is called with inputs you have not seen. 138 across 17 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, Dart and C |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 21 moments, in Python, JavaScript and Dart |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 23 of them, in Python, JavaScript and Dart |
 | **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 31 hunts, in Python, JavaScript and Dart |

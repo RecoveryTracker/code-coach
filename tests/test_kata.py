@@ -150,9 +150,9 @@ class ReferenceTests(unittest.TestCase):
         time this ran.
         """
         for k in katas():
-            if k.language == "dart":
-                # Run in test_dart_katas, which skips them cleanly on a
-                # machine without Dart instead of failing here.
+            if k.language in ("dart", "c"):
+                # Run in test_dart_katas / test_c_katas, which skip them
+                # cleanly on a machine without the toolchain.
                 continue
             with self.subTest(kata=k.id):
                 out, err, code = run_code(
@@ -181,6 +181,7 @@ class ReferenceTests(unittest.TestCase):
                 opener = {
                     "javascript": f"function {k.name}(",
                     "dart": f"{k.returns} {k.name}(",
+                    "c": f"{k.name}(",
                 }.get(k.language, f"def {k.name}(")
                 self.assertIn(opener, shown)
                 self.assertNotIn(f"def {k.solve.__name__}(", shown)
@@ -499,7 +500,7 @@ class BrokenExerciseTests(unittest.TestCase):
         allowed = {
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
-            "Fix the bug: Dart", "Change it: Dart",
+            "Fix the bug: Dart", "Change it: Dart", "Fix the bug: C",
         }
         for k in katas():
             if k.family in allowed:
@@ -515,7 +516,7 @@ class BrokenExerciseTests(unittest.TestCase):
         named = {
             "Fix the bug", "Finish the program",
             "Change it", "Change it: JavaScript",
-            "Fix the bug: Dart", "Change it: Dart",
+            "Fix the bug: Dart", "Change it: Dart", "Fix the bug: C",
         }
         for k in katas():
             if k.start.strip():
@@ -827,6 +828,9 @@ class JavaScriptTests(unittest.TestCase):
                 if k.language == "javascript":
                     self.assertTrue(k.signature.startswith("function "))
                     self.assertTrue(k.signature.endswith("{"))
+                elif k.language == "c":
+                    self.assertIn(f"{k.name}(", k.signature)
+                    self.assertTrue(k.signature.endswith("{"))
                 elif k.language == "dart":
                     self.assertTrue(k.signature.startswith(f"{k.returns} {k.name}("))
                     self.assertTrue(k.signature.endswith("{"))
@@ -923,6 +927,11 @@ class RouteLanguageTests(unittest.TestCase):
         for language in languages():
             if language == "dart" and not dart_available():
                 continue
+            if language == "c":
+                from code_coach.engine import c_available
+
+                if not c_available():
+                    continue
             with self.subTest(language=language):
                 first = next(
                     k for k in katas() if k.language == language)
