@@ -142,8 +142,13 @@ Either way you get the API on `127.0.0.1:8765`, the UI on `localhost:5173`, and
 a browser tab. To run them by hand instead:
 
 ```bash
-.venv/bin/python -m uvicorn code_coach.api.server:app --reload --host 127.0.0.1 --port 8765
+.venv/bin/python tools/serve_api.py
 ```
+
+That runs the API on port 8765 and restarts it whenever a file under
+`code_coach/` changes - a fresh process each time, which is sturdier than
+uvicorn's own `--reload` (on some machines that one logs "Reloading..." and
+never restarts).
 
 ```bash
 cd web && npm run dev
@@ -161,24 +166,17 @@ cd web && npm run dev
 git pull
 ```
 
-Then **restart the API**. On Windows that is `restart-api.bat`; by hand it is
-stopping the uvicorn process and starting it again.
+The API restarts itself: `tools/serve_api.py`, which `start.bat` runs, sees
+the changed files and starts a fresh server within a couple of seconds. If it
+ever seems stuck - a port held by something else, say - `restart-api.bat` stops
+everything and starts it again:
 
 ```bash
 restart-api.bat
 ```
 
-Finally reload the browser tab. The UI reloads itself as files change, but a
+Then reload the browser tab. The UI reloads itself as files change, but a
 tab that was already open can be holding an older bundle.
-
-**Do not use `start.bat` for this.** It checks whether port 8765 is already
-listening and says "API already running" if it is — so after a pull you would
-keep running the old Python while the new UI talked to it, which looks like
-the new feature being broken rather than absent. The API deliberately runs
-without `--reload`, because uvicorn's reloader wedges on some machines: it
-logs "Reloading..." and then never restarts, and the app serves stale code
-while looking perfectly healthy. A restart you have to ask for is slower than
-one that works and far faster than one that lies.
 
 Reinstalling dependencies is only needed when they actually change:
 

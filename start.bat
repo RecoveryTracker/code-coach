@@ -24,15 +24,15 @@ netstat -an | findstr "127.0.0.1:8765" | findstr LISTENING >nul
 if errorlevel 1 (
   echo Starting API...  logs\api.log
   if exist "%LOGS%\api.log" move /y "%LOGS%\api.log" "%LOGS%\api.log.prev" >nul 2>&1
-  rem No --reload, deliberately. Uvicorn's reloader wedges on this machine: it
-  rem logs "Reloading..." and then never restarts, so the API carries on
-  rem serving the code it started with while looking perfectly healthy. That
-  rem cost two debugging sessions before logs\api.log made it visible. Run
-  rem restart-api.bat after changing anything under code_coach\.
-  rem --no-use-colors because escape codes in a log file are noise.
+  rem Not uvicorn's --reload: on this machine its reloader logs
+  rem "Reloading..." and then never restarts, so the API carries on serving
+  rem the code it started with while looking perfectly healthy.
+  rem tools\serve_api.py does the reloading the plain way instead - it stops
+  rem the server and starts a fresh one whenever a file under code_coach\
+  rem changes, and says so in logs\api.log.
   rem The log path is relative on purpose: it avoids nesting quotes inside the
   rem quoted command, and `start` hands the child this directory anyway.
-  start "Code Coach API" /min cmd /c ".\.venv\Scripts\python.exe -m uvicorn code_coach.api.server:app --no-use-colors --host 127.0.0.1 --port 8765 > logs\api.log 2>&1"
+  start "Code Coach API" /min cmd /c ".\.venv\Scripts\python.exe tools\serve_api.py > logs\api.log 2>&1"
 ) else (
   echo API already running.
 )
@@ -50,7 +50,5 @@ if errorlevel 1 (
 
 start "" "http://localhost:5173"
 
-rem Said once, at the end, where it will actually be read. The UI reloads
-rem itself; the API does not.
-echo.
-echo Changed something under code_coach\? Run restart-api.bat.
+rem Both reload themselves: the UI through Vite, the API through
+rem tools\serve_api.py. restart-api.bat is still there if the API is stuck.

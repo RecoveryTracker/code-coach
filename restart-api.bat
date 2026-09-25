@@ -1,13 +1,10 @@
 @echo off
 rem Stop the API and start a fresh one.
 rem
-rem Needed because start.bat no longer passes --reload: uvicorn's reloader
-rem wedged on this machine, logging "Reloading..." and then never restarting,
-rem so the app quietly served old code for half an hour. A restart you have to
-rem ask for is slower than one that works and much faster than one that lies.
-rem
-rem Run this after changing anything under code_coach\. The UI is left alone —
-rem Vite's own reloading is fine.
+rem The API restarts itself when code changes (tools\serve_api.py), so this
+rem is for when it is stuck: a port held by something, or a crash that the
+rem next save did not clear. The UI is left alone — Vite's own reloading is
+rem fine.
 
 cd /d "%~dp0"
 set LOGS=%~dp0logs
@@ -24,7 +21,7 @@ rem the live worker running and the port occupied. That orphan is what made
 rem "API already running" attach to a server nobody was supervising.
 powershell -NoProfile -Command ^
   "$ErrorActionPreference='SilentlyContinue';" ^
-  "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*uvicorn*' -or $_.CommandLine -like '*multiprocessing-fork*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force };" ^
+  "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*uvicorn*' -or $_.CommandLine -like '*serve_api*' -or $_.CommandLine -like '*multiprocessing-fork*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force };" ^
   "(netstat -ano | Select-String '127.0.0.1:8765' | Select-String 'LISTENING' | ForEach-Object { ($_ -split '\s+')[-1] } | Sort-Object -Unique) | ForEach-Object { Stop-Process -Id $_ -Force }"
 
 rem Wait for the socket to actually clear before rebinding it.
@@ -40,7 +37,7 @@ if not errorlevel 1 (
 
 echo Starting the API...  logs\api.log
 if exist "%LOGS%\api.log" move /y "%LOGS%\api.log" "%LOGS%\api.log.prev" >nul 2>&1
-start "Code Coach API" /min cmd /c ".\.venv\Scripts\python.exe -m uvicorn code_coach.api.server:app --no-use-colors --host 127.0.0.1 --port 8765 > logs\api.log 2>&1"
+start "Code Coach API" /min cmd /c ".\.venv\Scripts\python.exe tools\serve_api.py > logs\api.log 2>&1"
 
 ping -n 5 127.0.0.1 >nul
 netstat -an | findstr "127.0.0.1:8765" | findstr LISTENING >nul
