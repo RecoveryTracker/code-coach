@@ -48,7 +48,10 @@ def _runnable():
 class CollectionTests(unittest.TestCase):
 
     def test_every_language_has_some(self) -> None:
-        self.assertEqual(set(hunt_families()), {"Python", "JavaScript", "Dart"})
+        from code_coach.engine import dart_available
+
+        want = {"Python", "JavaScript"} | ({"Dart"} if dart_available() else set())
+        self.assertEqual(set(hunt_families()), want)
         for family in hunt_families():
             with self.subTest(family=family):
                 self.assertGreaterEqual(len(hunts(family)), 3)

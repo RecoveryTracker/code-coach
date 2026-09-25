@@ -126,10 +126,19 @@ export default function RegexMode({ language }: { language: string }) {
   }
   if (!list || !item) return <div className="lessons-empty">Loading…</div>;
 
-  const engineName =
-    language === "javascript" || language === "typescript"
-      ? "JavaScript's RegExp"
+  // Once a check has run, name the engine it really used: without Dart
+  // installed, a Dart learner's pattern is checked in Python's re.
+  const engine =
+    result?.engine ||
+    (language === "javascript" || language === "typescript"
+      ? "javascript"
       : language === "dart"
+        ? "dart"
+        : "python");
+  const engineName =
+    engine === "javascript"
+      ? "JavaScript's RegExp"
+      : engine === "dart"
         ? "Dart's RegExp"
         : "Python's re";
   const rowsFor = (should: boolean) =>

@@ -151,7 +151,13 @@ def engine_for(language: str) -> str:
     """
     if language in ("javascript", "typescript"):
         return "javascript"
-    return "dart" if language == "dart" else "python"
+    if language == "dart":
+        from code_coach.engine import dart_available
+
+        # Without Dart installed, Python's re is the honest fallback -
+        # and the check result names the engine it really used.
+        return "dart" if dart_available() else "python"
+    return "python"
 
 
 @dataclass(frozen=True)

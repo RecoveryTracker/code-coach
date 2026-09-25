@@ -29,6 +29,26 @@ winget install -e --id Git.Git
 
 If it asks you to accept a source agreement, type `Y` and press Enter.
 
+### Flutter (for Dart)
+
+Dart is one of the three main languages here, and it comes with Flutter. After
+Git is installed, open a new Terminal and paste:
+
+```powershell
+git clone https://github.com/flutter/flutter.git -b stable C:\flutter
+```
+
+```powershell
+C:\flutter\bin\flutter --version
+```
+
+The second one takes a few minutes the first time: it downloads Dart. The app
+finds Flutter in `C:\flutter` by itself. To use `flutter` and `dart` in your
+own terminal too, add `C:\flutter\bin` to your PATH.
+
+Without Flutter the app still works - the Dart exercises are simply not
+offered, rather than offered and impossible to pass.
+
 ## 2. Close the Terminal and open a new one
 
 This step matters. The installers change your PATH, and a window that was already

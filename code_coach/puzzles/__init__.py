@@ -129,6 +129,10 @@ def supports(language: str) -> bool:
     screen, the same way Bug Hunt does, rather than being quietly handed
     a different language than the one picked at the top.
     """
+    if language == "dart":
+        from code_coach.engine import dart_available
+
+        return dart_available()
     return language in NAMES
 
 

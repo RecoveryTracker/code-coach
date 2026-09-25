@@ -137,9 +137,10 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
 def crashes(family: str | None = None) -> tuple[Crash, ...]:
     """Every one, or one family's, easiest first within the family."""
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
+    from code_coach.engine import if_dart
     from code_coach.errors.content_dart import DART_CRASHES
 
-    everything = (*MISSING, *NAMES, *WRONG_KIND, *DART_CRASHES)
+    everything = (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
     return tuple(sorted(everything, key=lambda c: c.level))
@@ -147,10 +148,11 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
 
 def crash_families() -> tuple[str, ...]:
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
+    from code_coach.engine import if_dart
     from code_coach.errors.content_dart import DART_CRASHES
 
     seen: list[str] = []
-    for c in (*MISSING, *NAMES, *WRONG_KIND, *DART_CRASHES):
+    for c in (*MISSING, *NAMES, *WRONG_KIND, *if_dart(DART_CRASHES)):
         if c.family not in seen:
             seen.append(c.family)
     return tuple(seen)

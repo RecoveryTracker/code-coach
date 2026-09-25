@@ -2088,7 +2088,7 @@ def puzzle_list() -> dict:
     Part two's brief is sent too: the screen keeps it behind part one,
     and knowing the question early is no help with part one anyway.
     """
-    from code_coach.puzzles import NAMES, dart_signature, puzzles
+    from code_coach.puzzles import NAMES, dart_signature, puzzles, supports
 
     saved = _store.load()
     counts, last = saved.puzzle_counts(), saved.puzzle_last()
@@ -2098,7 +2098,7 @@ def puzzle_list() -> dict:
         return {"types": list(types), "returns": returns}
 
     return {
-        "languages": list(NAMES),
+        "languages": [lang for lang in NAMES if supports(lang)],
         "names": {lang: list(names) for lang, names in NAMES.items()},
         "puzzles": [
             {

@@ -115,9 +115,9 @@ def _puzzle_items() -> list[tuple[str, str]]:
 
 
 def _puzzle_languages() -> dict[str, tuple[str, ...]]:
-    from code_coach.puzzles import NAMES, puzzles
+    from code_coach.puzzles import NAMES, puzzles, supports
 
-    return {p.id: tuple(NAMES) for p in puzzles()}
+    return {p.id: tuple(lang for lang in NAMES if supports(lang)) for p in puzzles()}
 
 
 def _case_items() -> list[tuple[str, str]]:

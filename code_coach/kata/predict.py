@@ -558,9 +558,18 @@ PUZZLES: tuple[Puzzle, ...] = (
 )
 
 
+def _offered() -> tuple[Puzzle, ...]:
+    """PUZZLES, less the Dart ones on a machine without Dart."""
+    from code_coach.engine import dart_available
+
+    if dart_available():
+        return PUZZLES
+    return tuple(p for p in PUZZLES if p.language != "dart")
+
+
 def puzzles(family: str | None = None) -> tuple[Puzzle, ...]:
     """Least surprising first, stable within a level."""
-    ordered = tuple(sorted(PUZZLES, key=lambda p: p.level))
+    ordered = tuple(sorted(_offered(), key=lambda p: p.level))
     if family is None:
         return ordered
     return tuple(p for p in ordered if p.family == family)
@@ -578,7 +587,7 @@ def predict_families() -> tuple[str, ...]:
     hold the least surprising puzzle.
     """
     seen: list[str] = []
-    for p in PUZZLES:
+    for p in _offered():
         if p.family not in seen:
             seen.append(p.family)
     return tuple(seen)

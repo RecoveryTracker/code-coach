@@ -57,7 +57,7 @@ class CollectionTests(unittest.TestCase):
 
     def test_only_the_languages_with_answers_are_offered(self) -> None:
         self.assertEqual(set(NAMES), set(LANGUAGES))
-        self.assertTrue(all(supports(lang) for lang in LANGUAGES))
+        self.assertTrue(all(supports(lang) for lang in RUNNABLE))
         self.assertFalse(supports("rust"))
 
 
@@ -170,7 +170,7 @@ class RouteTests(unittest.TestCase):
         from code_coach.api.server import puzzle_list
 
         listed = puzzle_list()
-        self.assertEqual(listed["languages"], list(NAMES))
+        self.assertEqual(listed["languages"], list(RUNNABLE))
         text = repr(listed)
         for p in puzzles():
             for n in (1, 2):

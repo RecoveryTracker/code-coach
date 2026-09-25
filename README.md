@@ -84,6 +84,22 @@ python -m venv .venv && .venv\Scripts\pip install -r requirements.txt && cd web 
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd web && npm install
 ```
 
+### Dart and Flutter
+
+Dart is one of the three focus languages, alongside Python and JavaScript, and
+it comes with Flutter. Install Flutter with Git (the official route):
+
+```bash
+git clone https://github.com/flutter/flutter.git -b stable ~/flutter   # Windows: C:\flutter
+~/flutter/bin/flutter --version                                        # downloads Dart the first time
+```
+
+The app finds `dart` on your PATH, under `FLUTTER_ROOT`, or in the usual
+places (`C:\flutter`, `C:\src\flutter`, `~/flutter`, `~/development/flutter`).
+Without it the app still runs: every Dart exercise is left out of the lists
+and the Session queue rather than offered and impossible to pass, and the
+Dart tests skip.
+
 ### PostgreSQL (optional)
 
 Everything else works without this. PostgreSQL is the one language that needs a

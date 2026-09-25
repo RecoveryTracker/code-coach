@@ -182,7 +182,7 @@ def _interpreter_for(path: Path) -> list[str] | None:
     if suffix == ".py":
         return [sys.executable, str(path)]
     if suffix == ".dart":
-        dart = shutil.which("dart")
+        dart = dart_path()
         return [dart, "run", str(path)] if dart else None
     if suffix in (".js", ".mjs"):
         node = shutil.which("node")
@@ -708,8 +708,47 @@ def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
                 pass
 
 
+#: Where Flutter usually lands when it is unzipped by hand, which is how
+#: its install guide does it. The folder is often not on PATH yet - adding
+#: it is a step people skip - so these are looked in as well.
+FLUTTER_HOMES = (
+    "C:/flutter", "C:/Flutter/flutter", "C:/src/flutter", "~/flutter",
+    "~/development/flutter", "~/src/flutter", "/opt/flutter",
+)
+
+
+@lru_cache(maxsize=1)
+def dart_path() -> str | None:
+    """The dart executable: on PATH, under FLUTTER_ROOT, or in a usual place.
+
+    Flutter carries its own Dart in bin/, so installing Flutter is enough.
+    """
+    found = shutil.which("dart")
+    if found:
+        return found
+    homes = [os.environ.get("FLUTTER_ROOT", ""), *FLUTTER_HOMES]
+    for home in homes:
+        if not home:
+            continue
+        for name in ("dart.bat", "dart.exe", "dart"):
+            candidate = Path(home).expanduser() / "bin" / name
+            if candidate.is_file():
+                return str(candidate)
+    return None
+
+
 def dart_available() -> bool:
-    return shutil.which("dart") is not None
+    return dart_path() is not None
+
+
+def if_dart(items) -> tuple:
+    """The items, if Dart is installed - otherwise none of them.
+
+    Every collection with Dart content passes it through here, so a
+    machine without Dart never offers an exercise it cannot check. The
+    content itself is still imported and tested wherever Dart is there.
+    """
+    return tuple(items) if dart_available() else ()
 
 
 def run_file(
