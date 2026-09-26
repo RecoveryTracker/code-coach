@@ -751,6 +751,16 @@ def if_c(items) -> tuple:
     return tuple(items) if c_available() else ()
 
 
+def ruby_available() -> bool:
+    """Whether Ruby can run here - on PATH or in the app's own .tools."""
+    return _interpreter_for(Path("probe.rb")) is not None
+
+
+def if_ruby(items) -> tuple:
+    """The items, if Ruby is installed - otherwise none of them."""
+    return tuple(items) if ruby_available() else ()
+
+
 def if_dart(items) -> tuple:
     """The items, if Dart is installed - otherwise none of them.
 

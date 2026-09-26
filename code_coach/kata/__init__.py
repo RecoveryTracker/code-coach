@@ -86,6 +86,8 @@ class Kata:
     dart_answer: str = ""
     #: The worked answer in C. Run through kata/c_harness.py, the C driver.
     c_answer: str = ""
+    #: The worked answer in Ruby. Run through kata/ruby_harness.py.
+    ruby_answer: str = ""
     #: How hard this one is, 1 to 5, and the order a family is read in.
     #:
     #: A judgement rather than anything derivable — there is no measure
@@ -168,6 +170,10 @@ class Kata:
             from code_coach.kata.c_harness import signature
 
             return signature(self)
+        if self.language == "ruby":
+            from code_coach.kata.ruby_harness import signature as ruby_signature
+
+            return ruby_signature(self)
         if self.language == "dart":
             typed = ", ".join(
                 f"{kind} {name}" for kind, name in zip(self.types, self.params))
@@ -212,6 +218,8 @@ class Kata:
             return self.dart_answer.strip()
         if self.language == "c":
             return self.c_answer.strip()
+        if self.language == "ruby":
+            return self.ruby_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
         return source.replace(
             f"def {self.solve.__name__}", f"def {self.name}", 1)
@@ -392,6 +400,10 @@ def harness(kata: Kata, code: str) -> str:
         from code_coach.kata import c_harness
 
         return c_harness.harness(kata, code)
+    if kata.language == "ruby":
+        from code_coach.kata import ruby_harness
+
+        return ruby_harness.harness(kata, code)
     driver = JS_DRIVER if kata.language == "javascript" else DRIVER
     return code.rstrip() + "\n" + driver.format(
         cases=json.dumps([list(case) for case in kata.cases]),
@@ -445,6 +457,11 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
     driver's line — so the results are taken from the marker onwards
     rather than from the whole of stdout.
     """
+    if kata.language == "ruby":
+        # Ruby names the temporary file in every error; say "Line N".
+        from code_coach.kata import ruby_harness
+
+        stderr = ruby_harness.tidy(stderr)
     if kata.language == "c":
         # C prints a line per case so a crash can be pinned to its input;
         # unpack turns those back into the one line read below.
@@ -593,7 +610,9 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.c_katas2 import C_KATAS_2
     from code_coach.kata.c_modify import C_MODIFY
     from code_coach.kata.content2 import MORE
-    from code_coach.engine import if_c, if_dart
+    from code_coach.kata.ruby_bugs import RUBY_BUGS
+    from code_coach.kata.ruby_katas import RUBY_KATAS
+    from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
@@ -613,6 +632,7 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
         + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
+        + if_ruby(RUBY_KATAS + RUBY_BUGS)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -633,7 +653,9 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.c_katas2 import C_KATAS_2
     from code_coach.kata.c_modify import C_MODIFY
     from code_coach.kata.content2 import MORE
-    from code_coach.engine import if_c, if_dart
+    from code_coach.kata.ruby_bugs import RUBY_BUGS
+    from code_coach.kata.ruby_katas import RUBY_KATAS
+    from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
     from code_coach.kata.dart_katas import DART_KATAS
@@ -653,6 +675,7 @@ def _in_file_order() -> tuple[Kata, ...]:
         + if_dart(DART_KATAS + DART_KATAS_2 + DART_BUGS + DART_BUGS_2
                   + DART_MODIFY + DART_MODIFY_2)
         + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
+        + if_ruby(RUBY_KATAS + RUBY_BUGS)
     )
 
 

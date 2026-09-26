@@ -53,6 +53,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
   javascript: "JavaScript",
   dart: "Dart",
   c: "C",
+  ruby: "Ruby",
 };
 
 function readDrafts(): Record<string, string> {
@@ -107,7 +108,9 @@ function asPython(value: unknown): string {
  */
 function asValue(value: unknown, language: string): string {
   if (language === "python") return asPython(value);
-  if (value === null || value === undefined) return "null";
+  if (value === null || value === undefined) {
+    return language === "ruby" ? "nil" : language === "c" ? "NULL" : "null";
+  }
   if (typeof value === "string") {
     if (language === "dart" && !value.includes("'")) return `'${value}'`;
     return JSON.stringify(value);

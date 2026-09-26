@@ -271,3 +271,12 @@ def with_defaults(prefs)
 end
 """,
 }
+
+
+def _with_answers():
+    from dataclasses import replace
+
+    return tuple(replace(k, ruby_answer=RUBY_BUG_ANSWERS[k.id]) for k in RUBY_BUGS)
+
+
+RUBY_BUGS = _with_answers()

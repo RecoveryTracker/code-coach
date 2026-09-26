@@ -390,3 +390,12 @@ def rank_players(scores)
 end
 """,
 }
+
+
+def _with_answers():
+    from dataclasses import replace
+
+    return tuple(replace(k, ruby_answer=RUBY_ANSWERS[k.id]) for k in RUBY_KATAS)
+
+
+RUBY_KATAS = _with_answers()
