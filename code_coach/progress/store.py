@@ -153,10 +153,12 @@ class StudentProgress:
     magnet_done: dict[str, DrillRecord] = field(default_factory=dict)
     error_done: dict[str, DrillRecord] = field(default_factory=dict)
     trace_done: dict[str, DrillRecord] = field(default_factory=dict)
+    flutter_done: dict[str, DrillRecord] = field(default_factory=dict)
     bughunt_done: dict[str, DrillRecord] = field(default_factory=dict)
     regex_done: dict[str, DrillRecord] = field(default_factory=dict)
     puzzle_done: dict[str, DrillRecord] = field(default_factory=dict)
     case_done: dict[str, DrillRecord] = field(default_factory=dict)
+    ticket_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -275,6 +277,15 @@ class StudentProgress:
     def puzzle_last(self) -> dict[str, str]:
         return {i: v.last_at for i, v in self.puzzle_done.items() if v.last_at}
 
+    def record_ticket(self, ticket_id: str) -> int:
+        return _bump(self.ticket_done, ticket_id)
+
+    def ticket_counts(self) -> dict[str, int]:
+        return {i: v.count for i, v in self.ticket_done.items()}
+
+    def ticket_last(self) -> dict[str, str]:
+        return {i: v.last_at for i, v in self.ticket_done.items() if v.last_at}
+
     def record_case(self, item_id: str) -> int:
         return _bump(self.case_done, item_id)
 
@@ -283,6 +294,15 @@ class StudentProgress:
 
     def case_last(self) -> dict[str, str]:
         return {i: v.last_at for i, v in self.case_done.items() if v.last_at}
+
+    def record_flutter(self, question_id: str) -> int:
+        return _bump(self.flutter_done, question_id)
+
+    def flutter_counts(self) -> dict[str, int]:
+        return {k: v.count for k, v in self.flutter_done.items()}
+
+    def flutter_last(self) -> dict[str, str]:
+        return {k: v.last_at for k, v in self.flutter_done.items() if v.last_at}
 
     def record_trace(self, trace_id: str) -> int:
         return _bump(self.trace_done, trace_id)
@@ -438,10 +458,12 @@ class StudentProgress:
             magnet_done=_records(raw.get("magnet_done")),
             error_done=_records(raw.get("error_done")),
             trace_done=_records(raw.get("trace_done")),
+            flutter_done=_records(raw.get("flutter_done")),
             bughunt_done=_records(raw.get("bughunt_done")),
             regex_done=_records(raw.get("regex_done")),
             puzzle_done=_records(raw.get("puzzle_done")),
             case_done=_records(raw.get("case_done")),
+            ticket_done=_records(raw.get("ticket_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

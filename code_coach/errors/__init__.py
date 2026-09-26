@@ -99,6 +99,17 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
     if exit_code == 0:
         return "", 0
 
+    if language == "ruby":
+        import re
+
+        # x.rb:3:in '<main>': message (ErrorClass). The path is matched
+        # lazily up to ".rb:<n>:" because a Windows path has a drive colon.
+        for raw in err.splitlines():
+            found = re.match(r"^(?:.+?)\.rb:(\d+):(?:in '[^']*': ?)?\s*(.*)$", raw.strip())
+            if found:
+                return found.group(2).strip(), int(found.group(1))
+        return "", 0
+
     message, line = "", 0
     previous = ""
     for raw in err.splitlines():
@@ -138,11 +149,13 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
     """Every one, or one family's, easiest first within the family."""
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
     from code_coach.errors.content_js2 import JS_CRASHES_2
-    from code_coach.engine import if_dart
+    from code_coach.errors.content_ruby import RUBY_CRASHES
+    from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
 
-    everything = (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *if_dart(DART_CRASHES + DART_CRASHES_2))
+    everything = (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *if_dart(DART_CRASHES + DART_CRASHES_2),
+        *if_ruby(RUBY_CRASHES))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
     return tuple(sorted(everything, key=lambda c: c.level))
@@ -151,12 +164,14 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
 def crash_families() -> tuple[str, ...]:
     from code_coach.errors.content import MISSING, NAMES, WRONG_KIND
     from code_coach.errors.content_js2 import JS_CRASHES_2
-    from code_coach.engine import if_dart
+    from code_coach.errors.content_ruby import RUBY_CRASHES
+    from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
 
     seen: list[str] = []
-    for c in (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *if_dart(DART_CRASHES + DART_CRASHES_2)):
+    for c in (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *if_dart(DART_CRASHES + DART_CRASHES_2),
+        *if_ruby(RUBY_CRASHES)):
         if c.family not in seen:
             seen.append(c.family)
     return tuple(seen)

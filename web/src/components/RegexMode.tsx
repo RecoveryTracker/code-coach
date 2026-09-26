@@ -258,9 +258,11 @@ export default function RegexMode({ language }: { language: string }) {
           <code className="rx-slash">/</code>
           <button
             type="button"
-            className="ws-btn primary"
+            className={`ws-btn primary${result ? " on" : ""}`}
             disabled={checking || !pattern}
-            onClick={() => void run()}
+            onClick={() => (result ? setResult(null) : void run())}
+            aria-pressed={!!result}
+            title={result ? "Click again to hide the result" : undefined}
           >
             {checking ? "Checking…" : "Check"}
           </button>

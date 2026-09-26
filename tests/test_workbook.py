@@ -224,45 +224,6 @@ class ReferenceRunTests(unittest.TestCase):
             f"printed {stdout!r}, wanted {exercise.expect!r}",
         )
 
-    def test_every_exercise_solves_in_python(self) -> None:
-        """The pages Python is offered, which is no longer all of them:
-        JavaScript's own intermediate pages have no Python answer to run."""
-        for p in pages("python"):
-            for e in p.exercises:
-                with self.subTest(exercise=e.id):
-                    self._run("python", e)
-
-    def test_every_exercise_solves_in_javascript(self) -> None:
-        """The pages JavaScript is offered — the shared tiers, plus its own
-        intermediate pages. Python's intermediate pages are not among
-        them."""
-        for p in pages("javascript"):
-            for e in p.exercises:
-                with self.subTest(exercise=e.id):
-                    self._run("javascript", e)
-
-    def test_every_typescript_only_exercise_compiles(self) -> None:
-        """TypeScript's own pages, every exercise rather than one per shape.
-
-        The shape-level test below rests on "within a shape only the numbers
-        change". For TypeScript that is not true: the rows carry type and
-        function names, and a top-level name shares a namespace with the DOM
-        globals. An interface named after a global merges with it instead of
-        shadowing it, so the object is reported as missing members it never
-        heard of.
-
-        That is not hypothetical. A row naming an interface Report compiled
-        fine as the first exercise of its shape and failed as the eighteenth,
-        and it was found by hand because nothing here was looking. This costs
-        a few minutes and would have caught it.
-        """
-        for p in pages("typescript"):
-            if p.number <= 80:
-                continue        # the shared tiers, covered per shape below
-            for e in p.exercises:
-                with self.subTest(exercise=e.id):
-                    self._run("typescript", e)
-
     def test_every_shape_compiles_and_runs_in_every_language(self) -> None:
         """One per shape rather than all of them: within a shape only the
         numbers change, and each of these is another compile."""
@@ -390,6 +351,53 @@ class ReferenceRunTests(unittest.TestCase):
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
 
+
+
+#: How many pieces the three long reference runs are cut into.
+#:
+#: Running every workbook exercise in one language used to be a single
+#: test: about a quarter of an hour, and so also the shortest a parallel
+#: run of the suite could ever be, however many workers it had. Worse, on
+#: a busy machine that one test could outlive the thirty-minute hang
+#: watchdog and take its worker down with it. Cut into interleaved pieces,
+#: every exercise still runs exactly once, and the pieces share out.
+PARTS = 6
+
+
+def _add_reference_parts(language: str, name: str, keep, why: str) -> None:
+    """Give ReferenceRunTests one test per piece of a language's exercises."""
+
+    def make(part: int):
+        def test(self) -> None:
+            every = [e for p in pages(language) if keep(p) for e in p.exercises]
+            for e in every[part::PARTS]:
+                with self.subTest(exercise=e.id):
+                    self._run(language, e)
+
+        test.__doc__ = f"{why} (piece {part + 1} of {PARTS})"
+        return test
+
+    for part in range(PARTS):
+        setattr(ReferenceRunTests, f"{name}_part{part + 1}", make(part))
+
+
+# The pages Python is offered, which is no longer all of them: JavaScript's
+# own intermediate pages have no Python answer to run.
+_add_reference_parts(
+    "python", "test_every_exercise_solves_in_python", lambda p: True,
+    "Every exercise Python is offered prints what it should")
+# The pages JavaScript is offered: the shared tiers plus its own
+# intermediate pages, not Python's.
+_add_reference_parts(
+    "javascript", "test_every_exercise_solves_in_javascript", lambda p: True,
+    "Every exercise JavaScript is offered prints what it should")
+# TypeScript's own pages (past the shared tiers, which are covered per
+# shape): every exercise, because a row naming an interface after a DOM
+# global merges with it - one named Report compiled as the first exercise
+# of its shape and failed as the eighteenth, found by hand.
+_add_reference_parts(
+    "typescript", "test_every_typescript_only_exercise_compiles", lambda p: p.number > 80,
+    "Every TypeScript-only exercise compiles and prints what it should")
 
 class ComplexityNoteTests(unittest.TestCase):
     """A complexity note is a claim about the code, so check it against it.

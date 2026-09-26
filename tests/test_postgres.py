@@ -19,6 +19,14 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
+#: One PostgreSQL server serves the whole suite, and test_postgres stops
+#: and restarts it on purpose. Run in parallel, that would pull the
+#: server out from under a case-file query on another worker - so every
+#: test that uses it runs on the same worker, one after another.
+pytestmark = pytest.mark.xdist_group("postgres")
+
 from code_coach import pg_server
 from code_coach.pg_runner import _split, _tidy_error, run_postgres
 

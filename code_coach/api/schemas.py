@@ -767,6 +767,21 @@ class ErrorCheckResponse(BaseModel):
     fix: str = ""
 
 
+class FlutterCheckRequest(BaseModel):
+    """One Flutter question, and the choice picked for it."""
+
+    question_id: str = ""
+    answer: str = ""
+
+
+class FlutterCheckResponse(BaseModel):
+    passed: bool = False
+    done: int = 0
+    expect: str = ""
+    answer: str = ""
+    why: str = ""
+
+
 class TraceCheckRequest(BaseModel):
     """One moment, and what you think the variable holds."""
 
@@ -897,6 +912,43 @@ class PuzzleCheckResponse(BaseModel):
 
 
 # ── SQL case files ───────────────────────────────────────────
+
+
+class TicketCheckRequest(BaseModel):
+    project_id: str
+    ticket_id: str
+    code: str = Field(default="", max_length=200_000)
+
+
+class TicketCaseResult(BaseModel):
+    args: list[Any] = Field(default_factory=list)
+    want: Any = None
+    got: Any = None
+    error: str = ""
+    passed: bool = False
+    changed: bool = False
+
+
+class TicketFunctionResult(BaseModel):
+    name: str
+    params: list[str] = Field(default_factory=list)
+    new: bool = False
+    passed: bool = False
+    broke: str = ""
+    count: int = 0
+    total: int = 0
+    results: list[TicketCaseResult] = Field(default_factory=list)
+
+
+class TicketCheckResponse(BaseModel):
+    passed: bool
+    broke: str = ""
+    stdout: str = ""
+    functions: list[TicketFunctionResult] = Field(default_factory=list)
+    new_passed: bool = False
+    kept_passed: bool = False
+    lesson: str = ""
+    done: int = 0
 
 
 class CaseQueryRequest(BaseModel):

@@ -272,7 +272,7 @@ export default function Magnets() {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", python: "Python", dart: "Dart", c: "C" } as Record<string, string>)[puzzle.language] ?? puzzle.language}
+              {({ javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby" } as Record<string, string>)[puzzle.language] ?? puzzle.language}
             </span>
           </h3>
         </header>
@@ -381,11 +381,14 @@ export default function Magnets() {
         <div className="wb-actions">
           <button
             type="button"
-            className="ws-btn primary"
-            onClick={() => void check()}
+            className={`ws-btn primary${result ? " on" : ""}`}
+            onClick={() => (result ? setResult(null) : void check())}
             disabled={checking || tray.length > 0 || !assembled.length}
+            aria-pressed={!!result}
             title={
-              tray.length
+              result
+                ? "Click again to hide the result"
+                : tray.length
                 ? "Every magnet has to be placed first"
                 : "Run it and see what it prints"
             }

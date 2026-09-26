@@ -53,7 +53,11 @@ WATCHDOG_SECONDS = float(os.environ.get("CODE_COACH_WATCHDOG", "1800"))
 #: Where a hang leaves its evidence. Rewritten at the start of every
 #: test, so afterwards it either holds a traceback and the name of the
 #: test that hung, or just the line saying nothing did.
-HANG_REPORT = Path(tempfile.gettempdir()) / "code-coach-hang.txt"
+#: One per worker when the suite runs in parallel (pytest -n), or they
+#: would all rewrite the same file and a hang's evidence could be
+#: overwritten by a test on another worker that finished fine.
+HANG_REPORT = Path(tempfile.gettempdir()) / (
+    f"code-coach-hang-{os.environ.get('PYTEST_XDIST_WORKER', 'main')}.txt")
 
 
 @pytest.fixture(autouse=True)

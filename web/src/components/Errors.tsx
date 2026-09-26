@@ -202,7 +202,7 @@ export default function Errors() {
           <h3>
             {item.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", python: "Python", dart: "Dart" } as Record<string, string>)[item.language] ?? item.language}
+              {({ javascript: "JavaScript", python: "Python", dart: "Dart", ruby: "Ruby" } as Record<string, string>)[item.language] ?? item.language}
             </span>
           </h3>
         </header>
@@ -276,11 +276,14 @@ export default function Errors() {
         <div className="wb-actions">
           <button
             type="button"
-            className="ws-btn primary"
-            onClick={() => void check()}
-            disabled={checking || !line || !meaning || answered}
+            className={`ws-btn primary${answered ? " on" : ""}`}
+            onClick={() => (answered ? setResult(null) : void check())}
+            disabled={checking || !line || !meaning}
+            aria-pressed={answered}
             title={
-              !line
+              answered
+                ? "Click again to hide the result"
+                : !line
                 ? "Pick the line first"
                 : !meaning
                   ? "Pick what the message means"

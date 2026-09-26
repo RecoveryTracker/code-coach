@@ -38,6 +38,8 @@ import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
 import BugHunt from "./components/BugHunt";
 import CaseFiles from "./components/CaseFiles";
+import FlutterMode from "./components/FlutterMode";
+import Tickets from "./components/Tickets";
 import Puzzles from "./components/Puzzles";
 import RegexMode from "./components/RegexMode";
 import Errors from "./components/Errors";
@@ -247,6 +249,8 @@ export default function App() {
   const puzzlesOpen = mode === "puzzles";
   const regexOpen = mode === "regex";
   const casesOpen = mode === "cases";
+  const flutterOpen = mode === "flutter";
+  const ticketsOpen = mode === "tickets";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
   const workbookOpen = mode === "workbook";
@@ -1281,6 +1285,24 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <RegexMode language={viewingLanguage} />
+      </div>
+    );
+  }
+
+  if (ticketsOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Tickets />
+      </div>
+    );
+  }
+
+  if (flutterOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <FlutterMode />
       </div>
     );
   }

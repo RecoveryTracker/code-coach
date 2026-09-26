@@ -332,9 +332,11 @@ export default function Drills() {
         <div className="wb-actions">
           <button
             type="button"
-            className="ws-btn primary"
-            onClick={() => void check()}
+            className={`ws-btn primary${result ? " on" : ""}`}
+            onClick={() => (result ? setResult(null) : void check())}
             disabled={checking || !typed.trim()}
+            aria-pressed={!!result}
+            title={result ? "Click again to hide the result" : undefined}
           >
             {checking ? "Checking…" : "Check"}
           </button>

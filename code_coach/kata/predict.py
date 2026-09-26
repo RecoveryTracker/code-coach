@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from code_coach.kata.predict_js import JS_PUZZLES
 from code_coach.kata.predict_c import C_PUZZLES
+from code_coach.kata.predict_ruby import RUBY_PUZZLES
 from code_coach.kata.predict_dart import DART_PUZZLES
 from code_coach.kata.predict_dart2 import DART_PUZZLES_2
 from code_coach.kata.predict_js2 import JS_PUZZLES_2
@@ -557,19 +558,21 @@ FLOW: tuple[Puzzle, ...] = (
 
 PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
-    + JS_PUZZLES_2 + JS_PUZZLES_3 + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES
+    + JS_PUZZLES_2 + JS_PUZZLES_3 + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES + RUBY_PUZZLES
 )
 
 
 def _offered() -> tuple[Puzzle, ...]:
     """PUZZLES, less any whose language this machine cannot run."""
-    from code_coach.engine import c_available, dart_available
+    from code_coach.engine import c_available, dart_available, ruby_available
 
     missing = set()
     if not dart_available():
         missing.add("dart")
     if not c_available():
         missing.add("c")
+    if not ruby_available():
+        missing.add("ruby")
     return tuple(p for p in PUZZLES if p.language not in missing)
 
 

@@ -1,0 +1,147 @@
+/* Tickets: the few pieces the kata and bug-hunt classes do not cover.
+   Palette variables only, so every skin keeps working. */
+
+.ticket-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.ticket-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ticket-project.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.ticket-project-lang {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ticket-done {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: 6px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket-done.yes {
+  color: var(--success);
+}
+
+.ticket-kind {
+  margin-right: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.ticket-kind-bug {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.ticket-kind-feature {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ticket-kind-refactor {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ticket-kind-change {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.ticket-report {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-elevated);
+  color: var(--text);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.ticket-scope {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ticket-scope code {
+  margin-right: 6px;
+  color: var(--text);
+}
+
+.ticket-code {
+  min-height: 24rem;
+}
+
+.ticket-fns {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.ticket-fn {
+  margin: 4px 0;
+}
+
+.ticket-fn-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ticket-fn.ok .ticket-fn-mark {
+  color: var(--success);
+}
+
+.ticket-fn.bad .ticket-fn-mark {
+  color: var(--danger);
+}
+
+.ticket-fn.bad .ticket-fn-head {
+  border-color: var(--danger);
+}
+
+.ticket-fn-count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

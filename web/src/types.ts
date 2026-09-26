@@ -911,10 +911,53 @@ export type SessionItem = {
   last: string;
 };
 
+export type FlutterQuestion = {
+  id: string;
+  name: string;
+  family: string;
+  level: number;
+  /** A whole Dart library; shown as is, indentation and all. */
+  code: string;
+  question: string;
+  /** Sorted, so the position gives nothing away. */
+  choices: string[];
+  done: number;
+  last: string;
+};
+
+export type FlutterList = { families: { name: string; questions: FlutterQuestion[] }[] };
+
+export type FlutterCheck = {
+  passed: boolean;
+  done: number;
+  expect: string;
+  answer: string;
+  why: string;
+};
+
 export type SessionQueue = {
   size: number;
   practices: { key: string; label: string }[];
   items: SessionItem[];
+};
+
+/** One item in the history, with how long ago it was last done. */
+export type HistoryItem = SessionItem & { days_ago: number };
+
+export type SessionHistory = {
+  refresh_days: number;
+  choices: number[];
+  practices: {
+    key: string;
+    label: string;
+    /** Items this practice can deal you, and how many you have done at all. */
+    total: number;
+    tried: number;
+    /** Done before, but longer ago than refresh_days - oldest first. */
+    due: HistoryItem[];
+  }[];
+  /** Everything done, newest first, across every practice. */
+  recent: HistoryItem[];
 };
 
 // ── Bug Hunt ────────────────────────────────────────────────

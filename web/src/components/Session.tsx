@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { fetchSession } from "../api";
+import SessionHistory from "./SessionHistory";
 import { aimAt } from "../lastKeys";
 import type { Practice } from "../lastKeys";
 import type { Mode } from "./ModeBar";
@@ -31,6 +32,9 @@ import type { SessionItem, SessionQueue } from "../types";
 /** How many to line up. Twenty is about half an hour of short items. */
 const SIZE_KEY = "code-coach:session-size";
 const SIZES = [10, 20, 30];
+
+/** Whether the queue or the history was showing. */
+const VIEW_KEY = "code-coach:session-view";
 
 /** Which ones have been opened this visit. */
 const VISITED_KEY = "code-coach:session-visited";
@@ -63,6 +67,14 @@ export default function Session({ go }: { go: (mode: Mode) => void }) {
     }
   });
   const [visited, setVisited] = useState<string[]>(readVisited);
+  /* Queue is what next; History is what has been done and what is due. */
+  const [view, setView] = useState<"queue" | "history">(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === "history" ? "history" : "queue";
+    } catch {
+      return "queue";
+    }
+  });
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -107,6 +119,50 @@ export default function Session({ go }: { go: (mode: Mode) => void }) {
     }
   };
 
+  const pickView = (next: "queue" | "history") => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      /* same */
+    }
+  };
+
+  const tabs = (
+    <div className="session-sizes session-tabs" role="tablist">
+      {(["queue", "history"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="tab"
+          aria-selected={view === v}
+          className={`ws-btn${view === v ? " on" : ""}`}
+          onClick={() => pickView(v)}
+        >
+          {v === "queue" ? "Queue" : "History"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (view === "history") {
+    return (
+      <div className="session-wrap">
+        <header className="session-head">
+          <div>
+            <h2>Session</h2>
+            <p className="lessons-intro">
+              How much of each practice you have touched, what is due for a
+              refresh, and what you did recently.
+            </p>
+          </div>
+          <div className="session-controls">{tabs}</div>
+        </header>
+        <SessionHistory go={go} />
+      </div>
+    );
+  }
+
   if (error && !queue) {
     return <div className="lessons-empty">Could not build a queue: {error}</div>;
   }
@@ -130,6 +186,7 @@ export default function Session({ go }: { go: (mode: Mode) => void }) {
           </p>
         </div>
         <div className="session-controls">
+          {tabs}
           <span className="session-count">
             {done} of {queue.items.length} opened
           </span>

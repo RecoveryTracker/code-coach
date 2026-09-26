@@ -70,6 +70,16 @@ export const MODES = [
     title: "A bug report and a program: reproduce it, find it, explain it, fix it",
   },
   {
+    id: "tickets",
+    label: "Tickets",
+    title: "A team codebase and its ticket queue - make the change without breaking what worked",
+  },
+  {
+    id: "flutter",
+    label: "Flutter",
+    title: "Read Flutter widget code and say what it builds, lays out or rebuilds",
+  },
+  {
     id: "puzzles",
     label: "Puzzles",
     title: "Solve part one, and part two changes the rules - same input, new question",

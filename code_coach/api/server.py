@@ -35,6 +35,8 @@ from code_coach.api.schemas import (
     ErrorCheckRequest,
     ErrorCheckResponse,
     TraceCheckRequest,
+    FlutterCheckRequest,
+    FlutterCheckResponse,
     TraceCheckResponse,
     MagnetCheckRequest,
     MagnetCheckResponse,
@@ -107,6 +109,8 @@ from code_coach.api.schemas import (
     CaseAnswerRequest,
     CaseAnswerResponse,
     CaseQueryRequest,
+    TicketCheckRequest,
+    TicketCheckResponse,
     CaseQueryResponse,
     PuzzleCheckRequest,
     PuzzleCheckResponse,
@@ -2239,6 +2243,127 @@ def case_reveal(case_id: str = "", step: int = 0) -> dict:
     return {"query": _step_or_404(found, step).reference}
 
 
+# ── Tickets ──────────────────────────────────────────────────
+
+
+def _ticket_or_404(project_id: str, ticket_id: str):
+    from code_coach.tickets import project, ticket
+
+    found_project = project(project_id)
+    found = ticket(project_id, ticket_id)
+    if found_project is None or found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown ticket {project_id}/{ticket_id}")
+    return found_project, found
+
+
+@app.get("/api/tickets")
+def ticket_list() -> dict:
+    """Every project and its tickets. No model answers."""
+    from code_coach.tickets import projects
+
+    saved = _store.load()
+    counts, last = saved.ticket_counts(), saved.ticket_last()
+    return {
+        "projects": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "language": p.language,
+                "story": p.story,
+                "tickets": [
+                    {
+                        "id": t.id,
+                        "title": t.title,
+                        "kind": t.kind,
+                        "report": t.report,
+                        "start": t.start,
+                        "hint": t.hint,
+                        "new": list(t.new),
+                        "checks": [c.name for c in t.checks],
+                        "done": counts.get(t.id, 0),
+                        "last": last.get(t.id, ""),
+                    }
+                    for t in p.tickets
+                ],
+            }
+            for p in projects()
+        ]
+    }
+
+
+@app.post("/api/tickets/check", response_model=TicketCheckResponse)
+def ticket_check(body: TicketCheckRequest) -> TicketCheckResponse:
+    """The whole file against what the ticket asks and what must keep working."""
+    from code_coach.tickets import run_ticket
+
+    found_project, found = _ticket_or_404(body.project_id, body.ticket_id)
+    outcome = run_ticket(found_project, found, body.code)
+    done = 0
+    if outcome["passed"]:
+        progress = _store.load()
+        done = progress.record_ticket(found.id)
+        _store.save(progress)
+    return TicketCheckResponse(
+        **outcome, lesson=found.lesson if outcome["passed"] else "", done=done)
+
+
+@app.get("/api/tickets/answer")
+def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
+    """The model file for one ticket, asked for rather than shipped."""
+    _, found = _ticket_or_404(project_id, ticket_id)
+    return {"id": found.id, "after": found.after}
+
+
+@app.get("/api/flutter")
+def flutter_list() -> dict:
+    """Every Flutter question, with the choices and without the answer."""
+    from code_coach.flutter import families, questions
+
+    saved = _store.load()
+    counts, last = saved.flutter_counts(), saved.flutter_last()
+    return {
+        "families": [
+            {
+                "name": family,
+                "questions": [
+                    {
+                        "id": q.id,
+                        "name": q.name,
+                        "family": q.family,
+                        "level": q.level,
+                        "code": q.code,
+                        "question": q.question,
+                        "choices": list(q.choices),
+                        "done": counts.get(q.id, 0),
+                        "last": last.get(q.id, ""),
+                    }
+                    for q in questions(family)
+                ],
+            }
+            for family in families()
+        ]
+    }
+
+
+@app.post("/api/flutter/check", response_model=FlutterCheckResponse)
+def flutter_check(body: FlutterCheckRequest) -> FlutterCheckResponse:
+    """Compare the pick with the answer Flutter's own tests hold it to."""
+    from code_coach.flutter import question
+
+    found = question(body.question_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown question {body.question_id}")
+    passed = body.answer.strip() == found.answer
+    done = 0
+    if passed:
+        progress = _store.load()
+        done = progress.record_flutter(found.id)
+        _store.save(progress)
+    return FlutterCheckResponse(
+        passed=passed, done=done, expect=found.answer, answer=body.answer, why=found.why,
+    )
+
+
 @app.get("/api/trace")
 def trace_list() -> dict:
     """Every moment, with the question and without the answer.
@@ -2301,6 +2426,19 @@ def trace_check(body: TraceCheckRequest) -> TraceCheckResponse:
         answer=body.answer,
         why=found.why,
     )
+
+
+@app.get("/api/session/history")
+def session_history(refresh_days: int = 7) -> dict:
+    """What has been done, what has not, and what is due for a refresh.
+
+    The gap is one of a few fixed choices, so a stray query string cannot
+    turn it into something meaningless like a negative number of days.
+    """
+    from code_coach.session import REFRESH_CHOICES, history
+
+    days = refresh_days if refresh_days in REFRESH_CHOICES else 7
+    return {**history(_store.load(), days), "choices": list(REFRESH_CHOICES)}
 
 
 @app.get("/api/session")

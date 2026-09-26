@@ -8,6 +8,9 @@ import type {
   MagnetList,
   MarkupCheck,
   MarkupList,
+  FlutterCheck,
+  FlutterList,
+  SessionHistory,
   SessionQueue,
   TraceCheck,
   TraceList,
@@ -186,6 +189,24 @@ export function checkCss(body: {
 /** The next things to do, across every practice at once. */
 export function fetchSession(size = 20): Promise<SessionQueue> {
   return request(`/api/session?size=${size}`);
+}
+
+/** Every Flutter question, with its choices and without its answer. */
+export function fetchFlutter(): Promise<FlutterList> {
+  return request("/api/flutter");
+}
+
+/** Send the choice picked for one Flutter question. */
+export function checkFlutter(question_id: string, answer: string): Promise<FlutterCheck> {
+  return request("/api/flutter/check", {
+    method: "POST",
+    body: JSON.stringify({ question_id, answer }),
+  });
+}
+
+/** What has been done, what has not, and what is due for a refresh. */
+export function fetchSessionHistory(refreshDays = 7): Promise<SessionHistory> {
+  return request(`/api/session/history?refresh_days=${refreshDays}`);
 }
 
 /** Every traced moment, with the question and without the value. */

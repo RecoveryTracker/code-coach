@@ -42,7 +42,11 @@ def _runnable():
     everywhere; without it the Dart hunts are skipped rather than failed."""
     from code_coach.engine import dart_available
 
-    return tuple(h for h in hunts() if h.language != "dart" or dart_available())
+    from code_coach.engine import ruby_available
+
+    return tuple(h for h in hunts()
+                 if (h.language != "dart" or dart_available())
+                 and (h.language != "ruby" or ruby_available()))
 
 
 class CollectionTests(unittest.TestCase):
@@ -50,7 +54,10 @@ class CollectionTests(unittest.TestCase):
     def test_every_language_has_some(self) -> None:
         from code_coach.engine import dart_available
 
-        want = {"Python", "JavaScript"} | ({"Dart"} if dart_available() else set())
+        from code_coach.engine import ruby_available
+
+        want = ({"Python", "JavaScript"} | ({"Dart"} if dart_available() else set())
+                | ({"Ruby"} if ruby_available() else set()))
         self.assertEqual(set(hunt_families()), want)
         for family in hunt_families():
             with self.subTest(family=family):

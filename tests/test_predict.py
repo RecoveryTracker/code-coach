@@ -29,12 +29,14 @@ from code_coach.kata.predict import PUZZLES, predict_families, puzzles
 class PuzzleTests(unittest.TestCase):
     def test_the_language_agrees_with_every_written_answer(self) -> None:
         """Each snippet in its own language, which is now two of them."""
-        from code_coach.engine import c_available, dart_available
+        from code_coach.engine import c_available, dart_available, ruby_available
 
         for p in PUZZLES:
             if p.language == "dart" and not dart_available():
                 continue  # Dart comes with Flutter; skipped, not failed
             if p.language == "c" and not c_available():
+                continue
+            if p.language == "ruby" and not ruby_available():
                 continue
             with self.subTest(puzzle=p.id, language=p.language):
                 stdout, stderr, code = run_code(p.code, language=p.language)
@@ -58,7 +60,8 @@ class PuzzleTests(unittest.TestCase):
                 self.assertIn(p.family, predict_families())
                 self.assertIn(
                     {"python": "print", "javascript": "console.log",
-                     "dart": "print(", "c": "printf("}[p.language],
+                     "dart": "print(", "c": "printf(",
+                     "ruby": "p"}[p.language],
                     p.code)
 
     def test_the_answer_is_not_sitting_in_the_snippet(self) -> None:

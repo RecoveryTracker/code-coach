@@ -568,9 +568,11 @@ export default function Workbook({ language }: Props) {
           <div className="wb-actions">
             <button
               type="button"
-              className="ws-btn primary"
-              onClick={() => void check()}
+              className={`ws-btn primary${result ? " on" : ""}`}
+              onClick={() => (result ? setResult(null) : void check())}
               disabled={checking || !code.trim()}
+              aria-pressed={!!result}
+              title={result ? "Click again to hide the result" : undefined}
             >
               {checking ? "Running…" : "Check"}
             </button>

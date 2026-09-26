@@ -552,6 +552,17 @@ def _tidy(detail: str) -> str:
         # Dart's stack frames: "#0  main (file:///.../x.dart:5:3)".
         if re.match(r"\s*#\d+\s", line):
             continue
+        # Ruby: "<path>.rb:4:in 'Object#f': msg (NameError)", then
+        # "from <path>.rb:..." frames, and the syntax checker's
+        # "<path>.rb: --> <path>.rb" header.
+        if ".rb:" in line:
+            if line.lstrip().startswith("from "):
+                continue
+            after = line.split(".rb:", 1)[1]
+            found = re.match(r"(\d+):(?:in '[^']*': )?\s*(.*)", after)
+            if found:
+                out.append(f"Line {found.group(1)}: {found.group(2)}")
+            continue
         # A C compiler that has lost track of the braces goes on to
         # report dozens of errors inside the system headers, each under
         # its full path. None of that is the learner's code, and the real

@@ -27,6 +27,8 @@ export const LAST_KEYS = {
   regex: "code-coach:regex-last",
   puzzles: "code-coach:puzzles-last",
   cases: "code-coach:cases-last",
+  flutter: "code-coach:flutter-last",
+  tickets: "code-coach:tickets-last",
 } as const;
 
 export type Practice = keyof typeof LAST_KEYS;
@@ -50,6 +52,8 @@ export const MODE_FOR: Record<Practice, Mode> = {
   regex: "regex",
   puzzles: "puzzles",
   cases: "cases",
+  flutter: "flutter",
+  tickets: "tickets",
 };
 
 /** The HTML & CSS screen's own tab, which the drills live behind. */

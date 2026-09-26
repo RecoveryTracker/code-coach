@@ -120,6 +120,18 @@ def _puzzle_languages() -> dict[str, tuple[str, ...]]:
     return {p.id: tuple(lang for lang in NAMES if supports(lang)) for p in puzzles()}
 
 
+def _ticket_items() -> list[tuple[str, str]]:
+    from code_coach.tickets import projects
+
+    return [(t.id, t.title) for p in projects() for t in p.tickets]
+
+
+def _flutter_items() -> list[tuple[str, str]]:
+    from code_coach.flutter import questions
+
+    return [(q.id, q.name) for q in questions()]
+
+
 def _case_items() -> list[tuple[str, str]]:
     from code_coach.casefiles import cases
 
@@ -149,6 +161,8 @@ SOURCES: tuple[Source, ...] = (
            "puzzle_counts", "puzzle_last", languages=_puzzle_languages),
     Source("regex", "Regex", _regex_items, "regex_counts", "regex_last"),
     Source("cases", "Case files", _case_items, "case_counts", "case_last"),
+    Source("flutter", "Flutter", _flutter_items, "flutter_counts", "flutter_last"),
+    Source("tickets", "Tickets", _ticket_items, "ticket_counts", "ticket_last"),
     Source("magnets", "Magnets", _magnet_items,
            "magnet_counts", "magnet_last"),
     Source("predict", "Predict", _predict_items,
@@ -223,3 +237,68 @@ def queue(progress, size: int = 20) -> list[dict]:
                     break
         depth += 1
     return out
+
+
+# ── History ──────────────────────────────────────────────────
+#
+# The queue answers "what next". History answers the questions a queue
+# cannot: how much of each practice have I touched at all, and which of
+# the things I did are old enough to be worth doing again. It is built
+# from the same counts and dates, so it cannot disagree with the queue.
+
+#: The refresh gaps a person can pick, in days.
+REFRESH_CHOICES = (3, 7, 14, 30)
+
+
+def _age_days(stamp: str, now) -> float | None:
+    """How many days ago an ISO timestamp was, or None if there is none."""
+    from datetime import datetime, timezone
+
+    if not stamp:
+        return None
+    try:
+        when = datetime.fromisoformat(stamp)
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (now - when).total_seconds() / 86400
+
+
+def history(progress, refresh_days: int = 7, now=None, recent_size: int = 20) -> dict:
+    """What has been done, what has not, and what is due for a refresh.
+
+    Due means done at least once and last done more than refresh_days
+    ago - oldest first, because the longest-unvisited is the most likely
+    to have faded. Recent is everything done, newest first, across every
+    practice: a log of the last few sessions.
+    """
+    from datetime import datetime, timezone
+
+    now = now or datetime.now(timezone.utc)
+    practices = []
+    recent = []
+    for source in SOURCES:
+        rows = _coldest(source, progress)
+        tried = [r for r in rows if r["done"]]
+        due = []
+        for row in tried:
+            age = _age_days(row["last"], now)
+            if age is not None:
+                recent.append({**row, "days_ago": round(age, 1)})
+                if age > refresh_days:
+                    due.append({**row, "days_ago": round(age, 1)})
+        due.sort(key=lambda r: -r["days_ago"])
+        practices.append({
+            "key": source.key,
+            "label": source.label,
+            "total": len(rows),
+            "tried": len(tried),
+            "due": due,
+        })
+    recent.sort(key=lambda r: r["days_ago"])
+    return {
+        "refresh_days": refresh_days,
+        "practices": practices,
+        "recent": recent[:recent_size],
+    }
