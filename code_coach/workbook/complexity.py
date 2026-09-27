@@ -195,6 +195,7 @@ def for_shape(shape: str) -> Cost | None:
     from code_coach.workbook import emit_jsgame
 
     from code_coach.workbook import emit_jsbuild
+    from code_coach.workbook import emit_jsasync
 
     return (
         complexity_more.for_shape(shape)
@@ -203,4 +204,5 @@ def for_shape(shape: str) -> Cost | None:
         or emit_js11.for_shape(shape)
         or emit_jsgame.for_shape(shape)
         or emit_jsbuild.for_shape(shape)
+        or emit_jsasync.for_shape(shape)
     )

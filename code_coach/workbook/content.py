@@ -66,6 +66,7 @@ from code_coach.workbook.content_js10 import JS10_PAGES
 from code_coach.workbook.content_js11 import JS11_PAGES
 from code_coach.workbook.content_jsgame import JSGAME_PAGES
 from code_coach.workbook.content_jsbuild import JSBUILD_PAGES
+from code_coach.workbook.content_jsasync import JSASYNC_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -718,6 +719,7 @@ _BASE_PAGES = (
     + JS11_PAGES
     + JSGAME_PAGES
     + JSBUILD_PAGES
+    + JSASYNC_PAGES
 )
 
 # Review pages are built from the pages above rather than written out, so

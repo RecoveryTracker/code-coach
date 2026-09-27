@@ -34,6 +34,7 @@ from code_coach.kata.predict_dart2 import DART_PUZZLES_2
 from code_coach.kata.predict_js2 import JS_PUZZLES_2
 from code_coach.kata.predict_js3 import JS_PUZZLES_3
 from code_coach.kata.predict_jsgame import JS_GAME_PUZZLES
+from code_coach.kata.predict_jsasync import JS_ASYNC_PUZZLES
 from code_coach.kata.puzzle import Puzzle, _p
 
 
@@ -559,7 +560,7 @@ FLOW: tuple[Puzzle, ...] = (
 
 PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
-    + JS_PUZZLES_2 + JS_PUZZLES_3 + JS_GAME_PUZZLES + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES + RUBY_PUZZLES
+    + JS_PUZZLES_2 + JS_PUZZLES_3 + JS_GAME_PUZZLES + JS_ASYNC_PUZZLES + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES + RUBY_PUZZLES
 )
 
 

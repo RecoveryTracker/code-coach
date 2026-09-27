@@ -12,7 +12,9 @@ from __future__ import annotations
 import shutil
 import unittest
 
-from code_coach.canvas import STEPS, check_step, harness_source, run_check, step
+from code_coach.canvas import STEPS as ALL_STEPS
+from code_coach.canvas import check_step, harness_source, run_check, step
+from code_coach.canvas.content import STEPS
 
 HAS_NODE = shutil.which("node") is not None
 
@@ -194,7 +196,7 @@ class RouteTests(unittest.TestCase):
 
         data = canvas_list()
         self.assertIn("__cc", data["harness"])
-        self.assertEqual([s["id"] for s in data["steps"]], [s.id for s in STEPS])
+        self.assertEqual([s["id"] for s in data["steps"]], [s.id for s in ALL_STEPS])
         for s in data["steps"]:
             self.assertNotIn("solution", s)
 

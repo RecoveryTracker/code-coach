@@ -18,6 +18,14 @@ function stage() {
     return true;
   };
 
+  class MouseEvent {
+    constructor(type, init) {
+      this.type = type;
+      Object.assign(this, init || {});
+    }
+    preventDefault() {}
+  }
+
   class KeyboardEvent {
     constructor(type, init) {
       this.type = type;
@@ -56,8 +64,11 @@ function stage() {
     getContext: (kind) => (kind === "2d" ? ctx : null),
     addEventListener: on,
     removeEventListener: off,
+    dispatchEvent: fire,
     focus() {},
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 480, height: 320 }),
+    // Drawn at twice its size and away from the corner of the page, as a
+    // canvas in a real layout usually is: page pixels are not canvas pixels.
+    getBoundingClientRect: () => ({ left: 100, top: 40, width: 960, height: 640, right: 1060, bottom: 680, x: 100, y: 40 }),
   };
   const document = {
     querySelector: (sel) => (String(sel).includes("canvas") ? canvas : null),
@@ -72,6 +83,7 @@ function stage() {
     console,
     document,
     KeyboardEvent,
+    MouseEvent,
     performance: { now: () => 0 },
     addEventListener: on,
     removeEventListener: off,

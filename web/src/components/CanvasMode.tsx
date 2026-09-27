@@ -110,6 +110,10 @@ export default function CanvasMode() {
   );
   const index = list && item ? list.steps.indexOf(item) : -1;
   const nextStep = list && index >= 0 ? list.steps[index + 1] ?? null : null;
+  // Numbered within their own track: Breakout starts again at 1.
+  const trackSteps = list && item ? list.steps.filter((s) => s.track === item.track) : [];
+  const number = item ? trackSteps.indexOf(item) + 1 : 0;
+  const tracks = list ? [...new Set(list.steps.map((s) => s.track))] : [];
 
   const run = useCallback(
     (source?: string) => {
@@ -221,9 +225,6 @@ export default function CanvasMode() {
   }
   if (!list || !item) return <div className="lessons-empty">Loading…</div>;
 
-  const passedAll = list.steps.filter((s) => s.checked && s.done).length;
-  const checkedAll = list.steps.filter((s) => s.checked).length;
-
   return (
     <div className="lessons-wrap">
       <nav className="lessons-list">
@@ -233,33 +234,40 @@ export default function CanvasMode() {
           and Check plays it - holding keys, counting frames - to see that it
           does what the step asks.
         </p>
-        <div className="wb-section">
-          <h4 className="wb-section-head">
-            {item.track}
-            <span className="wb-section-count">
-              {passedAll}/{checkedAll}
-            </span>
-          </h4>
-          {list.steps.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`lessons-pick${s.id === chosen ? " on" : ""}`}
-              onClick={() => setChosen(s.id)}
-            >
-              <span className="lessons-pick-name">
-                {i + 1}. {s.title}
-              </span>
-              {s.done ? <span className="lessons-pick-blurb">passed {s.done}&#215;</span> : null}
-            </button>
-          ))}
-        </div>
+        {tracks.map((track) => {
+          const steps = list.steps.filter((s) => s.track === track);
+          const passed = steps.filter((s) => s.checked && s.done).length;
+          const checked = steps.filter((s) => s.checked).length;
+          return (
+            <div key={track} className="wb-section">
+              <h4 className="wb-section-head">
+                {track}
+                <span className="wb-section-count">
+                  {passed}/{checked}
+                </span>
+              </h4>
+              {steps.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`lessons-pick${s.id === chosen ? " on" : ""}`}
+                  onClick={() => setChosen(s.id)}
+                >
+                  <span className="lessons-pick-name">
+                    {i + 1}. {s.title}
+                  </span>
+                  {s.done ? <span className="lessons-pick-blurb">passed {s.done}&#215;</span> : null}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </nav>
 
       <article className="lessons-open wb canvas-open">
         <header>
           <h3>
-            {index + 1}. {item.title}
+            {item.track} {number}. {item.title}
             <span className="predict-lang">JavaScript</span>
           </h3>
         </header>

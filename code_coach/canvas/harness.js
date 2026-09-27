@@ -186,6 +186,31 @@
         .filter((c) => c.name === "fillRect")
         .map((c) => ({ x: c.args[0], y: c.args[1], w: c.args[2], h: c.args[3], fill: c.fill }));
     },
+    /** The circles drawn this frame: arc(x, y, r, ...) calls. */
+    arcs() {
+      return calls
+        .filter((c) => c.name === "arc")
+        .map((c) => ({ x: c.args[0], y: c.args[1], r: c.args[2], fill: c.fill }));
+    },
+    /**
+     * Move the mouse to (x, y) in canvas pixels. The event carries page
+     * pixels, as a real one does - and in node the canvas is drawn at twice
+     * its size, so code that forgets to scale is caught here, not later.
+     */
+    pointer(x, y = 0) {
+      const el = W.document.querySelector("canvas");
+      const box = el.getBoundingClientRect();
+      const sx = box.width / el.width;
+      const sy = box.height / el.height;
+      const init = {
+        clientX: box.left + x * sx,
+        clientY: box.top + y * sy,
+        offsetX: x * sx,
+        offsetY: y * sy,
+        bubbles: true,
+      };
+      for (const type of ["pointermove", "mousemove"]) el.dispatchEvent(new W.MouseEvent(type, init));
+    },
     /** The text written this frame. */
     texts() {
       return calls.filter((c) => c.name === "fillText" || c.name === "strokeText").map((c) => String(c.args[0]));

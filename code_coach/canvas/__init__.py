@@ -15,7 +15,12 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from code_coach.canvas.content import STEPS, Step
+from code_coach.canvas.content import STEPS as DODGE_STEPS, Step
+from code_coach.canvas.content_breakout import BREAKOUT_STEPS
+
+#: Every track, in the order they are taught. Each track's first step
+#: starts from a blank loop; within a track, each starts from the last.
+STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS
 
 HERE = Path(__file__).resolve().parent
 HARNESS = HERE / "harness.js"
