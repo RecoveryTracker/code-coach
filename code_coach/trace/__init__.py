@@ -162,6 +162,19 @@ def value_at(
     reached, or a loop that does not go round that many times — which
     is a broken puzzle rather than an answer, and the suite says so.
     """
+    found = _value_at_once(code, at_line, occurrence, variable, language)
+    # Dart is traced by one VM driving another through its debugger, and on
+    # a busy machine that handshake now and then comes back with nothing.
+    # These are the course's own programs, so "nothing" twice is a broken
+    # puzzle and once is the machine: ask again before believing it.
+    if not found and language == "dart":
+        found = _value_at_once(code, at_line, occurrence, variable, language)
+    return found
+
+
+def _value_at_once(
+    code: str, at_line: int, occurrence: int, variable: str, language: str,
+) -> str:
     from code_coach.visualize import trace_code
 
     result = trace_code(code, language=language)

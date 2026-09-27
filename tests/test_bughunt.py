@@ -58,7 +58,9 @@ class CollectionTests(unittest.TestCase):
 
         want = ({"Python", "JavaScript"} | ({"Dart"} if dart_available() else set())
                 | ({"Ruby"} if ruby_available() else set()))
-        self.assertEqual(set(hunt_families()), want)
+        # Topic families (the JavaScript game-code hunts) sit beside
+        # the language ones and are checked in their own test file.
+        self.assertEqual(set(hunt_families()) - {"Game code"}, want)
         for family in hunt_families():
             with self.subTest(family=family):
                 self.assertGreaterEqual(len(hunts(family)), 3)

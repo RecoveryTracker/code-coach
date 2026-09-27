@@ -162,6 +162,8 @@ def expected_output(shape: str, args: dict) -> str:
         emit_rust3,
         emit_js10,
         emit_js11,
+        emit_jsgame,
+        emit_jsbuild,
     )
 
     if emit_pg.handles(shape):
@@ -174,6 +176,10 @@ def expected_output(shape: str, args: dict) -> str:
         return emit_js10.expected_output(shape, args, _value)
     if emit_js11.handles(shape):
         return emit_js11.expected_output(shape, args, _value)
+    if emit_jsgame.handles(shape):
+        return emit_jsgame.expected_output(shape, args, _value)
+    if emit_jsbuild.handles(shape):
+        return emit_jsbuild.expected_output(shape, args, _value)
     if emit_rust3.handles(shape):
         return emit_rust3.expected_output(shape, args, _value)
     if emit_topup.handles(shape):

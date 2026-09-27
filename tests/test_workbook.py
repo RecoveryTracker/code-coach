@@ -289,6 +289,8 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_rust3 import SHAPE_IDS as RUST3_SHAPES
         from code_coach.workbook.emit_js10 import SHAPE_IDS as JS10_SHAPES
         from code_coach.workbook.emit_js11 import SHAPE_IDS as JS11_SHAPES
+        from code_coach.workbook.emit_jsgame import SHAPE_IDS as JSGAME_SHAPES
+        from code_coach.workbook.emit_jsbuild import SHAPE_IDS as JSBUILD_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -352,6 +354,9 @@ class ReferenceRunTests(unittest.TestCase):
             # JavaScript's own regex and data pages: no Dart answer.
             | set(JS10_SHAPES)
             | set(JS11_SHAPES)
+            # And the game-math pages, JavaScript's too.
+            | set(JSGAME_SHAPES)
+            | set(JSBUILD_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)

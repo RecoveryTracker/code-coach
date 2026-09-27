@@ -131,13 +131,14 @@ def _m(**kw) -> Magnet:
 def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     """Every puzzle, or one family's, easiest first within the family."""
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
+    from code_coach.magnets.content_jsgame import JS_GAME_MAGNETS
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
     from code_coach.magnets.content_dart2 import DART_MAGNETS_2
 
-    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+    everything = (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
         *if_c(C_MAGNETS), *if_ruby(RUBY_MAGNETS))
     if family is not None:
         everything = tuple(m for m in everything if m.family == family)
@@ -146,6 +147,7 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
 
 def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
+    from code_coach.magnets.content_jsgame import JS_GAME_MAGNETS
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
@@ -153,7 +155,7 @@ def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content_dart2 import DART_MAGNETS_2
 
     seen: list[str] = []
-    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+    for m in (*FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
         *if_c(C_MAGNETS), *if_ruby(RUBY_MAGNETS)):
         if m.family not in seen:
             seen.append(m.family)

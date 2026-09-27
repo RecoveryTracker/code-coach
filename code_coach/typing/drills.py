@@ -20,6 +20,12 @@ from code_coach.typing import asm_drills, asmlore, blends
 from code_coach.typing import langhistory, langhistory_dart, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
 from code_coach.typing.snippets_js_more import JAVASCRIPT_BLOCKS_MORE
+from code_coach.typing.snippets_jsgame import (
+    JSGAME_BLOCKS,
+    JSGAME_LIBRARY_LINES,
+    JSGAME_LINES,
+    JSGAME_LORE,
+)
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -561,6 +567,25 @@ THEMES: tuple[Theme, ...] = (
         blocks=code_blocks_for("javascript") + JAVASCRIPT_BLOCKS_MORE,
         language="javascript",
     ),
+    # Game code is still JavaScript, so it is drilled and described as
+    # JavaScript; it is its own theme because it leans on the browser
+    # (canvas, frames, keys) and on library APIs the plain pool avoids.
+    Theme(
+        "jsgame", "JavaScript Game Code",
+        "Canvas, the frame loop, collisions, and Phaser, PixiJS, Three.js "
+        "and friends.",
+        passages=JSGAME_LINES + JSGAME_LIBRARY_LINES,
+        blocks=JSGAME_BLOCKS,
+        language="javascript",
+    ),
+    # Prose, like the other lore themes, so no language: it is history,
+    # not lines to parse.
+    Theme(
+        "jsgamelore", "Game Dev Lore",
+        "Canvas, WebGL, the end of Flash, and the games built in "
+        "JavaScript.",
+        passages=JSGAME_LORE,
+    ),
     Theme(
         "tscode", "TypeScript Code",
         "Typed signatures, generics and the solutions written out in them.",
@@ -648,7 +673,7 @@ THEMES: tuple[Theme, ...] = (
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
     "python": ("pycode",),
-    "javascript": ("jscode", "tscode"),
+    "javascript": ("jscode", "jsgame", "jsgamelore", "tscode"),
     "dart": ("dartcode",),
     "sql": ("sqlcode", "postgresqlcode"),
     "clang": ("ccode", "cppcode"),
