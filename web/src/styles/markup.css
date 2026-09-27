@@ -978,3 +978,60 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ── Regex: the primer and the live explanation ──────────── */
+
+.rx-primer {
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  font-size: 13px;
+  color: var(--text);
+}
+.rx-primer summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.rx-primer-table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+.rx-primer-table td {
+  padding: 3px 10px 3px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.rx-primer-table code {
+  font-family: var(--mono);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.rx-primer-eg {
+  color: var(--text-muted);
+}
+.rx-explain {
+  margin: 4px 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-elevated);
+  border-radius: 0 6px 6px 0;
+}
+.rx-explain ol {
+  margin: 0;
+  padding-left: 18px;
+}
+.rx-explain li {
+  margin: 3px 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.rx-explain li code {
+  display: inline-block;
+  min-width: 3.5em;
+  margin-right: 10px;
+  font-family: var(--mono);
+  color: var(--accent);
+}

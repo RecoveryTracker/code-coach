@@ -16,9 +16,33 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkRegex, fetchRegex, fetchRegexAnswer } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { explainPattern } from "../lib/regexExplain";
 import type { RegexCheck, RegexList, RegexTaskInfo } from "../types";
 
 const LAST_KEY = LAST_KEYS.regex;
+const PRIMER_KEY = "code-coach:regex-primer";
+
+/** Every symbol the tasks use: [symbol, what it means, an example]. */
+const PRIMER: [string, string, string][] = [
+  ["abc", "letters and digits mean themselves", "cat finds \"cat\" in \"concat\""],
+  [".", "any one character", "c.t finds cat, cot, c7t"],
+  ["\\d", "one digit, 0 to 9", "\\d\\d finds 42 in \"room 42\""],
+  ["\\w", "one letter, digit or _", "\\w finds the a in \"a!\""],
+  ["\\s", "one space or tab", "a\\sb finds \"a b\""],
+  ["[abc]", "one character from the list", "gr[ae]y finds gray and grey"],
+  ["[a-z]", "one character in the range", "[0-9] is the same as \\d"],
+  ["[^abc]", "one character NOT in the list", "[^aeiou] is any non-vowel"],
+  ["+", "the thing before it, one or more times", "\\d+ finds 7, 42 and 2026"],
+  ["*", "the thing before it, zero or more times", "ab*c finds ac, abc, abbbc"],
+  ["?", "the thing before it is optional", "colou?r finds color and colour"],
+  ["{3}", "the thing before it, exactly 3 times", "\\d{3} finds 123"],
+  ["{2,4}", "between 2 and 4 times", "a{2,4} finds aa to aaaa"],
+  ["^", "the start of the text", "^cat: text that begins with cat"],
+  ["$", "the end of the text", "cat$: text that ends with cat"],
+  ["|", "or", "cat|dog finds either"],
+  ["( )", "a group - repeat it as one, or capture it", "(ab)+ finds ab, abab"],
+  ["\\.", "a real dot (the backslash turns a symbol off)", "\\d\\.\\d finds 3.5"],
+];
 
 /** Fewest goes, and of those the longest ago. Same rule as everywhere. */
 function nextUp<T extends { done: number; last: string }>(all: T[]): T | null {
@@ -43,6 +67,14 @@ export default function RegexMode({ language }: { language: string }) {
   const [showHint, setShowHint] = useState(false);
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
+  // The primer starts open, and stays how you left it.
+  const [primerOpen, setPrimerOpen] = useState(() => {
+    try {
+      return localStorage.getItem(PRIMER_KEY) !== "closed";
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     let alive = true;
@@ -194,6 +226,44 @@ export default function RegexMode({ language }: { language: string }) {
         </header>
         <p className="lessons-blurb">{item.brief}</p>
 
+        <details
+          className="rx-primer"
+          open={primerOpen}
+          onToggle={(e) => {
+            const open = (e.currentTarget as HTMLDetailsElement).open;
+            setPrimerOpen(open);
+            try {
+              localStorage.setItem(PRIMER_KEY, open ? "open" : "closed");
+            } catch {
+              /* it just opens again next time */
+            }
+          }}
+        >
+          <summary>Regex from zero - what every symbol means</summary>
+          <p>
+            A regular expression is a description of text. Most characters just
+            mean themselves: <code>cat</code> finds the letters c, a, t in a row,
+            anywhere. A few characters are symbols with a special job:
+          </p>
+          <table className="rx-primer-table">
+            <tbody>
+              {PRIMER.map(([sym, says, example]) => (
+                <tr key={sym}>
+                  <td><code>{sym}</code></td>
+                  <td>{says}</td>
+                  <td className="rx-primer-eg">{example}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p>
+            How to do a task: look at what every string on the left has in
+            common, then at what the ones on the right lack. Build the pattern
+            one piece at a time, and read the explanation under the box to check
+            each piece says what you meant.
+          </p>
+        </details>
+
         <div className="rx-columns">
           <div className="rx-col">
             <p className="wb-walkthrough-note">Must match</p>
@@ -279,6 +349,19 @@ export default function RegexMode({ language }: { language: string }) {
             Show answer
           </button>
         </div>
+        {pattern ? (
+          <div className="rx-explain" aria-live="polite">
+            <p className="wb-walkthrough-note">What your pattern says</p>
+            <ol>
+              {explainPattern(pattern).map((piece, i) => (
+                <li key={i} style={{ marginLeft: `${piece.depth * 18}px` }}>
+                  <code>{piece.text}</code>
+                  <span>{piece.meaning}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
         {showHint ? <p className="wb-answer">{item.hint}</p> : null}
         {answer ? (
           <p className="wb-answer">

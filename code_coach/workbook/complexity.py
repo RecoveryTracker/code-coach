@@ -191,6 +191,11 @@ def for_shape(shape: str) -> Cost | None:
     found = NOTES.get(shape)
     if found is not None:
         return found
-    from code_coach.workbook import complexity_more, complexity_web
+    from code_coach.workbook import complexity_js10, complexity_more, complexity_web, emit_js11
 
-    return complexity_more.for_shape(shape) or complexity_web.for_shape(shape)
+    return (
+        complexity_more.for_shape(shape)
+        or complexity_web.for_shape(shape)
+        or complexity_js10.for_shape(shape)
+        or emit_js11.for_shape(shape)
+    )

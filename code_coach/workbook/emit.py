@@ -586,6 +586,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_newlang5,
         emit_topup,
         emit_rust3,
+        emit_js10,
+        emit_js11,
     )
 
     if emit_pg.handles(shape):
@@ -607,6 +609,10 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_newlang5.solution(language, shape, args)
     if emit_webnodes.handles(shape):
         return emit_webnodes.solution(language, shape, args)
+    if emit_js10.handles(shape):
+        return emit_js10.solution(language, shape, args)
+    if emit_js11.handles(shape):
+        return emit_js11.solution(language, shape, args)
     if emit_rust3.handles(shape):
         return emit_rust3.solution(language, shape, args)
     if emit_topup.handles(shape):
@@ -813,6 +819,8 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_webnodes,
         emit_topup,
         emit_rust3,
+        emit_js10,
+        emit_js11,
     )
 
     return (
@@ -875,4 +883,6 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_webnodes.SHAPE_IDS
         + emit_topup.SHAPE_IDS
         + emit_rust3.SHAPE_IDS
+        + emit_js10.SHAPE_IDS
+        + emit_js11.SHAPE_IDS
     )

@@ -1115,14 +1115,11 @@ export default function App() {
 
   const toolbar = (
     <div className="ws-top-actions">
-      <LanguagePicker
-        current={session?.language ?? "python"}
-        onChanged={onLanguageChanged}
-      />
-      {/* Here as well as in the top bar the other screens wear. The
-          editor has its own toolbar, and a skin you can only change
-          from some screens is a skin you cannot change from this one. */}
-      <SkinPicker />
+      {/* Only the editor's own controls. The language, the skin and the
+          row of modes are in the top bar every screen shares - this row
+          used to carry its own copy of them, which put the modes in a
+          different place here and let the editor's buttons push them
+          about. */}
       <ScriptLibrary
         source={freeMode ? "free" : "lesson"}
         getCode={() => codeRef.current}
@@ -1142,10 +1139,6 @@ export default function App() {
           }
         }}
       />
-      {/* The same controls the other eight screens wear, from the same
-          definition. This screen used to hand-write the list, which is
-          how a module gets added to the app and not to the editor. */}
-      {moduleRow}
       {!freeMode ? (
         <button
           type="button"
@@ -1167,7 +1160,8 @@ export default function App() {
     </div>
   );
 
-  const brand = <span className="ws-brand-inline">Code Coach</span>;
+  // The name lives in the shared top bar; the coach line no longer needs it.
+  const brand = null;
 
   // The reading screens each show one language's material, so the picker
   // belongs on them too rather than only behind a trip back to the editor.
@@ -1421,14 +1415,23 @@ export default function App() {
         ))}
       </div>
 
-      {/* Coach strip — hidden in free mode. The app toolbar rides on its
-          first line instead of owning a header row. */}
+      {/* The top bar every screen shares, so this one matches the rest. */}
+      <div className="ws-modebar-row">{modeBar}</div>
+
+      {/* Coach strip — the editor's own buttons ride on its first line. */}
       {!panes.nav ? null : freeMode ? (
         <div className="coach-banner free-banner">
           <div className="cur-nav-line">
             <span className="coach-banner-done">
+              {/* No standing message here: it pushed the buttons onto a new
+                  line, and the Free mode button already says it is on. The
+                  reminders stay on one line, cut short rather than taller,
+                  so they can come and go without moving anything. */}
               {hints.length > 0 && hintsOn ? (
-                <span className="free-hints">
+                <span
+                  className="free-hints"
+                  title={hints.map((h) => `line ${h.line}: ${h.message}`).join("\n")}
+                >
                   {hints.map((h, i) => (
                     <span className="free-hint" key={i}>
                       <span className="free-hint-line">line {h.line}</span>
@@ -1436,13 +1439,7 @@ export default function App() {
                     </span>
                   ))}
                 </span>
-              ) : (
-                <>
-                  Free mode — code anything. <strong>Save</strong> /{" "}
-                  <strong>Load…</strong> keep your scripts.{" "}
-                  <strong>Free mode</strong> again returns to the exercises.
-                </>
-              )}
+              ) : null}
             </span>
             <button
               type="button"
@@ -1620,21 +1617,6 @@ export default function App() {
       </div>
       ) : null}
 
-      {progressOpen && progress ? (
-        <ProgressPanel
-          progress={progress}
-          session={session}
-          onClose={() => setProgressOpen(false)}
-          onGotoClass={(id) => {
-            setProgressOpen(false);
-            void jumpTo({ class_id: id, lesson_number: 1 });
-          }}
-          onClearAll={() => {
-            clearAllDrafts();
-            if (session) void loadSession(session, true);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

@@ -315,6 +315,10 @@ class WorkbookCheckResponse(BaseModel):
     # printing the wrong thing. A compile error is a different problem from a
     # logic error and should not read as the same one.
     failed_to_run: bool = False
+    # Set when the output was right but the code is not: a print of a name
+    # defined nowhere, which crashes as soon as that line runs. Said in
+    # words, because the output alone looks like a pass.
+    problem: str = ""
     # How far through the page this leaves you.
     done_on_page: int = 0
     page_total: int = 0

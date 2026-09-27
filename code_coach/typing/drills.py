@@ -19,6 +19,7 @@ from code_coach.typing import english, langlore, thesaurus
 from code_coach.typing import asm_drills, asmlore, blends
 from code_coach.typing import langhistory, langhistory_dart, langlore2, langlore3, langlore4
 from code_coach.typing import snippets2
+from code_coach.typing.snippets_js_more import JAVASCRIPT_BLOCKS_MORE
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -557,7 +558,7 @@ THEMES: tuple[Theme, ...] = (
         "jscode", "JavaScript Code",
         "Destructuring, arrows and promises, plus the JavaScript solutions.",
         passages=code_lines_for("javascript", curated=JAVASCRIPT_CODE),
-        blocks=code_blocks_for("javascript"),
+        blocks=code_blocks_for("javascript") + JAVASCRIPT_BLOCKS_MORE,
         language="javascript",
     ),
     Theme(

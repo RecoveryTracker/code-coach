@@ -367,6 +367,30 @@ export default function Workbook({ language }: Props) {
     [page],
   );
 
+  // Up and down step through the pages - "Which is bigger" to "Two
+  // conditions at once" and back - so moving on never means reaching for
+  // the mouse. Not while typing: in the code box (or any field) the arrows
+  // belong to the cursor, and a held modifier means some other shortcut.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable;
+      if (typing || !data || !page) return;
+      const at = data.pages.findIndex((p) => p.id === page.id);
+      const to = data.pages[at + (event.key === "ArrowDown" ? 1 : -1)];
+      event.preventDefault();
+      if (to) setPageId(to.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [data, page]);
+
   /** Forward: the next exercise, or the next page once this one runs out. */
   const onward = useCallback(() => {
     if (atPageEnd) {
@@ -762,7 +786,12 @@ export default function Workbook({ language }: Props) {
               </div>
             ) : (
               <div className="wb-verdict bad">
-                {result.failed_to_run ? (
+                {result.problem ? (
+                  <>
+                    <strong>Right output, but the code would crash.</strong>{" "}
+                    {result.problem}
+                  </>
+                ) : result.failed_to_run ? (
                   <>
                     <strong>It didn't run.</strong>
                     <pre className="wb-stderr">

@@ -10,23 +10,24 @@
 /* Vertical stack for TV / large screens: coach immediately above editor.
    No header row — the title and app buttons ride on the coach line, which
    gives that 44px back to the editor. */
+/* First row: the top bar every screen shares. */
 .ws-shell-stack {
-  grid-template-rows: auto minmax(0, 1fr) 6px var(--term-h, 140px);
+  grid-template-rows: auto auto minmax(0, 1fr) 6px var(--term-h, 140px);
 }
 
 /* The tracks follow the panes. A grid does not drop a row when its child
    goes, so without these the editor gets sized by the row the terminal
    vacated — and with the menu gone as well it collapses to nothing. */
 .ws-shell-stack.no-term {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .ws-shell-stack.no-nav {
-  grid-template-rows: minmax(0, 1fr) 6px var(--term-h, 140px);
+  grid-template-rows: auto minmax(0, 1fr) 6px var(--term-h, 140px);
 }
 
 .ws-shell-stack.no-nav.no-term {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .ws-boot {
@@ -3241,4 +3242,22 @@ body.is-resizing .coach-msg-grip {
 
 .script-lib-actions button.danger {
   color: var(--danger);
+}
+
+/* Free mode's reminders share the button row, so they must never make it
+   taller: one line, cut short, the full text on hover. */
+.free-banner .coach-banner-done {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.free-banner .free-hints {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.free-banner .free-hint {
+  display: inline;
+  margin-right: 14px;
 }

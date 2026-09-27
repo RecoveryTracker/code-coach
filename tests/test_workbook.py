@@ -287,6 +287,8 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_webnodes import SHAPE_IDS as WEB_SHAPES
         from code_coach.workbook.emit_topup import SHAPE_IDS as TOPUP_SHAPES
         from code_coach.workbook.emit_rust3 import SHAPE_IDS as RUST3_SHAPES
+        from code_coach.workbook.emit_js10 import SHAPE_IDS as JS10_SHAPES
+        from code_coach.workbook.emit_js11 import SHAPE_IDS as JS11_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -347,6 +349,9 @@ class ReferenceRunTests(unittest.TestCase):
             # are not, and the roster is what dart does not have.
             | (set(TOPUP_SHAPES) - {"dart_more"})
             | set(RUST3_SHAPES)
+            # JavaScript's own regex and data pages: no Dart answer.
+            | set(JS10_SHAPES)
+            | set(JS11_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)

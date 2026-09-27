@@ -22,6 +22,7 @@ write each shape in each language.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from code_coach.workbook.emit import solution, supports
@@ -159,6 +160,8 @@ def expected_output(shape: str, args: dict) -> str:
         emit_webnodes,
         emit_topup,
         emit_rust3,
+        emit_js10,
+        emit_js11,
     )
 
     if emit_pg.handles(shape):
@@ -167,6 +170,10 @@ def expected_output(shape: str, args: dict) -> str:
         return emit_dart2.expected_output(shape, args, _value)
     if emit_webnodes.handles(shape):
         return emit_webnodes.expected_output(shape, args, _value)
+    if emit_js10.handles(shape):
+        return emit_js10.expected_output(shape, args, _value)
+    if emit_js11.handles(shape):
+        return emit_js11.expected_output(shape, args, _value)
     if emit_rust3.handles(shape):
         return emit_rust3.expected_output(shape, args, _value)
     if emit_topup.handles(shape):
@@ -336,6 +343,50 @@ def normalise(output: str) -> str:
 
 def matches(produced: str, expect: str) -> bool:
     return normalise(produced) == normalise(expect)
+
+
+#: A print whose whole argument is one bare name, per language.
+_PRINT_OF_A_NAME = {
+    "javascript": r"console\.log\(\s*([A-Za-z_$][\w$]*)\s*\)",
+    "typescript": r"console\.log\(\s*([A-Za-z_$][\w$]*)\s*\)",
+    "python": r"(?<![\w.])print\(\s*([A-Za-z_]\w*)\s*\)",
+    "dart": r"(?<![\w.])print\(\s*([A-Za-z_$][\w$]*)\s*\)",
+}
+#: Names that are always there, so printing one is never a missing quote.
+_ALWAYS_DEFINED = {
+    "true", "false", "null", "undefined", "NaN", "Infinity",
+    "True", "False", "None",
+}
+
+
+def undefined_print(code: str, language: str) -> str:
+    """A name printed but defined nowhere - almost always missing quotes.
+
+    The workbook marks what a program prints, and that has one blind spot:
+    a line that never runs is never checked. `if (n > 5) {
+    console.log(big); }` with n = 3 prints nothing, which is right, and
+    the missing quotes around "big" go unnoticed - until n is 7 and the
+    same program crashes. Found because someone's answer passed one
+    exercise on a page and failed its twin.
+
+    Deliberately narrow, so it never accuses a correct answer: only a
+    print whose whole argument is one bare name, and only when that name
+    appears nowhere else in the code at all - with no other mention, it
+    cannot have been defined. Returns the name, or "".
+    """
+    pattern = _PRINT_OF_A_NAME.get(language)
+    if not pattern:
+        return ""
+    calls = list(re.finditer(pattern, code))
+    for call in calls:
+        name = call.group(1)
+        if name in _ALWAYS_DEFINED:
+            continue
+        mentions = len(re.findall(rf"(?<![\w$]){re.escape(name)}(?![\w$])", code))
+        in_prints = sum(1 for c in calls if c.group(1) == name)
+        if mentions == in_prints:
+            return name
+    return ""
 
 
 # ── The pages ────────────────────────────────────────────────

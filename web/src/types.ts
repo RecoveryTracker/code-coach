@@ -587,6 +587,8 @@ export type WorkbookCheck = {
   exit_code: number;
   /** The program never ran — a compile or syntax error, not a wrong answer. */
   failed_to_run: boolean;
+  /** The output was right but the code is not - a line that would crash if it ran. */
+  problem: string;
   done_on_page: number;
   page_total: number;
 };

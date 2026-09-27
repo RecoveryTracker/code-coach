@@ -876,6 +876,7 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
     """
     from code_coach.workbook import exercise as find_exercise
     from code_coach.workbook import has_workbook, matches, page as find_page
+    from code_coach.workbook import undefined_print
 
     language = _viewing_language(body.language)
     if not has_workbook(language):
@@ -906,6 +907,19 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
     stdout, stderr, exit_code = run_code(body.code, language=language)
     expect = found.expect
     passed = exit_code == 0 and matches(stdout, expect)
+    # The right output can hide a line that never ran: console.log(big)
+    # inside an if that is false prints nothing, which is correct, and
+    # would crash the moment the if were true.
+    problem = ""
+    missing = undefined_print(body.code, language) if passed else ""
+    if missing:
+        passed = False
+        problem = (
+            f"The output is right, but {missing} is not defined anywhere, so "
+            f"that line would crash the moment it ran - it only passed because "
+            f"it did not run this time. To print the word {missing}, put it in "
+            f'quotes: "{missing}".'
+        )
 
     progress = _store.load()
     # Where you were is worth keeping whether or not the answer was right —
@@ -934,6 +948,7 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
         # An empty run with a bad exit code is a program that never got as far
         # as printing — a compile error, usually. Worth saying separately.
         failed_to_run=exit_code != 0,
+        problem=problem,
         done_on_page=sum(1 for e in on_page if e in done),
         page_total=len(on_page),
     )
