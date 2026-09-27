@@ -17,10 +17,11 @@ from pathlib import Path
 
 from code_coach.canvas.content import STEPS as DODGE_STEPS, Step
 from code_coach.canvas.content_breakout import BREAKOUT_STEPS
+from code_coach.canvas.content_farm import FARM_STEPS
 
 #: Every track, in the order they are taught. Each track's first step
 #: starts from a blank loop; within a track, each starts from the last.
-STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS
+STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS + FARM_STEPS
 
 HERE = Path(__file__).resolve().parent
 HARNESS = HERE / "harness.js"
@@ -53,12 +54,12 @@ def node_available() -> bool:
     return shutil.which("node") is not None
 
 
-def run_check(code: str, check: str) -> CheckResult:
-    """Play `code` in node and run `check` against it."""
+def run_check(code: str, check: str, world: str = "") -> CheckResult:
+    """Play `code` in node - after `world`, if the step has one - and run `check`."""
     node = shutil.which("node")
     if node is None:
         return CheckResult(False, "Checking needs Node.js, and it is not installed.")
-    payload = json.dumps({"harness": harness_source(), "code": code, "check": check})
+    payload = json.dumps({"harness": harness_source(), "world": world, "code": code, "check": check})
     try:
         done = subprocess.run(
             [node, str(NODE_CHECK)],
@@ -94,4 +95,4 @@ def check_step(step_id: str, code: str) -> CheckResult | None:
         return None
     if not found.check:
         return CheckResult(True, "")
-    return run_check(code, found.check)
+    return run_check(code, found.check, found.world)

@@ -922,6 +922,8 @@ export type CanvasStep = {
   /** The previous step's finished program - each step is one change. */
   starter: string;
   hint: string;
+  /** A game loaded before your code, for tracks where you program a world (Farm). */
+  world: string;
   /** False for the open-ended last step. */
   checked: boolean;
   done: number;

@@ -103,12 +103,14 @@ function stage() {
 async function main() {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;
-  const { harness, code, check } = JSON.parse(input);
+  const { harness, world, code, check } = JSON.parse(input);
   const context = stage();
   const say = (result) => process.stdout.write(JSON.stringify(result) + "\n");
 
   vm.runInContext(harness, context, { filename: "harness.js" });
   vm.runInContext("__cc.boot('check', 1)", context);
+  // A track's game, when you program it rather than write it (Farm).
+  if (world) vm.runInContext(world, context, { filename: "world.js" });
   try {
     vm.runInContext(code, context, { filename: "game.js", timeout: 3000 });
   } catch (e) {

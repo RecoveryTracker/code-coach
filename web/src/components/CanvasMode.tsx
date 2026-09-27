@@ -50,7 +50,7 @@ function writeStore(key: string, value: string | null): void {
  * of its own. Your code's first line is `start`, so an error the browser
  * reports against the whole document can be given back as your line number.
  */
-function previewPage(harness: string, code: string): string {
+function previewPage(harness: string, code: string, world = ""): string {
   const safe = (s: string) => s.replace(/<\/script/gi, "<\\/script");
   const before = (start: number) =>
     "<!doctype html><html><head><meta charset=\"utf-8\"><style>"
@@ -62,6 +62,8 @@ function previewPage(harness: string, code: string): string {
     + `<script>${safe(harness)}</script>\n`
     + `<script>__cc.boot('play', ${start});`
     + "document.querySelector('canvas').focus();</script>\n"
+    // A track's game, when you program it rather than write it (Farm).
+    + (world ? `<script>${safe(world)}</script>\n` : "")
     + "<script>\n";
   // Line numbers do not depend on the number written in, so measure once.
   const start = before(0).split("\n").length;
@@ -84,6 +86,10 @@ export default function CanvasMode() {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const codeRef = useRef("");
   codeRef.current = code;
+  // Read by run(), which the step-change effect calls in the same pass as
+  // the step changes - before a re-render could hand it the new step.
+  const chosenRef = useRef("");
+  chosenRef.current = chosen;
 
   useEffect(() => {
     let alive = true;
@@ -119,7 +125,8 @@ export default function CanvasMode() {
     (source?: string) => {
       if (!list) return;
       setLines([]);
-      setPage(previewPage(list.harness, source ?? codeRef.current));
+      const step = list.steps.find((s) => s.id === chosenRef.current);
+      setPage(previewPage(list.harness, source ?? codeRef.current, step?.world ?? ""));
       setRuns((n) => n + 1);
     },
     [list],

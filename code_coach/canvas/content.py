@@ -36,6 +36,9 @@ class Step:
     #: One nudge, shown when asked for.
     hint: str = ""
     track: str = "Dodge"
+    #: A game already written, loaded before your code - for tracks where
+    #: you program a world rather than build one (Farm). Empty for the rest.
+    world: str = ""
 
 
 _SETUP = """const canvas = document.querySelector('canvas');

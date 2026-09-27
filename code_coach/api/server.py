@@ -2351,6 +2351,7 @@ def canvas_list() -> dict:
                 "goal": s.goal,
                 "starter": s.starter,
                 "hint": s.hint,
+                "world": s.world,
                 "checked": bool(s.check),
                 "done": counts.get(s.id, 0),
             }
