@@ -35,6 +35,8 @@ from code_coach.api.schemas import (
     ErrorCheckRequest,
     ErrorCheckResponse,
     TraceCheckRequest,
+    CanvasCheckRequest,
+    CanvasCheckResponse,
     FlutterCheckRequest,
     FlutterCheckResponse,
     TraceCheckResponse,
@@ -2327,6 +2329,61 @@ def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
     """The model file for one ticket, asked for rather than shipped."""
     _, found = _ticket_or_404(project_id, ticket_id)
     return {"id": found.id, "after": found.after}
+
+
+@app.get("/api/canvas")
+def canvas_list() -> dict:
+    """Every Canvas step, the harness the preview loads, and how often each passed.
+
+    The solutions stay here: the answer is asked for, like a ticket's.
+    """
+    from code_coach.canvas import harness_source, steps
+
+    counts = _store.load().canvas_counts()
+    return {
+        "harness": harness_source(),
+        "steps": [
+            {
+                "id": s.id,
+                "track": s.track,
+                "title": s.title,
+                "teaches": s.teaches,
+                "goal": s.goal,
+                "starter": s.starter,
+                "hint": s.hint,
+                "checked": bool(s.check),
+                "done": counts.get(s.id, 0),
+            }
+            for s in steps()
+        ],
+    }
+
+
+@app.get("/api/canvas/answer")
+def canvas_answer(step_id: str = "") -> dict:
+    """One step's finished program, when you ask to see it."""
+    from code_coach.canvas import step
+
+    found = step(step_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown step {step_id}")
+    return {"id": found.id, "solution": found.solution}
+
+
+@app.post("/api/canvas/check", response_model=CanvasCheckResponse)
+def canvas_check(body: CanvasCheckRequest) -> CanvasCheckResponse:
+    """Play the program in node and run the step's check against it."""
+    from code_coach.canvas import check_step
+
+    result = check_step(body.step_id, body.code)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Unknown step {body.step_id}")
+    done = 0
+    if result.passed:
+        progress = _store.load()
+        done = progress.record_canvas(body.step_id)
+        _store.save(progress)
+    return CanvasCheckResponse(passed=result.passed, message=result.message, done=done)
 
 
 @app.get("/api/flutter")

@@ -1,4 +1,6 @@
 import type {
+  CanvasCheck,
+  CanvasList,
   CheckAnswerResult,
   ConceptTopic,
   CssCheck,
@@ -189,6 +191,24 @@ export function checkCss(body: {
 /** The next things to do, across every practice at once. */
 export function fetchSession(size = 20): Promise<SessionQueue> {
   return request(`/api/session?size=${size}`);
+}
+
+/** Every Canvas step, and the harness the preview loads first. */
+export function fetchCanvas(): Promise<CanvasList> {
+  return request("/api/canvas");
+}
+
+/** Play the program in node and run the step's check against it. */
+export function checkCanvas(step_id: string, code: string): Promise<CanvasCheck> {
+  return request("/api/canvas/check", {
+    method: "POST",
+    body: JSON.stringify({ step_id, code }),
+  });
+}
+
+/** One step's finished program - asked for, not shipped with the list. */
+export function fetchCanvasAnswer(step_id: string): Promise<{ id: string; solution: string }> {
+  return request(`/api/canvas/answer?step_id=${encodeURIComponent(step_id)}`);
 }
 
 /** Every Flutter question, with its choices and without its answer. */

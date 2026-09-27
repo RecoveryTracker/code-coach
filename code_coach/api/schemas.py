@@ -771,6 +771,19 @@ class ErrorCheckResponse(BaseModel):
     fix: str = ""
 
 
+class CanvasCheckRequest(BaseModel):
+    """One Canvas step, and the whole program written for it."""
+
+    step_id: str = ""
+    code: str = ""
+
+
+class CanvasCheckResponse(BaseModel):
+    passed: bool = False
+    message: str = ""
+    done: int = 0
+
+
 class FlutterCheckRequest(BaseModel):
     """One Flutter question, and the choice picked for it."""
 

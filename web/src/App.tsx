@@ -38,6 +38,7 @@ import Styles from "./components/Styles";
 import Magnets from "./components/Magnets";
 import BugHunt from "./components/BugHunt";
 import CaseFiles from "./components/CaseFiles";
+import CanvasMode from "./components/CanvasMode";
 import FlutterMode from "./components/FlutterMode";
 import Tickets from "./components/Tickets";
 import Puzzles from "./components/Puzzles";
@@ -250,6 +251,7 @@ export default function App() {
   const regexOpen = mode === "regex";
   const casesOpen = mode === "cases";
   const flutterOpen = mode === "flutter";
+  const canvasOpen = mode === "canvas";
   const ticketsOpen = mode === "tickets";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
@@ -1288,6 +1290,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Tickets />
+      </div>
+    );
+  }
+
+  if (canvasOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <CanvasMode />
       </div>
     );
   }

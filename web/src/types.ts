@@ -913,6 +913,24 @@ export type SessionItem = {
   last: string;
 };
 
+export type CanvasStep = {
+  id: string;
+  track: string;
+  title: string;
+  teaches: string;
+  goal: string;
+  /** The previous step's finished program - each step is one change. */
+  starter: string;
+  hint: string;
+  /** False for the open-ended last step. */
+  checked: boolean;
+  done: number;
+};
+
+export type CanvasList = { harness: string; steps: CanvasStep[] };
+
+export type CanvasCheck = { passed: boolean; message: string; done: number };
+
 export type FlutterQuestion = {
   id: string;
   name: string;

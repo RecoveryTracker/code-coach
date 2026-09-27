@@ -159,6 +159,7 @@ class StudentProgress:
     puzzle_done: dict[str, DrillRecord] = field(default_factory=dict)
     case_done: dict[str, DrillRecord] = field(default_factory=dict)
     ticket_done: dict[str, DrillRecord] = field(default_factory=dict)
+    canvas_done: dict[str, DrillRecord] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now)
 
     # ── Per-class endless counters ──
@@ -285,6 +286,12 @@ class StudentProgress:
 
     def ticket_last(self) -> dict[str, str]:
         return {i: v.last_at for i, v in self.ticket_done.items() if v.last_at}
+
+    def record_canvas(self, step_id: str) -> int:
+        return _bump(self.canvas_done, step_id)
+
+    def canvas_counts(self) -> dict[str, int]:
+        return {i: v.count for i, v in self.canvas_done.items()}
 
     def record_case(self, item_id: str) -> int:
         return _bump(self.case_done, item_id)
@@ -464,6 +471,7 @@ class StudentProgress:
             puzzle_done=_records(raw.get("puzzle_done")),
             case_done=_records(raw.get("case_done")),
             ticket_done=_records(raw.get("ticket_done")),
+            canvas_done=_records(raw.get("canvas_done")),
             updated_at=str(raw.get("updated_at") or _now()),
         )
 

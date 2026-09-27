@@ -75,6 +75,11 @@ export const MODES = [
     title: "A team codebase and its ticket queue - make the change without breaking what worked",
   },
   {
+    id: "canvas",
+    label: "Canvas",
+    title: "Write JavaScript that draws and moves - build a real game a step at a time",
+  },
+  {
     id: "flutter",
     label: "Flutter",
     title: "Read Flutter widget code and say what it builds, lays out or rebuilds",
