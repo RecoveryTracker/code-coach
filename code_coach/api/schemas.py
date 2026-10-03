@@ -771,6 +771,21 @@ class ErrorCheckResponse(BaseModel):
     fix: str = ""
 
 
+class FarmCodeRequest(BaseModel):
+    """A program for the farm, in one of its languages."""
+
+    language: str = "python"
+    code: str = ""
+
+
+class FarmUnlockRequest(BaseModel):
+    name: str = ""
+
+
+class FarmWarpRequest(BaseModel):
+    warp: float = 1
+
+
 class CanvasCheckRequest(BaseModel):
     """One Canvas step, and the whole program written for it."""
 

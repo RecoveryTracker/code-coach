@@ -36,6 +36,9 @@ from code_coach.api.schemas import (
     ErrorCheckResponse,
     TraceCheckRequest,
     CanvasCheckRequest,
+    FarmCodeRequest,
+    FarmUnlockRequest,
+    FarmWarpRequest,
     CanvasCheckResponse,
     FlutterCheckRequest,
     FlutterCheckResponse,
@@ -2329,6 +2332,73 @@ def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
     """The model file for one ticket, asked for rather than shipped."""
     _, found = _ticket_or_404(project_id, ticket_id)
     return {"id": found.id, "after": found.after}
+
+
+@app.get("/api/farm")
+def farm_overview() -> dict:
+    """The farm when the screen opens: field, items, research, functions, your code."""
+    from code_coach.farm.runner import HOST
+
+    return HOST.overview()
+
+
+@app.get("/api/farm/state")
+def farm_state(since: int = 0) -> dict:
+    """The farm now, and the output since line `since` - polled while you watch."""
+    from code_coach.farm.runner import HOST
+
+    return HOST.state(max(0, since))
+
+
+@app.post("/api/farm/run")
+def farm_run(body: FarmCodeRequest) -> dict:
+    """Check the program against what is unlocked, then start it."""
+    from code_coach.farm.runner import HOST
+
+    return HOST.start(body.language, body.code)
+
+
+@app.post("/api/farm/stop")
+def farm_stop() -> dict:
+    from code_coach.farm.runner import HOST
+
+    HOST.stop_run()
+    return {"ok": True}
+
+
+@app.post("/api/farm/code")
+def farm_code(body: FarmCodeRequest) -> dict:
+    """Keep what you have written, per language, without running it."""
+    from code_coach.farm.runner import HOST
+
+    HOST.keep_code(body.language, body.code)
+    return {"ok": True}
+
+
+@app.post("/api/farm/unlock")
+def farm_unlock(body: FarmUnlockRequest) -> dict:
+    """Buy the next level of a piece of research."""
+    from code_coach.farm.runner import HOST
+
+    ok = HOST.buy(body.name)
+    return {"ok": ok, **HOST.overview()}
+
+
+@app.post("/api/farm/warp")
+def farm_warp(body: FarmWarpRequest) -> dict:
+    from code_coach.farm.runner import HOST
+
+    HOST.set_warp(body.warp)
+    return {"ok": True}
+
+
+@app.post("/api/farm/reset")
+def farm_reset() -> dict:
+    """Start the farm over from one square of grass."""
+    from code_coach.farm.runner import HOST
+
+    HOST.reset()
+    return HOST.overview()
 
 
 @app.get("/api/canvas")

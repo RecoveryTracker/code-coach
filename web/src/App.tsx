@@ -39,6 +39,7 @@ import Magnets from "./components/Magnets";
 import BugHunt from "./components/BugHunt";
 import CaseFiles from "./components/CaseFiles";
 import CanvasMode from "./components/CanvasMode";
+import FarmMode from "./components/FarmMode";
 import FlutterMode from "./components/FlutterMode";
 import Tickets from "./components/Tickets";
 import Puzzles from "./components/Puzzles";
@@ -252,6 +253,7 @@ export default function App() {
   const casesOpen = mode === "cases";
   const flutterOpen = mode === "flutter";
   const canvasOpen = mode === "canvas";
+  const farmOpen = mode === "farm";
   const ticketsOpen = mode === "tickets";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
@@ -1290,6 +1292,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <Tickets />
+      </div>
+    );
+  }
+
+  if (farmOpen) {
+    return (
+      <div className="typing-shell farm-shell">
+        {modeBar}
+        <FarmMode />
       </div>
     );
   }

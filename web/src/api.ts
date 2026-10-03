@@ -1,4 +1,7 @@
 import type {
+  FarmOverview,
+  FarmStart,
+  FarmState,
   CanvasCheck,
   CanvasList,
   CheckAnswerResult,
@@ -191,6 +194,44 @@ export function checkCss(body: {
 /** The next things to do, across every practice at once. */
 export function fetchSession(size = 20): Promise<SessionQueue> {
   return request(`/api/session?size=${size}`);
+}
+
+/** The farm when its screen opens. */
+export function fetchFarm(): Promise<FarmOverview> {
+  return request("/api/farm");
+}
+
+/** The farm now, with the output since line `since`. */
+export function fetchFarmState(since: number): Promise<FarmState> {
+  return request(`/api/farm/state?since=${since}`);
+}
+
+/** Check a program against what is unlocked, and start it. */
+export function runFarm(language: string, code: string): Promise<FarmStart> {
+  return request("/api/farm/run", { method: "POST", body: JSON.stringify({ language, code }) });
+}
+
+export function stopFarm(): Promise<{ ok: boolean }> {
+  return request("/api/farm/stop", { method: "POST", body: "{}" });
+}
+
+/** Keep what is written in a language, without running it. */
+export function keepFarmCode(language: string, code: string): Promise<{ ok: boolean }> {
+  return request("/api/farm/code", { method: "POST", body: JSON.stringify({ language, code }) });
+}
+
+/** Buy the next level of a piece of research; answers with the whole farm. */
+export function buyFarmUnlock(name: string): Promise<FarmOverview & { ok: boolean }> {
+  return request("/api/farm/unlock", { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function setFarmWarp(warp: number): Promise<{ ok: boolean }> {
+  return request("/api/farm/warp", { method: "POST", body: JSON.stringify({ warp }) });
+}
+
+/** Start the farm over: one square of grass, nothing in the barn. */
+export function resetFarm(): Promise<FarmOverview> {
+  return request("/api/farm/reset", { method: "POST", body: "{}" });
 }
 
 /** Every Canvas step, and the harness the preview loads first. */

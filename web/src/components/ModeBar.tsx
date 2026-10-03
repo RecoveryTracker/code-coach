@@ -75,6 +75,11 @@ export const MODES = [
     title: "A team codebase and its ticket queue - make the change without breaking what worked",
   },
   {
+    id: "farm",
+    label: "Farm",
+    title: "The Farmer Was Replaced: program a drone to run a farm - in Python, JavaScript or Dart",
+  },
+  {
     id: "canvas",
     label: "Canvas",
     title: "Write JavaScript that draws and moves - build a real game a step at a time",

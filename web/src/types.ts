@@ -913,6 +913,96 @@ export type SessionItem = {
   last: string;
 };
 
+export type FarmCell = {
+  /** Ground: G(rassland) or S(oil). */
+  g: "G" | "S";
+  e?: string;
+  /** Growth, 0 to 1. */
+  p?: number;
+  /** Water level. */
+  w?: number;
+  /** Infected. */
+  i?: number;
+  /** Sunflower petals or cactus size. */
+  n?: number;
+  /** A ripe cactus: 1 if sorted. */
+  s?: number;
+  /** Part of a giant pumpkin: its corner and side. */
+  giant?: [number, number, number];
+};
+
+export type FarmSnapshot = {
+  w: number;
+  h: number;
+  time: number;
+  drone: { x: number; y: number; hat: string };
+  tiles: FarmCell[];
+  maze: { x0: number; y0: number; m: number; sides: number[]; treasure: [number, number] } | null;
+  tail: [number, number][];
+  smoke: string[];
+  speed: number;
+};
+
+export type FarmRun = {
+  id: number;
+  language: string;
+  status: "starting" | "running" | "done" | "stopped" | "error";
+  error: string;
+  line: number;
+  commands: number;
+  seconds: number;
+};
+
+export type FarmLine = { kind: "print" | "out" | "error" | "info"; text: string };
+
+export type FarmState = {
+  farm: FarmSnapshot;
+  items: Record<string, number>;
+  run: FarmRun | null;
+  output: FarmLine[];
+  outputEnd: number;
+  warp: number;
+};
+
+export type FarmUnlock = {
+  name: string;
+  level: number;
+  max: number;
+  cost: Record<string, number> | null;
+  available: boolean;
+  affordable: boolean;
+  needs: string[];
+  about: string;
+  missing: boolean;
+  upgradable: boolean;
+};
+
+export type FarmFunction = {
+  py: string;
+  js: string;
+  dart: string;
+  params: string[];
+  doc: string;
+  unlocked: boolean;
+  unlock: string;
+};
+
+export type FarmOverview = FarmState & {
+  code: Record<string, string>;
+  language: string;
+  warps: number[];
+  unlocks: FarmUnlock[];
+  features: string[];
+  functions: FarmFunction[];
+  languages: string[];
+  /** The game's named values, by group, in their Python spelling. */
+  names: Record<string, string[]>;
+};
+
+export type FarmViolation = { feature: string; line: number; snippet: string; message: string };
+
+export type FarmStart = { ok: boolean; run?: number; error?: string; violations?: FarmViolation[] };
+
 export type CanvasStep = {
   id: string;
   track: string;

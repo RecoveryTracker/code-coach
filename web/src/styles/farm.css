@@ -1,0 +1,278 @@
+/* Farm: code on the left, the field on the right - like the game, where the
+   code window floats over the farm. Both columns scroll on their own. */
+
+.farm-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 640px);
+  gap: 14px;
+  padding: 12px 16px 16px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Under the shared top bar, the farm takes the rest of the screen. */
+.farm-shell {
+  overflow: hidden;
+}
+
+.farm-shell > .farm-wrap {
+  flex: 1 1 auto;
+  height: auto;
+}
+
+.farm-code {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 8px;
+}
+
+.farm-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.farm-langs,
+.farm-actions,
+.farm-tabs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.farm-warp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-warp select {
+  background: var(--bg-elevated, #10141c);
+  color: var(--text, #cdd9e5);
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.farm-editor {
+  flex: 1 1 auto;
+  min-height: 280px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.farm-editor > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.farm-output {
+  flex: 0 0 150px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  background: var(--bg-elevated, #10141c);
+  font: 12px/1.45 ui-monospace, Consolas, monospace;
+}
+
+.farm-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.farm-line.info {
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-line.print {
+  color: #e6d38a;
+}
+
+.farm-line.error {
+  color: var(--danger, #f28b82);
+}
+
+.farm-line.error code {
+  margin-left: 6px;
+  color: var(--text, #cdd9e5);
+}
+
+.farm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.farm-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.farm-item {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #232c38);
+  background: var(--bg-elevated, #10141c);
+  font-size: 12px;
+}
+
+.farm-item b {
+  font-variant-numeric: tabular-nums;
+}
+
+.farm-item.muted {
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-canvas-box {
+  width: 100%;
+}
+
+.farm-canvas {
+  display: block;
+  border-radius: 8px;
+  border: 1px solid var(--border, #232c38);
+  max-width: 100%;
+}
+
+.farm-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-run.running {
+  color: var(--success, #3dd68c);
+}
+
+.farm-run.error {
+  color: var(--danger, #f28b82);
+}
+
+.farm-reset {
+  margin-left: auto;
+}
+
+.farm-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.farm-unlock {
+  padding: 8px 10px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  background: var(--bg-elevated, #10141c);
+  opacity: 0.55;
+}
+
+.farm-unlock.open,
+.farm-unlock.done {
+  opacity: 1;
+}
+
+.farm-unlock.ready {
+  border-color: var(--success, #3dd68c);
+}
+
+.farm-unlock p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.farm-unlock-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.farm-unlock-head .ws-btn {
+  margin-left: auto;
+}
+
+.farm-level {
+  font-size: 12px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-needs {
+  font-size: 12px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-feature {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #232c38);
+  opacity: 0.5;
+}
+
+.farm-feature.on {
+  opacity: 1;
+  border-color: var(--success, #3dd68c);
+}
+
+.farm-fn {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border, #232c38);
+  font-size: 13px;
+}
+
+.farm-fn code {
+  color: var(--accent, #6ea8fe);
+}
+
+.farm-fn.locked {
+  opacity: 0.5;
+}
+
+@media (max-width: 980px) {
+  .farm-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    overflow: visible;
+  }
+
+  .farm-editor {
+    min-height: 320px;
+  }
+}
+
+.farm-values {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.farm-values code {
+  margin-right: 8px;
+  color: var(--text, #cdd9e5);
+}
