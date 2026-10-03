@@ -13,13 +13,20 @@
 // numItems(Items.weirdSubstance). The game's named values are enums here,
 // so a misspelt one is an error before your program even starts.
 //
-// Dart has no varargs, so two commands look a little different:
+// Dart has no varargs, so three commands look a little different:
 //   min(a, b) and max(a, b) take up to four values, or one list of any
 //   length: min([3, 1, 2]).
 //   print() is dart:core's own - one value - and quickPrint() matches it.
+//   spawnDrone() takes the function's arguments as one list:
+//   spawnDrone(plantColumn, [3, Entities.carrot]).
 // And a tuple from the game is a record: getCompanion() gives
 // (Entities.carrot, (3, 5)), which unpacks as
 //   final (kind, (x, y)) = getCompanion()!;
+//
+// More drones: spawnDrone(f) starts a new run of this same program in drone
+// mode (FARM_DRONE holds the job). That run does not call your main(): it
+// calls f, and sends back what f returned. runner.dart lists your
+// top-level functions by name, which is how the new run finds f.
 //
 // The block between the NAMES markers is filled in by render.py from
 // code_coach/farm/data.py, so the names here can never drift from the farm.
@@ -183,6 +190,34 @@ num max(Object a, [Object? b, Object? c, Object? d]) => _extreme('max', a, b, c,
 /// The number without its sign.
 num abs(num x) => _call('abs', [x]) as num;
 
+/// Start another drone here, running function with args - spawnDrone(work),
+/// or spawnDrone(plantColumn, [3, Entities.carrot]) for plantColumn(3,
+/// Entities.carrot). Its handle, or null if every drone is already out.
+///
+/// The new drone is a new run of your program that runs only that function,
+/// so it is sent by name - which is why it has to be one declared at the top
+/// level, where the new run will find it again. Its globals start from their
+/// declarations: nothing of yours is copied across but the arguments.
+int? spawnDrone(Function function, [List<Object?> args = const []]) {
+  final name = _droneName(function);
+  final handle = _call('spawn_drone', [name, args, const <String, Object?>{}]);
+  return handle == null ? null : _int(handle);
+}
+
+/// How many drones are on the farm now.
+int numDrones() => _int(_call('num_drones'));
+
+/// How many drones you may have at once.
+int maxDrones() => _int(_call('max_drones'));
+
+/// True once that drone's function has returned.
+bool hasFinished(int drone) => _call('has_finished', [drone]) as bool;
+
+/// Wait for a drone to finish, and what its function returned: a number, a
+/// string, an enum value, or a list or map of those. (A record comes back
+/// as a list.)
+dynamic waitFor(int drone) => _unwire(_call('wait_for', [drone]));
+
 /// Python's range, which the game's for loops are written with:
 /// range(3) is [0, 1, 2], range(1, 7, 2) is [1, 3, 5], range(3, 0, -1) is
 /// [3, 2, 1]. Worked out here, so it costs the drone nothing.
@@ -225,14 +260,52 @@ int _int(Object? value) => (value as num).toInt();
 double _double(Object? value) => (value as num).toDouble();
 
 /// A value as the farm reads it: an enum by its game name, a set or other
-/// iterable as a list.
-Object? _wire(Object? value) {
-  if (value is _Wired) return value.wire;
+/// iterable as a list, and a record - (3, 5) - as a list too, the way the
+/// game's tuples travel.
+Object? _wire(Object? value) => switch (value) {
+      _Wired named => named.wire,
+      Map map => {for (final entry in map.entries) '${_wire(entry.key)}': _wire(entry.value)},
+      Iterable items => [for (final item in items) _wire(item)],
+      (var a,) => [_wire(a)],
+      (var a, var b) => [_wire(a), _wire(b)],
+      (var a, var b, var c) => [_wire(a), _wire(b), _wire(c)],
+      (var a, var b, var c, var d) => [_wire(a), _wire(b), _wire(c), _wire(d)],
+      _ => value,
+    };
+
+/// A value from the pipe as your program's own: a game name back to its
+/// enum value, and a list typed by what is in it, so that it fits a
+/// parameter declared that way.
+Object? _unwire(Object? value) {
+  if (value is String) return _byWire[value] ?? value;
+  if (value is List) return _narrow([for (final item in value) _unwire(item)]);
   if (value is Map) {
-    return {for (final entry in value.entries) '${_wire(entry.key)}': _wire(entry.value)};
+    return {for (final entry in value.entries) _unwire(entry.key): _unwire(entry.value)};
   }
-  if (value is Iterable) return [for (final item in value) _wire(item)];
   return value;
+}
+
+/// A list as a List<int>, List<String>, List<Entities> ... when every item
+/// is one: JSON's lists are List<dynamic>, which a parameter declared
+/// List<int> would turn away. Mixed, or empty, it stays as it is.
+List<Object?> _narrow(List<Object?> items) {
+  if (items.isEmpty) return items;
+  if (items.every((item) => item is int)) return List<int>.from(items);
+  if (items.every((item) => item is double)) return List<double>.from(items);
+  if (items.every((item) => item is num)) return List<num>.from(items);
+  if (items.every((item) => item is String)) return List<String>.from(items);
+  if (items.every((item) => item is bool)) return List<bool>.from(items);
+  for (final group in _groups) {
+    if (items.every(group.contains)) {
+      // A copy of the enum's own list, emptied: a List<Entities>, say.
+      final typed = group.toList()..clear();
+      for (final item in items) {
+        typed.add(item as _Wired);
+      }
+      return typed;
+    }
+  }
+  return items;
 }
 
 /// Python's json.dumps writes pure ASCII, and so does this: every character
@@ -290,14 +363,71 @@ void _crash(Object error, StackTrace stack) {
   exit(1);
 }
 
-/// Runs your main() - runner.dart calls this - inside a zone that does two
-/// things: print() becomes the game's print, words in smoke above the drone,
-/// and an error nobody caught, now or in something your program started, is
-/// reported with the line of yours it happened on.
-void runFarmProgram(Function main) {
+// ── More drones ─────────────────────────────────────────────────────────
+
+/// Your program's top-level functions, by name - runner.dart lists them -
+/// which are the functions a drone can be sent to run.
+Map<String, Function> _drones = const {};
+
+/// Which of your functions this is. Dart tells a function's name only in
+/// its toString - "Closure: () => void from Function 'harvestColumn':
+/// static." - and a static method, or a function from another library,
+/// reads just the same; so the name counts only when runner.dart listed
+/// this very function under it.
+String _droneName(Function function) {
+  final said = RegExp(r"from Function '([^']*)': static\.$").firstMatch('$function');
+  final name = said?.group(1) ?? '';
+  if (_drones[name] == function) return name;
+  if (name.startsWith('_')) {
+    throw FarmError('spawnDrone needs a function whose name does not start with _: in Dart '
+        'that keeps it private to your file, where a new drone cannot reach it.');
+  }
+  throw FarmError('spawnDrone needs a function declared at the top level of your program, '
+      'like void harvestColumn() { ... }');
+}
+
+/// Drone mode: FARM_DRONE names one of your functions and the arguments to
+/// give it. Your main() does not run - only that function - and what it
+/// returns goes back for waitFor().
+void _runDrone(String job) {
+  final order = jsonDecode(job) as Map<String, dynamic>;
+  final name = '${order['fn']}';
+  final function = _drones[name];
+  if (function == null) {
+    throw FarmError('This drone was to run $name(), but your program declares no function '
+        'of that name at its top level.');
+  }
+  final args = [for (final arg in order['args'] as List? ?? const []) _unwire(arg)];
+  final value = Function.apply(function, args);
+  // An async function hands back a Future: what it completes with is the answer.
+  if (value is Future) {
+    value.then(_returned);
+  } else {
+    _returned(value);
+  }
+}
+
+/// The drone's function has returned: say what with, and stop. The farm
+/// sends no answer to this one.
+void _returned(Object? value) {
+  _send('__return__', [value]);
+  exit(0);
+}
+
+/// Runs your program - runner.dart calls this, with your main() and your
+/// top-level functions - inside a zone that does two things: print()
+/// becomes the game's print, words in smoke above the drone, and an error
+/// nobody caught, now or in something your program started, is reported
+/// with the line of yours it happened on. A drone runs in the same zone,
+/// calling its one function instead of main().
+void runFarmProgram(Function main, {Map<String, Function> drones = const {}}) {
+  _drones = drones;
+  final job = Platform.environment['FARM_DRONE'] ?? '';
   runZonedGuarded(
     () {
-      if (main is dynamic Function()) {
+      if (job.isNotEmpty) {
+        _runDrone(job);
+      } else if (main is dynamic Function()) {
         main();
       } else if (main is dynamic Function(List<String>)) {
         main(const <String>[]);

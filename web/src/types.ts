@@ -936,6 +936,8 @@ export type FarmSnapshot = {
   h: number;
   time: number;
   drone: { x: number; y: number; hat: string };
+  /** Every drone on the farm (Megafarm); the first is the program's own. */
+  drones?: { x: number; y: number; hat: string }[];
   tiles: FarmCell[];
   maze: { x0: number; y0: number; m: number; sides: number[]; treasure: [number, number] } | null;
   tail: [number, number][];
@@ -951,6 +953,7 @@ export type FarmRun = {
   line: number;
   commands: number;
   seconds: number;
+  drones?: number;
 };
 
 export type FarmLine = { kind: "print" | "out" | "error" | "info"; text: string };

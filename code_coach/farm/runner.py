@@ -34,6 +34,8 @@ from code_coach.farm.protocol import FUNCTIONS, STOP, answer, decode_request, re
 from code_coach.farm.world import Refusal, World, spell_function
 
 LANGUAGES = ("python", "javascript", "dart")
+#: JavaScript drones read the program with TypeScript's parser (see stubs/farm_api.js).
+TYPESCRIPT = Path(__file__).resolve().parents[2] / "web" / "node_modules" / "typescript" / "lib" / "typescript.js"
 #: How far the farm may move on between two looks when nothing is running.
 IDLE_CATCH_UP = 2.0
 #: A program that sends no drone command for this long (real seconds) is
@@ -41,6 +43,9 @@ IDLE_CATCH_UP = 2.0
 SILENT_LIMIT = 15.0
 #: Dart compiles before it runs; its first command can take a while.
 FIRST_COMMAND_GRACE = 30.0
+#: How big a drone's job (function, arguments, globals) may be: it goes in an
+#: environment variable, and Windows allows about 32,000 characters for all of them.
+DRONE_JOB_LIMIT = 24000
 #: Warps the screen offers; 0 means as fast as the machine goes.
 WARPS = (1, 2, 4, 8, 16, 64, 0)
 
@@ -60,20 +65,51 @@ def save_path() -> Path:
     return active_store().path.with_name("farm_save.json")
 
 
+#: (Drone has a field called `time`, which would hide the module inside its body.)
+_now = time.monotonic
+
+
+@dataclass
+class Drone:
+    """One drone: its process, its own clock of game time, and where it is."""
+
+    id: int
+    proc: subprocess.Popen | None = None
+    time: float = 0.0
+    x: int = 0
+    y: int = 0
+    hat: str = "Straw_Hat"
+    status: str = "running"  # running, done
+    #: Waiting for its turn with a command in hand.
+    pending: bool = False
+    #: Inside wait_for, waiting on another drone: it can't act before that one ends.
+    blocked: bool = False
+    result: Any = None
+    ticks: int = 0
+    commands: int = 0
+    last_command: float = field(default_factory=_now)
+
+
 @dataclass
 class Run:
     id: int
     language: str
     warp: float
+    workdir: str = ""
+    argv: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
     status: str = "starting"  # starting, running, done, stopped, error
     error: str = ""
     error_line: int = 0
-    proc: subprocess.Popen | None = None
     stop: bool = False
-    started: float = field(default_factory=time.monotonic)
+    finished: bool = False
+    started: float = field(default_factory=_now)
     commands: int = 0
-    last_command: float = field(default_factory=time.monotonic)
-    workdir: str = ""
+    drones: dict[int, Drone] = field(default_factory=dict)
+    next_drone: int = 1
+    #: Real time and game time when the run began, for pacing.
+    clock_start: float = field(default_factory=_now)
+    time0: float = 0.0
 
 
 class FarmHost:
@@ -81,6 +117,8 @@ class FarmHost:
 
     def __init__(self) -> None:
         self.lock = threading.RLock()
+        #: Drones take turns under this, in game-time order.
+        self.turns = threading.Condition(self.lock)
         self.world: World | None = None
         self.code: dict[str, str] = dict(STARTER_CODE)
         self.language = "python"
@@ -153,13 +191,21 @@ class FarmHost:
             world = self._load()
             self._catch_up()
             run = self.run
+            farm = world.snapshot()
+            if run is not None and run.status in ("starting", "running") and run.drones:
+                live = [d for d in run.drones.values() if d.status == "running"] or list(run.drones.values())
+                farm["drones"] = [{"x": d.x, "y": d.y, "hat": d.hat} for d in live]
+                main = run.drones.get(0)
+                if main is not None:
+                    farm["drone"] = {"x": main.x, "y": main.y, "hat": main.hat}
             return {
-                "farm": world.snapshot(),
+                "farm": farm,
                 "items": {k: (int(v) if float(v).is_integer() else round(v, 2)) for k, v in world.items.items()},
                 "run": None if run is None else {
                     "id": run.id, "language": run.language, "status": run.status,
                     "error": run.error, "line": run.error_line, "commands": run.commands,
                     "seconds": round(time.monotonic() - run.started, 1),
+                    "drones": sum(1 for d in run.drones.values() if d.status == "running"),
                 },
                 "output": self.output[since:],
                 "outputEnd": len(self.output),
@@ -250,6 +296,17 @@ class FarmHost:
                 self.run.warp = self.warp
 
     # ── Running ─────────────────────────────────────────────────────────
+    #
+    # A run is one or more drones. Each is its own process of the player's
+    # program - the first runs it from the top, the rest (Megafarm) in
+    # drone mode, running just the function they were spawned with - and
+    # each has a thread here answering its commands.
+    #
+    # Each drone keeps its own clock of game time. A command waits for its
+    # turn: no drone that might act EARLIER (a lower clock) may still be
+    # busy or queued. So two drones harvesting side by side each take half
+    # a second of game time - in parallel, as in the game - and the farm's
+    # time is the furthest any of them has got.
 
     def start(self, language: str, code: str) -> dict[str, Any]:
         """Check the program against what is unlocked, then run it."""
@@ -280,39 +337,57 @@ class FarmHost:
             workdir = tempfile.mkdtemp(prefix="farm-")
             for name, text in files.items():
                 Path(workdir, name).write_text(text, encoding="utf-8")
-            run = Run(id=self._next_run, language=language, warp=self.warp, workdir=workdir)
-            self._next_run += 1
-            world.run_ticks = 0
             env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1", NO_COLOR="1")
+            ts = TYPESCRIPT
+            if ts.exists():
+                env["FARM_TS"] = str(ts)
+            env.pop("FARM_DRONE", None)
+            run = Run(id=self._next_run, language=language, warp=self.warp, workdir=workdir,
+                      argv=list(argv), env=env, time0=world.time)
+            self._next_run += 1
+            main = Drone(id=0, time=world.time, x=world.x, y=world.y, hat=world.hat)
             try:
-                run.proc = subprocess.Popen(
-                    argv, cwd=workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, env=env,
-                )
+                main.proc = self._launch(run, None)
             except OSError as exc:
                 shutil.rmtree(workdir, ignore_errors=True)
                 return {"ok": False, "error": f"Could not start {language}: {exc}"}
+            run.drones[0] = main
+            run.status = "running"
             self.run = run
-            self._say("info", f"Running your {language.capitalize() if language != 'javascript' else 'JavaScript'} program.")
+            name = {"javascript": "JavaScript"}.get(language, language.capitalize())
+            self._say("info", f"Running your {name} program.")
             self.save()
-        threading.Thread(target=self._drive, args=(run,), daemon=True).start()
+        threading.Thread(target=self._drive, args=(run, main), daemon=True).start()
         threading.Thread(target=self._watch, args=(run,), daemon=True).start()
         return {"ok": True, "run": run.id}
+
+    @staticmethod
+    def _launch(run: "Run", drone_job: dict[str, Any] | None) -> subprocess.Popen:
+        env = dict(run.env)
+        if drone_job is not None:
+            env["FARM_DRONE"] = json.dumps(drone_job)
+        return subprocess.Popen(
+            run.argv, cwd=run.workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, env=env,
+        )
 
     def stop_run(self, wait: bool = False) -> None:
         run = self.run
         if run is None or run.status not in ("starting", "running"):
             return
         run.stop = True
+        with self.turns:
+            self.turns.notify_all()
 
         def kill() -> None:
             time.sleep(0.5)
-            if run.proc and run.proc.poll() is None:
-                _kill_tree(run.proc)
+            for d in list(run.drones.values()):
+                if d.proc and d.proc.poll() is None:
+                    _kill_tree(d.proc)
 
         threading.Thread(target=kill, daemon=True).start()
         if wait:
-            deadline = time.monotonic() + 3
+            deadline = time.monotonic() + 4
             while run.status in ("starting", "running") and time.monotonic() < deadline:
                 time.sleep(0.02)
 
@@ -321,29 +396,38 @@ class FarmHost:
         if len(self.output) > 2000:
             del self.output[:500]
 
-    def _watch(self, run: Run) -> None:
+    def _fail(self, run: "Run", drone: "Drone", message: str, line: int = 0) -> None:
+        """One drone's error ends the whole run, as in the game."""
+        if not run.error:
+            run.error = message if drone.id == 0 else f"Drone {drone.id}: {message}"
+            run.error_line = line
+        run.stop = True
+        with self.turns:
+            self.turns.notify_all()
+
+    def _watch(self, run: "Run") -> None:
         """Stop a program that has gone quiet - an empty loop never ends on its own."""
         while run.status in ("starting", "running"):
             time.sleep(0.25)
-            limit = FIRST_COMMAND_GRACE if run.commands == 0 else SILENT_LIMIT
-            if time.monotonic() - run.last_command > limit and run.proc and run.proc.poll() is None:
-                run.error = (
-                    f"Your program ran for {int(limit)} seconds without giving the drone a single "
-                    "command, so it was stopped. Is there a loop with no drone command inside it?"
-                )
-                _kill_tree(run.proc)
-                return
+            now = time.monotonic()
+            for d in list(run.drones.values()):
+                if d.status != "running" or d.pending or d.blocked or not d.proc or d.proc.poll() is not None:
+                    continue
+                limit = FIRST_COMMAND_GRACE if d.commands == 0 else SILENT_LIMIT
+                if now - d.last_command > limit:
+                    who = "Your program" if d.id == 0 else f"Drone {d.id}"
+                    self._fail(run, d,
+                               f"{who} ran for {int(limit)} seconds without giving the drone a single "
+                               "command, so it was stopped. Is there a loop with no drone command inside it?")
+                    _kill_tree(d.proc)
+                    return
 
-    def _drive(self, run: Run) -> None:
-        proc = run.proc
+    def _drive(self, run: "Run", drone: "Drone") -> None:
+        proc = drone.proc
         assert proc is not None and proc.stdout is not None and proc.stdin is not None
-        clock_start = time.monotonic()
-        game_seconds = 0.0
-        run.status = "running"
         try:
             for raw in iter(proc.stdout.readline, b""):
                 line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
-                request = None
                 try:
                     request = decode_request(line)
                 except ValueError:
@@ -353,43 +437,33 @@ class FarmHost:
                         self._say("out", line)
                     continue
                 name, args = request
+                drone.commands += 1
                 run.commands += 1
-                run.last_command = time.monotonic()
+                drone.last_command = time.monotonic()
                 if name == "__error__":
-                    run.error = str(args[0]) if args else "Your program stopped with an error."
-                    run.error_line = int(args[1]) if len(args) > 1 and isinstance(args[1], int) else 0
+                    line_no = int(args[1]) if len(args) > 1 and isinstance(args[1], int) else 0
+                    self._fail(run, drone, str(args[0]) if args else "Your program stopped with an error.", line_no)
+                    continue
+                if name == "__return__":
+                    drone.result = args[0] if args else None
                     continue
                 if run.stop:
                     self._reply(proc, STOP)
                     break
-                with self.lock:
-                    world = self._load()
-                    try:
-                        result, seconds = world.call(name, args, run.language)
-                        reply = answer(result)
-                    except Refusal as exc:
-                        result, seconds, reply = None, 0.0, refuse(str(exc))
-                    except Exception as exc:  # noqa: BLE001 - a farm bug must not hang the program
-                        result, seconds, reply = None, 0.0, refuse(f"The farm could not do that: {exc}")
-                    if name in ("print", "quick_print") and not reply.startswith('{"e"'):
-                        self._say("print" if name == "print" else "out", str(args[0]) if args else "")
-                    self._last_look = time.monotonic()
-                    if time.monotonic() - self._last_save > 10:
-                        self.save()
-                # Pace the program to game time, sped up by the warp.
-                game_seconds += seconds
+                reply = self._command(run, drone, name, args)
+                # Pace this drone to its game time, sped up by the warp.
                 warp = run.warp
-                if warp:
-                    target = clock_start + game_seconds / warp
+                if warp and not run.stop:
+                    target = run.clock_start + (drone.time - run.time0) / warp
                     while not run.stop:
                         ahead = target - time.monotonic()
                         if ahead <= 0.001:
                             break
                         time.sleep(min(ahead, 0.05))
-                    if time.monotonic() - target > 1.0:
-                        # A slow command (a big snapshot, a busy machine) should not make
-                        # the program rush to catch up afterwards.
-                        clock_start = time.monotonic() - game_seconds / warp
+                    if drone.id == 0 and time.monotonic() - target > 1.0:
+                        # A slow moment (a busy machine) should not make the
+                        # program rush to catch up afterwards.
+                        run.clock_start = time.monotonic() - (drone.time - run.time0) / warp
                 if run.stop:
                     self._reply(proc, STOP)
                     break
@@ -397,7 +471,142 @@ class FarmHost:
         except (OSError, ValueError):
             pass
         finally:
-            self._finish(run)
+            self._drone_ended(run, drone)
+
+    def _my_turn(self, run: "Run", drone: "Drone") -> bool:
+        """No other drone could still act before this one."""
+        for d in run.drones.values():
+            if d is drone or d.status != "running" or d.blocked:
+                continue
+            if d.pending:
+                if (d.time, d.id) < (drone.time, drone.id):
+                    return False
+            elif d.time <= drone.time:
+                return False
+        return True
+
+    def _command(self, run: "Run", drone: "Drone", name: str, args: list[Any]) -> str:
+        """Do one command for one drone, in its turn. Returns the reply line."""
+        with self.turns:
+            drone.pending = True
+            while not run.stop and not self._my_turn(run, drone):
+                self.turns.wait(0.05)
+            drone.pending = False
+            if run.stop:
+                self.turns.notify_all()
+                return STOP
+            world = self._load()
+            if name == "wait_for":
+                return self._wait_for(run, drone, args, world)
+            world.x, world.y, world.hat = drone.x, drone.y, drone.hat
+            world.clock = drone.time
+            world.run_ticks = drone.ticks
+            try:
+                if name in ("spawn_drone", "num_drones", "max_drones", "has_finished"):
+                    result, _seconds = self._drone_command(run, drone, name, args, world)
+                else:
+                    if name == "change_hat" and args and args[0] == "Hats.Dinosaur_Hat" and any(
+                        d is not drone and d.status == "running" and d.hat == "Dinosaur_Hat"
+                        for d in run.drones.values()
+                    ):
+                        raise Refusal("There is only one dinosaur hat, and another drone is wearing it.")
+                    result, _seconds = world.call(name, args, run.language)
+                reply = answer(result)
+            except Refusal as exc:
+                reply = refuse(str(exc))
+            except Exception as exc:  # noqa: BLE001 - a farm bug must not hang the program
+                reply = refuse(f"The farm could not do that: {exc}")
+            drone.x, drone.y, drone.hat = world.x, world.y, world.hat
+            drone.time = world.clock if world.clock is not None else drone.time
+            drone.ticks = world.run_ticks
+            world.clock = None
+            if drone.id == 0:
+                pass
+            else:
+                # The farm's own drone fields belong to the first drone between commands.
+                main = run.drones.get(0)
+                if main is not None:
+                    world.x, world.y, world.hat = main.x, main.y, main.hat
+            if name in ("print", "quick_print") and not reply.startswith('{"e"'):
+                self._say("print" if name == "print" else "out", str(args[0]) if args else "")
+            self._last_look = time.monotonic()
+            if time.monotonic() - self._last_save > 10:
+                self.save()
+            self.turns.notify_all()
+            return reply
+
+    def _drone_command(self, run: "Run", drone: "Drone", name: str, args: list[Any],
+                       world: World) -> tuple[Any, float]:
+        world.require(name, run.language)
+        live = [d for d in run.drones.values() if d.status == "running"]
+        if name == "num_drones":
+            return len(live), world.spend_ticks(data.QUESTION_TICKS)
+        if name == "max_drones":
+            return world.max_drones(), world.spend_ticks(data.QUESTION_TICKS)
+        if name == "has_finished":
+            target = run.drones.get(args[0] if args else -1)
+            if target is None:
+                raise Refusal(f"{spell_function('has_finished', run.language)} needs a drone handle "
+                              f"from {spell_function('spawn_drone', run.language)}.")
+            return target.status != "running", world.spend_ticks(data.QUESTION_TICKS)
+        # spawn_drone
+        fn = args[0] if args else None
+        if not isinstance(fn, str) or not fn:
+            raise Refusal(f"{spell_function('spawn_drone', run.language)} needs a function.")
+        if len(live) >= world.max_drones():
+            return None, world.spend_ticks(data.FAILED_TICKS)
+        seconds = world.spend_ticks(data.ACTION_TICKS)
+        job = {
+            "fn": fn,
+            "args": args[1] if len(args) > 1 and isinstance(args[1], list) else [],
+            "globals": args[2] if len(args) > 2 and isinstance(args[2], dict) else {},
+        }
+        if len(json.dumps(job)) > DRONE_JOB_LIMIT:
+            # The job travels in an environment variable, and Windows caps those.
+            raise Refusal(
+                "Your program's global variables are too big to copy to another drone. Keep "
+                "the globals small, or pass the drone what it needs as arguments."
+            )
+        new = Drone(id=run.next_drone, time=world.clock if world.clock is not None else world.time,
+                    x=world.x, y=world.y, hat="Straw_Hat")
+        run.next_drone += 1
+        try:
+            new.proc = self._launch(run, job)
+        except OSError as exc:
+            raise Refusal(f"Could not start another drone: {exc}") from None
+        run.drones[new.id] = new
+        threading.Thread(target=self._drive, args=(run, new), daemon=True).start()
+        return new.id, seconds
+
+    def _wait_for(self, run: "Run", drone: "Drone", args: list[Any], world: World) -> str:
+        """Called holding the turn lock: block this drone until another finishes."""
+        try:
+            world.require("wait_for", run.language)
+        except Refusal as exc:
+            self.turns.notify_all()
+            return refuse(str(exc))
+        target = run.drones.get(args[0] if args else -1)
+        if target is None or target is drone:
+            self.turns.notify_all()
+            return refuse(f"{spell_function('wait_for', run.language)} needs another drone's handle "
+                          f"from {spell_function('spawn_drone', run.language)}.")
+        drone.blocked = True
+        self.turns.notify_all()
+        while target.status == "running" and not run.stop:
+            self.turns.wait(0.05)
+        drone.blocked = False
+        if run.stop:
+            self.turns.notify_all()
+            return STOP
+        # The waiting drone catches up to the moment the other one finished.
+        drone.time = max(drone.time, target.time)
+        world.x, world.y, world.hat = drone.x, drone.y, drone.hat
+        world.clock = drone.time
+        world.spend_ticks(data.QUESTION_TICKS)
+        drone.time = world.clock
+        world.clock = None
+        self.turns.notify_all()
+        return answer(target.result)
 
     @staticmethod
     def _reply(proc: subprocess.Popen, text: str) -> None:
@@ -408,8 +617,8 @@ class FarmHost:
         except (OSError, ValueError):
             pass
 
-    def _finish(self, run: Run) -> None:
-        proc = run.proc
+    def _drone_ended(self, run: "Run", drone: "Drone") -> None:
+        proc = drone.proc
         stderr = ""
         if proc is not None:
             try:
@@ -422,10 +631,31 @@ class FarmHost:
                     stderr = proc.stderr.read().decode("utf-8", errors="replace")
                 except (OSError, ValueError):
                     stderr = ""
-        if not run.error and proc is not None and proc.returncode not in (0, None) and not run.stop:
-            run.error, run.error_line = _compile_error(stderr, run.language)
+            if proc.returncode not in (0, None) and not run.stop and not run.error:
+                message, line = _compile_error(stderr, run.language)
+                self._fail(run, drone, message, line)
+        with self.turns:
+            drone.status = "done"
+            self.turns.notify_all()
+            last = all(d.status != "running" for d in run.drones.values())
+        if run.stop:
+            # Make sure the others go too.
+            for d in list(run.drones.values()):
+                if d.status == "running" and d.proc and d.proc.poll() is None:
+                    threading.Thread(target=_kill_later, args=(d.proc,), daemon=True).start()
+        if last:
+            self._finish(run)
+
+    def _finish(self, run: "Run") -> None:
         with self.lock:
+            if run.finished:
+                return
+            run.finished = True
             world = self._load()
+            main = run.drones.get(0)
+            if main is not None:
+                world.x, world.y, world.hat = main.x, main.y, main.hat
+            world.clock = None
             world.end_run()
             if run.stop and not run.error:
                 run.status = "stopped"
@@ -439,6 +669,12 @@ class FarmHost:
                 self._say("info", "Your program finished.")
             self.save()
         shutil.rmtree(run.workdir, ignore_errors=True)
+
+
+def _kill_later(proc: subprocess.Popen) -> None:
+    time.sleep(0.5)
+    if proc.poll() is None:
+        _kill_tree(proc)
 
 
 def _kill_tree(proc: subprocess.Popen) -> None:

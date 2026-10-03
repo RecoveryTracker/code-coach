@@ -31,6 +31,21 @@ Two calls need a word of their own:
                                                (print takes a game second).
 
 get_cost answers {} - never None - for an unlock already at its top level.
+
+More drones (Megafarm). Drones share no memory, as in the game: each one
+is a new process of the same program, started in drone mode - the
+environment variable FARM_DRONE holds JSON {"fn": name, "args": [...],
+"globals": {...}}. In drone mode a library defines the program's
+functions WITHOUT running its top-level code, sets the globals it was
+given (Python sends a snapshot of its JSON-able globals; JavaScript and
+Dart send {} and their globals start from their declarations), calls
+fn(*args), and sends
+
+    {"f": "__return__", "a": [value]}   no reply; then exits 0
+
+spawn_drone goes on the wire as ["spawn_drone", [fn_name, [args...], {globals}]]:
+only a function declared at the top level of the program can be spawned,
+by name. wait_for answers with the other drone's return value.
 range() in JavaScript and Dart is the library's own and never reaches the
 farm (Python has its own).
 
@@ -97,6 +112,12 @@ FUNCTIONS: tuple[Function, ...] = (
     Function("min", "min", "min", ("*values",), "The smallest of the values, or of one list."),
     Function("max", "max", "max", ("*values",), "The largest of the values, or of one list."),
     Function("abs", "abs", "abs", ("x",), "The number without its sign."),
+    Function("spawn_drone", "spawnDrone", "spawnDrone", ("function", "*args"),
+             "Start another drone here, running function(args). Its handle, or None if all are out."),
+    Function("num_drones", "numDrones", "numDrones", (), "How many drones are on the farm now."),
+    Function("max_drones", "maxDrones", "maxDrones", (), "How many drones you may have at once."),
+    Function("has_finished", "hasFinished", "hasFinished", ("drone",), "True once that drone's function has returned."),
+    Function("wait_for", "waitFor", "waitFor", ("drone",), "Wait for a drone to finish; its function's return value."),
 )
 
 FUNCTIONS_BY_PY = {f.py: f for f in FUNCTIONS}

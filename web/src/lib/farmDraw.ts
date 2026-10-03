@@ -87,11 +87,17 @@ export function drawFarm(ctx: CanvasRenderingContext2D, snap: FarmSnapshot, px: 
     }
   }
 
-  // The drone, with its hat and anything it has just printed.
-  const { x, y, hat } = snap.drone;
-  const cx = sx(x) + cell / 2;
-  const cy = sy(y) + cell / 2;
-  const r = cell * 0.3;
+  // Every drone, with its hat; then anything the first one has just printed.
+  for (const d of snap.drones?.length ? snap.drones : [snap.drone]) {
+    drawDrone(ctx, sx(d.x) + cell / 2, sy(d.y) + cell / 2, cell * 0.3, d.hat);
+  }
+  if (snap.smoke.length) {
+    drawSmoke(ctx, snap.smoke[snap.smoke.length - 1], px,
+      sx(snap.drone.x) + cell / 2, sy(snap.drone.y) + cell / 2, cell * 0.3, cell);
+  }
+}
+
+function drawDrone(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, hat: string): void {
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.beginPath();
   ctx.ellipse(cx, cy + r * 0.9, r * 0.9, r * 0.3, 0, 0, Math.PI * 2);
@@ -107,9 +113,12 @@ export function drawFarm(ctx: CanvasRenderingContext2D, snap: FarmSnapshot, px: 
   ctx.fillStyle = HAT_COLOURS[hat] ?? HAT_COLOURS.Straw_Hat;
   ctx.fillRect(cx - r * 0.4, cy - r * 0.75, r * 0.8, r * 0.4);
   ctx.fillRect(cx - r * 0.6, cy - r * 0.4, r * 1.2, r * 0.12);
+}
 
-  if (snap.smoke.length) {
-    const text = snap.smoke[snap.smoke.length - 1];
+function drawSmoke(
+  ctx: CanvasRenderingContext2D, text: string, px: number, cx: number, cy: number, r: number, cell: number,
+): void {
+  {
     ctx.font = `${Math.max(11, Math.round(cell * 0.28))}px ui-monospace, monospace`;
     const width = ctx.measureText(text).width + 10;
     const bx = Math.min(Math.max(4, cx - width / 2), px - width - 4);

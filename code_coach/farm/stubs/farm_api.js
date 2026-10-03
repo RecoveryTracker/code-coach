@@ -17,6 +17,12 @@ Waiting for the answer is synchronous, as it is in the game: fs.writeSync
 and fs.readSync on the process's own stdout and stdin, no promises, no
 event loop. Your program never needs await.
 
+More drones: spawnDrone(f) starts a new run of this same file in drone
+mode (FARM_DRONE holds the job). That run reads your file with
+TypeScript's parser - the farm says where it is, in FARM_TS - and runs
+only its definitions: functions, classes, and variables whose values are
+written out plainly. Then it runs f, and sends back what f returned.
+
 The block between the NAMES markers is filled in by render.py from
 code_coach/farm/data.py, so the names here can never drift from the farm.
 */
@@ -215,13 +221,55 @@ function group(members) {
   return Object.freeze(named);
 }
 
+// ── More drones ─────────────────────────────────────────────────────────
+
+// A name a drone can be sent by: one plain identifier, so looking it up as
+// code can only ever look it up.
+const IDENTIFIER = /^[\p{ID_Start}$_][\p{ID_Continue}$\u200c\u200d]*$/u;
+
+// What a name means at the top level of your program - a function you
+// declared, or a const or let holding one - or undefined if nothing there
+// has that name. Your file runs as a script, and a second script in the
+// same context sees its top-level names, which is how this looks.
+function topLevel(name) {
+  if (typeof name !== "string" || !IDENTIFIER.test(name)) return undefined;
+  try {
+    return vm.runInThisContext(name, { filename: "drone.js" });
+  } catch {
+    return undefined;
+  }
+}
+
+// spawnDrone(harvestColumn, 3): start another drone here, running
+// harvestColumn(3). Its handle, or null if every drone is already out.
+// The new drone is a new run of your file that runs only that function, so
+// it is sent by name - which is why it has to be one declared at the top
+// level, where the new run will find it again. Its globals start from
+// their declarations: nothing of yours is copied across but the arguments.
+function spawnDrone(fn, ...args) {
+  const isClass = typeof fn === "function" && /^class\b/.test(Function.prototype.toString.call(fn));
+  if (typeof fn !== "function" || isClass || !fn.name || topLevel(fn.name) !== fn) {
+    throw new FarmError(
+      "spawnDrone needs a function declared at the top level of your program, " +
+        "like function harvestColumn() { ... }",
+    );
+  }
+  return call("spawn_drone", [fn.name, args, {}]);
+}
+
 // Everything your program sees: the directions, the groups, a function for
 // every command (under its JavaScript name), range and FarmError.
 function api() {
   const names = {};
   for (const direction of DIRECTIONS) names[direction] = direction;
   for (const [title, members] of Object.entries(GROUPS)) names[title] = group(members);
-  const special = { print: printer, quick_print: printer, min: extreme, max: extreme };
+  const special = {
+    print: printer,
+    quick_print: printer,
+    min: extreme,
+    max: extreme,
+    spawn_drone: () => spawnDrone,
+  };
   for (const [py, js] of FUNCTIONS) {
     // Named, so console.log(move) shows [Function: move].
     names[js] = Object.defineProperty((special[py] || command)(py), "name", { value: js });
@@ -272,6 +320,139 @@ function crash(error) {
   exit(1);
 }
 
+// ── Running one function, as a drone ────────────────────────────────────
+
+// TypeScript's compiler, from where the farm says it is. It reads plain
+// JavaScript too, and the web app already has it, so nothing is installed.
+function typescript() {
+  const where = process.env.FARM_TS;
+  if (!where) {
+    throw new FarmError(
+      "A drone reads your program with TypeScript's parser, and the farm did not say where it is (FARM_TS).",
+    );
+  }
+  return require(where);
+}
+
+// Every character but a line break: what blanks a statement out, so the
+// lines after it keep their numbers.
+const BLANK = /[^\r\n\u2028\u2029]/g;
+
+// Your file with only its definitions left: function and class
+// declarations, and let/const/var whose every value is a function, a class,
+// or something written out plainly - a number, a string, true, null, North,
+// Entities.Bush, or an array, object or template of those. Every other
+// statement is blanked to spaces, its newlines kept, so each line that is
+// left is still on its own line number, and an error still names your line.
+// ("use strict" at the top stays too: it changes what the functions do.)
+function definitionsOnly(source) {
+  const ts = typescript();
+  const K = ts.SyntaxKind;
+  const sf = ts.createSourceFile(CODE_NAME, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const PLAIN_NAMES = new Set(["undefined", "NaN", "Infinity", ...DIRECTIONS, ...Object.keys(GROUPS)]);
+  const PLAIN_SIGNS = [K.MinusToken, K.PlusToken, K.ExclamationToken, K.TildeToken];
+
+  function plain(node) {
+    switch (node.kind) {
+      case K.NumericLiteral:
+      case K.BigIntLiteral:
+      case K.StringLiteral:
+      case K.NoSubstitutionTemplateLiteral:
+      case K.RegularExpressionLiteral:
+      case K.TrueKeyword:
+      case K.FalseKeyword:
+      case K.NullKeyword:
+      case K.FunctionExpression:
+      case K.ArrowFunction:
+      case K.ClassExpression:
+        return true;
+      case K.Identifier:
+        return PLAIN_NAMES.has(node.text);
+      case K.ParenthesizedExpression:
+        return plain(node.expression);
+      case K.PrefixUnaryExpression:
+        return PLAIN_SIGNS.includes(node.operator) && plain(node.operand);
+      case K.TemplateExpression:
+        return node.templateSpans.every((span) => plain(span.expression));
+      case K.ArrayLiteralExpression:
+        return node.elements.every((element) => {
+          if (element.kind === K.OmittedExpression) return true;
+          return plain(element.kind === K.SpreadElement ? element.expression : element);
+        });
+      case K.ObjectLiteralExpression:
+        return node.properties.every(plainProperty);
+      // Entities.Bush: a member of one of the farm's groups.
+      case K.PropertyAccessExpression:
+        return !node.questionDotToken && ts.isIdentifier(node.expression) && node.expression.text in GROUPS;
+      default:
+        return false;
+    }
+  }
+
+  function plainProperty(property) {
+    const computed = property.name && ts.isComputedPropertyName(property.name);
+    if (computed && !plain(property.name.expression)) return false;
+    switch (property.kind) {
+      case K.PropertyAssignment:
+        return plain(property.initializer);
+      case K.ShorthandPropertyAssignment:
+        return PLAIN_NAMES.has(property.name.text) && !property.objectAssignmentInitializer;
+      case K.SpreadAssignment:
+        return plain(property.expression);
+      case K.MethodDeclaration:
+      case K.GetAccessor:
+      case K.SetAccessor:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function isDefinition(statement) {
+    if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) return true;
+    if (!ts.isVariableStatement(statement)) return false;
+    return statement.declarationList.declarations.every((d) => !d.initializer || plain(d.initializer));
+  }
+
+  let kept = "";
+  let at = 0;
+  let prologue = true;
+  for (const statement of sf.statements) {
+    prologue = prologue && ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression);
+    if (prologue || isDefinition(statement)) continue;
+    const start = statement.getStart(sf);
+    const blanked = source.slice(start, statement.end).replace(BLANK, " ");
+    kept += source.slice(at, start) + blanked;
+    at = statement.end;
+  }
+  return kept + source.slice(at);
+}
+
+// The drone's function has returned: say what with, and stop. The farm
+// sends no answer to this one.
+function finish(value) {
+  send("__return__", [value]);
+  exit(0);
+}
+
+// Drone mode: FARM_DRONE names one of your functions and the arguments to
+// give it. Only your definitions run - nothing else at the top level -
+// then that function, and what it returns goes back for waitFor().
+function runDrone(path, job) {
+  vm.runInThisContext(definitionsOnly(fs.readFileSync(path, "utf8")), { filename: CODE_NAME });
+  const name = String(job.fn);
+  const fn = topLevel(name);
+  if (typeof fn !== "function") {
+    throw new FarmError(
+      `This drone was to run ${name}(), but your program declares no function of that name at its top level.`,
+    );
+  }
+  const value = fn(...(Array.isArray(job.args) ? job.args : []));
+  // An async function hands back a promise: what it settles to is the answer.
+  if (value instanceof Promise) value.then(finish, crash);
+  else finish(value);
+}
+
 function main(path) {
   // Room for a deep stack, so your line is still in it.
   Error.stackTraceLimit = Math.max(Error.stackTraceLimit, 50);
@@ -281,9 +462,10 @@ function main(path) {
   // are reported the same way.
   process.on("uncaughtException", crash);
   process.on("unhandledRejection", crash);
-  const source = fs.readFileSync(path, "utf8");
+  const job = process.env.FARM_DRONE;
   try {
-    vm.runInThisContext(source, { filename: CODE_NAME });
+    if (job) runDrone(path, JSON.parse(job));
+    else vm.runInThisContext(fs.readFileSync(path, "utf8"), { filename: CODE_NAME });
   } catch (error) {
     crash(error);
   }

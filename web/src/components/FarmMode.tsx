@@ -337,7 +337,7 @@ export default function FarmMode() {
           {run_ ? (
             <span className={`farm-run ${run_.status}`}>
               {run_.status === "running"
-                ? `running · ${run_.commands} commands`
+                ? `running · ${run_.commands} commands${run_.drones && run_.drones > 1 ? ` · ${run_.drones} drones` : ""}`
                 : run_.status === "error"
                   ? `stopped with an error${run_.line ? ` on line ${run_.line}` : ""}`
                   : run_.status}

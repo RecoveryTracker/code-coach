@@ -282,7 +282,10 @@ UNLOCKS: dict[str, Unlock] = {
                "you can follow.",
                functions={1: ("set_execution_speed", "set_world_size")}),
         Unlock("Megafarm", _ladder("Gold", 2000, 8000, 32000, 128000, 512000), ("Mazes",),
-               "More drones, working at once: spawn_drone().", missing=True),
+               "More drones, working at once. spawn_drone(f) starts one where you stand, running "
+               "f; drones share no memory, so pass what it needs as arguments, and wait_for() "
+               "hands back what it returns. Each level doubles how many you may have.",
+               functions={1: ("spawn_drone", "num_drones", "max_drones", "has_finished", "wait_for")}),
         Unlock("Simulation", _ladder("Gold", 5000), ("Megafarm",),
                "Run your code in a simulation, faster and repeatable.", missing=True),
         Unlock("Leaderboard", (_c(("Bone", 2000000), ("Gold", 1000000)),), ("Dinosaurs", "Megafarm"),

@@ -149,6 +149,9 @@ class World:
         #: Per run: ticks since it started, and the speed it is held to.
         self.run_ticks = 0
         self.speed_cap: float | None = None
+        #: With more than one drone out, the clock of the drone acting now: each
+        #: keeps its own, and the farm's time is the furthest any has got.
+        self.clock: float | None = None
         #: Words printed above the drone: (text, game time it fades).
         self.smoke: list[tuple[str, float]] = []
         self._pumpkins: dict[tuple[int, int], tuple[int, int, int]] | None = None
@@ -329,8 +332,22 @@ class World:
         seconds = ticks / (data.BASE_TICKS_PER_SECOND * self.speed_factor())
         if powered:
             self.items["Power"] = max(0.0, self.items["Power"] - ticks / data.TICKS_PER_POWER)
-        self.advance(seconds)
+        self._pass(seconds)
         return seconds
+
+    def _pass(self, seconds: float) -> None:
+        """The acting drone spends `seconds`. With one drone the farm moves on with
+        it; with several, only when this drone gets further than any has yet."""
+        if self.clock is None:
+            self.advance(seconds)
+            return
+        self.clock += seconds
+        if self.clock > self.time:
+            self.advance(self.clock - self.time)
+
+    def max_drones(self) -> int:
+        """Megafarm doubles the drones you may have, per level."""
+        return 2 ** self.level("Megafarm")
 
     def advance(self, seconds: float) -> None:
         """Time passes: plants grow, ground dries, supplies arrive."""
@@ -673,6 +690,12 @@ class World:
 
     def call(self, name: str, args: list[Any], language: str = "python") -> tuple[Any, float]:
         """Do one command. Returns its result and the real seconds it took."""
+        self.require(name, language)
+        handler = getattr(self, "_do_" + name)
+        return handler(list(args), language)
+
+    def require(self, name: str, language: str = "python") -> None:
+        """Refuse a command the farm doesn't have, or that isn't unlocked yet."""
         if name not in FUNCTIONS_BY_PY:
             raise Refusal(f"There is no {spell_function(name, language)} on this farm.")
         if not self.has_function(name):
@@ -680,8 +703,6 @@ class World:
                 f"{spell_function(name, language)} isn't unlocked yet - research "
                 f"{self.function_unlock(name)}."
             )
-        handler = getattr(self, "_do_" + name)
-        return handler(list(args), language)
 
     # Each _do_ returns (result, seconds).
 
@@ -692,7 +713,7 @@ class World:
         return self.spend_ticks(data.QUESTION_TICKS)
 
     def _fixed(self, seconds: float = data.FIXED_SECONDS) -> float:
-        self.advance(seconds)
+        self._pass(seconds)
         return seconds
 
     def _direction(self, args: list[Any], name: str, language: str, optional: bool = False) -> str | None:
@@ -838,7 +859,7 @@ class World:
         return f"Grounds.{self.here().ground}", self._ask()
 
     def _do_get_time(self, args, language):
-        now = round(self.time, 4)
+        now = round(self.clock if self.clock is not None else self.time, 4)
         return now, self._ask()
 
     def _do_get_tick_count(self, args, language):
@@ -1035,6 +1056,24 @@ class World:
         except TypeError:
             raise Refusal(f"{spell_function('max', language)} can only compare numbers or strings.") from None
 
+    # The drone commands proper are the runner's (it owns the processes);
+    # these answer for a farm with only the one drone, as in a test.
+
+    def _do_spawn_drone(self, args, language):
+        return None, self._act(False)
+
+    def _do_num_drones(self, args, language):
+        return 1, self._ask()
+
+    def _do_max_drones(self, args, language):
+        return self.max_drones(), self._ask()
+
+    def _do_has_finished(self, args, language):
+        return True, self._ask()
+
+    def _do_wait_for(self, args, language):
+        return None, self._ask()
+
     def _do_abs(self, args, language):
         value = args[0] if args else None
         if not isinstance(value, (int, float)) or isinstance(value, bool):
@@ -1141,6 +1180,7 @@ class World:
         return {
             "w": self.w, "h": self.h, "time": round(self.time, 3),
             "drone": {"x": self.x, "y": self.y, "hat": self.hat},
+            "drones": [{"x": self.x, "y": self.y, "hat": self.hat}],
             "tiles": tiles, "maze": maze, "tail": [list(p) for p in self.tail],
             "smoke": [text for text, until in self.smoke if until > self.time],
             "speed": round(self.speed_factor(), 4),
