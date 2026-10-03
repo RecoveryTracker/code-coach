@@ -37,6 +37,7 @@ from code_coach.api.schemas import (
     TraceCheckRequest,
     CanvasCheckRequest,
     FarmCodeRequest,
+    FarmFileRequest,
     FarmUnlockRequest,
     FarmWarpRequest,
     CanvasCheckResponse,
@@ -2355,7 +2356,7 @@ def farm_run(body: FarmCodeRequest) -> dict:
     """Check the program against what is unlocked, then start it."""
     from code_coach.farm.runner import HOST
 
-    return HOST.start(body.language, body.code)
+    return HOST.start(body.language, body.code, body.file)
 
 
 @app.post("/api/farm/stop")
@@ -2371,8 +2372,17 @@ def farm_code(body: FarmCodeRequest) -> dict:
     """Keep what you have written, per language, without running it."""
     from code_coach.farm.runner import HOST
 
-    HOST.keep_code(body.language, body.code)
+    HOST.keep_code(body.language, body.code, body.file)
     return {"ok": True}
+
+
+@app.post("/api/farm/file")
+def farm_file(body: FarmFileRequest) -> dict:
+    """Add, rename, delete or pick one of a language's files; answers with the whole farm."""
+    from code_coach.farm.runner import HOST
+
+    got = HOST.file_op(body.language, body.action, body.name, body.new_name)
+    return {**got, **HOST.overview()}
 
 
 @app.post("/api/farm/unlock")

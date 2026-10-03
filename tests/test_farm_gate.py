@@ -564,9 +564,8 @@ class EveryLanguage(unittest.TestCase):
         self.assertEqual(v.message, "`if` needs Speed - buy it in the research tree.")
         [v] = check("print(1 + 2)\n", "python", set())
         self.assertEqual(v.message, "`+` needs Operators - buy it in the research tree.")
-        # Import is in the tree but not built yet, so there is nothing to buy.
         [v] = check("import math\n", "python", set())
-        self.assertEqual(v.message, "`import` needs Import, which Code Coach does not have yet.")
+        self.assertEqual(v.message, "`import` needs Import - buy it in the research tree.")
 
     def test_a_long_snippet_is_cut_short(self):
         code = "print(get_pos_x() + get_pos_y() + get_world_size() + get_water())\n"

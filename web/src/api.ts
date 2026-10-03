@@ -207,8 +207,21 @@ export function fetchFarmState(since: number): Promise<FarmState> {
 }
 
 /** Check a program against what is unlocked, and start it. */
-export function runFarm(language: string, code: string): Promise<FarmStart> {
-  return request("/api/farm/run", { method: "POST", body: JSON.stringify({ language, code }) });
+export function runFarm(language: string, code: string, file = ""): Promise<FarmStart> {
+  return request("/api/farm/run", { method: "POST", body: JSON.stringify({ language, code, file }) });
+}
+
+/** Add, rename, delete or select one of a language's files; answers with the whole farm. */
+export function farmFile(
+  language: string,
+  action: "add" | "rename" | "delete" | "select",
+  name: string,
+  newName = "",
+): Promise<FarmOverview & { ok: boolean; error?: string }> {
+  return request("/api/farm/file", {
+    method: "POST",
+    body: JSON.stringify({ language, action, name, new_name: newName }),
+  });
 }
 
 export function stopFarm(): Promise<{ ok: boolean }> {
@@ -216,8 +229,8 @@ export function stopFarm(): Promise<{ ok: boolean }> {
 }
 
 /** Keep what is written in a language, without running it. */
-export function keepFarmCode(language: string, code: string): Promise<{ ok: boolean }> {
-  return request("/api/farm/code", { method: "POST", body: JSON.stringify({ language, code }) });
+export function keepFarmCode(language: string, code: string, file = ""): Promise<{ ok: boolean }> {
+  return request("/api/farm/code", { method: "POST", body: JSON.stringify({ language, code, file }) });
 }
 
 /** Buy the next level of a piece of research; answers with the whole farm. */

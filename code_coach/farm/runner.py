@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -30,10 +31,12 @@ from pathlib import Path
 from typing import Any
 
 from code_coach.farm import data
-from code_coach.farm.protocol import FUNCTIONS, STOP, answer, decode_request, refuse
+from code_coach.farm.protocol import FUNCTIONS, MARK, STOP, answer, decode_request, refuse
 from code_coach.farm.world import Refusal, World, spell_function
 
-LANGUAGES = ("python", "javascript", "dart")
+#: "original" is the game's own language: Python's syntax, run by our interpreter
+#: (stubs/farm_lang.py) so that every operation costs ticks, as in the game.
+LANGUAGES = ("original", "python", "javascript", "dart")
 #: JavaScript drones read the program with TypeScript's parser (see stubs/farm_api.js).
 TYPESCRIPT = Path(__file__).resolve().parents[2] / "web" / "node_modules" / "typescript" / "lib" / "typescript.js"
 #: How far the farm may move on between two looks when nothing is running.
@@ -50,6 +53,8 @@ DRONE_JOB_LIMIT = 24000
 WARPS = (1, 2, 4, 8, 16, 64, 0)
 
 STARTER_CODE = {
+    "original": "# Your first program: harvest the grass under the drone.\n"
+                "# Run it a few times, collect hay, and buy Loops.\nharvest()\n",
     "python": "# Your first program: harvest the grass under the drone.\n"
               "# Run it a few times, collect hay, and buy Loops.\nharvest()\n",
     "javascript": "// Your first program: harvest the grass under the drone.\n"
@@ -57,6 +62,29 @@ STARTER_CODE = {
     "dart": "// Your first program: harvest the grass under the drone.\n"
             "// Run it a few times, collect hay, and buy Loops.\nvoid main() {\n  harvest();\n}\n",
 }
+
+
+#: A file's name: a module name in all three languages, and lowercase because
+#: Windows filenames ignore case.
+FILE_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,23}$")
+#: Names the libraries use for themselves.
+RESERVED_FILES = ("farm_api", "runner", "package")
+
+#: What a new file starts with.
+STARTER_HELPER = {
+    "original": "# Functions here can be used from your other files:\n"
+                "#     import {name}   or   from {name} import harvest_column\n\n",
+    "python": "# Functions here can be imported from your other files:\n"
+              "#     import {name}   or   from {name} import harvest_column\n\n",
+    "javascript": "// Export what your other files import:\n"
+                  "//     import {{ harvestColumn }} from \"./{name}.js\";\n\n",
+    "dart": "// Your other files use this one with:\n"
+            "//     import '{name}.dart';\n\n",
+}
+
+
+def _starter_files() -> dict[str, dict[str, str]]:
+    return {lang: {"main": STARTER_CODE[lang]} for lang in LANGUAGES}
 
 
 def save_path() -> Path:
@@ -101,6 +129,8 @@ class Run:
     status: str = "starting"  # starting, running, done, stopped, error
     error: str = ""
     error_line: int = 0
+    #: The player's file the error is in, when there are several.
+    error_file: str = ""
     stop: bool = False
     finished: bool = False
     started: float = field(default_factory=_now)
@@ -120,8 +150,10 @@ class FarmHost:
         #: Drones take turns under this, in game-time order.
         self.turns = threading.Condition(self.lock)
         self.world: World | None = None
-        self.code: dict[str, str] = dict(STARTER_CODE)
-        self.language = "python"
+        #: Each language's files (name -> code), and which one Run runs.
+        self.files: dict[str, dict[str, str]] = _starter_files()
+        self.entry: dict[str, str] = {lang: "main" for lang in LANGUAGES}
+        self.language = "original"
         self.warp: float = 1
         self.run: Run | None = None
         self.output: list[dict[str, Any]] = []
@@ -138,14 +170,32 @@ class FarmHost:
             return self.world
         self._path = path
         self.world = World()
-        self.code = dict(STARTER_CODE)
+        self.files = _starter_files()
+        self.entry = {lang: "main" for lang in LANGUAGES}
         self.output = []
         if path.exists():
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 self.world = World.from_json(raw.get("world", {}))
-                self.code.update({k: v for k, v in raw.get("code", {}).items() if k in LANGUAGES})
-                self.language = raw.get("language", "python") if raw.get("language") in LANGUAGES else "python"
+                saved = raw.get("files")
+                if isinstance(saved, dict):
+                    for lang, files in saved.items():
+                        if lang in LANGUAGES and isinstance(files, dict):
+                            kept = {str(k): str(v) for k, v in files.items() if FILE_NAME.match(str(k))}
+                            if kept:
+                                self.files[lang] = kept
+                else:
+                    # A save from before files: its one program becomes "main".
+                    for lang, code in raw.get("code", {}).items():
+                        if lang in LANGUAGES:
+                            self.files[lang]["main"] = str(code)
+                for lang, name in (raw.get("entry") or {}).items():
+                    if lang in LANGUAGES and name in self.files[lang]:
+                        self.entry[lang] = name
+                for lang in LANGUAGES:
+                    if self.entry[lang] not in self.files[lang]:
+                        self.entry[lang] = next(iter(self.files[lang]))
+                self.language = raw.get("language") if raw.get("language") in LANGUAGES else "original"
                 self.warp = float(raw.get("warp", 1))
             except (OSError, ValueError, KeyError, TypeError):
                 self.world = World()
@@ -156,7 +206,8 @@ class FarmHost:
         with self.lock:
             world = self._load()
             payload = {
-                "world": world.to_json(), "code": self.code, "language": self.language,
+                "world": world.to_json(), "files": self.files, "entry": self.entry,
+                "language": self.language,
                 "warp": self.warp,
             }
             path = save_path()
@@ -203,7 +254,8 @@ class FarmHost:
                 "items": {k: (int(v) if float(v).is_integer() else round(v, 2)) for k, v in world.items.items()},
                 "run": None if run is None else {
                     "id": run.id, "language": run.language, "status": run.status,
-                    "error": run.error, "line": run.error_line, "commands": run.commands,
+                    "error": run.error, "line": run.error_line, "file": run.error_file,
+                    "commands": run.commands,
                     "seconds": round(time.monotonic() - run.started, 1),
                     "drones": sum(1 for d in run.drones.values() if d.status == "running"),
                 },
@@ -219,6 +271,8 @@ class FarmHost:
             payload = self.state(len(self.output))
             payload.update({
                 "code": self.code,
+                "files": self.files,
+                "entry": self.entry,
                 "language": self.language,
                 "warps": list(WARPS),
                 "unlocks": self.unlock_list(),
@@ -261,7 +315,7 @@ class FarmHost:
 
     @staticmethod
     def language_available(language: str) -> bool:
-        if language == "python":
+        if language in ("original", "python"):
             return True
         if language == "javascript":
             return shutil.which("node") is not None
@@ -280,14 +334,70 @@ class FarmHost:
                 self.save()
             return ok
 
-    def keep_code(self, language: str, code: str) -> None:
+    @property
+    def code(self) -> dict[str, str]:
+        """Each language's file that Run runs."""
+        return {lang: self.files[lang].get(self.entry[lang], "") for lang in LANGUAGES}
+
+    def keep_code(self, language: str, code: str, file: str = "") -> None:
         if language not in LANGUAGES:
             return
         with self.lock:
             self._load()
-            self.code[language] = code
+            name = file or self.entry[language]
+            if name not in self.files[language]:
+                return
+            self.files[language][name] = code
             self.language = language
             self.save()
+
+    def file_op(self, language: str, action: str, name: str, new_name: str = "") -> dict[str, Any]:
+        """Add, rename, delete or pick (to run) one of a language's files."""
+        if language not in LANGUAGES:
+            return {"ok": False, "error": f"{language} is not a farm language."}
+        with self.lock:
+            self._load()
+            files = self.files[language]
+
+            def bad_name(n: str) -> str:
+                if not FILE_NAME.match(n):
+                    return ("A file name is lowercase letters, digits and _, starting with a letter "
+                            "or _, up to 24 characters - like utils or harvest_rows.")
+                if n in RESERVED_FILES:
+                    return f"{n} is a name the farm uses itself; pick another."
+                return ""
+
+            if action == "add":
+                problem = bad_name(name) or (f"There is already a file called {name}." if name in files else "")
+                if problem:
+                    return {"ok": False, "error": problem}
+                files[name] = STARTER_HELPER[language].format(name=name)
+            elif action == "rename":
+                problem = "" if name in files else f"There is no file called {name}."
+                problem = problem or bad_name(new_name) or (
+                    f"There is already a file called {new_name}." if new_name in files else "")
+                if problem:
+                    return {"ok": False, "error": problem}
+                self.files[language] = {(new_name if k == name else k): v for k, v in files.items()}
+                if self.entry[language] == name:
+                    self.entry[language] = new_name
+            elif action == "delete":
+                if name not in files:
+                    return {"ok": False, "error": f"There is no file called {name}."}
+                if len(files) == 1:
+                    return {"ok": False, "error": "A program needs at least one file."}
+                del files[name]
+                if self.entry[language] == name:
+                    self.entry[language] = next(iter(files))
+            elif action == "select":
+                if name not in files:
+                    return {"ok": False, "error": f"There is no file called {name}."}
+                self.entry[language] = name
+            else:
+                return {"ok": False, "error": f"Unknown file action {action}."}
+            self.language = language
+            self.save()
+            return {"ok": True}
 
     def set_warp(self, warp: float) -> None:
         with self.lock:
@@ -308,35 +418,45 @@ class FarmHost:
     # a second of game time - in parallel, as in the game - and the farm's
     # time is the furthest any of them has got.
 
-    def start(self, language: str, code: str) -> dict[str, Any]:
-        """Check the program against what is unlocked, then run it."""
+    def start(self, language: str, code: str, file: str = "") -> dict[str, Any]:
+        """Check the program - every file of it - against what is unlocked, then run it.
+
+        `code` is the latest text of `file` (the entry, the one Run runs);
+        the other files run as they were last kept.
+        """
         if language not in LANGUAGES or not self.language_available(language):
             return {"ok": False, "error": f"{language} is not available on this machine."}
         self.stop_run(wait=True)
         with self.lock:
             world = self._load()
-            self.code[language] = code
+            entry = file or self.entry[language]
+            if entry not in self.files[language]:
+                return {"ok": False, "error": f"There is no file called {entry}."}
+            self.files[language][entry] = code
+            self.entry[language] = entry
             self.language = language
             from code_coach.farm import gate
 
-            problems = gate.check(code, language, world.unlocked_features())
-            if problems:
-                return {
-                    "ok": False,
-                    "violations": [
-                        {"feature": p.feature, "line": p.line, "snippet": p.snippet, "message": p.message}
-                        for p in problems
-                    ],
-                }
+            unlocked = world.unlocked_features()
+            violations = []
+            for name, text in self.files[language].items():
+                # The game's language is Python's syntax: the same gate holds it.
+                for p in gate.check(text, "python" if language == "original" else language, unlocked):
+                    violations.append({"feature": p.feature, "line": p.line, "snippet": p.snippet,
+                                       "message": p.message, "file": name})
+            if violations:
+                return {"ok": False, "violations": violations}
             from code_coach.farm.stubs.render import prepare
 
             try:
-                files, argv, _user_file = prepare(language, code)
+                files, argv, _player_files = prepare(language, dict(self.files[language]), entry)
             except (RuntimeError, ValueError) as exc:
                 return {"ok": False, "error": str(exc)}
             workdir = tempfile.mkdtemp(prefix="farm-")
             for name, text in files.items():
-                Path(workdir, name).write_text(text, encoding="utf-8")
+                target = Path(workdir, name)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(text, encoding="utf-8")
             env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1", NO_COLOR="1")
             ts = TYPESCRIPT
             if ts.exists():
@@ -396,11 +516,12 @@ class FarmHost:
         if len(self.output) > 2000:
             del self.output[:500]
 
-    def _fail(self, run: "Run", drone: "Drone", message: str, line: int = 0) -> None:
+    def _fail(self, run: "Run", drone: "Drone", message: str, line: int = 0, file: str = "") -> None:
         """One drone's error ends the whole run, as in the game."""
         if not run.error:
             run.error = message if drone.id == 0 else f"Drone {drone.id}: {message}"
             run.error_line = line
+            run.error_file = file
         run.stop = True
         with self.turns:
             self.turns.notify_all()
@@ -437,12 +558,21 @@ class FarmHost:
                         self._say("out", line)
                     continue
                 name, args = request
+                # The game's language sends the ticks its own operations took.
+                spent = 0
+                if '"t"' in line:
+                    try:
+                        spent = max(0, int(json.loads(line[len(MARK):]).get("t", 0) or 0))
+                    except (ValueError, TypeError):
+                        spent = 0
                 drone.commands += 1
                 run.commands += 1
                 drone.last_command = time.monotonic()
                 if name == "__error__":
                     line_no = int(args[1]) if len(args) > 1 and isinstance(args[1], int) else 0
-                    self._fail(run, drone, str(args[0]) if args else "Your program stopped with an error.", line_no)
+                    where = str(args[2]) if len(args) > 2 and args[2] else ""
+                    self._fail(run, drone, str(args[0]) if args else "Your program stopped with an error.",
+                               line_no, where)
                     continue
                 if name == "__return__":
                     drone.result = args[0] if args else None
@@ -450,7 +580,7 @@ class FarmHost:
                 if run.stop:
                     self._reply(proc, STOP)
                     break
-                reply = self._command(run, drone, name, args)
+                reply = self._command(run, drone, name, args, spent)
                 # Pace this drone to its game time, sped up by the warp.
                 warp = run.warp
                 if warp and not run.stop:
@@ -485,7 +615,7 @@ class FarmHost:
                 return False
         return True
 
-    def _command(self, run: "Run", drone: "Drone", name: str, args: list[Any]) -> str:
+    def _command(self, run: "Run", drone: "Drone", name: str, args: list[Any], spent: int = 0) -> str:
         """Do one command for one drone, in its turn. Returns the reply line."""
         with self.turns:
             drone.pending = True
@@ -501,8 +631,12 @@ class FarmHost:
             world.x, world.y, world.hat = drone.x, drone.y, drone.hat
             world.clock = drone.time
             world.run_ticks = drone.ticks
+            if spent:
+                world.spend_ticks(spent)
             try:
-                if name in ("spawn_drone", "num_drones", "max_drones", "has_finished"):
+                if name == "__ticks__":
+                    result = None
+                elif name in ("spawn_drone", "num_drones", "max_drones", "has_finished"):
                     result, _seconds = self._drone_command(run, drone, name, args, world)
                 else:
                     if name == "change_hat" and args and args[0] == "Hats.Dinosaur_Hat" and any(
@@ -632,8 +766,8 @@ class FarmHost:
                 except (OSError, ValueError):
                     stderr = ""
             if proc.returncode not in (0, None) and not run.stop and not run.error:
-                message, line = _compile_error(stderr, run.language)
-                self._fail(run, drone, message, line)
+                message, line, where = _compile_error(stderr, run.language)
+                self._fail(run, drone, message, line, where)
         with self.turns:
             drone.status = "done"
             self.turns.notify_all()
@@ -662,8 +796,12 @@ class FarmHost:
                 self._say("info", "Stopped.")
             elif run.error:
                 run.status = "error"
-                where = f" (line {run.error_line})" if run.error_line else ""
-                self._say("error", run.error + where)
+                spot = []
+                if run.error_file and len(self.files.get(run.language, {})) > 1:
+                    spot.append(run.error_file)
+                if run.error_line:
+                    spot.append(f"line {run.error_line}")
+                self._say("error", run.error + (f" ({', '.join(spot)})" if spot else ""))
             else:
                 run.status = "done"
                 self._say("info", "Your program finished.")
@@ -693,25 +831,29 @@ def _kill_tree(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
-def _compile_error(stderr: str, language: str) -> tuple[str, int]:
-    """The first useful line of a crash the program could not report itself."""
-    import re
+def _compile_error(stderr: str, language: str) -> tuple[str, int, str]:
+    """A crash the program could not report itself: (message, line, file).
 
+    Dart compile errors arrive this way, naming the player's file as
+    name.dart:LINE:COL. The farm's own files (farm_api, runner) are never
+    the player's fault, so a line in them is passed over.
+    """
     lines = [line.strip() for line in stderr.splitlines() if line.strip()]
     if not lines:
-        return "Your program stopped with an error.", 0
-    if language == "dart" and "runner.dart" in stderr and "main" in stderr and "farm.dart" not in stderr:
-        return "A Dart program needs a main function: put your code inside void main() { ... }.", 0
+        return "Your program stopped with an error.", 0, ""
+    own = ("farm_api", "runner")
     if language == "dart":
         for line in lines:
-            m = re.search(r"farm\.dart:(\d+):\d+: (?:Error|Context): (.*)", line)
-            if m:
-                return m.group(2), int(m.group(1))
+            m = re.search(r"(?:^|[/\\])([a-z_][a-z0-9_]*)\.dart:(\d+):\d+: (?:Error|Context): (.*)", line)
+            if m and m.group(1) not in own:
+                return m.group(3), int(m.group(2)), m.group(1)
+        if "main" in stderr:
+            return "A Dart program needs a main function: put your code inside void main() { ... }.", 0, ""
     for line in lines:
-        m = re.search(r"farm\.(?:py|js)\D+(\d+)", line)
-        if m:
-            return lines[-1], int(m.group(1))
-    return lines[-1][:300], 0
+        m = re.search(r"(?:^|[/\\\s\"'])([a-z_][a-z0-9_]*)\.(?:py|js|mjs|cjs)\D+(\d+)", line)
+        if m and m.group(1) not in own:
+            return lines[-1], int(m.group(2)), m.group(1)
+    return lines[-1][:300], 0, ""
 
 
 HOST = FarmHost()

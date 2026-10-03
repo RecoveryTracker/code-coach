@@ -276,3 +276,46 @@
   margin-right: 8px;
   color: var(--text, #cdd9e5);
 }
+
+/* The program's files, as tabs above the editor. */
+.farm-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.farm-file {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px 6px 0 0;
+  background: var(--bg-elevated, #10141c);
+}
+
+.farm-file.on {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.farm-file button {
+  background: none;
+  border: none;
+  color: var(--text, #cdd9e5);
+  font: 12px ui-monospace, Consolas, monospace;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.farm-file .farm-file-x {
+  padding: 4px 6px 4px 0;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-file-add {
+  border: 1px dashed var(--border, #232c38);
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted, #8b98a8);
+  padding: 2px 9px;
+  cursor: pointer;
+}

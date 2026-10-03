@@ -42,7 +42,7 @@ from typing import Any, Callable
 
 from code_coach.farm import protocol
 from code_coach.farm.stubs.render import dart_functions, dart_runner, prepare
-from tests.test_farm_stubs import HAS_DART, HAS_NODE, Run, _kill, canned
+from tests.test_farm_stubs import HAS_DART, HAS_NODE, Run, _kill, canned, write_files
 
 #: Where the runner tells a JavaScript drone TypeScript's compiler is.
 TYPESCRIPT = Path(__file__).resolve().parents[1] / "web" / "node_modules" / "typescript" / "lib" / "typescript.js"
@@ -108,19 +108,21 @@ def names(run: Run) -> list[str]:
     return [name for name, _ in run.calls]
 
 
-def farm(language: str, code: str, *, job: dict[str, Any] | None = None,
-         typescript: bool = True, limit: float = 90.0) -> tuple[Run, list[Run]]:
-    """Run a program - or, given a job, one drone of it - against the fake
-    farm. Returns that run, and the drones it spawned, in order."""
-    files, argv, _ = prepare(language, code)
+def farm(language: str, code: str | dict[str, str], *, job: dict[str, Any] | None = None,
+         typescript: bool = True, limit: float = 90.0, entry: str = "main",
+         extra_env: dict[str, str] | None = None) -> tuple[Run, list[Run]]:
+    """Run a program - one file, or {name: code} run from entry - or, given
+    a job, one drone of it, against the fake farm. Returns that run, and the
+    drones it spawned, in order."""
+    files, argv, _ = prepare(language, code, entry)
     with tempfile.TemporaryDirectory(prefix="farm-drones-", ignore_cleanup_errors=True) as folder:
-        for name, text in files.items():
-            Path(folder, name).write_text(text, encoding="utf-8")
+        write_files(folder, files)
         env = dict(os.environ)
         env.pop("FARM_DRONE", None)
         env.pop("FARM_TS", None)
         if typescript:
             env["FARM_TS"] = str(TYPESCRIPT)
+        env.update(extra_env or {})
         drones: list[Run] = []
 
         def answers(name: str, args: list) -> str:
@@ -146,7 +148,8 @@ def farm(language: str, code: str, *, job: dict[str, Any] | None = None,
     return run, drones
 
 
-def farm_all(language: str, *jobs: tuple[str, dict[str, Any] | None]) -> list[tuple[Run, list[Run]]]:
+def farm_all(language: str, *jobs: tuple[str | dict[str, str], dict[str, Any] | None],
+             ) -> list[tuple[Run, list[Run]]]:
     """Several at once, each (code, job): each one mostly waits for its process to start."""
     with ThreadPoolExecutor(len(jobs)) as pool:
         return list(pool.map(lambda pair: farm(language, pair[0], job=pair[1]), jobs))
@@ -274,17 +277,17 @@ class PythonDroneTests(unittest.TestCase):
     def test_an_error_in_a_drone_reports_your_line(self) -> None:
         run = self.broken
         line = line_of(PYTHON, "    return x + undefined_name")
-        self.assertEqual(run.calls, [("__error__", ["NameError: name 'undefined_name' is not defined", line])],
-                         run.explain())
+        self.assertEqual(run.calls, [("__error__", ["NameError: name 'undefined_name' is not defined", line,
+                                                    "main"])], run.explain())
         self.assertEqual(run.code, 1)
 
     def test_a_drone_without_its_function_says_so(self) -> None:
         self.assertEqual(self.lost.error(), [
             "This drone was to run nowhere(), but your program defines no function of that name at its top level.",
-            0], self.lost.explain())
+            0, ""], self.lost.explain())
 
     def test_a_drone_can_only_hand_back_what_can_travel(self) -> None:
-        message, _line = self.odd.error() or ["", 0]
+        message, _line, _file = self.odd.error() or ["", 0, ""]
         self.assertTrue(message.startswith("outer() returned a function, which a drone can't hand back"),
                         self.odd.explain())
 
@@ -373,18 +376,18 @@ class JavaScriptDroneTests(unittest.TestCase):
         # The statements around it were blanked, not removed: the line is still yours.
         run = self.broken
         line = line_of(JS, "  return x + undefinedName;")
-        self.assertEqual(run.calls, [("__error__", ["ReferenceError: undefinedName is not defined", line])],
-                         run.explain())
+        self.assertEqual(run.calls, [("__error__", ["ReferenceError: undefinedName is not defined", line,
+                                                    "main"])], run.explain())
         self.assertEqual(run.code, 1)
 
     def test_a_drone_without_its_function_says_so(self) -> None:
         self.assertEqual(self.lost.error(), [
             "This drone was to run nowhere(), but your program declares no function of that name at its "
-            "top level.", 0], self.lost.explain())
+            "top level.", 0, ""], self.lost.explain())
 
     def test_a_drone_needs_to_be_told_where_typescript_is(self) -> None:
         run, _ = farm("javascript", JS, job=job("work", [1, "Entities.Bush"]), typescript=False)
-        message, _line = run.error() or ["", 0]
+        message, _line, _file = run.error() or ["", 0, ""]
         self.assertIn("FARM_TS", message, run.explain())
         self.assertNotIn("harvest", names(run))
 
@@ -495,16 +498,17 @@ class DartDroneTests(unittest.TestCase):
 
     def test_an_error_in_a_drone_reports_your_line(self) -> None:
         run = self.broken
-        message, line = run.error() or ["", 0]
+        message, line, file = run.error() or ["", 0, ""]
         self.assertTrue(message.startswith("RangeError"), run.explain())
         self.assertEqual(line, line_of(DART, "  return xs[5];"), run.explain())
+        self.assertEqual(file, "main", run.explain())
         self.assertNotIn("harvest", names(run))
         self.assertEqual(run.code, 1)
 
     def test_a_drone_without_its_function_says_so(self) -> None:
         self.assertEqual(self.lost.error(), [
             "This drone was to run nowhere(), but your program declares no function of that name at its "
-            "top level.", 0], self.lost.explain())
+            "top level.", 0, ""], self.lost.explain())
 
 
 # ── Finding Dart's top-level functions ──────────────────────────────────

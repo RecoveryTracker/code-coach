@@ -1,5 +1,11 @@
 """Turn a player's program into files a real Python, Node or Dart process runs.
 
+A program is one or more files, each with a name - main, utils - and the
+one that runs, the entry. The files import each other the way their
+language does (import utils / import { f } from "./utils.js" /
+import 'utils.dart';), and every one of them sees the farm's names without
+importing anything.
+
 The farm's three libraries sit beside this file - farm_api.py, farm_api.js
 and farm_api.dart - each with a NAMES block that is nearly empty in the
 file itself. prepare() fills that block from data.py and protocol.py every
@@ -10,8 +16,9 @@ way there.
 
 What comes back is everything the runner needs and nothing it has to know
 about a particular language: the files to write into an empty folder (as
-UTF-8), the command to run in that folder, and which file is the player's,
-so an error can point at their line.
+UTF-8; a path may have a folder in it), the command to run in that folder,
+and where each of the player's files went, so an error can point at their
+file and line. Each file keeps every line where the player wrote it.
 
 The same files and command start every drone of a run, too: the runner
 only adds FARM_DRONE (and, for JavaScript, FARM_TS) to the environment.
@@ -25,14 +32,50 @@ import os
 import re
 import shutil
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 from code_coach.engine import dart_path
 from code_coach.farm import data, protocol
 
-LANGUAGES = ("python", "javascript", "dart")
+#: "original" is the game's own language, run by farm_lang.py (an interpreter
+#: that charges ticks for every operation, as the game does).
+LANGUAGES = ("original", "python", "javascript", "dart")
 
 _HERE = Path(__file__).resolve().parent
+
+#: What a file of the player's can be called: lowercase letters, digits and
+#: _, not starting with a digit. Lowercase, because Windows can't tell
+#: Utils.py from utils.py; and every such name is a name each language can
+#: import a file by.
+FILE_NAME = re.compile(r"[a-z_][a-z0-9_]*")
+
+#: Names the farm's own files have beside the player's, which no file of
+#: the player's can take: farm_api (the library), runner (runner.dart) and
+#: package (JavaScript's package.json).
+RESERVED_NAMES = frozenset({"farm_api", "runner", "package"})
+
+
+def program_files(files: Mapping[str, str] | str, entry: str = "main") -> dict[str, str]:
+    """A program's files as {name: code}, checked. A plain string is a
+    program of one file, main. Raises ValueError, in words a player can
+    read, for a name a file can't have or an entry that isn't one of them."""
+    if isinstance(files, str):
+        files = {"main": files}
+    program: dict[str, str] = {}
+    for name, code in files.items():
+        if not isinstance(name, str) or not FILE_NAME.fullmatch(name):
+            raise ValueError(f"{name!r} can't be the name of a file: use lowercase letters, digits "
+                             "and _, and don't start with a digit.")
+        if name in RESERVED_NAMES:
+            raise ValueError(f"{name!r} is the name of one of the farm's own files: call yours "
+                             "something else.")
+        if not isinstance(code, str):
+            raise ValueError(f"The file {name!r} should hold text.")
+        program[name] = code
+    if entry not in program:
+        raise ValueError(f"There is no file called {entry!r} to run.")
+    return program
 
 
 class MissingRuntime(RuntimeError):
@@ -116,8 +159,25 @@ def _dart_names() -> str:
     ])
 
 
+def _original_names() -> str:
+    """The game's own language: the same names as Python's library. Its FUNCTIONS
+    are the ones that go straight to the farm - print, min, max and spawn_drone
+    the interpreter handles itself."""
+    own = {"print", "quick_print", "min", "max", "spawn_drone"}
+    groups = "".join(
+        f"    {json.dumps(title)}: {json.dumps(list(members))},\n"
+        for title, members in _groups().items()
+    )
+    return (
+        f"DIRECTIONS = {json.dumps(list(data.DIRECTIONS))}\n"
+        f"GROUPS = {{\n{groups}}}\n"
+        f"FUNCTIONS = {json.dumps([f.py for f in protocol.FUNCTIONS if f.py not in own])}"
+    )
+
+
 #: Per language: the library's file, how its comments start, and its names.
 _LIBRARIES = {
+    "original": ("farm_lang.py", "#", _original_names),
     "python": ("farm_api.py", "#", _python_names),
     "javascript": ("farm_api.js", "//", _javascript_names),
     "dart": ("farm_api.dart", "//", _dart_names),
@@ -143,19 +203,19 @@ def library(language: str) -> str:
 
 # ── Dart's extra files ──────────────────────────────────────────────────
 
-#: Put in front of a Dart program, on its first line, so every line of it
-#: keeps its number.
+#: Put in front of each Dart file of the player's, on its first line, so
+#: every line of it keeps its number.
 DART_IMPORT = "import 'farm_api.dart'; "
 
-#: The Dart program that actually runs. Your file is a library with a
-#: main(); this imports it under a prefix, so nothing you name can clash
-#: with anything here, and hands that main() to the farm's library -
-#: with every top-level function of yours, by name, for the drones.
+#: The Dart program that actually runs. Each of your files is a library;
+#: this imports every one of them under a prefix of its own, so nothing
+#: you name can clash with anything here, and hands the main() of the one
+#: you run to the farm's library - with every top-level function of every
+#: file of yours, by name, for the drones.
 DART_RUNNER = """\
-// Runs farm.dart - your program - with the farm's library around it.
+// Runs {entry}.dart - your program - with the farm's library around it.
 import 'farm_api.dart' as farm;
-import 'farm.dart' as program;
-
+{imports}
 void main() => farm.runFarmProgram(program.main, drones: {{
 {drones}}});
 """
@@ -321,15 +381,29 @@ def dart_functions(code: str) -> list[str]:
     return found
 
 
-def dart_runner(user_code: str) -> str:
-    """runner.dart for a program: its main(), and its top-level functions for
-    the drones, each as 'harvestColumn': program.harvestColumn. (A $ in a
-    name is escaped in the string, where it would start an interpolation.)"""
-    entries = []
-    for name in dart_functions(user_code):
-        key = name.replace("$", "\\$")
-        entries.append(f"  '{key}': program.{name},\n")
-    return DART_RUNNER.format(drones="".join(entries))
+def dart_runner(files: Mapping[str, str] | str, entry: str = "main") -> str:
+    """runner.dart for a program: the main() of the file it runs, and the
+    top-level functions of all its files for the drones, each as
+    'harvestColumn': program.harvestColumn.
+
+    The file it runs is imported as program, each other file as
+    program_<its name>. A function is listed under its own name - the
+    entry's first, then the other files' in the order of their names - and
+    when that name is taken already, under utils.harvestColumn instead, so
+    every function is there under one name. (A $ in a name is escaped in
+    the string, where it would start an interpolation.)"""
+    program = program_files(files, entry)
+    order = [entry, *sorted(name for name in program if name != entry)]
+    prefixes = {name: "program" if name == entry else f"program_{name}" for name in order}
+    imports = "".join(f"import '{name}.dart' as {prefixes[name]};\n" for name in order)
+    entries, taken = [], set()
+    for file in order:
+        for name in dart_functions(program[file]):
+            key = name if name not in taken else f"{file}.{name}"
+            taken.add(key)
+            quoted = key.replace("$", "\\$")
+            entries.append(f"  '{quoted}': {prefixes[file]}.{name},\n")
+    return DART_RUNNER.format(entry=entry, imports=imports, drones="".join(entries))
 
 
 def dart_executable() -> str | None:
@@ -354,34 +428,83 @@ def dart_executable() -> str | None:
     return str(real) if real.is_file() else found
 
 
-def prepare(language: str, user_code: str) -> tuple[dict[str, str], list[str], str]:
-    """Files to write into an empty temp dir, the command to run there (argv; the
-    executable as found by shutil.which / code_coach.engine.dart_path), and the name
-    of the file holding the user's code (for error line reporting).
+# ── JavaScript's extra files ────────────────────────────────────────────
+
+#: Beside the player's files, so that Node runs each .js file as an ES
+#: module - import and export, as JavaScript is written today.
+JS_PACKAGE = '{"type": "module"}\n'
+
+
+def js_lead(name: str) -> str:
+    """Put in front of a JavaScript file of the player's, on its first line,
+    so every line keeps its number: it hands farm_api.cjs a way to look up
+    a name at the top level of that file - a module's names are its own,
+    and only code inside it can see them. spawnDrone uses it to make sure
+    a function is one a new drone can find again, and the drone uses it to
+    find it. (eval is given the name as arguments[0], not as a parameter,
+    so that no name of the player's can be hidden by the parameter's; a
+    module can't declare a name arguments, or eval.)"""
+    return (f'globalThis[Symbol.for("farm.file")]?.({json.dumps(name)}, '
+            f"function () {{ return eval(arguments[0]); }}); ")
+
+
+def prepare(language: str, files: Mapping[str, str] | str, entry: str = "main",
+            ) -> tuple[dict[str, str], list[str], dict[str, str]]:
+    """What the runner needs to run a program: the files to write into an
+    empty temp dir (relative path -> text; a path may name a folder to
+    make), the command to run there (argv; the executable as found by
+    shutil.which / code_coach.engine.dart_path), and where each of the
+    player's files was put (name -> relative path), for error reporting.
+
+    files is {name: code}, or a plain string for one file, main; entry
+    names the one that runs. An error a program reports names the file it
+    happened in by its name, without the extension: [message, line, "utils"].
+
+    The layouts:
+    - Python: the library is farm/farm_api.py, a folder down, so that a
+      file of yours called json.py or random.py can't stand in for a module
+      the library imports itself; your files are main.py, utils.py ... and
+      the command names the entry: python -u farm/farm_api.py main.
+    - JavaScript: farm_api.cjs, package.json ({"type": "module"}) and your
+      files as main.js, utils.js ... - ES modules, each with js_lead() on
+      its first line; the command is node farm_api.cjs main.
+    - Dart: farm_api.dart, runner.dart (which knows the entry) and your
+      files as main.dart, utils.dart ... - each with DART_IMPORT on its
+      first line; the command is dart run runner.dart.
 
     For Dart the executable is dart_executable(): the SDK behind Flutter's
     shim when there is one, so that killing the process kills the program.
 
     Raises MissingRuntime if node or dart is not installed, and ValueError
-    for a language there is no library for.
+    for a language there is no library for, a name a file can't have (see
+    FILE_NAME and RESERVED_NAMES), or an entry that is not one of the files.
     """
+    if language not in LANGUAGES:
+        raise ValueError(f"there is no farm library for {language!r}; try one of {', '.join(LANGUAGES)}")
+    program = program_files(files, entry)
+    if language == "original":
+        # The interpreter reads your files from files/ beside it.
+        where = {name: f"files/{name}.py" for name in program}
+        to_write = {"farm_lang.py": library("original")}
+        to_write.update({where[name]: code for name, code in program.items()})
+        return to_write, [sys.executable, "-u", "farm_lang.py", entry], where
     if language == "python":
-        files = {"farm_api.py": library("python"), "farm.py": user_code}
-        return files, [sys.executable, "-u", "farm_api.py", "farm.py"], "farm.py"
+        where = {name: f"{name}.py" for name in program}
+        to_write = {"farm/farm_api.py": library("python")}
+        to_write.update({where[name]: code for name, code in program.items()})
+        return to_write, [sys.executable, "-u", "farm/farm_api.py", entry], where
     if language == "javascript":
         node = shutil.which("node")
         if node is None:
             raise MissingRuntime("JavaScript runs on Node.js, which is not installed here.")
-        files = {"farm_api.js": library("javascript"), "farm.js": user_code}
-        return files, [node, "farm_api.js", "farm.js"], "farm.js"
-    if language == "dart":
-        dart = dart_executable()
-        if dart is None:
-            raise MissingRuntime("Dart is not installed here. It comes with Flutter.")
-        files = {
-            "farm_api.dart": library("dart"),
-            "farm.dart": DART_IMPORT + user_code,
-            "runner.dart": dart_runner(user_code),
-        }
-        return files, [dart, "run", "runner.dart"], "farm.dart"
-    raise ValueError(f"there is no farm library for {language!r}; try one of {', '.join(LANGUAGES)}")
+        where = {name: f"{name}.js" for name in program}
+        to_write = {"farm_api.cjs": library("javascript"), "package.json": JS_PACKAGE}
+        to_write.update({where[name]: js_lead(name) + code for name, code in program.items()})
+        return to_write, [node, "farm_api.cjs", entry], where
+    dart = dart_executable()
+    if dart is None:
+        raise MissingRuntime("Dart is not installed here. It comes with Flutter.")
+    where = {name: f"{name}.dart" for name in program}
+    to_write = {"farm_api.dart": library("dart"), "runner.dart": dart_runner(program, entry)}
+    to_write.update({where[name]: DART_IMPORT + code for name, code in program.items()})
+    return to_write, [dart, "run", "runner.dart"], where

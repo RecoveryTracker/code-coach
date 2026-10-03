@@ -860,7 +860,7 @@ class World:
 
     def _do_get_time(self, args, language):
         now = round(self.clock if self.clock is not None else self.time, 4)
-        return now, self._ask()
+        return now, 0.0
 
     def _do_get_tick_count(self, args, language):
         return self.run_ticks, 0.0

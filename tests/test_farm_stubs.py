@@ -15,8 +15,9 @@ Each library is held to the same promises, in its own language's terms:
   to Entities.Bush, a cost is indexed by an item, a companion unpacks;
 - print and quick_print send text already formatted the language's way;
 - {"e": ...} raises FarmError, which a program can catch, and which, not
-  caught, ends it with __error__ and the line it happened on;
-- any other crash reports the player's line too;
+  caught, ends it with __error__: the message, the line it happened on and
+  the file it is in (by name - a program of one file is "main");
+- any other crash reports the player's line and file too;
 - {"stop": true} ends the program there and then, quietly.
 
 Dart takes about two seconds to start, so its programs are few, each
@@ -108,7 +109,7 @@ class Run:
         return [args[0] for name, args in self.calls if name == "print"]
 
     def error(self) -> list | None:
-        """The [message, line] of the crash report, if there was one."""
+        """The [message, line, file] of the crash report, if there was one."""
         return next((args for name, args in self.calls if name == "__error__"), None)
 
     def explain(self) -> str:
@@ -126,13 +127,22 @@ def _kill(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
-def drive(language: str, code: str, answers: Callable[[str, list], Any] = canned,
-          *, limit: float = 30.0) -> Run:
-    """Run a program to the end against the fake farm."""
-    files, argv, _ = prepare(language, code)
+def write_files(folder: str, files: dict[str, str]) -> None:
+    """What prepare() says to write, as the runner writes it: a path may
+    name a folder to make first."""
+    for name, text in files.items():
+        target = Path(folder, name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+
+
+def drive(language: str, code: str | dict[str, str], answers: Callable[[str, list], Any] = canned,
+          *, limit: float = 30.0, entry: str = "main") -> Run:
+    """Run a program - one file, or {name: code} run from entry - to the end
+    against the fake farm."""
+    files, argv, _ = prepare(language, code, entry)
     with tempfile.TemporaryDirectory(prefix="farm-stubs-", ignore_cleanup_errors=True) as folder:
-        for name, text in files.items():
-            Path(folder, name).write_text(text, encoding="utf-8")
+        write_files(folder, files)
         proc = subprocess.Popen(argv, cwd=folder, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         timed_out = threading.Event()
@@ -185,7 +195,7 @@ def drive(language: str, code: str, answers: Callable[[str, list], Any] = canned
     return Run(calls, output, stderr, code, timed_out.is_set())
 
 
-def drive_all(language: str, *codes: str, limit: float = 30.0) -> list[Run]:
+def drive_all(language: str, *codes: str | dict[str, str], limit: float = 30.0) -> list[Run]:
     """Several programs at once: each one mostly waits for its process to start."""
     with ThreadPoolExecutor(len(codes)) as pool:
         return list(pool.map(lambda code: drive(language, code, limit=limit), codes))
@@ -204,8 +214,7 @@ def ends_when_killed(language: str, code: str) -> bool:
     """
     files, argv, _ = prepare(language, code)
     with tempfile.TemporaryDirectory(prefix="farm-stubs-", ignore_cleanup_errors=True) as folder:
-        for name, text in files.items():
-            Path(folder, name).write_text(text, encoding="utf-8")
+        write_files(folder, files)
         proc = subprocess.Popen(argv, cwd=folder, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         watchdog = threading.Timer(60, _kill, (proc,))
@@ -383,13 +392,14 @@ class PythonTests(_Story, unittest.TestCase):
 
     def test_an_uncaught_farm_error_reports_your_line(self) -> None:
         run = self.refused
-        self.assertEqual(run.error(), ["nope", 2], run.explain())
+        self.assertEqual(run.error(), ["nope", 2, "main"], run.explain())
         self.assertEqual(run.code, 1)
         self.assertEqual(run.said(), [])
 
     def test_a_crash_reports_your_line(self) -> None:
         run = self.crashed
-        self.assertEqual(run.error(), ["NameError: name 'undefined_name' is not defined", 3], run.explain())
+        self.assertEqual(run.error(), ["NameError: name 'undefined_name' is not defined", 3, "main"],
+                         run.explain())
         self.assertEqual(run.code, 1)
 
     def test_a_closed_pipe_ends_the_program_quietly(self) -> None:
@@ -429,22 +439,23 @@ class JavaScriptTests(_Story, unittest.TestCase):
 
     def test_an_uncaught_farm_error_reports_your_line(self) -> None:
         run = self.refused
-        self.assertEqual(run.error(), ["nope", 2], run.explain())
+        self.assertEqual(run.error(), ["nope", 2, "main"], run.explain())
         self.assertEqual(run.code, 1)
         self.assertEqual(run.said(), [])
 
     def test_a_crash_reports_your_line(self) -> None:
         run = self.crashed
-        self.assertEqual(run.error(), ["ReferenceError: undefinedName is not defined", 3], run.explain())
+        self.assertEqual(run.error(), ["ReferenceError: undefinedName is not defined", 3, "main"], run.explain())
         self.assertEqual(run.code, 1)
 
     def test_a_syntax_error_reports_your_line_before_anything_runs(self) -> None:
         run = self.broken
-        self.assertEqual(run.calls, [("__error__", ["SyntaxError: Unexpected token ';'", 2])], run.explain())
+        self.assertEqual(run.calls, [("__error__", ["SyntaxError: Unexpected token ';'", 2, "main"])],
+                         run.explain())
         self.assertEqual(run.code, 1)
 
     def test_a_crash_in_a_timer_is_reported_too(self) -> None:
-        self.assertEqual(self.later.error(), ["nope", 2], self.later.explain())
+        self.assertEqual(self.later.error(), ["nope", 2, "main"], self.later.explain())
 
     def test_every_name_is_a_global(self) -> None:
         missing, values = self.names.said()
@@ -492,15 +503,16 @@ class DartTests(_Story, unittest.TestCase):
 
     def test_an_uncaught_farm_error_reports_your_line(self) -> None:
         run = self.refused
-        self.assertEqual(run.error(), ["nope", 2], run.explain())
+        self.assertEqual(run.error(), ["nope", 2, "main"], run.explain())
         self.assertEqual(run.code, 1)
         self.assertEqual(run.said(), [])
 
     def test_a_crash_reports_your_line(self) -> None:
         run = self.crashed
-        message, line = run.error() or ["", 0]
+        message, line, file = run.error() or ["", 0, ""]
         self.assertTrue(message.startswith("RangeError"), run.explain())
         self.assertEqual(line, 4, run.explain())
+        self.assertEqual(file, "main", run.explain())
         self.assertEqual(run.calls[0], ("move", ["North"]))
         self.assertEqual(run.code, 1)
 
@@ -520,21 +532,24 @@ DART_FORBIDDEN = {
 
 class RenderTests(unittest.TestCase):
     def test_prepare_describes_each_language(self) -> None:
+        # The library first; then the rest of the farm's files and the player's.
         cases = {
-            "python": (["farm_api.py", "farm.py"], ["-u", "farm_api.py", "farm.py"], "farm.py"),
-            "javascript": (["farm_api.js", "farm.js"], ["farm_api.js", "farm.js"], "farm.js"),
-            "dart": (["farm_api.dart", "farm.dart", "runner.dart"], ["run", "runner.dart"], "farm.dart"),
+            # The game's own language: the interpreter, with your files in files/.
+            "original": (["farm_lang.py", "files/main.py"], ["-u", "farm_lang.py", "main"], "files/main.py"),
+            "python": (["farm/farm_api.py", "main.py"], ["-u", "farm/farm_api.py", "main"], "main.py"),
+            "javascript": (["farm_api.cjs", "package.json", "main.js"], ["farm_api.cjs", "main"], "main.js"),
+            "dart": (["farm_api.dart", "runner.dart", "main.dart"], ["run", "runner.dart"], "main.dart"),
         }
         self.assertEqual(tuple(cases), LANGUAGES)
         for language, (names, args, code_name) in cases.items():
             if (language == "javascript" and not HAS_NODE) or (language == "dart" and not HAS_DART):
                 continue
             with self.subTest(language=language):
-                files, argv, got_name = prepare(language, "one\ntwo\n")
+                files, argv, where = prepare(language, "one\ntwo\n")
                 self.assertEqual(sorted(files), sorted(names))
                 self.assertEqual(argv[1:], args)
                 self.assertTrue(Path(argv[0]).is_file(), argv[0])
-                self.assertEqual(got_name, code_name)
+                self.assertEqual(where, {"main": code_name})
                 self.assertIn("NAMES-START", files[names[0]])
                 # The player's file keeps every line where they wrote it.
                 self.assertEqual(files[code_name].splitlines()[1:], ["two"])

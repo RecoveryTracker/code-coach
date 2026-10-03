@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   buyFarmUnlock,
+  farmFile,
   fetchFarm,
   fetchFarmState,
   keepFarmCode,
@@ -31,8 +32,19 @@ import type { FarmFunction, FarmLine, FarmOverview, FarmState, FarmUnlock, FarmV
 import { EditorPane } from "./EditorPane";
 import "../styles/farm.css";
 
-const LANGUAGE_NAMES: Record<string, string> = { python: "Python", javascript: "JavaScript", dart: "Dart" };
-const FILE_NAMES: Record<string, string> = { python: "farm.py", javascript: "farm.js", dart: "farm.dart" };
+const LANGUAGE_NAMES: Record<string, string> = {
+  original: "Original",
+  python: "Python",
+  javascript: "JavaScript",
+  dart: "Dart",
+};
+const LANGUAGE_TIPS: Record<string, string> = {
+  original: "The game's own language: Python's syntax, and every operation costs ticks, as in the game",
+  python: "Real Python - only drone commands cost game time",
+  javascript: "Real JavaScript (Node) - only drone commands cost game time",
+  dart: "Real Dart - only drone commands cost game time",
+};
+const EXTENSIONS: Record<string, string> = { original: ".py", python: ".py", javascript: ".js", dart: ".dart" };
 const FEATURE_UNLOCKS: Record<string, string> = {
   while: "Loops", if: "Speed", for: "Expand 2", operators: "Operators", variables: "Variables",
   functions: "Functions", lists: "Lists", dicts: "Dictionaries", import: "Import",
@@ -62,8 +74,8 @@ function costText(cost: Record<string, number> | null): string {
 function signature(f: FarmFunction, language: string): string {
   const name = language === "javascript" ? f.js : language === "dart" ? f.dart : f.py;
   const params = f.params.map((p) => {
-    const bare = p.replace(/=.*/, "").replace(/^\*/, language === "python" ? "*" : "...");
-    if (language === "python") return p;
+    const bare = p.replace(/=.*/, "").replace(/^\*/, language === "javascript" || language === "dart" ? "..." : "*");
+    if (language === "python" || language === "original") return p;
     return p.includes("=") ? `${bare}?` : bare;
   });
   return `${name}(${params.join(", ")})`;
@@ -73,7 +85,9 @@ export default function FarmMode() {
   const [overview, setOverview] = useState<FarmOverview | null>(null);
   const [state, setState] = useState<FarmState | null>(null);
   const [language, setLanguage] = useState("python");
-  const [code, setCode] = useState<Record<string, string>>({});
+  /** Each language's files (name to code), and the one Run runs - the open tab. */
+  const [files, setFiles] = useState<Record<string, Record<string, string>>>({});
+  const [entry, setEntry] = useState<Record<string, string>>({});
   const [revision, setRevision] = useState(0);
   const [lines, setLines] = useState<FarmLine[]>([]);
   const [violations, setViolations] = useState<FarmViolation[]>([]);
@@ -84,9 +98,12 @@ export default function FarmMode() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [px, setPx] = useState(480);
-  const codeRef = useRef(code);
-  codeRef.current = code;
+  const filesRef = useRef(files);
+  filesRef.current = files;
   const saveTimer = useRef<number | null>(null);
+  /** An edit waiting to be kept: which file, and its text. */
+  const pending = useRef<{ language: string; file: string; code: string } | null>(null);
+  const file = entry[language] ?? "main";
 
   const apply = useCallback((o: FarmOverview) => {
     setOverview(o);
@@ -98,7 +115,8 @@ export default function FarmMode() {
       .then((o) => {
         apply(o);
         setLanguage(o.languages.includes(o.language) ? o.language : "python");
-        setCode(o.code);
+        setFiles(o.files);
+        setEntry(o.entry);
         setRevision((r) => r + 1);
         sinceRef.current = o.outputEnd;
       })
@@ -159,26 +177,87 @@ export default function FarmMode() {
     if (ctx) drawFarm(ctx, state.farm, px);
   }, [state, px]);
 
+  /** Keep a waiting edit now, before anything that reads the files back. */
+  const flush = useCallback(async () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    const waiting = pending.current;
+    pending.current = null;
+    if (waiting) await keepFarmCode(waiting.language, waiting.code, waiting.file);
+  }, []);
+
   const onChange = useCallback(
     (value: string) => {
-      setCode((was) => ({ ...was, [language]: value }));
+      setFiles((was) => ({ ...was, [language]: { ...(was[language] ?? {}), [file]: value } }));
+      pending.current = { language, file, code: value };
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(() => {
-        void keepFarmCode(language, value);
-      }, 800);
+      saveTimer.current = window.setTimeout(() => void flush(), 800);
     },
-    [language],
+    [language, file, flush],
+  );
+
+  /** A file operation's answer is the whole farm: take its files and tabs. */
+  const fileAnswer = useCallback(
+    (o: FarmOverview & { ok: boolean; error?: string }) => {
+      apply(o);
+      setFiles(o.files);
+      setEntry(o.entry);
+      setRevision((r) => r + 1);
+      setViolations([]);
+      setError(o.ok ? "" : o.error ?? "");
+    },
+    [apply],
   );
 
   const pickLanguage = useCallback(
-    (next: string) => {
+    async (next: string) => {
       if (next === language) return;
+      await flush();
       setLanguage(next);
       setRevision((r) => r + 1);
       setViolations([]);
-      void keepFarmCode(next, codeRef.current[next] ?? "");
+      void farmFile(next, "select", entry[next] ?? "main");
     },
-    [language],
+    [language, entry, flush],
+  );
+
+  const openFile = useCallback(
+    async (name: string) => {
+      if (name === file) return;
+      await flush();
+      setEntry((was) => ({ ...was, [language]: name }));
+      setRevision((r) => r + 1);
+      setViolations([]);
+      void farmFile(language, "select", name);
+    },
+    [file, language, flush],
+  );
+
+  const addFile = useCallback(async () => {
+    const name = window.prompt("Name the new file (lowercase letters, digits and _):", "utils");
+    if (!name) return;
+    await flush();
+    fileAnswer(await farmFile(language, "add", name.trim()));
+    void farmFile(language, "select", name.trim()).then((o) => o.ok && fileAnswer(o));
+  }, [language, flush, fileAnswer]);
+
+  const renameFile = useCallback(
+    async (name: string) => {
+      const next = window.prompt(`Rename ${name} to:`, name);
+      if (!next || next.trim() === name) return;
+      await flush();
+      fileAnswer(await farmFile(language, "rename", name, next.trim()));
+    },
+    [language, flush, fileAnswer],
+  );
+
+  const deleteFile = useCallback(
+    async (name: string) => {
+      if (!window.confirm(`Delete ${name}${EXTENSIONS[language]}? Its code goes with it.`)) return;
+      await flush();
+      fileAnswer(await farmFile(language, "delete", name));
+    },
+    [language, flush, fileAnswer],
   );
 
   const run = useCallback(async () => {
@@ -187,7 +266,8 @@ export default function FarmMode() {
     setError("");
     setViolations([]);
     try {
-      const got = await runFarm(language, codeRef.current[language] ?? "");
+      await flush();
+      const got = await runFarm(language, filesRef.current[language]?.[file] ?? "", file);
       if (!got.ok) {
         if (got.violations?.length) setViolations(got.violations);
         else setError(got.error ?? "Could not start the program.");
@@ -199,7 +279,7 @@ export default function FarmMode() {
     } finally {
       setBusy(false);
     }
-  }, [busy, language]);
+  }, [busy, language, file, flush]);
 
   const stop = useCallback(() => {
     void stopFarm();
@@ -255,7 +335,8 @@ export default function FarmMode() {
                 role="tab"
                 aria-selected={lang === language}
                 className={`ws-btn${lang === language ? " on" : ""}`}
-                onClick={() => pickLanguage(lang)}
+                onClick={() => void pickLanguage(lang)}
+                title={LANGUAGE_TIPS[lang]}
                 disabled={running}
               >
                 {LANGUAGE_NAMES[lang] ?? lang}
@@ -275,7 +356,7 @@ export default function FarmMode() {
                 disabled={busy}
                 title="Run (Ctrl+Enter)"
               >
-                {busy ? "Starting…" : "Run"}
+                {busy ? "Starting…" : `Run ${file}`}
               </button>
             )}
             <label className="farm-warp" title="Time warp: how many game seconds pass per real second">
@@ -290,20 +371,62 @@ export default function FarmMode() {
             </label>
           </div>
         </div>
+        {/* The program's files, like the game's code windows. The open tab is
+            the one Run runs; the others are there to be imported. */}
+        <div className="farm-files" role="tablist" aria-label="Files">
+          {Object.keys(files[language] ?? {}).map((name) => (
+            <span key={name} className={`farm-file${name === file ? " on" : ""}`}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={name === file}
+                onClick={() => void openFile(name)}
+                onDoubleClick={() => void renameFile(name)}
+                disabled={running}
+                title="Double-click to rename"
+              >
+                {name}
+                {EXTENSIONS[language]}
+              </button>
+              {Object.keys(files[language] ?? {}).length > 1 ? (
+                <button
+                  type="button"
+                  className="farm-file-x"
+                  onClick={() => void deleteFile(name)}
+                  disabled={running}
+                  aria-label={`Delete ${name}`}
+                  title={`Delete ${name}`}
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
+          ))}
+          <button
+            type="button"
+            className="farm-file-add"
+            onClick={() => void addFile()}
+            disabled={running}
+            title="Add a file - with Import researched, your files can import each other"
+          >
+            +
+          </button>
+        </div>
         <div className="farm-editor">
           <EditorPane
-            code={code[language] ?? ""}
+            code={files[language]?.[file] ?? ""}
             revision={revision}
             onChange={onChange}
             onRun={() => void run()}
-            language={language}
-            fileName={FILE_NAMES[language]}
+            language={language === "original" ? "python" : language}
+            fileName={`${file}${EXTENSIONS[language]}`}
           />
         </div>
         <div className="farm-output" aria-live="polite">
           {violations.map((v, i) => (
             <div key={`v${i}`} className="farm-line error">
-              Line {v.line}: {v.message} <code>{v.snippet}</code>
+              {v.file && Object.keys(files[language] ?? {}).length > 1 ? `${v.file}, line` : "Line"} {v.line}:{" "}
+              {v.message} <code>{v.snippet}</code>
             </div>
           ))}
           {error ? <div className="farm-line error">{error}</div> : null}
@@ -339,7 +462,7 @@ export default function FarmMode() {
               {run_.status === "running"
                 ? `running · ${run_.commands} commands${run_.drones && run_.drones > 1 ? ` · ${run_.drones} drones` : ""}`
                 : run_.status === "error"
-                  ? `stopped with an error${run_.line ? ` on line ${run_.line}` : ""}`
+                  ? `stopped with an error${run_.line ? ` on line ${run_.line}` : ""}${run_.file && Object.keys(files[language] ?? {}).length > 1 ? ` of ${run_.file}` : ""}`
                   : run_.status}
             </span>
           ) : null}

@@ -951,6 +951,8 @@ export type FarmRun = {
   status: "starting" | "running" | "done" | "stopped" | "error";
   error: string;
   line: number;
+  /** The file the error is in. */
+  file?: string;
   commands: number;
   seconds: number;
   drones?: number;
@@ -992,6 +994,10 @@ export type FarmFunction = {
 
 export type FarmOverview = FarmState & {
   code: Record<string, string>;
+  /** Each language's files, name to code. */
+  files: Record<string, Record<string, string>>;
+  /** Each language's file that Run runs. */
+  entry: Record<string, string>;
   language: string;
   warps: number[];
   unlocks: FarmUnlock[];
@@ -1002,7 +1008,7 @@ export type FarmOverview = FarmState & {
   names: Record<string, string[]>;
 };
 
-export type FarmViolation = { feature: string; line: number; snippet: string; message: string };
+export type FarmViolation = { feature: string; line: number; snippet: string; message: string; file?: string };
 
 export type FarmStart = { ok: boolean; run?: number; error?: string; violations?: FarmViolation[] };
 

@@ -211,7 +211,10 @@ UNLOCKS: dict[str, Unlock] = {
         Unlock("Functions", _ladder("Carrot", 40), ("Variables",), "Define your own functions.",
                features={1: ("functions",)}),
         Unlock("Import", _ladder("Carrot", 80), ("Functions",),
-               "Import from other files.", features={1: ("import",)}, missing=True),
+               "Split your program into files and import one from another - in Python "
+               "import utils, in JavaScript import { f } from \"./utils.js\", in Dart "
+               "import 'utils.dart'. Add files with the + beside the file tabs.",
+               features={1: ("import",)}),
         Unlock("Lists", _ladder("Carrot", 500), ("Functions",), "Lists, to keep many values in order.",
                features={1: ("lists",)}),
         Unlock("Trees", (_c(("Wood", 50), ("Carrot", 70)),) + _ladder("Hay", 300, 1200, 4800, 19200,

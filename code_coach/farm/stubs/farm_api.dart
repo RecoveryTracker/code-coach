@@ -1,9 +1,12 @@
 // The farm's commands, for a Dart program.
 //
-// Your file is an ordinary Dart program with a main(). This library is
-// imported on its first line - on the same line as your first, so the line
-// numbers in an error are still yours - and runner.dart (which render.py
-// writes) hands your main() to runFarmProgram() below.
+// Your program is one or more files - main.dart, utils.dart ... - and the
+// one that runs is an ordinary Dart program with a main(). Your files
+// import each other the way Dart files do: import 'utils.dart'; (with as,
+// show and hide if you like). This library is imported on the first line of
+// every one of them - on the same line as your first, so the line numbers
+// in an error are still yours - and runner.dart (which render.py writes)
+// hands the main() of the file you run to runFarmProgram() below.
 //
 // Run as:  dart run runner.dart
 //
@@ -25,8 +28,8 @@
 //
 // More drones: spawnDrone(f) starts a new run of this same program in drone
 // mode (FARM_DRONE holds the job). That run does not call your main(): it
-// calls f, and sends back what f returned. runner.dart lists your
-// top-level functions by name, which is how the new run finds f.
+// calls f, and sends back what f returned. runner.dart lists the top-level
+// functions of all your files by name, which is how the new run finds f.
 //
 // The block between the NAMES markers is filled in by render.py from
 // code_coach/farm/data.py, so the names here can never drift from the farm.
@@ -345,18 +348,31 @@ Object? _call(String name, [List<Object?> args = const []]) {
 
 // ── Running your program ────────────────────────────────────────────────
 
-/// The first line of your file in a stack trace, which is where it went
-/// wrong: a frame reads "main (file:///.../farm.dart:3:5)". The library's
-/// own frames are in farm_api.dart, so they never match.
-final RegExp _yourLine = RegExp(r'(?:^|[/\\\s(])farm\.dart:(\d+)', multiLine: true);
+/// A frame of a stack trace in a file in the folder your program runs in -
+/// "main (file:///C:/.../main.dart:3:5)", "tend (file:///C:/.../utils.dart:2:3)"
+/// - with the file's name and the line. Dart's own frames are dart: URIs,
+/// so they never match.
+final RegExp _frame = RegExp(
+    '${RegExp.escape(Platform.script.resolve('.').toString())}([a-z_][a-z0-9_]*)\\.dart:(\\d+)');
 
-/// Tell the farm what went wrong and on which of your lines, then stop.
+/// The farm's own files, beside yours.
+const Set<String> _farmFiles = {'farm_api', 'runner'};
+
+/// Tell the farm what went wrong, in which file of yours and on which line,
+/// then stop. The place is the deepest frame of the stack that is in one of
+/// your files - the first one in it.
 void _crash(Object error, StackTrace stack) {
-  final found = _yourLine.firstMatch('$stack');
-  final line = found == null ? 0 : int.parse(found.group(1)!);
+  var line = 0;
+  var file = '';
+  for (final found in _frame.allMatches('$stack')) {
+    if (_farmFiles.contains(found.group(1))) continue;
+    file = found.group(1)!;
+    line = int.parse(found.group(2)!);
+    break;
+  }
   final message = error is FarmError ? error.message : '$error';
   try {
-    _send('__error__', [message, line]);
+    _send('__error__', [message, line, file]);
   } catch (_) {
     // The farm has gone; there is no one left to tell.
   }
@@ -365,19 +381,23 @@ void _crash(Object error, StackTrace stack) {
 
 // ── More drones ─────────────────────────────────────────────────────────
 
-/// Your program's top-level functions, by name - runner.dart lists them -
-/// which are the functions a drone can be sent to run.
+/// The top-level functions of all your files, by name - runner.dart lists
+/// them: the file you run first, so its name wins, and a name taken twice
+/// as utils.harvestColumn - which are the functions a drone can be sent to
+/// run.
 Map<String, Function> _drones = const {};
 
-/// Which of your functions this is. Dart tells a function's name only in
-/// its toString - "Closure: () => void from Function 'harvestColumn':
-/// static." - and a static method, or a function from another library,
-/// reads just the same; so the name counts only when runner.dart listed
-/// this very function under it.
+/// Which of your functions this is: the name runner.dart listed this very
+/// function under. Dart tells a function's name only in its toString -
+/// "Closure: () => void from Function 'harvestColumn': static." - and a
+/// static method, or a function from another library, reads just the same;
+/// so that is only read to say why a function is not one of yours.
 String _droneName(Function function) {
+  for (final listed in _drones.entries) {
+    if (listed.value == function) return listed.key;
+  }
   final said = RegExp(r"from Function '([^']*)': static\.$").firstMatch('$function');
   final name = said?.group(1) ?? '';
-  if (_drones[name] == function) return name;
   if (name.startsWith('_')) {
     throw FarmError('spawnDrone needs a function whose name does not start with _: in Dart '
         'that keeps it private to your file, where a new drone cannot reach it.');

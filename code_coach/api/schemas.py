@@ -772,10 +772,21 @@ class ErrorCheckResponse(BaseModel):
 
 
 class FarmCodeRequest(BaseModel):
-    """A program for the farm, in one of its languages."""
+    """One file of a program for the farm, in one of its languages."""
 
     language: str = "python"
     code: str = ""
+    #: Which file; empty means the one Run runs.
+    file: str = ""
+
+
+class FarmFileRequest(BaseModel):
+    """Add, rename, delete or select (to run) one of a language's files."""
+
+    language: str = "python"
+    action: str = ""
+    name: str = ""
+    new_name: str = ""
 
 
 class FarmUnlockRequest(BaseModel):

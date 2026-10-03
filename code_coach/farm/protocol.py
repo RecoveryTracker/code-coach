@@ -21,10 +21,13 @@ so a cost dictionary indexes the same way); Dart turns them into enums.
 
 Two calls need a word of their own:
 
-    {"f": "__error__", "a": [message, line]}   the program crashed; line is
-                                               the line of YOUR file, or 0.
-                                               The only line with NO reply -
-                                               the program is ending.
+    {"f": "__error__", "a": [message, line, file]}
+                                               the program crashed; file is the
+                                               name (no extension) of YOUR file
+                                               it happened in, "" if unknown,
+                                               and line is a line of that file,
+                                               or 0. No reply - the program is
+                                               ending.
     {"f": "print" / "quick_print", "a": [text]} text already formatted the
                                                way the language prints it.
                                                Answered like any command
@@ -44,8 +47,17 @@ fn(*args), and sends
     {"f": "__return__", "a": [value]}   no reply; then exits 0
 
 spawn_drone goes on the wire as ["spawn_drone", [fn_name, [args...], {globals}]]:
-only a function declared at the top level of the program can be spawned,
-by name. wait_for answers with the other drone's return value.
+only a function at the top level of one of the program's files can be
+spawned. fn_name is the name the entry file has it under, or "file.name"
+for one in another file. Drone mode runs the entry's definitions and
+imports (an imported file runs its top level, as any import does). wait_for
+answers with the other drone's return value.
+
+The game's own language ("original", stubs/farm_lang.py) adds "t" to every
+line it sends: the ticks its own operations took since the last line. The
+farm spends them on the drone's clock before doing the command, and
+{"f": "__ticks__", "a": [], "t": n} sends them on their own (answered with
+null) when a long computation has no command to carry them.
 range() in JavaScript and Dart is the library's own and never reaches the
 farm (Python has its own).
 
