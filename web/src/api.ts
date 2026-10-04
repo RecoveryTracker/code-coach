@@ -1,3 +1,4 @@
+import type { BrainItem, BrainSummary } from "./components/BrainDrills";
 import type {
   FarmOverview,
   FarmStart,
@@ -194,6 +195,27 @@ export function checkCss(body: {
 /** The next things to do, across every practice at once. */
 export function fetchSession(size = 20): Promise<SessionQueue> {
   return request(`/api/session?size=${size}`);
+}
+
+/** Brain Drills' home: activities, bests, stamps and code ages. */
+export function fetchBrain(): Promise<BrainSummary> {
+  return request("/api/brain");
+}
+
+/** A fresh round of one Brain Drills activity. */
+export function fetchBrainRound(activity: string): Promise<{ activity: string; items: BrainItem[] }> {
+  return request(`/api/brain/round?activity=${encodeURIComponent(activity)}`);
+}
+
+/** Keep a finished round; its code age, and whether it beat the best. */
+export function postBrainResult(body: {
+  activity: string;
+  seconds: number;
+  errors: number;
+  total: number;
+  checkId: string;
+}): Promise<{ age: number; best: boolean }> {
+  return request("/api/brain/result", { method: "POST", body: JSON.stringify(body) });
 }
 
 /** The farm when its screen opens. */

@@ -36,6 +36,7 @@ from code_coach.api.schemas import (
     ErrorCheckResponse,
     TraceCheckRequest,
     CanvasCheckRequest,
+    BrainResultRequest,
     FarmCodeRequest,
     FarmFileRequest,
     FarmUnlockRequest,
@@ -2333,6 +2334,37 @@ def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
     """The model file for one ticket, asked for rather than shipped."""
     _, found = _ticket_or_404(project_id, ticket_id)
     return {"id": found.id, "after": found.after}
+
+
+@app.get("/api/brain")
+def brain_summary() -> dict:
+    """Brain Drills' home: the activities and their bests, the stamps, the code ages."""
+    from code_coach import brain
+
+    return brain.summary()
+
+
+@app.get("/api/brain/round")
+def brain_round(activity: str = "", seed: int | None = None) -> dict:
+    """A fresh round of one activity, answers included - it's a speed drill, checked as you go."""
+    from code_coach import brain
+
+    if activity not in brain.ACTIVITIES_BY_ID:
+        raise HTTPException(status_code=404, detail=f"Unknown activity {activity}")
+    return brain.round_payload(activity, seed)
+
+
+@app.post("/api/brain/result")
+def brain_result(body: BrainResultRequest) -> dict:
+    """Keep a finished round; answers with its code age and whether it beat the best."""
+    from code_coach import brain
+
+    if body.activity not in brain.ACTIVITIES_BY_ID:
+        raise HTTPException(status_code=404, detail=f"Unknown activity {body.activity}")
+    before = next(a["best"] for a in brain.summary()["activities"] if a["id"] == body.activity)
+    result = brain.record(body.activity, body.seconds, body.errors, body.total, body.checkId)
+    best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
+    return {"age": result.age, "best": best}
 
 
 @app.get("/api/farm")

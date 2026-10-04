@@ -771,6 +771,17 @@ class ErrorCheckResponse(BaseModel):
     fix: str = ""
 
 
+class BrainResultRequest(BaseModel):
+    """One finished round of a Brain Drills activity."""
+
+    activity: str = ""
+    seconds: float = 0
+    errors: int = 0
+    total: int = 1
+    #: Set when the round is part of a Code age check: the three share it.
+    checkId: str = ""
+
+
 class FarmCodeRequest(BaseModel):
     """One file of a program for the farm, in one of its languages."""
 

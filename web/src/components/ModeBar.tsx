@@ -30,6 +30,11 @@ export const MODES = [
     title: "One queue across every practice — whatever you have done least",
   },
   {
+    id: "brain",
+    label: "Brain Drills",
+    title: "A minute of quick-fire JavaScript reflexes a day, scored as your code age",
+  },
+  {
     id: "workbook",
     label: "Workbook",
     title: "Pages of small exercises you solve by typing",
