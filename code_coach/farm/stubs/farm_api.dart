@@ -31,6 +31,14 @@
 // calls f, and sends back what f returned. runner.dart lists the top-level
 // functions of all your files by name, which is how the new run finds f.
 //
+// Simulation: simulate('f1', Unlocks.values, {Items.carrot: 100}, {'a': 13},
+// 0, 64) runs one of your files as a new program on a fresh farm of its
+// own, and answers with the game seconds it took. The unlocks are a list of
+// them - Unlocks.values is every one - or a map of levels, {Unlocks.speed:
+// 2}. The new program is an ordinary run of that file, not a drone; Dart
+// can't make a global at run time, so it finds the globals it was given
+// (FARM_GLOBALS holds them) in simGlobals: there, simGlobals['a'] is 13.
+//
 // The block between the NAMES markers is filled in by render.py from
 // code_coach/farm/data.py, so the names here can never drift from the farm.
 
@@ -220,6 +228,33 @@ bool hasFinished(int drone) => _call('has_finished', [drone]) as bool;
 /// string, an enum value, or a list or map of those. (A record comes back
 /// as a list.)
 dynamic waitFor(int drone) => _unwire(_call('wait_for', [drone]));
+
+/// Run one of your files as a new program on a fresh farm of its own, and
+/// the game seconds it took; your own farm is left as it was. unlocks is a
+/// list of them, each at its top level - Unlocks.values is every one - or a
+/// map of levels, {Unlocks.speed: 2}, where a negative level is the top
+/// one. items is what the new farm starts with, globals what the program
+/// finds in simGlobals, and a negative seed is a random one.
+double simulate(String filename, Object unlocks, Map<Items, num> items, Map<String, Object?> globals,
+        int seed, num speedup) =>
+    _double(_call('simulate', [filename, unlocks, items, globals, seed, speedup]));
+
+/// The globals simulate() gave this program to start with, by name: Dart
+/// can't make a global at run time, so simGlobals['a'] is the a it was
+/// given. A game name is its enum value again, and a list is typed by what
+/// is in it, as waitFor() hands them back. Empty when this run is not a
+/// simulation.
+final Map<String, Object?> simGlobals = _startingGlobals();
+
+Map<String, Object?> _startingGlobals() {
+  final text = Platform.environment['FARM_GLOBALS'] ?? '';
+  if (text.isEmpty) return {};
+  final given = jsonDecode(text);
+  if (given is! Map) {
+    throw FarmError('The farm sent this simulation its globals as something other than a map.');
+  }
+  return {for (final entry in given.entries) '${entry.key}': _unwire(entry.value)};
+}
 
 /// Python's range, which the game's for loops are written with:
 /// range(3) is [0, 1, 2], range(1, 7, 2) is [1, 3, 5], range(3, 0, -1) is

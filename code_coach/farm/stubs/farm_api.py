@@ -28,6 +28,15 @@ and imports of the file you run without running anything else at its top
 level - a file it imports runs as any import does - takes a copy of the
 globals you had when you spawned it, runs f, and sends back what f
 returned.
+
+Simulation: simulate(filename, sim_unlocks, sim_items, sim_globals, seed,
+speedup) runs one of your files as a new program on a fresh farm of its
+own, and answers with the game seconds it took. A whole group stands for
+all of its values - simulate("f1", Unlocks, ...) is every unlock - and so
+does a list of them, or a dictionary of levels, {Unlocks.Speed: 2}. The
+new program is an ordinary run of that file, not a drone: FARM_GLOBALS
+holds the globals it was given, and they are its globals before its first
+line runs.
 """
 
 import ast
@@ -111,6 +120,10 @@ class _Group:
 def _wire(value):
     if isinstance(value, _Value):
         return value.name
+    if isinstance(value, _Group):
+        # A whole group is all of its values, as the game reads it:
+        # simulate("f1", Unlocks, ...) is every unlock there is.
+        return [v.name for v in value]
     if isinstance(value, (list, tuple)):
         return [_wire(v) for v in value]
     if isinstance(value, dict):
@@ -382,8 +395,9 @@ def _globals_snapshot():
     """The globals of the file you run as they are now - the ones that can
     go down the pipe: numbers, text, lists, dictionaries and the game's
     values. The farm's own names stay behind (the drone has its own), and so
-    do functions, classes and modules (the drone defines its own from your
-    files)."""
+    does a group of them under a name of yours - it would arrive as a plain
+    list - and so do functions, classes and modules (the drone defines its
+    own from your files)."""
     api = _program.api
     snapshot = {}
     for name, value in list(vars(_program.main).items()):
@@ -391,7 +405,7 @@ def _globals_snapshot():
             continue
         if name in api and api[name] is value:
             continue
-        if callable(value) or isinstance(value, types.ModuleType):
+        if callable(value) or isinstance(value, (types.ModuleType, _Group)):
             continue
         wired = _travels(value)
         if wired is not _NO:
@@ -451,6 +465,21 @@ def _run_drone(job, program):
 # ── Running your program ────────────────────────────────────────────────
 
 
+def _starting_globals():
+    """The globals simulate() gave this run - FARM_GLOBALS holds them as
+    they went down the pipe - as your own values again: a name back to its
+    value, a list still a list. None of Python's own __names__, as a drone's
+    globals have none. Empty when this run is not a simulation."""
+    text = os.environ.get("FARM_GLOBALS")
+    if not text:
+        return {}
+    given = json.loads(text)
+    if not isinstance(given, dict):
+        raise FarmError("The farm sent this simulation its globals as something other than a dictionary.")
+    return {name: _unwire(value, list) for name, value in given.items()
+            if not (name.startswith("__") and name.endswith("__"))}
+
+
 def _crash(error, program):
     """Tell the farm what went wrong, in which file of yours and on which
     line: the deepest place in the traceback that is in a file of yours."""
@@ -486,8 +515,11 @@ def main(entry):
         sys.modules["__main__"] = program.main
         job = os.environ.get("FARM_DRONE")
         if job:
+            # A drone's globals are the ones it was spawned with, a
+            # simulation's starting ones among them.
             _run_drone(json.loads(job), program)
         else:
+            vars(program.main).update(_starting_globals())
             exec(program.compile(entry, program.source), vars(program.main))
     except SystemExit:
         raise

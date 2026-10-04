@@ -962,6 +962,8 @@ export type FarmLine = { kind: "print" | "out" | "error" | "info"; text: string 
 
 export type FarmState = {
   farm: FarmSnapshot;
+  /** While simulate() runs, the farm drawn is the simulation's: which file, how fast. */
+  simulation?: { file: string; speedup: number } | null;
   items: Record<string, number>;
   run: FarmRun | null;
   output: FarmLine[];

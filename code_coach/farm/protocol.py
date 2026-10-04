@@ -53,6 +53,19 @@ for one in another file. Drone mode runs the entry's definitions and
 imports (an imported file runs its top level, as any import does). wait_for
 answers with the other drone's return value.
 
+Simulation. simulate(filename, sim_unlocks, sim_items, sim_globals, seed,
+speedup) goes on the wire as six arguments: the file's name; the unlocks
+as a list of "Unlocks.X" (each at its top level) or a dict
+{"Unlocks.X": level} (a negative level meaning the top one) - a whole
+group passed as itself (Python's Unlocks, the game's way of saying
+everything) goes as the list of its members; the items as {"Items.X": n};
+the globals as {"name": value}; a seed (negative for a random one); and the
+speedup. The farm runs the file as a new program on a fresh farm and
+answers with the game seconds it took. The new program finds its starting
+globals in the environment variable FARM_GLOBALS, JSON {"name": value}:
+Python, Original and JavaScript set them as globals before the file runs;
+Dart, which can't make globals at run time, offers them as simGlobals['name'].
+
 The game's own language ("original", stubs/farm_lang.py) adds "t" to every
 line it sends: the ticks its own operations took since the last line. The
 farm spends them on the drone's clock before doing the command, and
@@ -130,6 +143,10 @@ FUNCTIONS: tuple[Function, ...] = (
     Function("max_drones", "maxDrones", "maxDrones", (), "How many drones you may have at once."),
     Function("has_finished", "hasFinished", "hasFinished", ("drone",), "True once that drone's function has returned."),
     Function("wait_for", "waitFor", "waitFor", ("drone",), "Wait for a drone to finish; its function's return value."),
+    Function("simulate", "simulate", "simulate",
+             ("filename", "sim_unlocks", "sim_items", "sim_globals", "seed", "speedup"),
+             "Run one of your files on a fresh, separate farm; the game seconds it took. "
+             "The real farm is untouched."),
 )
 
 FUNCTIONS_BY_PY = {f.py: f for f in FUNCTIONS}

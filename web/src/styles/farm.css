@@ -319,3 +319,17 @@
   padding: 2px 9px;
   cursor: pointer;
 }
+
+/* simulate(): the farm drawn is the simulation's, and it says so. */
+.farm-sim-banner {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #9c6ade;
+  background: rgba(156, 106, 222, 0.14);
+  font-size: 13px;
+}
+
+.farm-canvas-box.sim .farm-canvas {
+  outline: 2px dashed #9c6ade;
+  outline-offset: 2px;
+}

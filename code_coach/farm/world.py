@@ -1074,11 +1074,90 @@ class World:
     def _do_wait_for(self, args, language):
         return None, self._ask()
 
+    def _do_simulate(self, args, language):
+        # Running a program is the runner's job; a farm on its own can only check the asking.
+        self.simulation_setup(args, language)
+        raise Refusal(f"{spell_function('simulate', language)} runs a program, so it needs a running farm.")
+
     def _do_abs(self, args, language):
         value = args[0] if args else None
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             raise Refusal(f"{spell_function('abs', language)} needs a number.")
         return abs(value), self._ask()
+
+    # ── Simulations ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def simulation_setup(args: list[Any], language: str = "python") -> dict[str, Any]:
+        """simulate()'s six arguments, checked and put in plain form.
+
+        unlocks: a list of "Unlocks.X" (each at its top level) or a dict of
+        levels (negative meaning the top level); items: {"Items.X": n};
+        globals: {"name": value}; seed: negative for a random one; speedup:
+        how fast to play it (0 or less: as fast as it goes)."""
+        name = spell_function("simulate", language)
+        if len(args) != 6:
+            raise Refusal(f"{name} takes six things: the file, the unlocks, the items, the globals, "
+                          "the seed and the speedup.")
+        filename, raw_unlocks, raw_items, raw_globals, seed, speedup = args
+        if not isinstance(filename, str) or not filename:
+            raise Refusal(f"{name} needs the name of one of your files first.")
+        levels: dict[str, int] = {}
+
+        def top(unlock: str) -> int:
+            u = UNLOCKS[unlock]
+            return u.starts_at + len(u.costs)
+
+        def member(value: Any) -> str:
+            if not isinstance(value, str) or not value.startswith("Unlocks.") or value[8:] not in UNLOCKS:
+                raise Refusal(f"{name}'s unlocks should be Unlocks, like {spell_value('Unlocks.Speed', language)}.")
+            return value[8:]
+
+        if isinstance(raw_unlocks, list):
+            for value in raw_unlocks:
+                levels[member(value)] = top(member(value))
+        elif isinstance(raw_unlocks, dict):
+            for value, level in raw_unlocks.items():
+                unlock = member(value)
+                if not isinstance(level, (int, float)) or isinstance(level, bool):
+                    raise Refusal(f"{name}: an unlock's level is a number.")
+                levels[unlock] = top(unlock) if level < 0 else min(int(level), top(unlock))
+        elif raw_unlocks is not None:
+            raise Refusal(f"{name}'s unlocks are a list of unlocks, or a dictionary of their levels.")
+        items: dict[str, float] = {}
+        if isinstance(raw_items, dict):
+            for value, amount in raw_items.items():
+                if not isinstance(value, str) or not value.startswith("Items.") or value[6:] not in data.ITEMS:
+                    raise Refusal(f"{name}'s items should be Items, like {spell_value('Items.Hay', language)}.")
+                if not isinstance(amount, (int, float)) or isinstance(amount, bool) or amount < 0:
+                    raise Refusal(f"{name}: an amount of an item is a number, 0 or more.")
+                items[value[6:]] = amount
+        elif raw_items is not None:
+            raise Refusal(f"{name}'s items are a dictionary of item to amount.")
+        if raw_globals is not None and not isinstance(raw_globals, dict):
+            raise Refusal(f"{name}'s globals are a dictionary of name to value.")
+        if not isinstance(seed, (int, float)) or isinstance(seed, bool) or int(seed) != seed:
+            raise Refusal(f"{name}'s seed is a whole number (negative for a random one).")
+        if not isinstance(speedup, (int, float)) or isinstance(speedup, bool):
+            raise Refusal(f"{name}'s speedup is a number.")
+        return {
+            "file": filename, "unlocks": levels, "items": items, "globals": dict(raw_globals or {}),
+            "seed": int(seed), "speedup": float(speedup) if speedup > 0 else 0.0,
+        }
+
+    @classmethod
+    def for_simulation(cls, setup: dict[str, Any]) -> "World":
+        """A fresh farm, as simulate() asks for it: nothing grown yet, the research and
+        items given, and the seed fixing every bit of chance - the same seed and
+        start always give the same simulation."""
+        world = cls(seed=setup["seed"] if setup["seed"] >= 0 else None)
+        for unlock, level in setup["unlocks"].items():
+            world.unlocks[unlock] = level
+        for item, amount in setup["items"].items():
+            world.items[item] = amount
+        world.width, world.height = data.FARM_SIZES[min(world.level("Expand"), len(data.FARM_SIZES) - 1)]
+        world._fill()
+        return world
 
     # ── Saving ──────────────────────────────────────────────────────────
 

@@ -170,11 +170,14 @@ class Frame:
 def wire(v):
     if isinstance(v, Value):
         return v.name
+    if isinstance(v, Group):
+        # A whole group - simulate(f, Unlocks, ...) - stands for all its members.
+        return [m.name for m in v.members.values()]
     if isinstance(v, (list, tuple, set, frozenset)):
         return [wire(x) for x in v]
     if isinstance(v, dict):
         return {str(wire(k)): wire(x) for k, x in v.items()}
-    if isinstance(v, (Function, Builtin, Module, Group)):
+    if isinstance(v, (Function, Builtin, Module)):
         raise GameError(f"{show(v)} can't be sent to the farm.")
     return v
 
@@ -480,13 +483,15 @@ class Interp:
         check_language(tree, name)
         return tree
 
-    def load(self, name, node=None, as_main=False, definitions_only=False):
+    def load(self, name, node=None, as_main=False, definitions_only=False, start_globals=None):
         key = "__main__" if as_main else name
         if key in self.modules:
             return self.modules[key]
         tree = self.parse(name)
         module = Module("__main__" if as_main else name)
         module.globals["__file_name__"] = name
+        # A simulation's starting globals, there before the first line runs.
+        module.globals.update(start_globals or {})
         self.modules[key] = module
         outer = self.file
         self.file = name
@@ -957,7 +962,12 @@ def main(entry):
             result = interp.run_function(fn, args, fn.node)
             interp.send("__return__", wire(result))
             return 0
-        interp.load(entry, as_main=True)
+        start = {}
+        if os.environ.get("FARM_GLOBALS"):
+            # Started by simulate(): sim_globals become this program's globals.
+            for k, v in json.loads(os.environ["FARM_GLOBALS"]).items():
+                start[str(k)] = list(unwire(v)) if isinstance(v, list) else unwire(v)
+        interp.load(entry, as_main=True, start_globals=start)
         if interp.pending:
             interp.command("__ticks__")
         return 0

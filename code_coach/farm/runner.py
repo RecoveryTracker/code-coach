@@ -140,6 +140,21 @@ class Run:
     #: Real time and game time when the run began, for pacing.
     clock_start: float = field(default_factory=_now)
     time0: float = 0.0
+    #: The program's files and the one that runs, so a simulation can start another.
+    files: dict[str, str] = field(default_factory=dict)
+    entry: str = "main"
+    #: The farm this run plays on: None for the real one; a simulation's own World.
+    world: World | None = None
+    #: A simulation knows the run that started it; that run knows the simulation
+    #: going on now, and waits - every drone of it - until it ends.
+    parent: "Run | None" = None
+    sim: "Run | None" = None
+    sim_file: str = ""
+    sim_speedup: float = 0.0
+
+
+class _Stopped(Exception):
+    """The run was stopped while a command was waiting on something."""
 
 
 class FarmHost:
@@ -243,7 +258,21 @@ class FarmHost:
             self._catch_up()
             run = self.run
             farm = world.snapshot()
-            if run is not None and run.status in ("starting", "running") and run.drones:
+            items = world.items
+            simulation = None
+            sim = run.sim if run is not None else None
+            if sim is not None and sim.world is not None:
+                # While a simulation runs, the screen shows its farm, as the game does.
+                farm = sim.world.snapshot()
+                items = sim.world.items
+                live = [d for d in sim.drones.values() if d.status == "running"]
+                if live:
+                    farm["drones"] = [{"x": d.x, "y": d.y, "hat": d.hat} for d in live]
+                    first = sim.drones.get(0)
+                    if first is not None:
+                        farm["drone"] = {"x": first.x, "y": first.y, "hat": first.hat}
+                simulation = {"file": sim.sim_file, "speedup": sim.sim_speedup}
+            elif run is not None and run.status in ("starting", "running") and run.drones:
                 live = [d for d in run.drones.values() if d.status == "running"] or list(run.drones.values())
                 farm["drones"] = [{"x": d.x, "y": d.y, "hat": d.hat} for d in live]
                 main = run.drones.get(0)
@@ -251,7 +280,8 @@ class FarmHost:
                     farm["drone"] = {"x": main.x, "y": main.y, "hat": main.hat}
             return {
                 "farm": farm,
-                "items": {k: (int(v) if float(v).is_integer() else round(v, 2)) for k, v in world.items.items()},
+                "simulation": simulation,
+                "items": {k: (int(v) if float(v).is_integer() else round(v, 2)) for k, v in items.items()},
                 "run": None if run is None else {
                     "id": run.id, "language": run.language, "status": run.status,
                     "error": run.error, "line": run.error_line, "file": run.error_file,
@@ -463,7 +493,8 @@ class FarmHost:
                 env["FARM_TS"] = str(ts)
             env.pop("FARM_DRONE", None)
             run = Run(id=self._next_run, language=language, warp=self.warp, workdir=workdir,
-                      argv=list(argv), env=env, time0=world.time)
+                      argv=list(argv), env=env, time0=world.time,
+                      files=dict(self.files[language]), entry=entry)
             self._next_run += 1
             main = Drone(id=0, time=world.time, x=world.x, y=world.y, hat=world.hat)
             try:
@@ -495,15 +526,20 @@ class FarmHost:
         run = self.run
         if run is None or run.status not in ("starting", "running"):
             return
-        run.stop = True
+        runs = [run]
+        while runs[-1].sim is not None:
+            runs.append(runs[-1].sim)
+        for r in runs:
+            r.stop = True
         with self.turns:
             self.turns.notify_all()
 
         def kill() -> None:
             time.sleep(0.5)
-            for d in list(run.drones.values()):
-                if d.proc and d.proc.poll() is None:
-                    _kill_tree(d.proc)
+            for r in runs:
+                for d in list(r.drones.values()):
+                    if d.proc and d.proc.poll() is None:
+                        _kill_tree(d.proc)
 
         threading.Thread(target=kill, daemon=True).start()
         if wait:
@@ -555,7 +591,7 @@ class FarmHost:
                     request = None
                 if request is None:
                     with self.lock:
-                        self._say("out", line)
+                        self._say("out", _prefix(run) + line)
                     continue
                 name, args = request
                 # The game's language sends the ticks its own operations took.
@@ -605,6 +641,9 @@ class FarmHost:
 
     def _my_turn(self, run: "Run", drone: "Drone") -> bool:
         """No other drone could still act before this one."""
+        if run.sim is not None:
+            # The whole farm waits while one of its drones runs a simulation.
+            return False
         for d in run.drones.values():
             if d is drone or d.status != "running" or d.blocked:
                 continue
@@ -625,7 +664,7 @@ class FarmHost:
             if run.stop:
                 self.turns.notify_all()
                 return STOP
-            world = self._load()
+            world = self._world_of(run)
             if name == "wait_for":
                 return self._wait_for(run, drone, args, world)
             world.x, world.y, world.hat = drone.x, drone.y, drone.hat
@@ -636,6 +675,8 @@ class FarmHost:
             try:
                 if name == "__ticks__":
                     result = None
+                elif name == "simulate":
+                    result = self._simulate(run, drone, args, world)
                 elif name in ("spawn_drone", "num_drones", "max_drones", "has_finished"):
                     result, _seconds = self._drone_command(run, drone, name, args, world)
                 else:
@@ -648,6 +689,8 @@ class FarmHost:
                 reply = answer(result)
             except Refusal as exc:
                 reply = refuse(str(exc))
+            except _Stopped:
+                reply = STOP
             except Exception as exc:  # noqa: BLE001 - a farm bug must not hang the program
                 reply = refuse(f"The farm could not do that: {exc}")
             drone.x, drone.y, drone.hat = world.x, world.y, world.hat
@@ -662,12 +705,79 @@ class FarmHost:
                 if main is not None:
                     world.x, world.y, world.hat = main.x, main.y, main.hat
             if name in ("print", "quick_print") and not reply.startswith('{"e"'):
-                self._say("print" if name == "print" else "out", str(args[0]) if args else "")
+                self._say("print" if name == "print" else "out", _prefix(run) + (str(args[0]) if args else ""))
             self._last_look = time.monotonic()
             if time.monotonic() - self._last_save > 10:
                 self.save()
             self.turns.notify_all()
             return reply
+
+    def _world_of(self, run: "Run") -> World:
+        return run.world if run.world is not None else self._load()
+
+    def _argv_for(self, run: "Run", file: str) -> list[str]:
+        """The command that runs another of the program's files from the top."""
+        argv = list(run.argv)
+        if run.language == "dart":
+            # Dart's runner names the file it runs, so a simulation gets one of its own.
+            from code_coach.farm.stubs.render import dart_runner
+
+            name = f"runner_sim_{file}.dart"
+            Path(run.workdir, name).write_text(dart_runner(run.files, file), encoding="utf-8")
+            return [argv[0], "run", name]
+        argv[-1] = file
+        return argv
+
+    def _simulate(self, run: "Run", drone: "Drone", args: list[Any], world: World) -> float:
+        """simulate(): run one of the program's files on a World of its own, and wait.
+
+        Called holding the turn lock, in the caller's turn. The caller spends
+        an action's time; every drone of the calling run waits (see _my_turn);
+        the real farm stands still. The answer is the game seconds the
+        simulated program took - the only thing that comes back out of it."""
+        world.require("simulate", run.language)
+        setup = World.simulation_setup(args, run.language)
+        if run.parent is not None:
+            raise Refusal("A simulation can't start another simulation.")
+        if setup["file"] not in run.files:
+            raise Refusal(f"There is no file called {setup['file']} to simulate.")
+        world.spend_ticks(data.ACTION_TICKS)
+        env = dict(run.env)
+        env["FARM_GLOBALS"] = json.dumps(setup["globals"])
+        child = Run(
+            id=self._next_run, language=run.language, warp=setup["speedup"], workdir=run.workdir,
+            argv=self._argv_for(run, setup["file"]), env=env, files=run.files, entry=setup["file"],
+            world=World.for_simulation(setup), parent=run, sim_file=setup["file"],
+            sim_speedup=setup["speedup"], time0=0.0,
+        )
+        self._next_run += 1
+        main = Drone(id=0, time=0.0)
+        try:
+            main.proc = self._launch(child, None)
+        except OSError as exc:
+            raise Refusal(f"Could not start the simulation: {exc}") from None
+        child.drones[0] = main
+        child.status = "running"
+        run.sim = child
+        drone.blocked = True
+        speed = f"at {setup['speedup']:g}x" if setup["speedup"] else "as fast as it goes"
+        self._say("info", f"Simulating {setup['file']} {speed}.")
+        threading.Thread(target=self._drive, args=(child, main), daemon=True).start()
+        threading.Thread(target=self._watch, args=(child,), daemon=True).start()
+        self.turns.notify_all()
+        try:
+            while child.status in ("starting", "running") and not run.stop:
+                self.turns.wait(0.05)
+        finally:
+            run.sim = None
+            drone.blocked = False
+            drone.last_command = time.monotonic()
+        if run.stop:
+            raise _Stopped()
+        if child.status == "error":
+            spot = f" ({child.error_file}, line {child.error_line})" if child.error_line else ""
+            raise Refusal(f"The simulation of {setup['file']} stopped with an error: {child.error}{spot}")
+        return round(child.world.time, 4)
 
     def _drone_command(self, run: "Run", drone: "Drone", name: str, args: list[Any],
                        world: World) -> tuple[Any, float]:
@@ -781,6 +891,9 @@ class FarmHost:
             self._finish(run)
 
     def _finish(self, run: "Run") -> None:
+        if run.parent is not None:
+            self._finish_simulation(run)
+            return
         with self.lock:
             if run.finished:
                 return
@@ -807,6 +920,26 @@ class FarmHost:
                 self._say("info", "Your program finished.")
             self.save()
         shutil.rmtree(run.workdir, ignore_errors=True)
+
+    def _finish_simulation(self, run: "Run") -> None:
+        with self.turns:
+            if run.finished:
+                return
+            run.finished = True
+            if run.stop and not run.error:
+                run.status = "stopped"
+            elif run.error:
+                run.status = "error"
+            else:
+                run.status = "done"
+                assert run.world is not None
+                self._say("info", f"The simulation of {run.sim_file} took {run.world.time:.2f} seconds.")
+            self.turns.notify_all()
+
+
+def _prefix(run: "Run") -> str:
+    """Output from inside a simulation says so."""
+    return "(simulation) " if run.parent is not None else ""
 
 
 def _kill_later(proc: subprocess.Popen) -> None:

@@ -39,6 +39,15 @@ only its imports and its definitions: functions, classes, and variables
 whose values are written out plainly. A file it imports runs as any import
 does. Then it runs f, and sends back what f returned.
 
+Simulation: simulate(filename, simUnlocks, simItems, simGlobals, seed,
+speedup) runs one of your files as a new program on a fresh farm of its
+own, and answers with the game seconds it took. A whole group stands for
+all of its values - simulate("f1", Unlocks, ...) is every unlock - and so
+does an array of them, or an object of levels, { [Unlocks.Speed]: 2 }. The
+new program is an ordinary run of that file, not a drone: FARM_GLOBALS
+holds the globals it was given, and they are set on globalThis before any
+file of yours runs, so every file reads them as it reads North.
+
 The block between the NAMES markers is filled in by render.py from
 code_coach/farm/data.py, so the names here can never drift from the farm.
 */
@@ -141,13 +150,21 @@ function ascii(json) {
   return json.replace(/[\u007f-\uffff]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
 }
 
+// The farm's own groups - Entities, Items ... - each as group() below made
+// it. Only these go down the pipe as lists: any other object is a
+// dictionary, however it was made.
+const farmGroups = new WeakSet();
+
 // A value as the farm reads it. Nearly everything already is one; a Set
-// goes as a list and a Map as a dictionary, as they would in Python.
+// goes as a list and a Map as a dictionary, as they would in Python. A
+// whole group is all of its values, as the game reads it:
+// simulate("f1", Unlocks, ...) is every unlock there is.
 function wire(value) {
   if (value === undefined) return null;
   if (typeof value === "bigint") return Number(value);
   if (Array.isArray(value)) return value.map(wire);
   if (value instanceof Set) return [...value].map(wire);
+  if (farmGroups.has(value)) return [...value];
   if (value instanceof Map) {
     const out = {};
     for (const [key, item] of value) out[String(wire(key))] = wire(item);
@@ -234,6 +251,7 @@ function group(members) {
   const values = Object.values(members);
   const named = { ...members };
   Object.defineProperty(named, Symbol.iterator, { value: () => values[Symbol.iterator]() });
+  farmGroups.add(named);
   return Object.freeze(named);
 }
 
@@ -677,6 +695,32 @@ async function runDrone(text) {
 
 // ── Running your program ────────────────────────────────────────────────
 
+// A simulation's starting globals. simulate() runs a file of yours as a new
+// program, and FARM_GLOBALS holds the globals it was given as they went
+// down the pipe - which is already how JavaScript has them, the game's
+// names being strings here. Each is set on globalThis before any file of
+// yours runs, so every file reads it by its name.
+function startingGlobals() {
+  const text = process.env.FARM_GLOBALS;
+  if (!text) return;
+  let given = null;
+  try {
+    given = JSON.parse(text);
+  } catch {
+    // Not JSON at all: said just below, rather than as a SyntaxError of yours.
+  }
+  if (given === null || typeof given !== "object" || Array.isArray(given)) {
+    throw new FarmError("The farm sent this simulation its globals as something other than an object.");
+  }
+  for (const [name, value] of Object.entries(given)) {
+    try {
+      globalThis[name] = value;
+    } catch {
+      throw new FarmError(`A simulation can't start with a global called ${name}: JavaScript doesn't let it change.`);
+    }
+  }
+}
+
 function main(name) {
   // Room for a deep stack, so your line is still in it.
   Error.stackTraceLimit = Math.max(Error.stackTraceLimit, 50);
@@ -692,7 +736,13 @@ function main(name) {
   if (!FILE_NAME.test(entry) || !fs.existsSync(fileOf(entry))) {
     running = Promise.reject(new FarmError(`There is no file called ${entry} to run.`));
   } else {
-    running = job ? runDrone(job) : import(urlOf(entry));
+    try {
+      // A drone of a simulation starts from them too, as from its declarations.
+      startingGlobals();
+      running = job ? runDrone(job) : import(urlOf(entry));
+    } catch (error) {
+      running = Promise.reject(error);
+    }
   }
   running.catch(crash);
 }

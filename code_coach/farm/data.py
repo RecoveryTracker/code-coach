@@ -290,7 +290,11 @@ UNLOCKS: dict[str, Unlock] = {
                "hands back what it returns. Each level doubles how many you may have.",
                functions={1: ("spawn_drone", "num_drones", "max_drones", "has_finished", "wait_for")}),
         Unlock("Simulation", _ladder("Gold", 5000), ("Megafarm",),
-               "Run your code in a simulation, faster and repeatable.", missing=True),
+               "simulate() runs one of your files on a fresh farm of its own - the research, "
+               "items and globals you choose, a fixed random seed, at any speed - and tells "
+               "you the game seconds it took. Your real farm is left exactly as it was: the "
+               "way to time two versions of your code against each other.",
+               functions={1: ("simulate",)}),
         Unlock("Leaderboard", (_c(("Bone", 2000000), ("Gold", 1000000)),), ("Dinosaurs", "Megafarm"),
                "Race the clock.", missing=True),
     )

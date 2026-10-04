@@ -450,7 +450,14 @@ export default function FarmMode() {
             </span>
           ))}
         </div>
-        <div ref={boxRef} className="farm-canvas-box">
+        {state.simulation ? (
+          <div className="farm-sim-banner" role="status">
+            Simulating <b>{state.simulation.file}</b>
+            {state.simulation.speedup ? ` at ${state.simulation.speedup}×` : " as fast as it goes"} - this is
+            the simulation&apos;s farm; your real farm is paused and won&apos;t change.
+          </div>
+        ) : null}
+        <div ref={boxRef} className={`farm-canvas-box${state.simulation ? " sim" : ""}`}>
           <canvas ref={canvasRef} width={px} height={px} className="farm-canvas" />
         </div>
         <div className="farm-status">
