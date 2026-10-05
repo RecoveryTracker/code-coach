@@ -157,9 +157,47 @@ Use the in-app browser at a desktop size (1400x900), and measure the DOM
 with JavaScript rather than trusting screenshots: screenshots of the pane
 time out or catch a canvas before it paints. Reset the viewport when done.
 
+## Next: the DOM track in Canvas (planned 2026-10-04, not started)
+
+A fourth Canvas track where the learner's JavaScript works on a web page
+rather than a canvas, building a to-do app a step at a time:
+
+1. querySelector + textContent
+2. classList
+3. a click listener
+4. reading an input's value
+5. createElement / append
+6. trim and ignore empty input
+7. a form's submit with preventDefault (Enter adds)
+8. deleting with remove()
+9. toggling done with event delegation
+10. a "left to do" counter
+11. saving to localStorage and loading it back (JSON)
+12. an open step: filters, editing, and so on
+
+How each step works:
+- Each step carries its page's HTML as well as starter, solution and check.
+- **The check runs in a real browser, never a homemade DOM** (see
+  tools/verify_css.py for why). In the app, the preview iframe runs the
+  learner's code and then the check, through a small harness: `cc.click`,
+  `cc.type`, `cc.submit`, `$` and `expect`. The iframe posts the result
+  back, and the server records the pass.
+- The sandboxed iframe has no localStorage, so the harness supplies an
+  in-memory one.
+
+How the tests check it:
+- They use headless Chrome as the oracle. Write one page with the HTML,
+  harness, code and check, then run
+  `chrome --headless=new --dump-dom file:///page.html`; the check writes
+  its verdict into `document.title`.
+- This was proven on 2026-10-04, with Chrome at
+  `C:/Program Files/Google/Chrome/Application/chrome.exe` (Edge printed
+  nothing). Skip the tests when no Chrome is found.
+- For each step: the solution passes, the starter fails, and the common
+  mistakes fail.
+
 ## Ideas not built yet
 
-- A DOM track in Canvas (a to-do app: querySelector, events, forms).
 - Node practice (files, arguments, a small server).
 - A build-from-blank project: spec and tests, no starter.
 - Brain Drills in Python as well.
