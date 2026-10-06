@@ -14,17 +14,22 @@ and longest ago.
 
 ## What is in it
 
-Thirteen modes, all sharing one row of names at the top of every screen.
+Twenty-two modes, all sharing one row of names at the top of every screen.
 
 | Mode | What you do |
 |------|-------------|
-| **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise |
+| **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise. Its History view shows how much of each practice you have touched and what is due to be done again |
+| **Brain Drills** | Timed JavaScript reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. Seven activities, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
 | **Forms** | Write a function; it is called with inputs you have not seen. 192 across 21 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, Dart, C and Ruby |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 29 moments, in Python, JavaScript and Dart |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 29 of them, in Python, JavaScript and Dart |
 | **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 37 hunts, in Python, JavaScript and Dart |
+| **Tickets** | One small codebase and the team's queue of work against it: bug reports, features, a change of rules, a refactor. Each ticket starts from the code as the last one left it, and is checked on what it asks and on everything that already worked. 12 tickets in two projects: a shop's orders in Python and a team task board in JavaScript |
+| **Farm** | A copy of the programming game The Farmer Was Replaced. Write the program that runs a drone around a farm, and spend the harvest on research, the language included: no `while` until you have bought Loops. Playable in the game's own language, Python, JavaScript and Dart |
+| **Canvas** | JavaScript you can watch and play, written a step at a time, each step starting where the last one finished. Four tracks, 47 steps: Dodge and Breakout, two games; Farm, a drone to program on a grid of soil; and To-do, a web page built step by step, whose checks run in a real browser |
+| **Flutter** | Read Flutter widget code and say what it builds, how it lays out, or what rebuilds after a `setState`. 16 questions in four families: the widget tree, layout, state and rebuilds, lifecycle and async |
 | **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 15 puzzles, in Python, JavaScript and Dart (typed signatures included) |
 | **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re`, JavaScript's `RegExp` or Dart's `RegExp`). 32 tasks, from single letters to lookarounds |
 | **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
@@ -223,6 +228,19 @@ So each mode gets its answers from a different place, on purpose:
   order with the reference, because more than one order is usually correct. The
   stage labels are subgoal labels: given rather than asked for, because that is
   what the research on Parsons problems supports.
+- **Canvas** — node plays each canvas step against a stand-in canvas: so many
+  frames, this key held, then a look at what happened. Any way of writing it
+  that works passes. The tests hold every check to passing the step's solution
+  and failing its starter and the mistakes people really make there. The To-do
+  track is a web page, so its checks run in the browser, and the tests hold
+  them to headless Chrome through `code_coach/canvas/dom.py`.
+- **Farm** — the numbers are the game's own, from its community wiki: costs,
+  growth times, ticks. The tests hold the field to the rules as the game states
+  them, and every language's drone library to the same commands. Where the
+  wiki is silent the value is a guess, marked as one in `data.py`.
+- **Brain Drills** — each item is made fresh from a template and its answer
+  worked out in Python, by modelling what JavaScript does. The tests run the
+  templates through node over many seeds, and the model has to agree.
 
 ### Where your work is kept
 
