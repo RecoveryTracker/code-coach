@@ -34,6 +34,61 @@
   min-height: 0;
 }
 
+/* A page step (To-do): app.js, index.html and style.css as tabs. The tabs
+   stand in for the editor's own header, which would only say app.js. */
+.canvas-editor > .canvas-files {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--border, #232c38);
+  background: var(--bg-panel, #0f131a);
+}
+
+.canvas-file {
+  padding: 6px 12px 7px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: var(--text-muted, #8b98a8);
+  font: 12px/1 ui-monospace, Consolas, monospace;
+  cursor: pointer;
+}
+
+.canvas-file:hover {
+  color: var(--text, #cdd9e5);
+}
+
+.canvas-file.on {
+  color: var(--text, #cdd9e5);
+  background: var(--bg-elevated, #10141c);
+  border-color: var(--border, #232c38);
+  margin-bottom: -1px;
+}
+
+.canvas-file-note {
+  margin-left: auto;
+  padding: 0 6px 3px;
+  font-size: 11px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.canvas-editor-body:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-editor-body > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.canvas-editor.has-files .iae-pane-header {
+  display: none;
+}
+
 .canvas-side {
   display: flex;
   flex-direction: column;
@@ -48,6 +103,37 @@
   border-radius: 6px;
   background: #0b0e14;
   display: block;
+}
+
+/* A web page rather than a game: taller, and the page's own colours. */
+.canvas-frame.page {
+  aspect-ratio: auto;
+  height: 420px;
+  background: #f4f1ea;
+}
+
+/* The page a check plays. It is laid out like a page in a window (a check
+   may care about layout) but never seen and never in the way. */
+.canvas-check-frame {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 480px;
+  height: 640px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.canvas-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #6ea8fe);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .canvas-frame:focus {

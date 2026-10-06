@@ -21,6 +21,9 @@ import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution"
 import "monaco-editor/esm/vs/basic-languages/sql/sql.contribution";
 import "monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution";
 import "monaco-editor/esm/vs/basic-languages/rust/rust.contribution";
+// Read, not written: the pages under Canvas's To-do track.
+import "monaco-editor/esm/vs/basic-languages/html/html.contribution";
+import "monaco-editor/esm/vs/basic-languages/css/css.contribution";
 
 self.MonacoEnvironment = {
   // No per-language workers: the drills are typing practice, so tokenisation

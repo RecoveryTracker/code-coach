@@ -5,6 +5,9 @@ a sandboxed frame, so you can watch and play it; and here, in node, against
 a stand-in canvas, where a step's check plays it by hand - so many frames,
 this key held - and looks at what happened. Both load harness.js first, so
 the game the check plays is the game you watched.
+
+The To-do track (content_dom.py) is the exception: it works on a web page,
+and a page's check needs a real browser, so it runs in one - see dom.py.
 """
 
 from __future__ import annotations
@@ -17,11 +20,12 @@ from pathlib import Path
 
 from code_coach.canvas.content import STEPS as DODGE_STEPS, Step
 from code_coach.canvas.content_breakout import BREAKOUT_STEPS
+from code_coach.canvas.content_dom import TODO_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
 
-#: Every track, in the order they are taught. Each track's first step
-#: starts from a blank loop; within a track, each starts from the last.
-STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS + FARM_STEPS
+#: Every track, in the order they are taught. Within a track, each step
+#: starts from the last one finished.
+STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS + FARM_STEPS + TODO_STEPS
 
 HERE = Path(__file__).resolve().parent
 HARNESS = HERE / "harness.js"
@@ -95,4 +99,6 @@ def check_step(step_id: str, code: str) -> CheckResult | None:
         return None
     if not found.check:
         return CheckResult(True, "")
+    if found.kind == "dom":
+        return CheckResult(False, "This step is checked in your browser, not here.")
     return run_check(code, found.check, found.world)

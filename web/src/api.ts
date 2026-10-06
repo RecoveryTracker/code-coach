@@ -287,6 +287,30 @@ export function fetchCanvasAnswer(step_id: string): Promise<{ id: string; soluti
   return request(`/api/canvas/answer?step_id=${encodeURIComponent(step_id)}`);
 }
 
+/**
+ * A To-do step's page, built around your code: the preview's ("play"),
+ * starting from the localStorage it had, or the hidden one a check plays.
+ */
+export function fetchCanvasPage(
+  step_id: string,
+  code: string,
+  mode: "play" | "check",
+  storage: Record<string, string> = {},
+): Promise<{ page: string }> {
+  return request("/api/canvas/page", {
+    method: "POST",
+    body: JSON.stringify({ step_id, code, mode, storage }),
+  });
+}
+
+/** Count a pass the browser saw, for a step checked in the browser. */
+export function recordCanvasPass(step_id: string): Promise<CanvasCheck> {
+  return request("/api/canvas/passed", {
+    method: "POST",
+    body: JSON.stringify({ step_id }),
+  });
+}
+
 /** Every Flutter question, with its choices and without its answer. */
 export function fetchFlutter(): Promise<FlutterList> {
   return request("/api/flutter");

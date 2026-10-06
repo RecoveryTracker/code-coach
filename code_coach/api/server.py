@@ -36,6 +36,8 @@ from code_coach.api.schemas import (
     ErrorCheckResponse,
     TraceCheckRequest,
     CanvasCheckRequest,
+    CanvasPageRequest,
+    CanvasPassedRequest,
     BrainResultRequest,
     FarmCodeRequest,
     FarmFileRequest,
@@ -2450,6 +2452,7 @@ def canvas_list() -> dict:
     The solutions stay here: the answer is asked for, like a ticket's.
     """
     from code_coach.canvas import harness_source, steps
+    from code_coach.canvas.dom import source_html
 
     counts = _store.load().canvas_counts()
     return {
@@ -2458,12 +2461,16 @@ def canvas_list() -> dict:
             {
                 "id": s.id,
                 "track": s.track,
+                "kind": s.kind,
                 "title": s.title,
                 "teaches": s.teaches,
                 "goal": s.goal,
                 "starter": s.starter,
                 "hint": s.hint,
                 "world": s.world,
+                # A page step's index.html and style.css, to read beside app.js.
+                "page": source_html(s) if s.kind == "dom" else "",
+                "css": s.css,
                 "checked": bool(s.check),
                 "done": counts.get(s.id, 0),
             }
@@ -2486,8 +2493,14 @@ def canvas_answer(step_id: str = "") -> dict:
 @app.post("/api/canvas/check", response_model=CanvasCheckResponse)
 def canvas_check(body: CanvasCheckRequest) -> CanvasCheckResponse:
     """Play the program in node and run the step's check against it."""
-    from code_coach.canvas import check_step
+    from code_coach.canvas import check_step, step
 
+    found = step(body.step_id)
+    if found is not None and found.kind == "dom":
+        raise HTTPException(
+            status_code=400,
+            detail=f"{body.step_id} is checked in the browser: ask /api/canvas/page for its check page",
+        )
     result = check_step(body.step_id, body.code)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Unknown step {body.step_id}")
@@ -2497,6 +2510,46 @@ def canvas_check(body: CanvasCheckRequest) -> CanvasCheckResponse:
         done = progress.record_canvas(body.step_id)
         _store.save(progress)
     return CanvasCheckResponse(passed=result.passed, message=result.message, done=done)
+
+
+def _page_step(step_id: str):
+    """A To-do step, or the reason there isn't one."""
+    from code_coach.canvas import step
+
+    found = step(step_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown step {step_id}")
+    if found.kind != "dom":
+        raise HTTPException(status_code=400, detail=f"{step_id} is drawn on a canvas, not a page")
+    return found
+
+
+@app.post("/api/canvas/page")
+def canvas_page(body: CanvasPageRequest) -> dict:
+    """The page a To-do step runs on, built around the code sent.
+
+    'play' is the preview, starting from the localStorage it had; 'check'
+    is the hidden page that plays the step's check and posts the verdict.
+    A page step is checked in the browser rather than here - a check needs
+    a real DOM (canvas/dom.py says why) - so building its page is all the
+    server does for it.
+    """
+    from code_coach.canvas.dom import page
+
+    found = _page_step(body.step_id)
+    return {"page": page(found, body.code, mode=body.mode, storage=body.storage)}
+
+
+@app.post("/api/canvas/passed", response_model=CanvasCheckResponse)
+def canvas_passed(body: CanvasPassedRequest) -> CanvasCheckResponse:
+    """Count a pass the browser saw, for a step checked in the browser."""
+    found = _page_step(body.step_id)
+    if not found.check:
+        raise HTTPException(status_code=400, detail=f"{body.step_id} has no check to pass")
+    progress = _store.load()
+    done = progress.record_canvas(body.step_id)
+    _store.save(progress)
+    return CanvasCheckResponse(passed=True, message="", done=done)
 
 
 @app.get("/api/flutter")

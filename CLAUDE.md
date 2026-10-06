@@ -141,11 +141,11 @@ code_coach/farm/
 
 ## Canvas and Brain Drills
 
-- **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Farm.
-  `canvas/harness.js` runs in the browser preview and in node
+- **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Farm,
+  To-do. `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's
-  solution.
+  solution. To-do is different - see below.
 - **Brain Drills** (`code_coach/brain/`): seven timed JavaScript reflex
   activities and a "code age" from 20 to 80. Every item is modelled in
   Python and held to node in `tests/test_brain.py`. (Not called "Brain
@@ -157,44 +157,66 @@ Use the in-app browser at a desktop size (1400x900), and measure the DOM
 with JavaScript rather than trusting screenshots: screenshots of the pane
 time out or catch a canvas before it paints. Reset the viewport when done.
 
-## Next: the DOM track in Canvas (planned 2026-10-04, not started)
+## Canvas's To-do track: a web page, checked in a browser
 
-A fourth Canvas track where the learner's JavaScript works on a web page
-rather than a canvas, building a to-do app a step at a time:
+Built 2026-10-05. Twelve steps build a to-do list on a real page:
+querySelector and textContent, classList, a click listener, an input's
+value, createElement and append, trim, a form's submit with
+preventDefault, remove(), event delegation, a counter, localStorage, and
+an open step. The page grows as the steps do (a box at 4, a form at 7, ×
+buttons at 8, a counter at 10), and each starter is still the step before.
 
-1. querySelector + textContent
-2. classList
-3. a click listener
-4. reading an input's value
-5. createElement / append
-6. trim and ignore empty input
-7. a form's submit with preventDefault (Enter adds)
-8. deleting with remove()
-9. toggling done with event delegation
-10. a "left to do" counter
-11. saving to localStorage and loading it back (JSON)
-12. an open step: filters, editing, and so on
+```text
+code_coach/canvas/
+  content_dom.py   the steps: html (the page's <body>), css, starter, solution, check
+  dom.py           builds the page (preview or check); headless Chrome for the tests
+  dom_harness.js   loaded in the page's <head>: storage, cc.click/type/enter/reload
+```
 
-How each step works:
-- Each step carries its page's HTML as well as starter, solution and check.
-- **The check runs in a real browser, never a homemade DOM** (see
-  tools/verify_css.py for why). In the app, the preview iframe runs the
-  learner's code and then the check, through a small harness: `cc.click`,
-  `cc.type`, `cc.submit`, `$` and `expect`. The iframe posts the result
-  back, and the server records the pass.
-- The sandboxed iframe has no localStorage, so the harness supplies an
-  in-memory one.
-
-How the tests check it:
-- They use headless Chrome as the oracle. Write one page with the HTML,
-  harness, code and check, then run
-  `chrome --headless=new --dump-dom file:///page.html`; the check writes
-  its verdict into `document.title`.
-- This was proven on 2026-10-04, with Chrome at
-  `C:/Program Files/Google/Chrome/Application/chrome.exe` (Edge printed
-  nothing). Skip the tests when no Chrome is found.
-- For each step: the solution passes, the starter fails, and the common
-  mistakes fail.
+- **The check runs in a real browser, never a homemade DOM.** In the app,
+  Check loads the page `POST /api/canvas/page` builds (mode `check`) in a
+  hidden sandboxed frame. It posts `{type: "result"}` back, and a pass is
+  counted with `POST /api/canvas/passed`. The server builds the preview's
+  page too, so the preview and the check load the same document. Node
+  never checks a page step (`/api/canvas/check` answers 400).
+- A check's API is `cc.click(el, label)`, `cc.type`, `cc.enter` (Enter in a
+  box, with the browser's implicit submission: it clicks the default
+  button, else submits a one-field form), `cc.reload()`, `cc.logs()`,
+  `cc.text`, plus `expect`, `$` and `$$`. Checks read the page, never the
+  learner's variables.
+- **Forms.** A sandbox without `allow-forms` never fires `submit` at all;
+  the spec blocks it before the event. So:
+  - the check frame has no `allow-forms`, and the harness fires `submit`
+    itself, failing the check when nothing calls `preventDefault`;
+  - the preview has `allow-forms`, and the harness's last-in-line window
+    listener catches an unstopped submit; Code Coach reloads the preview
+    and explains why.
+- **localStorage.** The sandbox has none, so the harness puts an in-memory
+  one on `window` (with property access, as the real one allows). The
+  preview posts its contents up, and Run passes them back in, so Run is a
+  reload. A check starts with it empty.
+- **`cc.reload()`** fires `beforeunload`, `pagehide` and `unload`, then:
+  - removes the window/document listeners and timers the code added;
+  - puts the HTML back and runs the code again inside `{ }`, so its
+    `const` and `let` don't clash with the first run's;
+  - fires `DOMContentLoaded` and `load`.
+- **Line numbers.** The code goes in as an injected script, so a stack
+  reads `<anonymous>:line:col`. Take the line from the stack:
+  `JSON.parse`'s error event reports the line of the JSON, not the caller.
+- **Tests** (`tests/test_canvas_dom.py`) load every case in one headless
+  Chrome (`dom.run_pages`, about 5 seconds), each in a frame sandboxed like
+  the app's, and skip when there's no Chrome. The traps:
+  - `--dump-dom` doesn't wait for out-of-process frames. Hence
+    `--disable-features=IsolateSandboxedIframes`,
+    `--disable-site-isolation-trials` and `--virtual-time-budget`, which
+    make Chrome finish every frame's tasks first.
+  - The host page must listen for messages from its `<head>`, or the
+    first frames report before anyone hears.
+- **Checking it by hand** in the in-app browser: its clicks and keys don't
+  reach into a sandboxed frame. Drive the page from its own code instead,
+  for example a draft that calls `requestSubmit()` once, guarded by a
+  localStorage flag. When the pane isn't drawing, neither
+  `requestAnimationFrame` nor ResizeObserver runs, so measure the DOM.
 
 ## Ideas not built yet
 

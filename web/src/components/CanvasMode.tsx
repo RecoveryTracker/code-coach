@@ -12,11 +12,20 @@
  * console.log). Check does not use it. The server plays the same program in
  * node against the same harness, holding keys and stepping frames, so a
  * check cannot freeze this tab and passes the same way every time.
+ *
+ * The To-do track works a web page instead of a canvas: index.html and
+ * style.css sit beside app.js, to read. A page's check needs a real DOM, so
+ * it runs here in the browser, in a second sandboxed frame, hidden, which
+ * loads the page the server builds with the check inside and posts back the
+ * verdict; the server then counts the pass. The sandbox has no localStorage
+ * of its own, so the preview's is kept here between Runs - Run is a reload.
  */
 
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { checkCanvas, fetchCanvas, fetchCanvasAnswer } from "../api";
+import { checkCanvas, fetchCanvas, fetchCanvasAnswer, fetchCanvasPage, recordCanvasPass } from "../api";
+import { defineEditorThemes, editorThemeFor, useSkin } from "../skins";
 import type { CanvasCheck, CanvasList, CanvasStep } from "../types";
 import { EditorPane } from "./EditorPane";
 import "../styles/canvas.css";
@@ -25,8 +34,34 @@ const LAST_KEY = "code-coach:canvas-last";
 const DRAFT_KEY = (id: string) => `code-coach:canvas-draft:${id}`;
 /** More than a game prints in a minute of play, fewer than slow the page. */
 const MAX_LINES = 200;
+/** Far longer than any page check takes; short enough to call a loop endless. */
+const CHECK_TIMEOUT_MS = 10000;
 
 type Line = { tone: "log" | "warn" | "error"; text: string };
+type Verdict = { passed: boolean; message: string };
+type PageFile = "app.js" | "index.html" | "style.css";
+
+const PAGE_FILES: PageFile[] = ["app.js", "index.html", "style.css"];
+
+const RELOAD_NOTE =
+  "The form was submitted and nothing called event.preventDefault(), so the page "
+  + "reloaded - and everything added since it loaded is gone.";
+const TIMEOUT_NOTE =
+  "The check ran out of time. Is there a loop that never ends - a while whose "
+  + "condition never turns false?";
+
+const VIEW_OPTIONS = {
+  readOnly: true,
+  domReadOnly: true,
+  fontSize: 14,
+  fontFamily: '"SF Mono", Menlo, Monaco, Consolas, ui-monospace, monospace',
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  wordWrap: "on" as const,
+  automaticLayout: true,
+  padding: { top: 12, bottom: 12 },
+  renderLineHighlight: "none" as const,
+};
 
 function readStore(key: string): string | null {
   try {
@@ -70,6 +105,26 @@ function previewPage(harness: string, code: string, world = ""): string {
   return before(start) + safe(code) + "\n</script></body></html>";
 }
 
+/** index.html or style.css, to read beside app.js - highlighted, not editable. */
+function FileView({ text, language }: { text: string; language: string }) {
+  const skin = useSkin();
+  const beforeMount: BeforeMount = (monaco) => defineEditorThemes(monaco);
+  // Sized at once: automaticLayout waits for the next frame to measure, and
+  // a tab opened in a window that isn't drawing would stay a 5px square.
+  const onMount: OnMount = (editor) => editor.layout();
+  return (
+    <Editor
+      height="100%"
+      language={language}
+      theme={editorThemeFor(skin)}
+      value={text}
+      beforeMount={beforeMount}
+      onMount={onMount}
+      options={VIEW_OPTIONS}
+    />
+  );
+}
+
 export default function CanvasMode() {
   const [list, setList] = useState<CanvasList | null>(null);
   const [chosen, setChosen] = useState("");
@@ -83,13 +138,26 @@ export default function CanvasMode() {
   const [showHint, setShowHint] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Page steps only: the file on show, the preview's localStorage, and the
+  // hidden page a check is playing.
+  const [file, setFile] = useState<PageFile>("app.js");
+  const [stored, setStored] = useState<Record<string, string>>({});
+  const [checkPage, setCheckPage] = useState("");
+  const [checkRuns, setCheckRuns] = useState(0);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const checkFrameRef = useRef<HTMLIFrameElement | null>(null);
   const codeRef = useRef("");
   codeRef.current = code;
   // Read by run(), which the step-change effect calls in the same pass as
   // the step changes - before a re-render could hand it the new step.
   const chosenRef = useRef("");
   chosenRef.current = chosen;
+  /** Each page step's localStorage, as the preview last left it. */
+  const storageRef = useRef<Record<string, Record<string, string>>>({});
+  /** Hands the hidden check page's verdict to the check waiting for it. */
+  const verdictRef = useRef<((v: Verdict) => void) | null>(null);
+  /** Only the newest Run's page is shown, if two are fetched at once. */
+  const runTicket = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -120,17 +188,34 @@ export default function CanvasMode() {
   const trackSteps = list && item ? list.steps.filter((s) => s.track === item.track) : [];
   const number = item ? trackSteps.indexOf(item) + 1 : 0;
   const tracks = list ? [...new Set(list.steps.map((s) => s.track))] : [];
+  const onPage = item?.kind === "dom";
 
   const run = useCallback(
-    (source?: string) => {
+    (source?: string, keepLines = false) => {
       if (!list) return;
-      setLines([]);
+      if (!keepLines) setLines([]);
       const step = list.steps.find((s) => s.id === chosenRef.current);
-      setPage(previewPage(list.harness, source ?? codeRef.current, step?.world ?? ""));
+      const program = source ?? codeRef.current;
+      const ticket = ++runTicket.current;
+      if (step?.kind === "dom") {
+        // The server builds a page step's page, so the preview loads the
+        // same page a check does.
+        fetchCanvasPage(step.id, program, "play", storageRef.current[step.id] ?? {})
+          .then((got) => {
+            if (ticket !== runTicket.current) return;
+            setPage(got.page);
+            setRuns((n) => n + 1);
+          })
+          .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+        return;
+      }
+      setPage(previewPage(list.harness, program, step?.world ?? ""));
       setRuns((n) => n + 1);
     },
     [list],
   );
+  const runRef = useRef(run);
+  runRef.current = run;
 
   // A new step: its draft if there is one, else its starter, and run it.
   // Keyed on the id so a pass (which rebuilds the list) does not reload it.
@@ -145,17 +230,46 @@ export default function CanvasMode() {
     setShowHint(false);
     setAnswer(null);
     setError("");
+    setFile("app.js");
+    setStored(storageRef.current[step.id] ?? {});
     writeStore(LAST_KEY, step.id);
     run(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chosen, list === null]);
 
-  // What the preview says: console lines and errors, from our frame only.
+  // What the preview says - console lines, errors, its localStorage, a
+  // form that would have reloaded it - and the hidden check page's verdict.
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== frameRef.current?.contentWindow) return;
-      const data = event.data as { cc?: boolean; type?: string; level?: string; text?: string; message?: string; line?: number };
+      const data = event.data as {
+        cc?: boolean;
+        type?: string;
+        level?: string;
+        text?: string;
+        message?: string;
+        line?: number;
+        passed?: boolean;
+        items?: Record<string, string>;
+      };
       if (!data || !data.cc) return;
+      if (checkFrameRef.current && event.source === checkFrameRef.current.contentWindow) {
+        if (data.type === "result") {
+          verdictRef.current?.({ passed: Boolean(data.passed), message: String(data.message ?? "") });
+        }
+        return;
+      }
+      if (event.source !== frameRef.current?.contentWindow) return;
+      if (data.type === "storage") {
+        const items = data.items ?? {};
+        storageRef.current[chosenRef.current] = items;
+        setStored(items);
+        return;
+      }
+      if (data.type === "reload") {
+        setLines((was) => [...was, { tone: "warn", text: RELOAD_NOTE }]);
+        runRef.current(undefined, true);
+        return;
+      }
       let line: Line | null = null;
       if (data.type === "log") {
         const tone = data.level === "warn" || data.level === "error" ? data.level : "log";
@@ -183,26 +297,51 @@ export default function CanvasMode() {
     [item],
   );
 
+  /** Load a page step's check page in the hidden frame and wait for its verdict. */
+  const checkInBrowser = useCallback(async (stepId: string, program: string): Promise<Verdict> => {
+    const built = await fetchCanvasPage(stepId, program, "check");
+    try {
+      return await new Promise<Verdict>((resolve) => {
+        const timer = window.setTimeout(() => resolve({ passed: false, message: TIMEOUT_NOTE }), CHECK_TIMEOUT_MS);
+        verdictRef.current = (v) => {
+          window.clearTimeout(timer);
+          resolve(v);
+        };
+        setCheckPage(built.page);
+        setCheckRuns((n) => n + 1);
+      });
+    } finally {
+      verdictRef.current = null;
+      setCheckPage("");
+    }
+  }, []);
+
   const check = useCallback(async () => {
     if (!item || checking) return;
+    const id = item.id;
     setChecking(true);
     setError("");
     try {
-      const got = await checkCanvas(item.id, codeRef.current);
-      setResult(got);
+      let got: CanvasCheck;
+      if (item.kind === "dom") {
+        const verdict = await checkInBrowser(id, codeRef.current);
+        got = verdict.passed ? await recordCanvasPass(id) : { ...verdict, done: 0 };
+      } else {
+        got = await checkCanvas(id, codeRef.current);
+      }
       if (got.passed) {
         setList((was) =>
-          was
-            ? { ...was, steps: was.steps.map((s) => (s.id === item.id ? { ...s, done: got.done } : s)) }
-            : was,
+          was ? { ...was, steps: was.steps.map((s) => (s.id === id ? { ...s, done: got.done } : s)) } : was,
         );
       }
+      // Moved on while it ran: the count is kept, the verdict isn't shown.
+      if (chosenRef.current === id) setResult(got);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setChecking(false);
     }
-  }, [item, checking]);
+  }, [item, checking, checkInBrowser]);
 
   const reset = useCallback(() => {
     if (!item) return;
@@ -211,6 +350,14 @@ export default function CanvasMode() {
     setRevision((r) => r + 1);
     setResult(null);
     run(item.starter);
+  }, [item, run]);
+
+  /** Empty the preview's localStorage - a first visit, as far as the page knows. */
+  const clearStorage = useCallback(() => {
+    if (!item) return;
+    delete storageRef.current[item.id];
+    setStored({});
+    run();
   }, [item, run]);
 
   const toggleAnswer = useCallback(async () => {
@@ -232,14 +379,17 @@ export default function CanvasMode() {
   }
   if (!list || !item) return <div className="lessons-empty">Loading…</div>;
 
+  const storedKeys = Object.keys(stored).length;
+
   return (
     <div className="lessons-wrap">
       <nav className="lessons-list">
         <h2>Canvas</h2>
         <p className="lessons-intro">
-          JavaScript you can watch. Each step is one change to the same game,
-          and Check plays it - holding keys, counting frames - to see that it
-          does what the step asks.
+          JavaScript you can watch. Each step is one change to the same
+          program, and Check runs it - holding keys and counting frames, or
+          clicking and typing on the page - to see that it does what the
+          step asks.
         </p>
         {tracks.map((track) => {
           const steps = list.steps.filter((s) => s.track === track);
@@ -284,27 +434,74 @@ export default function CanvasMode() {
         </p>
 
         <div className="canvas-split">
-          <div className="canvas-editor">
-            <EditorPane
-              code={code}
-              revision={revision}
-              onChange={onChange}
-              onRun={() => run()}
-              language="javascript"
-              fileName="game.js"
-            />
+          <div className={`canvas-editor${onPage ? " has-files" : ""}`}>
+            {onPage ? (
+              <div className="canvas-files" role="tablist" aria-label="Files">
+                {PAGE_FILES.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    role="tab"
+                    aria-selected={file === f}
+                    className={`canvas-file${file === f ? " on" : ""}`}
+                    onClick={() => setFile(f)}
+                  >
+                    {f}
+                  </button>
+                ))}
+                <span className="canvas-file-note">
+                  {file === "app.js" ? "your code" : "to read - your code goes in app.js"}
+                </span>
+              </div>
+            ) : null}
+            <div className="canvas-editor-body" hidden={onPage && file !== "app.js"}>
+              <EditorPane
+                code={code}
+                revision={revision}
+                onChange={onChange}
+                onRun={() => run()}
+                language="javascript"
+                fileName={onPage ? "app.js" : "game.js"}
+              />
+            </div>
+            {onPage && file !== "app.js" ? (
+              <div className="canvas-editor-body">
+                <FileView
+                  key={file}
+                  text={file === "index.html" ? item.page : item.css}
+                  language={file === "index.html" ? "html" : "css"}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="canvas-side">
             <iframe
               key={runs}
               ref={frameRef}
-              className="canvas-frame"
-              title="Your game"
-              sandbox="allow-scripts"
+              className={`canvas-frame${onPage ? " page" : ""}`}
+              title={onPage ? "Your page" : "Your game"}
+              sandbox={onPage ? "allow-scripts allow-forms" : "allow-scripts"}
               srcDoc={page}
-              onLoad={() => frameRef.current?.focus()}
+              onLoad={() => {
+                if (!onPage) frameRef.current?.focus();
+              }}
             />
-            <p className="canvas-tip">Click the game to give it the keyboard.</p>
+            {onPage ? (
+              <p className="canvas-tip">
+                The page is live: click and type in it. Run reloads it.
+                {storedKeys ? (
+                  <>
+                    {" "}
+                    localStorage holds {storedKeys} {storedKeys === 1 ? "key" : "keys"}.{" "}
+                    <button type="button" className="canvas-link" onClick={clearStorage}>
+                      Clear it
+                    </button>
+                  </>
+                ) : null}
+              </p>
+            ) : (
+              <p className="canvas-tip">Click the game to give it the keyboard.</p>
+            )}
             <div className="canvas-console" aria-live="polite">
               {lines.length === 0 ? (
                 <span className="canvas-console-empty">console.log output and errors show here</span>
@@ -319,6 +516,19 @@ export default function CanvasMode() {
           </div>
         </div>
 
+        {checkPage ? (
+          <iframe
+            key={`check-${checkRuns}`}
+            ref={checkFrameRef}
+            className="canvas-check-frame"
+            title="Check"
+            aria-hidden="true"
+            tabIndex={-1}
+            sandbox="allow-scripts"
+            srcDoc={checkPage}
+          />
+        ) : null}
+
         <div className="wb-actions">
           <button type="button" className="ws-btn" onClick={() => run()} title="Run it again from the start (Ctrl+Enter)">
             Run
@@ -330,7 +540,13 @@ export default function CanvasMode() {
               onClick={() => (result ? setResult(null) : void check())}
               disabled={checking}
               aria-pressed={result !== null}
-              title={result ? "Click again to hide the result" : "Play it and see if it does what the step asks"}
+              title={
+                result
+                  ? "Click again to hide the result"
+                  : onPage
+                    ? "Use the page and see if it does what the step asks"
+                    : "Play it and see if it does what the step asks"
+              }
             >
               {checking ? "Checking…" : "Check"}
             </button>

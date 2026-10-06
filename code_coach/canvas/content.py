@@ -39,6 +39,15 @@ class Step:
     #: A game already written, loaded before your code - for tracks where
     #: you program a world rather than build one (Farm). Empty for the rest.
     world: str = ""
+    #: For a step on a web page instead of a canvas (the To-do track): the
+    #: page's <body>, and the stylesheet it is drawn with. Empty for the rest.
+    html: str = ""
+    css: str = ""
+
+    @property
+    def kind(self) -> str:
+        """'dom' for a step on a web page, checked in the browser; else 'canvas'."""
+        return "dom" if self.html else "canvas"
 
 
 _SETUP = """const canvas = document.querySelector('canvas');

@@ -1017,6 +1017,8 @@ export type FarmStart = { ok: boolean; run?: number; error?: string; violations?
 export type CanvasStep = {
   id: string;
   track: string;
+  /** "dom" for a step on a web page (To-do), checked in the browser; "canvas" for the rest. */
+  kind: "canvas" | "dom";
   title: string;
   teaches: string;
   goal: string;
@@ -1025,6 +1027,9 @@ export type CanvasStep = {
   hint: string;
   /** A game loaded before your code, for tracks where you program a world (Farm). */
   world: string;
+  /** A page step's index.html and style.css, as you read them; empty for the rest. */
+  page: string;
+  css: string;
   /** False for the open-ended last step. */
   checked: boolean;
   done: number;

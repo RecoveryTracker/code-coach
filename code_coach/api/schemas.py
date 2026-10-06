@@ -821,6 +821,23 @@ class CanvasCheckResponse(BaseModel):
     done: int = 0
 
 
+class CanvasPageRequest(BaseModel):
+    """A To-do step's page: the preview's, or the hidden one a check plays."""
+
+    step_id: str = ""
+    code: str = ""
+    #: 'play' for the preview, 'check' for the page a check runs in.
+    mode: Literal["play", "check"] = "play"
+    #: What the preview's localStorage held when it was last loaded.
+    storage: dict[str, str] = Field(default_factory=dict)
+
+
+class CanvasPassedRequest(BaseModel):
+    """A pass the browser saw, for a step checked in the browser."""
+
+    step_id: str = ""
+
+
 class FlutterCheckRequest(BaseModel):
     """One Flutter question, and the choice picked for it."""
 
