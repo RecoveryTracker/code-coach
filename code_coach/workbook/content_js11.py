@@ -510,7 +510,7 @@ def _entries_prompt(want, v, f, vals) -> str:
             f"'{f}: count', one per line, ")
     if want == "keys":
         return base + f"in alphabetical order of {f}."
-    return base + f"most common first, alphabetically where counts tie."
+    return base + "most common first, alphabetically where counts tie."
 
 
 ENTRIES_PAGE = _page(

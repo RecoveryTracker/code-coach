@@ -283,8 +283,6 @@ class ShapeIdTests(unittest.TestCase):
                 self.assertEqual(len(ids), len(set(ids)), ids)
 
     def test_ids_are_url_safe(self) -> None:
-        import re
-
         for theme_id in DRILLABLE:
             for entry in shape_catalog(theme_id):
                 with self.subTest(id=entry["id"]):

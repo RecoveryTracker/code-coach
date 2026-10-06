@@ -137,8 +137,8 @@ def _print_result(kind: str) -> list[str]:
     if kind == "int[]":
         return [
             f"if (count < 0 || count > {OUT_MAX}) {{",
-            f'  printf("{{\\"error\\": \\"returned a count of %d, which is not how '
-            f'many it wrote\\"}}\\n", count);',
+            '  printf("{\\"error\\": \\"returned a count of %d, which is not how '
+            'many it wrote\\"}\\n", count);',
             "} else {",
             '  printf("{\\"got\\": [");',
             '  for (int i = 0; i < count; i++) printf(i ? ", %d" : "%d", out[i]);',

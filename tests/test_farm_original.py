@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 
 from code_coach.farm import data
-from code_coach.farm.protocol import FUNCTIONS, MARK
+from code_coach.farm.protocol import MARK
 
 LANG = Path(__file__).resolve().parent.parent / "code_coach" / "farm" / "stubs" / "farm_lang.py"
 

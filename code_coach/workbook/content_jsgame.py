@@ -444,8 +444,8 @@ _WRAPS = (
 
 def _wrap_row(row):
     want, size = row[0], row[1]
-    base = (f"Write wrap(value, size) that brings any whole number back into "
-            f"0 up to but not including size, even a negative one. ")
+    base = ("Write wrap(value, size) that brings any whole number back into "
+            "0 up to but not including size, even a negative one. ")
     if want == "values":
         values = row[2]
         listed = ", ".join(str(v) for v in values)

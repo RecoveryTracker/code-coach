@@ -523,7 +523,6 @@ def summary(today: date | None = None) -> dict[str, Any]:
 
 
 def round_payload(activity_id: str, seed: int | None = None) -> dict[str, Any]:
-    activity = ACTIVITIES_BY_ID[activity_id]
     items = make_round(activity_id, seed)
     return {
         "activity": activity_id,

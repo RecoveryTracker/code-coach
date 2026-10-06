@@ -98,10 +98,10 @@ LATER_PAGE = _page(
     "the program, however short its delay",
     "jsa_later",
     tuple(
-        (f"Write these in this order: "
+        ("Write these in this order: "
          + _and(_later_step(w, ms) for w, ms in steps)
          + ". Each word goes on its own line, and every timer uses "
-         f"setTimeout.",
+         "setTimeout.",
          {"steps": steps})
         for steps in _LATERS
     ),
@@ -503,8 +503,8 @@ SLEEP_PAGE = _page(
     "waits 30 ms in all, one wait after the other",
     "jsa_sleep",
     tuple(
-        (f"Write a sleep(ms) helper that returns a promise resolved by "
-         f"setTimeout. In an async function main, go through the steps "
+        ("Write a sleep(ms) helper that returns a promise resolved by "
+         "setTimeout. In an async function main, go through the steps "
          + _and(f"{n} for {ms} ms" for n, ms in steps)
          + f" in turn, awaiting sleep for each and adding up the time "
          f"waited, and print each as "

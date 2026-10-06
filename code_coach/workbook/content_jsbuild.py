@@ -397,7 +397,7 @@ TILES_PAGE = _page(
     "and map[1][1] !== \"#\" is true",
     "jsb_tiles",
     tuple(
-        (f"The map rows are "
+        ("The map rows are "
          + ", ".join(f"'{r}'" for r in rows)
          + f", where # is a wall. Print the player's position as player at "
          f"column 1, row 2, then how many walls there are, then true or "

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import unittest
 
+from code_coach.engine import dart_available
 from code_coach.trace import (
     _nth,
     one_trace,
@@ -61,9 +62,6 @@ class ShapeTests(unittest.TestCase):
                 levels = [t.level for t in traces(family)]
                 self.assertEqual(levels, sorted(levels))
                 self.assertGreater(len(set(levels)), 1)
-
-
-from code_coach.engine import dart_available
 
 
 class TracerTests(unittest.TestCase):

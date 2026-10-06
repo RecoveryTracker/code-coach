@@ -41,7 +41,7 @@ from pathlib import Path
 
 from code_coach.farm.stubs.render import dart_runner, js_lead, prepare
 from tests.test_farm_drones_stubs import TYPESCRIPT, farm, farm_all, job, names, returned
-from tests.test_farm_stubs import HAS_DART, HAS_NODE, drive, drive_all
+from tests.test_farm_stubs import HAS_DART, HAS_NODE, drive_all
 
 #: Every command a program of three files sends on its way to its output:
 #: two harvests and moves in another file's function, which asks a third
