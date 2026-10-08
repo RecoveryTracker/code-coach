@@ -20,12 +20,18 @@ from pathlib import Path
 
 from code_coach.canvas.content import STEPS as DODGE_STEPS, Step
 from code_coach.canvas.content_breakout import BREAKOUT_STEPS
+from code_coach.canvas.content_blank import BLANK_STEPS
 from code_coach.canvas.content_dom import TODO_STEPS
+from code_coach.canvas.content_platformer import PLATFORMER_STEPS
+from code_coach.canvas.content_snake import SNAKE_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
 
 #: Every track, in the order they are taught. Within a track, each step
 #: starts from the last one finished.
-STEPS: tuple[Step, ...] = DODGE_STEPS + BREAKOUT_STEPS + FARM_STEPS + TODO_STEPS
+STEPS: tuple[Step, ...] = (
+    DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + FARM_STEPS
+    + TODO_STEPS + BLANK_STEPS
+)
 
 HERE = Path(__file__).resolve().parent
 HARNESS = HERE / "harness.js"

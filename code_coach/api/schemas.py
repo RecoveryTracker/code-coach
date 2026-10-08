@@ -780,6 +780,8 @@ class BrainResultRequest(BaseModel):
     total: int = 1
     #: Set when the round is part of a Code age check: the three share it.
     checkId: str = ""
+    #: "javascript" or "python": code age is kept per language.
+    language: str = "javascript"
 
 
 class FarmCodeRequest(BaseModel):

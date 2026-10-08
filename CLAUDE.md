@@ -91,7 +91,7 @@ Most modes take content as a new module plus a one-line registration:
   `all_shape_ids`), `complexity.py`, and `tests/test_workbook.py`
   (`python_only` for JS-only shapes). The JavaScript book is numbered in
   order: 168-177 regex, 178-187 data, 188-197 game math, 198-207 building a
-  game, 208-217 async, 218-227 planets, 228-237 bodybuilding.
+  game, 208-217 async, 218-227 planets, 228-237 bodybuilding, 238-247 Node, 248-257 music, 258-267 cooking.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's
@@ -141,13 +141,15 @@ code_coach/farm/
 
 ## Canvas and Brain Drills
 
-- **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Farm,
-  To-do. `canvas/harness.js` runs in the browser preview and in node
+- **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Snake,
+  Platformer, Farm, To-do, and From blank (five independent projects: a spec
+  and a check, no starter code). `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's
   solution. To-do is different - see below.
-- **Brain Drills** (`code_coach/brain/`): seven timed JavaScript reflex
-  activities and a "code age" from 20 to 80. Every item is modelled in
+- **Brain Drills** (`code_coach/brain/`): seven timed reflex activities, in
+  JavaScript or Python (`pythonic.py`; scores kept per language), and a
+  "code age" from 20 to 80. Every item is modelled in
   Python and held to node in `tests/test_brain.py`. (Not called "Brain
   Age", which is Nintendo's trademark.)
 
@@ -222,4 +224,3 @@ code_coach/canvas/
 
 - Node practice (files, arguments, a small server).
 - A build-from-blank project: spec and tests, no starter.
-- Brain Drills in Python as well.

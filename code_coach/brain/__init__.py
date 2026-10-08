@@ -6,12 +6,14 @@ your coding reflexes act - 20 at their sharpest, 80 at their slowest -
 which you try to bring down day by day. A daily stamp for training at all,
 and a Code age check (three activities in a row) whose result is charted.
 
-Every activity is JavaScript, generated fresh each time from templates, so
-there is nothing to memorise but the language. Each answer is worked out
-here, in Python, by modelling what JavaScript does; tests/test_brain.py
-then runs every template through node to hold the model to the real thing
-(the oracle rule: the expected answer comes from somewhere other than the
-code under test).
+Every activity is generated fresh each time from templates, so there is
+nothing to memorise but the language - JavaScript or Python, switched on
+the screen (the Python templates are in pythonic.py). Each answer is worked
+out here, in Python, by modelling what the language does; tests/test_brain.py
+(JavaScript, through node) and tests/test_brain_python.py (Python, through
+the real interpreter) then run every template to hold the model to the real
+thing (the oracle rule: the expected answer comes from somewhere other than
+the code under test). Code age is kept per language.
 """
 
 from __future__ import annotations
@@ -19,26 +21,15 @@ from __future__ import annotations
 import json
 import math
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
+from . import pythonic
+from .items import Item
+
 # ── Items and activities ────────────────────────────────────────────────
-
-
-@dataclass(frozen=True)
-class Item:
-    #: The code shown (for Variable Recall, the question).
-    prompt: str
-    #: The right answer, as typed - or one of the activity's two choices.
-    answer: str
-    #: Why, for the review after the round.
-    explain: str = ""
-    #: Variable Recall: what to remember, shown first and then hidden.
-    show: str = ""
-    #: The JavaScript an oracle test runs to check `answer` (empty: no check needed).
-    check: str = ""
 
 
 @dataclass(frozen=True)
@@ -59,6 +50,13 @@ class Activity:
     choices: tuple[str, str] = ("", "")
     #: Variable Recall shows something first, for this many seconds.
     show_seconds: float = 0.0
+    #: The Python version: its generator, and its wording where it differs.
+    make_py: Callable[[random.Random], Item] | None = None
+    question_py: str = ""
+    blurb_py: str = ""
+
+
+LANGUAGES = ("javascript", "python")
 
 
 def _num(x: float) -> str:
@@ -363,19 +361,27 @@ def _syntax_snap(rng: random.Random) -> Item:
 
 ACTIVITIES: tuple[Activity, ...] = (
     Activity("eval", "Quick Eval", "What does it print? Twenty quick ones.",
-             "What does console.log print?", 20, "type", 2.0, 9.0, _quick_eval),
+             "What does console.log print?", 20, "type", 2.0, 9.0, _quick_eval,
+             make_py=pythonic.quick_eval, question_py="What does print() show?"),
     Activity("truthy", "Truthy or Falsy", "In an if, is it true or false? Left for falsy, right for truthy.",
-             "Truthy or falsy?", 20, "pick", 0.9, 3.5, _truthy, ("falsy", "truthy")),
+             "Truthy or falsy?", 20, "pick", 0.9, 3.5, _truthy, ("falsy", "truthy"),
+             make_py=pythonic.truthy),
     Activity("loops", "Loop Count", "How many times does the loop run?",
-             "How many times does the body run?", 10, "type", 3.0, 13.0, _loop_count),
+             "How many times does the body run?", 10, "type", 3.0, 13.0, _loop_count,
+             make_py=pythonic.loop_count),
     Activity("trace", "Final Value", "Follow a few lines in your head.",
-             "What is x at the end?", 8, "type", 4.0, 16.0, _final_value),
+             "What is x at the end?", 8, "type", 4.0, 16.0, _final_value,
+             make_py=pythonic.final_value),
     Activity("brackets", "Bracket Check", "Balanced or not? Left for no, right for yes.",
-             "Balanced?", 16, "pick", 1.0, 4.5, _bracket_check, ("no", "yes")),
+             "Balanced?", 16, "pick", 1.0, 4.5, _bracket_check, ("no", "yes"),
+             make_py=pythonic.bracket_check),
     Activity("recall", "Variable Recall", "Remember the variables, then answer from memory.",
-             "What was it?", 6, "type", 2.5, 9.0, _recall, show_seconds=3.5),
+             "What was it?", 6, "type", 2.5, 9.0, _recall, show_seconds=3.5,
+             make_py=pythonic.recall),
     Activity("syntax", "Syntax Snap", "Would JavaScript accept this line? Left for no, right for yes.",
-             "Valid JavaScript?", 16, "pick", 1.4, 6.0, _syntax_snap, ("invalid", "valid")),
+             "Valid JavaScript?", 16, "pick", 1.4, 6.0, _syntax_snap, ("invalid", "valid"),
+             make_py=pythonic.syntax_snap, question_py="Valid Python?",
+             blurb_py="Would Python accept this line? Left for no, right for yes."),
 )
 
 ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
@@ -383,9 +389,21 @@ ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
 CHECK = ("eval", "truthy", "brackets")
 
 
-def make_round(activity_id: str, seed: int | None = None) -> list[Item]:
-    """A fresh round of an activity. The same seed gives the same round."""
+def activity_for(activity_id: str, language: str = "javascript") -> Activity:
+    """The activity as played in a language (KeyError for an unknown one)."""
     activity = ACTIVITIES_BY_ID[activity_id]
+    if language == "javascript":
+        return activity
+    if language == "python":
+        assert activity.make_py is not None
+        return replace(activity, make=activity.make_py, question=activity.question_py or activity.question,
+                       blurb=activity.blurb_py or activity.blurb)
+    raise KeyError(language)
+
+
+def make_round(activity_id: str, seed: int | None = None, language: str = "javascript") -> list[Item]:
+    """A fresh round of an activity. The same seed gives the same round."""
+    activity = activity_for(activity_id, language)
     rng = random.Random(seed)
     items: list[Item] = []
     seen: set[str] = set()
@@ -404,11 +422,12 @@ def make_round(activity_id: str, seed: int | None = None) -> list[Item]:
 
 # ── Scoring: the code age ───────────────────────────────────────────────
 
-def code_age(activity_id: str, seconds: float, errors: int, total: int) -> int:
+def code_age(activity_id: str, seconds: float, errors: int, total: int, language: str = "javascript") -> int:
     """How old your reflexes acted, 20 to 80. Speed per item between the
     activity's par (20) and slow (80) times, and five years for each mistake;
-    Variable Recall is about memory, so it is scored on mistakes alone."""
-    activity = ACTIVITIES_BY_ID[activity_id]
+    Variable Recall is about memory, so it is scored on mistakes alone.
+    Both languages are held to the same par and slow times."""
+    activity = activity_for(activity_id, language)
     total = max(1, total)
     if activity_id == "recall":
         age = 20 + 60 * (errors / total)
@@ -457,17 +476,22 @@ class Result:
     age: int
     #: Part of a Code age check (check_id groups the three).
     check_id: str = ""
+    #: Which language was played. Rounds saved before Python existed have no
+    #: such field in the file and count as JavaScript.
+    language: str = "javascript"
 
 
 def record(activity_id: str, seconds: float, errors: int, total: int, check_id: str = "",
-           today: date | None = None) -> Result:
+           today: date | None = None, language: str = "javascript") -> Result:
     if activity_id not in ACTIVITIES_BY_ID:
         raise KeyError(activity_id)
+    if language not in LANGUAGES:
+        raise KeyError(language)
     seconds = max(0.0, float(seconds))
     errors = max(0, int(errors))
     total = max(1, int(total))
     result = Result((today or date.today()).isoformat(), activity_id, round(seconds, 2), errors, total,
-                    code_age(activity_id, seconds, errors, total), check_id)
+                    code_age(activity_id, seconds, errors, total, language), check_id, language)
     state = _load()
     state["results"].append(asdict(result))
     state["results"] = state["results"][-2000:]
@@ -475,17 +499,20 @@ def record(activity_id: str, seconds: float, errors: int, total: int, check_id: 
     return result
 
 
-def summary(today: date | None = None) -> dict[str, Any]:
-    """Everything the home screen shows: each activity's best and last, the
-    days trained (for the stamps), the streak, and the check ages by day."""
+def summary(today: date | None = None, language: str = "javascript") -> dict[str, Any]:
+    """Everything the home screen shows: each activity's best and last and
+    the check ages by day (for one language), and the days trained (for the
+    stamps and the streak - training in either language counts)."""
+    if language not in LANGUAGES:
+        raise KeyError(language)
     today = today or date.today()
-    results = _load()["results"]
+    all_results = _load()["results"]
+    results = [r for r in all_results if r.get("language", "javascript") == language]
     best: dict[str, dict[str, Any]] = {}
     last: dict[str, dict[str, Any]] = {}
-    days: set[str] = set()
     checks: dict[str, list[int]] = {}
+    days = {r["day"] for r in all_results}
     for r in results:
-        days.add(r["day"])
         a = r["activity"]
         last[a] = r
         if a not in best or (r["age"], r["seconds"]) < (best[a]["age"], best[a]["seconds"]):
@@ -508,11 +535,13 @@ def summary(today: date | None = None) -> dict[str, Any]:
     recent = [(today - timedelta(days=k)).isoformat() for k in range(27, -1, -1)]
     return {
         "today": today.isoformat(),
+        "language": language,
+        "languages": list(LANGUAGES),
         "activities": [
             {"id": a.id, "title": a.title, "blurb": a.blurb, "question": a.question, "count": a.count,
              "kind": a.kind, "choices": list(a.choices), "showSeconds": a.show_seconds,
              "best": best.get(a.id), "last": last.get(a.id)}
-            for a in ACTIVITIES
+            for a in (activity_for(x.id, language) for x in ACTIVITIES)
         ],
         "check": list(CHECK),
         "stamps": [{"day": d, "trained": d in days} for d in recent],
@@ -522,19 +551,20 @@ def summary(today: date | None = None) -> dict[str, Any]:
     }
 
 
-def round_payload(activity_id: str, seed: int | None = None) -> dict[str, Any]:
-    items = make_round(activity_id, seed)
+def round_payload(activity_id: str, seed: int | None = None, language: str = "javascript") -> dict[str, Any]:
+    items = make_round(activity_id, seed, language)
     return {
         "activity": activity_id,
+        "language": language,
         "items": [{"prompt": i.prompt, "answer": i.answer, "explain": i.explain, "show": i.show}
                   for i in items],
     }
 
 
-def all_items_for_tests(seeds: range) -> list[tuple[str, Item]]:
+def all_items_for_tests(seeds: range, language: str = "javascript") -> list[tuple[str, Item]]:
     """Every activity's items over many seeds - what the oracle tests run."""
     out = []
     for activity in ACTIVITIES:
         for seed in seeds:
-            out.extend((activity.id, item) for item in make_round(activity.id, seed))
+            out.extend((activity.id, item) for item in make_round(activity.id, seed, language))
     return out

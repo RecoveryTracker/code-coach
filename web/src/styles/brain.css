@@ -293,3 +293,31 @@
     font-size: 20px;
   }
 }
+
+/* The JavaScript | Python switch on the home screen. */
+.brain-lang {
+  display: inline-flex;
+  margin-top: 10px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.brain-lang-btn {
+  padding: 6px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #8b98a8);
+  font: inherit;
+  cursor: pointer;
+}
+
+.brain-lang-btn + .brain-lang-btn {
+  border-left: 1px solid var(--border, #232c38);
+}
+
+.brain-lang-btn.on {
+  background: var(--accent, #6ea8fe);
+  color: #0b0f16;
+  font-weight: 600;
+}

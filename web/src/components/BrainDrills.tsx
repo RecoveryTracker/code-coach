@@ -16,6 +16,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
 import "../styles/brain.css";
 
+export type BrainLanguage = "javascript" | "python";
+const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python" };
+
+function savedLanguage(): BrainLanguage {
+  try {
+    return window.localStorage.getItem("brain-language") === "python" ? "python" : "javascript";
+  } catch {
+    return "javascript";
+  }
+}
+
 type Result = { day: string; activity: string; seconds: number; errors: number; total: number; age: number };
 type ActivityInfo = {
   id: string;
@@ -31,6 +42,8 @@ type ActivityInfo = {
 };
 export type BrainSummary = {
   today: string;
+  language: BrainLanguage;
+  languages: BrainLanguage[];
   activities: ActivityInfo[];
   check: string[];
   stamps: { day: string; trained: boolean }[];
@@ -59,8 +72,11 @@ type Screen =
 
 /** Forgive what a person types: spaces, case, and quotes round a string. */
 function same(given: string, answer: string): boolean {
-  const clean = (s: string) =>
-    s.trim().replace(/^(['"`])(.*)\1$/s, "$2").trim().toLowerCase();
+  // Python prints lists as "[1, 2]": spaces inside brackets don't matter.
+  const clean = (s: string) => {
+    const t = s.trim().replace(/^(['"`])(.*)\1$/s, "$2").trim().toLowerCase();
+    return /^[[({]/.test(t) ? t.replace(/\s+/g, "") : t;
+  };
   return clean(given) === clean(answer);
 }
 
@@ -68,13 +84,23 @@ export default function BrainDrills() {
   const [summary, setSummary] = useState<BrainSummary | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "home" });
   const [error, setError] = useState("");
+  const [language, setLanguage] = useState<BrainLanguage>(savedLanguage);
 
   const load = useCallback(() => {
-    fetchBrain()
+    fetchBrain(language)
       .then(setSummary)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, []);
+  }, [language]);
   useEffect(load, [load]);
+
+  const pickLanguage = useCallback((next: BrainLanguage) => {
+    setLanguage(next);
+    try {
+      window.localStorage.setItem("brain-language", next);
+    } catch {
+      /* a remembered choice is only a convenience */
+    }
+  }, []);
 
   const byId = useMemo(() => new Map((summary?.activities ?? []).map((a) => [a.id, a])), [summary]);
 
@@ -96,7 +122,7 @@ export default function BrainDrills() {
       if (s.name !== "play") return;
       try {
         const got = await postBrainResult({
-          activity: activity.id, seconds, errors: misses.length, total, checkId: s.checkId,
+          activity: activity.id, seconds, errors: misses.length, total, checkId: s.checkId, language,
         });
         setScreen({
           name: "done", activity, seconds, misses, total, age: got.age, best: got.best,
@@ -108,7 +134,7 @@ export default function BrainDrills() {
         setScreen({ name: "home" });
       }
     },
-    [load],
+    [load, language],
   );
 
   if (error && !summary) return <div className="lessons-empty">Could not load Brain Drills: {error}</div>;
@@ -119,6 +145,7 @@ export default function BrainDrills() {
       <Round
         key={`${screen.activity.id}-${screen.checkId}`}
         activity={screen.activity}
+        language={language}
         checkStep={screen.checkId ? summary.check.length - screen.checkLeft.length : 0}
         checkSize={summary.check.length}
         onQuit={() => setScreen({ name: "home" })}
@@ -158,8 +185,21 @@ export default function BrainDrills() {
         <div>
           <h2>Brain Drills</h2>
           <p className="brain-sub">
-            Quick JavaScript reflexes, timed. Your code age: 20 is as sharp as it gets.
+            Quick {LANGUAGE_NAMES[language]} reflexes, timed. Your code age: 20 is as sharp as it gets.
           </p>
+          <div className="brain-lang" role="group" aria-label="Language">
+            {(summary.languages ?? ["javascript", "python"]).map((l) => (
+              <button
+                key={l}
+                type="button"
+                className={`brain-lang-btn${l === language ? " on" : ""}`}
+                aria-pressed={l === language}
+                onClick={() => pickLanguage(l)}
+              >
+                {LANGUAGE_NAMES[l]}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="brain-age-box">
           <span className="brain-age-label">Code age</span>
@@ -206,12 +246,14 @@ export default function BrainDrills() {
 /** One activity, start to finish: countdown, items, then onDone. */
 function Round({
   activity,
+  language,
   checkStep,
   checkSize,
   onQuit,
   onDone,
 }: {
   activity: ActivityInfo;
+  language: BrainLanguage;
   checkStep: number;
   checkSize: number;
   onQuit: () => void;
@@ -231,11 +273,11 @@ function Round({
 
   useEffect(() => {
     let alive = true;
-    fetchBrainRound(activity.id).then((r) => alive && setItems(r.items));
+    fetchBrainRound(activity.id, language).then((r) => alive && setItems(r.items));
     return () => {
       alive = false;
     };
-  }, [activity.id]);
+  }, [activity.id, language]);
 
   // 3, 2, 1 - then the clock starts.
   useEffect(() => {

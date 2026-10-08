@@ -69,6 +69,9 @@ from code_coach.workbook.content_jsbuild import JSBUILD_PAGES
 from code_coach.workbook.content_jsasync import JSASYNC_PAGES
 from code_coach.workbook.content_jsplanets import JSPLANETS_PAGES
 from code_coach.workbook.content_jslifting import JSLIFTING_PAGES
+from code_coach.workbook.content_jsnode import JSNODE_PAGES
+from code_coach.workbook.content_jsmusic import JSMUSIC_PAGES
+from code_coach.workbook.content_jscooking import JSCOOKING_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -724,6 +727,9 @@ _BASE_PAGES = (
     + JSASYNC_PAGES
     + JSPLANETS_PAGES
     + JSLIFTING_PAGES
+    + JSNODE_PAGES
+    + JSMUSIC_PAGES
+    + JSCOOKING_PAGES
 )
 
 # Review pages are built from the pages above rather than written out, so

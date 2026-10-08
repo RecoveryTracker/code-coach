@@ -167,6 +167,9 @@ def expected_output(shape: str, args: dict) -> str:
         emit_jsasync,
         emit_jsplanets,
         emit_jslifting,
+        emit_jsnode,
+        emit_jsmusic,
+        emit_jscooking,
     )
 
     if emit_pg.handles(shape):
@@ -189,6 +192,12 @@ def expected_output(shape: str, args: dict) -> str:
         return emit_jsplanets.expected_output(shape, args, _value)
     if emit_jslifting.handles(shape):
         return emit_jslifting.expected_output(shape, args, _value)
+    if emit_jsnode.handles(shape):
+        return emit_jsnode.expected_output(shape, args, _value)
+    if emit_jsmusic.handles(shape):
+        return emit_jsmusic.expected_output(shape, args, _value)
+    if emit_jscooking.handles(shape):
+        return emit_jscooking.expected_output(shape, args, _value)
     if emit_rust3.handles(shape):
         return emit_rust3.expected_output(shape, args, _value)
     if emit_topup.handles(shape):

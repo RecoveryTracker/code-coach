@@ -2339,21 +2339,25 @@ def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
 
 
 @app.get("/api/brain")
-def brain_summary() -> dict:
-    """Brain Drills' home: the activities and their bests, the stamps, the code ages."""
+def brain_summary(language: str = "javascript") -> dict:
+    """Brain Drills' home: the activities and their bests, the stamps, the code ages (per language)."""
     from code_coach import brain
 
-    return brain.summary()
+    if language not in brain.LANGUAGES:
+        raise HTTPException(status_code=404, detail=f"Unknown language {language}")
+    return brain.summary(language=language)
 
 
 @app.get("/api/brain/round")
-def brain_round(activity: str = "", seed: int | None = None) -> dict:
+def brain_round(activity: str = "", seed: int | None = None, language: str = "javascript") -> dict:
     """A fresh round of one activity, answers included - it's a speed drill, checked as you go."""
     from code_coach import brain
 
     if activity not in brain.ACTIVITIES_BY_ID:
         raise HTTPException(status_code=404, detail=f"Unknown activity {activity}")
-    return brain.round_payload(activity, seed)
+    if language not in brain.LANGUAGES:
+        raise HTTPException(status_code=404, detail=f"Unknown language {language}")
+    return brain.round_payload(activity, seed, language)
 
 
 @app.post("/api/brain/result")
@@ -2363,8 +2367,11 @@ def brain_result(body: BrainResultRequest) -> dict:
 
     if body.activity not in brain.ACTIVITIES_BY_ID:
         raise HTTPException(status_code=404, detail=f"Unknown activity {body.activity}")
-    before = next(a["best"] for a in brain.summary()["activities"] if a["id"] == body.activity)
-    result = brain.record(body.activity, body.seconds, body.errors, body.total, body.checkId)
+    if body.language not in brain.LANGUAGES:
+        raise HTTPException(status_code=404, detail=f"Unknown language {body.language}")
+    before = next(a["best"] for a in brain.summary(language=body.language)["activities"] if a["id"] == body.activity)
+    result = brain.record(body.activity, body.seconds, body.errors, body.total, body.checkId,
+                          language=body.language)
     best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
     return {"age": result.age, "best": best}
 

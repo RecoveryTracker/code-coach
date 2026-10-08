@@ -198,13 +198,18 @@ export function fetchSession(size = 20): Promise<SessionQueue> {
 }
 
 /** Brain Drills' home: activities, bests, stamps and code ages. */
-export function fetchBrain(): Promise<BrainSummary> {
-  return request("/api/brain");
+export function fetchBrain(language = "javascript"): Promise<BrainSummary> {
+  return request(`/api/brain?language=${encodeURIComponent(language)}`);
 }
 
 /** A fresh round of one Brain Drills activity. */
-export function fetchBrainRound(activity: string): Promise<{ activity: string; items: BrainItem[] }> {
-  return request(`/api/brain/round?activity=${encodeURIComponent(activity)}`);
+export function fetchBrainRound(
+  activity: string,
+  language = "javascript",
+): Promise<{ activity: string; items: BrainItem[] }> {
+  return request(
+    `/api/brain/round?activity=${encodeURIComponent(activity)}&language=${encodeURIComponent(language)}`,
+  );
 }
 
 /** Keep a finished round; its code age, and whether it beat the best. */
@@ -214,6 +219,7 @@ export function postBrainResult(body: {
   errors: number;
   total: number;
   checkId: string;
+  language: string;
 }): Promise<{ age: number; best: boolean }> {
   return request("/api/brain/result", { method: "POST", body: JSON.stringify(body) });
 }
