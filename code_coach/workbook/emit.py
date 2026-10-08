@@ -591,6 +591,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_jsgame,
         emit_jsbuild,
         emit_jsasync,
+        emit_jsplanets,
+        emit_jslifting,
     )
 
     if emit_pg.handles(shape):
@@ -622,6 +624,10 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_jsbuild.solution(language, shape, args)
     if emit_jsasync.handles(shape):
         return emit_jsasync.solution(language, shape, args)
+    if emit_jsplanets.handles(shape):
+        return emit_jsplanets.solution(language, shape, args)
+    if emit_jslifting.handles(shape):
+        return emit_jslifting.solution(language, shape, args)
     if emit_rust3.handles(shape):
         return emit_rust3.solution(language, shape, args)
     if emit_topup.handles(shape):
@@ -833,6 +839,8 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_jsgame,
         emit_jsbuild,
         emit_jsasync,
+        emit_jsplanets,
+        emit_jslifting,
     )
 
     return (
@@ -900,4 +908,6 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_jsgame.SHAPE_IDS
         + emit_jsbuild.SHAPE_IDS
         + emit_jsasync.SHAPE_IDS
+        + emit_jsplanets.SHAPE_IDS
+        + emit_jslifting.SHAPE_IDS
     )

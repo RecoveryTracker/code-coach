@@ -26,6 +26,8 @@ from code_coach.typing.snippets_jsgame import (
     JSGAME_LINES,
     JSGAME_LORE,
 )
+from code_coach.typing.snippets_jslifting import JSLIFTING_BLOCKS, JSLIFTING_LINES
+from code_coach.typing.snippets_jsplanets import JSPLANETS_BLOCKS, JSPLANETS_LINES
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -586,6 +588,22 @@ THEMES: tuple[Theme, ...] = (
         "JavaScript.",
         passages=JSGAME_LORE,
     ),
+    # Themed JavaScript: the same language, written about the planets
+    # and about a training log, for practice that is about something.
+    Theme(
+        "jsplanets", "JavaScript Planet Code",
+        "Gravity, light-time, orbits and a table of the planets.",
+        passages=JSPLANETS_LINES,
+        blocks=JSPLANETS_BLOCKS,
+        language="javascript",
+    ),
+    Theme(
+        "jslifting", "JavaScript Gym Code",
+        "A training log, one-rep maxes, plate math and macros.",
+        passages=JSLIFTING_LINES,
+        blocks=JSLIFTING_BLOCKS,
+        language="javascript",
+    ),
     Theme(
         "tscode", "TypeScript Code",
         "Typed signatures, generics and the solutions written out in them.",
@@ -673,7 +691,7 @@ THEMES: tuple[Theme, ...] = (
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
     "python": ("pycode",),
-    "javascript": ("jscode", "jsgame", "jsgamelore", "tscode"),
+    "javascript": ("jscode", "jsgame", "jsgamelore", "jsplanets", "jslifting", "tscode"),
     "dart": ("dartcode",),
     "sql": ("sqlcode", "postgresqlcode"),
     "clang": ("ccode", "cppcode"),

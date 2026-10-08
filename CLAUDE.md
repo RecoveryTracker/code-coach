@@ -91,7 +91,7 @@ Most modes take content as a new module plus a one-line registration:
   `all_shape_ids`), `complexity.py`, and `tests/test_workbook.py`
   (`python_only` for JS-only shapes). The JavaScript book is numbered in
   order: 168-177 regex, 178-187 data, 188-197 game math, 198-207 building a
-  game, 208-217 async.
+  game, 208-217 async, 218-227 planets, 228-237 bodybuilding.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's

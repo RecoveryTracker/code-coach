@@ -292,6 +292,8 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_jsgame import SHAPE_IDS as JSGAME_SHAPES
         from code_coach.workbook.emit_jsbuild import SHAPE_IDS as JSBUILD_SHAPES
         from code_coach.workbook.emit_jsasync import SHAPE_IDS as JSASYNC_SHAPES
+        from code_coach.workbook.emit_jsplanets import SHAPE_IDS as JSPLANETS_SHAPES
+        from code_coach.workbook.emit_jslifting import SHAPE_IDS as JSLIFTING_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -359,6 +361,9 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JSGAME_SHAPES)
             | set(JSBUILD_SHAPES)
             | set(JSASYNC_SHAPES)
+            # And the planets and bodybuilding pages.
+            | set(JSPLANETS_SHAPES)
+            | set(JSLIFTING_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)
