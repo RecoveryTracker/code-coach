@@ -333,3 +333,42 @@
   outline: 2px dashed #9c6ade;
   outline-offset: 2px;
 }
+
+/* The Playbook: a tip, its snippet, and what to do with it. */
+.farm-group {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8b98a8);
+}
+
+.farm-tip {
+  padding: 8px 10px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  background: var(--bg-elevated, #10141c);
+}
+
+.farm-tip.locked {
+  opacity: 0.6;
+}
+
+.farm-tip p {
+  margin: 4px 0 0;
+}
+
+.farm-snippet {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg, #0b0e14);
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  overflow-x: auto;
+}
+
+.farm-tip-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}

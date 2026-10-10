@@ -1,6 +1,7 @@
 import type { BrainItem, BrainSummary } from "./components/BrainDrills";
 import type {
   FarmOverview,
+  FarmTip,
   FarmStart,
   FarmState,
   CanvasCheck,
@@ -268,6 +269,11 @@ export function buyFarmUnlock(name: string): Promise<FarmOverview & { ok: boolea
 
 export function setFarmWarp(warp: number): Promise<{ ok: boolean }> {
   return request("/api/farm/warp", { method: "POST", body: JSON.stringify({ warp }) });
+}
+
+/** The Playbook: tips and snippets for the farm. */
+export function fetchFarmPlaybook(): Promise<{ entries: FarmTip[] }> {
+  return request("/api/farm/playbook");
 }
 
 /** Start the farm over: one square of grass, nothing in the barn. */

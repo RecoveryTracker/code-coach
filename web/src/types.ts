@@ -984,6 +984,19 @@ export type FarmUnlock = {
   upgradable: boolean;
 };
 
+/** One tip with a snippet per language (Original, Python, JavaScript, Dart). */
+export type FarmTip = {
+  id: string;
+  group: string;
+  title: string;
+  tip: string;
+  /** Research it needs before it will run. */
+  needs: string[];
+  /** A level a need must reach, where researched once is not enough (Expand: 2). */
+  levels: Record<string, number>;
+  snippets: Record<string, string>;
+};
+
 export type FarmFunction = {
   py: string;
   js: string;

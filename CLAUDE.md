@@ -137,12 +137,15 @@ code_coach/farm/
   (`World.for_simulation`). The caller's whole run waits, and starting
   globals go in via env `FARM_GLOBALS`.
 - The save is `farm_save.json` beside the progress file.
+- **Playbook** (`farm/playbook.py`, the Playbook button): tips and paste-able
+  snippets in all four languages. `tests/test_farm_playbook.py` gates every
+  snippet against exactly its research and runs the key ones on a real farm.
 - Not built yet: the leaderboard (deliberately skipped).
 
 ## Canvas and Brain Drills
 
 - **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Snake,
-  Platformer, Farm, To-do, and From blank (five independent projects: a spec
+  Platformer, Asteroids, Farm, To-do, and From blank (five independent projects: a spec
   and a check, no starter code). `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's

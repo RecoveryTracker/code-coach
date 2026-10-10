@@ -96,7 +96,7 @@ bool move(Direction direction) => _call('move', [direction]) as bool;
 void till() => _call('till');
 
 /// Swap what is under the drone with its neighbour.
-bool swap(Direction direction) => _call('swap', [direction]) as bool;
+void swap(Direction direction) => _call('swap', [direction]);
 
 /// Petals of a sunflower, size of a cactus, a pumpkin's id - a number - or
 /// where the next treasure or apple is, as an (x, y) record. Null if there

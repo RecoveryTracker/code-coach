@@ -20,6 +20,7 @@ import {
   buyFarmUnlock,
   farmFile,
   fetchFarm,
+  fetchFarmPlaybook,
   fetchFarmState,
   keepFarmCode,
   resetFarm,
@@ -28,7 +29,15 @@ import {
   stopFarm,
 } from "../api";
 import { drawFarm } from "../lib/farmDraw";
-import type { FarmFunction, FarmLine, FarmOverview, FarmState, FarmUnlock, FarmViolation } from "../types";
+import type {
+  FarmFunction,
+  FarmLine,
+  FarmOverview,
+  FarmState,
+  FarmTip,
+  FarmUnlock,
+  FarmViolation,
+} from "../types";
 import { EditorPane } from "./EditorPane";
 import "../styles/farm.css";
 
@@ -91,7 +100,9 @@ export default function FarmMode() {
   const [revision, setRevision] = useState(0);
   const [lines, setLines] = useState<FarmLine[]>([]);
   const [violations, setViolations] = useState<FarmViolation[]>([]);
-  const [panel, setPanel] = useState<"research" | "docs" | null>("research");
+  const [panel, setPanel] = useState<"research" | "docs" | "playbook" | null>("research");
+  const [tips, setTips] = useState<FarmTip[]>([]);
+  const [copied, setCopied] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const sinceRef = useRef(0);
@@ -309,6 +320,35 @@ export default function FarmMode() {
     setLines([]);
   }, [apply]);
 
+  // The Playbook is fetched the first time it is opened.
+  useEffect(() => {
+    if (panel !== "playbook" || tips.length > 0) return;
+    fetchFarmPlaybook()
+      .then((got) => setTips(got.entries))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  }, [panel, tips.length]);
+
+  /** Add a snippet to the end of the open file, a blank line after what is there. */
+  const addSnippet = useCallback(
+    (code: string) => {
+      const now = filesRef.current[language]?.[file] ?? "";
+      const next = (now.trim() ? now.replace(/\s+$/, "") + "\n\n" : "") + code + "\n";
+      onChange(next);
+      setRevision((r) => r + 1);
+    },
+    [language, file, onChange],
+  );
+
+  const copySnippet = useCallback((id: string, code: string) => {
+    navigator.clipboard
+      ?.writeText(code)
+      .then(() => {
+        setCopied(id);
+        window.setTimeout(() => setCopied((c) => (c === id ? "" : c)), 1500);
+      })
+      .catch(() => setError("Copy was blocked here: use Add to my code instead."));
+  }, []);
+
   const unlocks = useMemo(() => {
     const list = overview?.unlocks ?? [];
     const rank = (u: FarmUnlock) =>
@@ -489,6 +529,13 @@ export default function FarmMode() {
           >
             Commands
           </button>
+          <button
+            type="button"
+            className={`ws-btn${panel === "playbook" ? " on" : ""}`}
+            onClick={() => setPanel(panel === "playbook" ? null : "playbook")}
+          >
+            Playbook
+          </button>
           <button type="button" className="ws-btn farm-reset" onClick={() => void startOver()}>
             Start over
           </button>
@@ -526,6 +573,45 @@ export default function FarmMode() {
                   {!u.available && !maxed && !u.missing ? (
                     <p className="farm-needs">Needs {u.needs.join(" and ") || "nothing"}.</p>
                   ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {panel === "playbook" ? (
+          <div className="farm-panel">
+            <p className="farm-needs">
+              Tips and snippets for {language === "original" ? "the game's own language" : language}. Add one to
+              your code, then press Run. Greyed ones need research first.
+            </p>
+            {tips.length === 0 ? <p className="farm-needs">Loading…</p> : null}
+            {tips.map((t, i) => {
+              const code = t.snippets[language] ?? "";
+              const missing = t.needs.filter(
+                (n) => ((overview.unlocks ?? []).find((u) => u.name === n)?.level ?? 0) < (t.levels[n] ?? 1),
+              );
+              return (
+                <div key={t.id}>
+                  {i === 0 || tips[i - 1].group !== t.group ? <h4 className="farm-group">{t.group}</h4> : null}
+                  <div className={`farm-tip${missing.length ? " locked" : ""}`}>
+                    <strong>{t.title}</strong>
+                    <p>{t.tip}</p>
+                    {missing.length ? (
+                      <p className="farm-needs">Needs {missing.map((n) => n.replace(/_/g, " ") + ((t.levels[n] ?? 1) > 1 ? ` level ${t.levels[n]}` : "")).join(" and ")}.</p>
+                    ) : null}
+                    {code ? <pre className="farm-snippet">{code}</pre> : null}
+                    {code ? (
+                      <div className="farm-tip-actions">
+                        <button type="button" className="ws-btn" onClick={() => addSnippet(code)}>
+                          Add to my code
+                        </button>
+                        <button type="button" className="ws-btn" onClick={() => copySnippet(t.id, code)}>
+                          {copied === t.id ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               );
             })}

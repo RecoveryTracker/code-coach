@@ -2384,6 +2384,14 @@ def farm_overview() -> dict:
     return HOST.overview()
 
 
+@app.get("/api/farm/playbook")
+def farm_playbook() -> dict:
+    """Tips and paste-able snippets for the farm, in each language."""
+    from code_coach.farm.playbook import entries
+
+    return {"entries": entries()}
+
+
 @app.get("/api/farm/state")
 def farm_state(since: int = 0) -> dict:
     """The farm now, and the output since line `since` - polled while you watch."""
