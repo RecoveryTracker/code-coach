@@ -25,13 +25,14 @@ from code_coach.canvas.content_blank import BLANK_STEPS
 from code_coach.canvas.content_dom import TODO_STEPS
 from code_coach.canvas.content_platformer import PLATFORMER_STEPS
 from code_coach.canvas.content_snake import SNAKE_STEPS
+from code_coach.canvas.content_towers import TOWER_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
 
 #: Every track, in the order they are taught. Within a track, each step
 #: starts from the last one finished.
 STEPS: tuple[Step, ...] = (
     DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + ASTEROIDS_STEPS
-    + FARM_STEPS
+    + TOWER_STEPS + FARM_STEPS
     + TODO_STEPS + BLANK_STEPS
 )
 

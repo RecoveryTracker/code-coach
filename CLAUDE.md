@@ -145,7 +145,7 @@ code_coach/farm/
 ## Canvas and Brain Drills
 
 - **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Snake,
-  Platformer, Asteroids, Farm, To-do, and From blank (five independent projects: a spec
+  Platformer, Asteroids, Tower defense, Farm, To-do, and From blank (five independent projects: a spec
   and a check, no starter code). `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's
