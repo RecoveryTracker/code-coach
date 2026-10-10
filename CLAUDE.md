@@ -140,6 +140,11 @@ code_coach/farm/
 - **Playbook** (`farm/playbook.py`, the Playbook button): tips and paste-able
   snippets in all four languages. `tests/test_farm_playbook.py` gates every
   snippet against exactly its research and runs the key ones on a real farm.
+- **The game's language as a language** (`tfwr` in the top-bar picker): Free mode
+  runs it on a throwaway farm (`farm/scratch.py`, never the saved one, every
+  upgrade bought, capped at 10 s) and "Explain my code" glosses the game's
+  commands (`farm/explain_farm.py`). Free mode's Explain button and the coach's
+  share `components/ExplainPanel.tsx`.
 - Not built yet: the leaderboard (deliberately skipped).
 
 ## Canvas and Brain Drills

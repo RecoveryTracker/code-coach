@@ -8,6 +8,7 @@ import {
 import {
   backFromReview,
   evaluateDrill,
+  explainCode,
   fetchCurrentPractice,
   fetchHints,
   fetchMoreLines,
@@ -19,6 +20,7 @@ import {
   updateProgress,
 } from "./api";
 import { AdaptiveCoach } from "./components/AdaptiveCoach";
+import { ExplainPanel } from "./components/ExplainPanel";
 import { EditorPane } from "./components/EditorPane";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { SkinPicker } from "./components/SkinPicker";
@@ -62,6 +64,7 @@ import {
 } from "./lib/drafts";
 import type {
   DrillEvaluateResult,
+  ExplainResult,
   PracticeSession,
   ProgressInfo,
   SyntaxHint,
@@ -211,6 +214,12 @@ export default function App() {
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const [watching, setWatching] = useState(false);
   const [freeMode, setFreeMode] = useState(false);
+  // Free mode's "Explain my code": the coach's own walkthrough, asked for on
+  // whatever is in the editor.
+  const [freeExplainOpen, setFreeExplainOpen] = useState(false);
+  const [freeExplanation, setFreeExplanation] = useState<ExplainResult | null>(null);
+  const [freeExplainBusy, setFreeExplainBusy] = useState(false);
+  const [freeExplainError, setFreeExplainError] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
 
   /* Which module is open.
@@ -1120,6 +1129,24 @@ export default function App() {
     </>
   );
 
+  const refreshFreeExplanation = async () => {
+    if (freeExplainBusy) return;
+    setFreeExplainBusy(true);
+    setFreeExplainError(false);
+    try {
+      setFreeExplanation(await explainCode(codeRef.current));
+    } catch {
+      setFreeExplainError(true);
+    } finally {
+      setFreeExplainBusy(false);
+    }
+  };
+
+  const toggleFreeExplain = () => {
+    if (!freeExplainOpen) void refreshFreeExplanation();
+    setFreeExplainOpen((open) => !open);
+  };
+
   const toolbar = (
     <div className="ws-top-actions">
       {/* Only the editor's own controls. The language, the skin and the
@@ -1488,9 +1515,31 @@ export default function App() {
             >
               Reminders {hintsOn ? "on" : "off"}
             </button>
+            {session?.can_explain !== false ? (
+              <button
+                type="button"
+                className={`coach-chat-toggle${freeExplainOpen ? " active" : ""}`}
+                onClick={toggleFreeExplain}
+                title="Say in plain English what the code in the editor does"
+              >
+                {freeExplainOpen ? "Hide explain" : "Explain my code"}
+              </button>
+            ) : null}
             {brand}
             {toolbar}
           </div>
+          {freeExplainOpen && session?.can_explain !== false ? (
+            <ExplainPanel
+              explanation={freeExplanation}
+              busy={freeExplainBusy}
+              error={freeExplainError}
+              onRefresh={() => void refreshFreeExplanation()}
+              onGripDown={() => {
+                drag.current = "explain";
+                document.body.classList.add("is-resizing");
+              }}
+            />
+          ) : null}
         </div>
       ) : (
         <AdaptiveCoach

@@ -1196,6 +1196,13 @@ def explain(body: ExplainRequest) -> ExplainResponse:
             ),
         )
 
+    if lang.id == "tfwr":
+        # The game's own language: read with Python's ast plus the farm's
+        # vocabulary, and run once on a throwaway farm (never the saved one).
+        from code_coach.farm.explain_farm import explain_farm
+
+        return ExplainResponse(**explain_farm(body.code or ""))
+
     if lang.id in ("javascript", "typescript"):
         from code_coach.explain_js import explain_js
         from code_coach.visualize import suggest_call, trace_code

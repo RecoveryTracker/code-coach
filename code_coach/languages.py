@@ -290,6 +290,21 @@ LANGUAGES: tuple[Language, ...] = (
         ),
         ready=("workbook", "typing", "runner"),
     ),
+    Language(
+        id="tfwr",
+        name="The Farmer Was Replaced",
+        # The game's language is Python's syntax, so Python's colours fit.
+        monaco="python",
+        extension="py",
+        available=True,
+        note=(
+            "Free mode only: paste code from the game. Run executes it in "
+            "the game's own interpreter on a throwaway farm (every unlock "
+            "bought, the biggest field, plenty of items), never your "
+            "saved one, and Explain my code reads it line by line."
+        ),
+        ready=("runner", "explainer"),
+    ),
 )
 
 DEFAULT_LANGUAGE = "python"

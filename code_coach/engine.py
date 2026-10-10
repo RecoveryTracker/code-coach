@@ -881,6 +881,12 @@ def run_code(
         from code_coach.pg_runner import run_postgres
 
         return run_postgres(code)
+    if language == "tfwr":
+        # The game's own language, run by its interpreter on a throwaway
+        # farm - never the saved one. See farm/scratch.py.
+        from code_coach.farm.scratch import run_scratch
+
+        return run_scratch(code, timeout)
 
     suffix = _SUFFIXES.get(language, ".py")
     if timeout is None:
