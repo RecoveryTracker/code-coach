@@ -1113,8 +1113,9 @@ export default function App() {
         {/* The name never changes, so you look for the same word to get
             back. It used to become "Coach on", which reads as a
             different button and is somewhere else on the row by the
-            time you want it. */}
-        Free mode{freeMode ? " · on" : ""}
+            time you want it. The blue pressed state already says it
+            is on, so no word is added for that either. */}
+        Free mode
       </button>
     </>
   );
@@ -1457,7 +1458,7 @@ export default function App() {
           <div className="cur-nav-line">
             <span className="coach-banner-done">
               {/* No standing message here: it pushed the buttons onto a new
-                  line, and the Free mode button already says it is on. The
+                  line, and the Free mode button is already blue when it is on. The
                   reminders stay on one line, cut short rather than taller,
                   so they can come and go without moving anything. */}
               {hints.length > 0 && hintsOn ? (

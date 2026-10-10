@@ -26,7 +26,10 @@ from code_coach.typing.snippets_jsgame import (
     JSGAME_LINES,
     JSGAME_LORE,
 )
+from code_coach.typing.snippets_jscooking import JSCOOKING_BLOCKS, JSCOOKING_LINES
 from code_coach.typing.snippets_jslifting import JSLIFTING_BLOCKS, JSLIFTING_LINES
+from code_coach.typing.snippets_jsmusic import JSMUSIC_BLOCKS, JSMUSIC_LINES
+from code_coach.typing.snippets_jsnode import JSNODE_BLOCKS, JSNODE_LINES
 from code_coach.typing.snippets_jsplanets import JSPLANETS_BLOCKS, JSPLANETS_LINES
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
@@ -605,6 +608,27 @@ THEMES: tuple[Theme, ...] = (
         language="javascript",
     ),
     Theme(
+        "jsnode", "JavaScript Node Code",
+        "Paths, files, JSON on disk, events, a small server and the command line.",
+        passages=JSNODE_LINES,
+        blocks=JSNODE_BLOCKS,
+        language="javascript",
+    ),
+    Theme(
+        "jsmusic", "JavaScript Music Code",
+        "Tempo, MIDI notes, frequencies, scales, decibels and a step sequencer.",
+        passages=JSMUSIC_LINES,
+        blocks=JSMUSIC_BLOCKS,
+        language="javascript",
+    ),
+    Theme(
+        "jscooking", "JavaScript Kitchen Code",
+        "Scaling a recipe, units, oven times, shopping lists and the cost of a meal.",
+        passages=JSCOOKING_LINES,
+        blocks=JSCOOKING_BLOCKS,
+        language="javascript",
+    ),
+    Theme(
         "tscode", "TypeScript Code",
         "Typed signatures, generics and the solutions written out in them.",
         passages=code_lines_for("typescript"),
@@ -691,7 +715,7 @@ THEMES: tuple[Theme, ...] = (
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
     "python": ("pycode",),
-    "javascript": ("jscode", "jsgame", "jsgamelore", "jsplanets", "jslifting", "tscode"),
+    "javascript": ("jscode", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode"),
     "dart": ("dartcode",),
     "sql": ("sqlcode", "postgresqlcode"),
     "clang": ("ccode", "cppcode"),
