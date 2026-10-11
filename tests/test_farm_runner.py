@@ -114,6 +114,43 @@ class PythonRunTests(unittest.TestCase):
         self.assertEqual(again._load().items["Hay"], 1)
         self.assertEqual(again.code["python"], "harvest()\n")
 
+    def test_a_save_waits_for_a_file_another_program_is_holding(self) -> None:
+        # Windows says "access denied" to a replace while a scanner has the
+        # file open; it clears in moments, so the save has to outlast it.
+        real = runner.os.replace
+        refused = []
+
+        def busy(src, dst):
+            if len(refused) < 3:
+                refused.append(src)
+                raise PermissionError(5, "Access is denied")
+            return real(src, dst)
+
+        h = host()
+        h._load().advance(1)
+        original, runner.os.replace = runner.os.replace, busy
+        try:
+            h.save()
+        finally:
+            runner.os.replace = original
+        self.assertEqual(len(refused), 3)
+        self.assertEqual(FarmHost()._load().items["Hay"], 0)
+
+    def test_a_save_that_is_never_let_through_says_so(self) -> None:
+        h = host()
+
+        def never(src, dst):
+            raise PermissionError(5, "Access is denied")
+
+        original, runner.os.replace = runner.os.replace, never
+        saved_wait, runner.SAVE_WAIT = runner.SAVE_WAIT, 0
+        try:
+            with self.assertRaises(PermissionError):
+                h.save()
+        finally:
+            runner.os.replace = original
+            runner.SAVE_WAIT = saved_wait
+
     def test_research_can_be_bought(self) -> None:
         h = host()
         h._load().items["Hay"] = 5

@@ -372,3 +372,48 @@
   gap: 6px;
   margin-top: 6px;
 }
+
+.farm-tip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.farm-tip-search {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 6px;
+  background: var(--bg-elevated, #10141c);
+  color: inherit;
+  font: inherit;
+}
+
+.farm-tip-ready {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted, #8b98a8);
+  white-space: nowrap;
+}
+
+.farm-group-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.farm-group-count {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.7;
+}

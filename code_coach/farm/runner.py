@@ -49,6 +49,10 @@ FIRST_COMMAND_GRACE = 30.0
 #: How big a drone's job (function, arguments, globals) may be: it goes in an
 #: environment variable, and Windows allows about 32,000 characters for all of them.
 DRONE_JOB_LIMIT = 24000
+
+#: How long save() waits for a save file another process is holding: 40 tries 50 ms apart.
+SAVE_TRIES = 40
+SAVE_WAIT = 0.05
 #: Warps the screen offers; 0 means as fast as the machine goes.
 WARPS = (1, 2, 4, 8, 16, 64, 0)
 
@@ -229,7 +233,18 @@ class FarmHost:
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_suffix(".tmp")
             tmp.write_text(json.dumps(payload), encoding="utf-8")
-            os.replace(tmp, path)
+            # Windows refuses to replace a file another process has open for a
+            # moment - a virus scanner or the indexer looking at the save it
+            # just saw change. It lets go in a few milliseconds, so wait for it
+            # rather than lose the save.
+            for attempt in range(SAVE_TRIES):
+                try:
+                    os.replace(tmp, path)
+                    break
+                except PermissionError:
+                    if attempt == SAVE_TRIES - 1:
+                        raise
+                    time.sleep(SAVE_WAIT)
             self._last_save = time.monotonic()
 
     def reset(self) -> None:

@@ -185,11 +185,10 @@ def named_values(code: str) -> set[tuple[str, str]]:
 class ShapeTests(unittest.TestCase):
     def test_there_are_enough_entries_in_groups_in_order(self) -> None:
         self.assertGreaterEqual(len(ENTRIES), 16)
-        self.assertLessEqual(len(ENTRIES), 24)
-        self.assertEqual(
-            playbook.GROUPS,
-            ("Moving", "Planting", "Pumpkins", "Sunflowers", "Cactus", "Maze", "Speed", "Tips"),
-        )
+        # The first pass's eight groups open the playbook, in this order; the
+        # groups added since follow them. Not pinned to "exactly these".
+        first = ("Moving", "Planting", "Pumpkins", "Sunflowers", "Cactus", "Maze", "Speed", "Tips")
+        self.assertEqual(playbook.GROUPS[: len(first)], first)
         seen = [e.group for e in ENTRIES]
         self.assertEqual(seen, sorted(seen, key=playbook.GROUPS.index), "entries run group by group")
 

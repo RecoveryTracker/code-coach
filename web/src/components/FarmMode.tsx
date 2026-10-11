@@ -103,6 +103,10 @@ export default function FarmMode() {
   const [panel, setPanel] = useState<"research" | "docs" | "playbook" | null>("research");
   const [tips, setTips] = useState<FarmTip[]>([]);
   const [copied, setCopied] = useState("");
+  // The Playbook's own controls: a search, "ready to run" only, and which groups are open.
+  const [tipSearch, setTipSearch] = useState("");
+  const [readyOnly, setReadyOnly] = useState(false);
+  const [shut, setShut] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const sinceRef = useRef(0);
@@ -583,38 +587,86 @@ export default function FarmMode() {
           <div className="farm-panel">
             <p className="farm-needs">
               Tips and snippets for {language === "original" ? "the game's own language" : language}. Add one to
-              your code, then press Run. Greyed ones need research first.
+              your code, then press Run.
             </p>
+            <div className="farm-tip-controls">
+              <input
+                type="search"
+                className="farm-tip-search"
+                placeholder="Search the tips (pumpkin, maze, drone…)"
+                value={tipSearch}
+                onChange={(e) => setTipSearch(e.target.value)}
+                aria-label="Search the playbook"
+              />
+              <label className="farm-tip-ready">
+                <input type="checkbox" checked={readyOnly} onChange={(e) => setReadyOnly(e.target.checked)} />
+                Ready to run
+              </label>
+            </div>
             {tips.length === 0 ? <p className="farm-needs">Loading…</p> : null}
-            {tips.map((t, i) => {
-              const code = t.snippets[language] ?? "";
-              const missing = t.needs.filter(
-                (n) => ((overview.unlocks ?? []).find((u) => u.name === n)?.level ?? 0) < (t.levels[n] ?? 1),
+            {(() => {
+              const needle = tipSearch.trim().toLowerCase();
+              const levelOf = (n: string) => (overview.unlocks ?? []).find((u) => u.name === n)?.level ?? 0;
+              const missingFor = (t: FarmTip) => t.needs.filter((n) => levelOf(n) < (t.levels[n] ?? 1));
+              const shown = tips.filter(
+                (t) =>
+                  (!needle || `${t.title} ${t.tip} ${t.group}`.toLowerCase().includes(needle)) &&
+                  (!readyOnly || missingFor(t).length === 0),
               );
-              return (
-                <div key={t.id}>
-                  {i === 0 || tips[i - 1].group !== t.group ? <h4 className="farm-group">{t.group}</h4> : null}
-                  <div className={`farm-tip${missing.length ? " locked" : ""}`}>
-                    <strong>{t.title}</strong>
-                    <p>{t.tip}</p>
-                    {missing.length ? (
-                      <p className="farm-needs">Needs {missing.map((n) => n.replace(/_/g, " ") + ((t.levels[n] ?? 1) > 1 ? ` level ${t.levels[n]}` : "")).join(" and ")}.</p>
-                    ) : null}
-                    {code ? <pre className="farm-snippet">{code}</pre> : null}
-                    {code ? (
-                      <div className="farm-tip-actions">
-                        <button type="button" className="ws-btn" onClick={() => addSnippet(code)}>
-                          Add to my code
-                        </button>
-                        <button type="button" className="ws-btn" onClick={() => copySnippet(t.id, code)}>
-                          {copied === t.id ? "Copied" : "Copy"}
-                        </button>
-                      </div>
-                    ) : null}
+              if (tips.length > 0 && shown.length === 0) {
+                return <p className="farm-needs">Nothing matches{readyOnly ? " yet - try without Ready to run" : ""}.</p>;
+              }
+              const groups = [...new Set(shown.map((t) => t.group))];
+              return groups.map((group) => {
+                const inGroup = shown.filter((t) => t.group === group);
+                // A search opens everything it found; otherwise a group is open unless shut.
+                const open = needle ? true : !shut[group];
+                return (
+                  <div key={group}>
+                    <button
+                      type="button"
+                      className="farm-group farm-group-btn"
+                      aria-expanded={open}
+                      onClick={() => setShut((was) => ({ ...was, [group]: open }))}
+                    >
+                      <span>{open ? "▾" : "▸"}</span> {group} <span className="farm-group-count">{inGroup.length}</span>
+                    </button>
+                    {open
+                      ? inGroup.map((t) => {
+                          const code = t.snippets[language] ?? "";
+                          const missing = missingFor(t);
+                          return (
+                            <div key={t.id} className={`farm-tip${missing.length ? " locked" : ""}`}>
+                              <strong>{t.title}</strong>
+                              <p>{t.tip}</p>
+                              {missing.length ? (
+                                <p className="farm-needs">
+                                  Needs{" "}
+                                  {missing
+                                    .map((n) => n.replace(/_/g, " ") + ((t.levels[n] ?? 1) > 1 ? ` level ${t.levels[n]}` : ""))
+                                    .join(" and ")}
+                                  .
+                                </p>
+                              ) : null}
+                              {code ? <pre className="farm-snippet">{code}</pre> : null}
+                              {code ? (
+                                <div className="farm-tip-actions">
+                                  <button type="button" className="ws-btn" onClick={() => addSnippet(code)}>
+                                    Add to my code
+                                  </button>
+                                  <button type="button" className="ws-btn" onClick={() => copySnippet(t.id, code)}>
+                                    {copied === t.id ? "Copied" : "Copy"}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })
+                      : null}
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         ) : null}
 
