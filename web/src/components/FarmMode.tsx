@@ -104,6 +104,15 @@ export default function FarmMode() {
   const [tips, setTips] = useState<FarmTip[]>([]);
   const [copied, setCopied] = useState("");
   // The Playbook's own controls: a search, "ready to run" only, and which groups are open.
+  // The language the tips are shown in. The game's own comes first and is where it starts:
+  // the tips are about that language before they are about any other.
+  const [tipLang, setTipLang] = useState<string>(() => {
+    try {
+      return localStorage.getItem("code-coach:playbook-language") || "original";
+    } catch {
+      return "original";
+    }
+  });
   const [tipSearch, setTipSearch] = useState("");
   const [readyOnly, setReadyOnly] = useState(false);
   const [shut, setShut] = useState<Record<string, boolean>>({});
@@ -332,15 +341,36 @@ export default function FarmMode() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, [panel, tips.length]);
 
-  /** Add a snippet to the end of the open file, a blank line after what is there. */
+  const chooseTipLang = useCallback((next: string) => {
+    setTipLang(next);
+    try {
+      localStorage.setItem("code-coach:playbook-language", next);
+    } catch {
+      /* the choice just isn't remembered */
+    }
+  }, []);
+
+  /**
+   * Add a snippet to the end of the open file in the tips' language, a blank line after what is
+   * there. If the editor is on another language it moves to this one, so what you add is what
+   * Run runs.
+   */
   const addSnippet = useCallback(
-    (code: string) => {
-      const now = filesRef.current[language]?.[file] ?? "";
+    async (code: string) => {
+      await flush();
+      const name = entry[tipLang] ?? "main";
+      const now = filesRef.current[tipLang]?.[name] ?? "";
       const next = (now.trim() ? now.replace(/\s+$/, "") + "\n\n" : "") + code + "\n";
-      onChange(next);
+      setFiles((was) => ({ ...was, [tipLang]: { ...(was[tipLang] ?? {}), [name]: next } }));
+      await keepFarmCode(tipLang, next, name);
+      if (tipLang !== language) {
+        setLanguage(tipLang);
+        setViolations([]);
+        void farmFile(tipLang, "select", name);
+      }
       setRevision((r) => r + 1);
     },
-    [language, file, onChange],
+    [tipLang, language, entry, flush],
   );
 
   const copySnippet = useCallback((id: string, code: string) => {
@@ -585,9 +615,25 @@ export default function FarmMode() {
 
         {panel === "playbook" ? (
           <div className="farm-panel">
+            <div className="farm-langs farm-tip-langs" role="tablist" aria-label="Tip language">
+              {(overview.languages ?? ["original", "python", "javascript", "dart"]).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="tab"
+                  aria-selected={tipLang === l}
+                  className={`ws-btn${tipLang === l ? " on" : ""}`}
+                  onClick={() => chooseTipLang(l)}
+                >
+                  {LANGUAGE_NAMES[l] ?? l}
+                </button>
+              ))}
+            </div>
             <p className="farm-needs">
-              Tips and snippets for {language === "original" ? "the game's own language" : language}. Add one to
-              your code, then press Run.
+              {tipLang === "original"
+                ? "Written in the game's own language: this is what the tips look like in the game itself. "
+                : "Same tips in " + (LANGUAGE_NAMES[tipLang] ?? tipLang) + ". "}
+              Add one to your code, then press Run.
             </p>
             <div className="farm-tip-controls">
               <input
@@ -633,7 +679,7 @@ export default function FarmMode() {
                     </button>
                     {open
                       ? inGroup.map((t) => {
-                          const code = t.snippets[language] ?? "";
+                          const code = t.snippets[tipLang] ?? "";
                           const missing = missingFor(t);
                           return (
                             <div key={t.id} className={`farm-tip${missing.length ? " locked" : ""}`}>
@@ -651,7 +697,7 @@ export default function FarmMode() {
                               {code ? <pre className="farm-snippet">{code}</pre> : null}
                               {code ? (
                                 <div className="farm-tip-actions">
-                                  <button type="button" className="ws-btn" onClick={() => addSnippet(code)}>
+                                  <button type="button" className="ws-btn" onClick={() => void addSnippet(code)}>
                                     Add to my code
                                   </button>
                                   <button type="button" className="ws-btn" onClick={() => copySnippet(t.id, code)}>
