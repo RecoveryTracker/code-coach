@@ -246,17 +246,19 @@ class OriginalRunTests(unittest.TestCase):
     def host(self, **levels):
         import time as _time  # noqa: F401 - kept local: only these tests wait on runs
 
-        from code_coach.farm.runner import FarmHost
+        from code_coach.farm.runner import LANGUAGES, FarmHost
 
         h = FarmHost()
-        h.warp = 0
-        world = h._load()
-        for name, level in levels.items():
-            world.unlocks[name] = level
-        if levels.get("Expand"):
-            world.width, world.height = data.FARM_SIZES[levels["Expand"]]
-            world._fill()
-        world.advance(5)
+        h._load()
+        for lang in LANGUAGES:  # every language has a farm of its own: set each up alike
+            h.warps[lang] = 0
+            world = h._world_for(lang)
+            for name, level in levels.items():
+                world.unlocks[name] = level
+            if levels.get("Expand"):
+                world.width, world.height = data.FARM_SIZES[levels["Expand"]]
+                world._fill()
+            world.advance(5)
         return h
 
     def finish(self, h, timeout=60.0):

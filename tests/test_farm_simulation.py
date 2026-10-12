@@ -16,7 +16,7 @@ import unittest
 
 from code_coach.engine import dart_path
 from code_coach.farm import data
-from code_coach.farm.runner import FarmHost
+from code_coach.farm.runner import LANGUAGES, FarmHost
 from code_coach.farm.world import Refusal, World
 
 HAS_NODE = shutil.which("node") is not None
@@ -32,13 +32,15 @@ BENCH = "quick_print(num_items(Items.Hay))\nfor i in range(rows):\n    harvest()
 
 def host(**levels) -> FarmHost:
     h = FarmHost()
-    h.warp = 0
-    world = h._load()
-    for name, level in (levels or LEVELS).items():
-        world.unlocks[name] = level
-    world.width, world.height = data.FARM_SIZES[world.level("Expand")]
-    world._fill()
-    world.advance(5)
+    h._load()
+    for lang in LANGUAGES:  # every language has a farm of its own: set each up alike
+        h.warps[lang] = 0
+        world = h._world_for(lang)
+        for name, level in (levels or LEVELS).items():
+            world.unlocks[name] = level
+        world.width, world.height = data.FARM_SIZES[world.level("Expand")]
+        world._fill()
+        world.advance(5)
     return h
 
 

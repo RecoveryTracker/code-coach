@@ -15,7 +15,7 @@ import unittest
 
 from code_coach.engine import dart_path
 from code_coach.farm import runner
-from code_coach.farm.runner import FarmHost
+from code_coach.farm.runner import LANGUAGES, FarmHost
 
 HAS_NODE = shutil.which("node") is not None
 HAS_DART = dart_path() is not None
@@ -24,16 +24,24 @@ HAS_DART = dart_path() is not None
 def host(**levels: int) -> FarmHost:
     """A fresh farm (in the test's own save folder) with research bought."""
     h = FarmHost()
-    h.warp = 0
-    world = h._load()
-    for name, level in levels.items():
-        world.unlocks[name] = level
-    if levels.get("Expand"):
-        from code_coach.farm import data
+    h._load()
+    for lang in LANGUAGES:  # every language has a farm of its own: set each up alike
+        h.warps[lang] = 0
+        world = h._world_for(lang)
+        for name, level in levels.items():
+            world.unlocks[name] = level
+        if levels.get("Expand"):
+            from code_coach.farm import data
 
-        world.width, world.height = data.FARM_SIZES[levels["Expand"]]
-        world._fill()
+            world.width, world.height = data.FARM_SIZES[levels["Expand"]]
+            world._fill()
     return h
+
+
+def ripen(h: FarmHost) -> None:
+    """Let a second pass on every language's farm, so the grass is ready wherever the program runs."""
+    for lang in LANGUAGES:
+        h._world_for(lang).advance(1)
 
 
 def finish(h: FarmHost, timeout: float = 60.0) -> str:
@@ -49,7 +57,7 @@ def finish(h: FarmHost, timeout: float = 60.0) -> str:
 class PythonRunTests(unittest.TestCase):
     def test_a_first_program_harvests_hay(self) -> None:
         h = host()
-        h._load().advance(1)
+        ripen(h)
         started = h.start("python", "harvest()\n")
         self.assertTrue(started["ok"], started)
         self.assertEqual(finish(h), "done")
@@ -107,7 +115,7 @@ class PythonRunTests(unittest.TestCase):
 
     def test_the_farm_and_your_code_are_saved(self) -> None:
         h = host()
-        h._load().advance(1)
+        ripen(h)
         h.start("python", "harvest()\n")
         finish(h)
         again = FarmHost()
@@ -127,7 +135,7 @@ class PythonRunTests(unittest.TestCase):
             return real(src, dst)
 
         h = host()
-        h._load().advance(1)
+        ripen(h)
         original, runner.os.replace = runner.os.replace, busy
         try:
             h.save()

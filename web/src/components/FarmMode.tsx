@@ -129,23 +129,45 @@ export default function FarmMode() {
   const pending = useRef<{ language: string; file: string; code: string } | null>(null);
   const file = entry[language] ?? "main";
 
+  /** Bumped each time the screen moves to another language's farm, so a poll for the old one is dropped. */
+  const farmGen = useRef(0);
+
   const apply = useCallback((o: FarmOverview) => {
     setOverview(o);
     setState(o);
   }, []);
 
+  /**
+   * Go to the farm in this answer - each language has its own, with its own items, research, field,
+   * files and tabs. Everything on screen comes from the answer, and the output starts afresh.
+   */
+  const enterFarm = useCallback(
+    (o: FarmOverview) => {
+      farmGen.current += 1;
+      apply(o);
+      setLanguage(o.languages.includes(o.language) ? o.language : "python");
+      setFiles(o.files);
+      setEntry(o.entry);
+      setLines([]);
+      setViolations([]);
+      setRevision((r) => r + 1);
+      sinceRef.current = o.outputEnd;
+    },
+    [apply],
+  );
+
   useEffect(() => {
     fetchFarm()
-      .then((o) => {
-        apply(o);
-        setLanguage(o.languages.includes(o.language) ? o.language : "python");
-        setFiles(o.files);
-        setEntry(o.entry);
-        setRevision((r) => r + 1);
-        sinceRef.current = o.outputEnd;
+      .then(async (o) => {
+        if (!o.languages.includes(o.language)) {
+          // Saved on a language this machine can't run (no Node, say): go to Python's farm instead.
+          const got = await farmFile("python", "select", o.entry.python ?? "main");
+          if (got.ok) o = got;
+        }
+        enterFarm(o);
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [apply]);
+  }, [enterFarm]);
 
   const running = state?.run?.status === "running" || state?.run?.status === "starting";
 
@@ -154,9 +176,10 @@ export default function FarmMode() {
     if (!overview) return;
     let alive = true;
     const tick = async () => {
+      const gen = farmGen.current;
       try {
         const s = await fetchFarmState(sinceRef.current);
-        if (!alive) return;
+        if (!alive || gen !== farmGen.current) return;
         setState(s);
         if (s.output.length) {
           setLines((was) => [...was, ...s.output].slice(-400));
@@ -237,12 +260,17 @@ export default function FarmMode() {
     async (next: string) => {
       if (next === language) return;
       await flush();
-      setLanguage(next);
-      setRevision((r) => r + 1);
-      setViolations([]);
-      void farmFile(next, "select", entry[next] ?? "main");
+      try {
+        // Each language has its own farm: selecting a file there takes the server to that farm,
+        // and its answer is everything to show.
+        const got = await farmFile(next, "select", entry[next] ?? "main");
+        if (got.ok) enterFarm(got);
+        else setError(got.error ?? "Could not switch farms.");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     },
-    [language, entry, flush],
+    [language, entry, flush, enterFarm],
   );
 
   const openFile = useCallback(
@@ -327,11 +355,19 @@ export default function FarmMode() {
   }, []);
 
   const startOver = useCallback(async () => {
-    if (!window.confirm("Start the farm over? Every item and every unlock goes.")) return;
+    const name = LANGUAGE_NAMES[language] ?? language;
+    if (
+      !window.confirm(
+        `Start the ${name} farm over? Every item and every unlock in the ${name} farm goes. ` +
+          "Your code stays, and so do the other languages' farms - each language has its own.",
+      )
+    )
+      return;
     const o = await resetFarm();
     apply(o);
     setLines([]);
-  }, [apply]);
+    sinceRef.current = o.outputEnd;
+  }, [apply, language]);
 
   // The Playbook is fetched the first time it is opened.
   useEffect(() => {
@@ -357,20 +393,31 @@ export default function FarmMode() {
    */
   const addSnippet = useCallback(
     async (code: string) => {
+      if (running && tipLang !== language) {
+        setError(`Stop the running program first: ${LANGUAGE_NAMES[tipLang] ?? tipLang} has its own farm.`);
+        return;
+      }
       await flush();
       const name = entry[tipLang] ?? "main";
       const now = filesRef.current[tipLang]?.[name] ?? "";
       const next = (now.trim() ? now.replace(/\s+$/, "") + "\n\n" : "") + code + "\n";
       setFiles((was) => ({ ...was, [tipLang]: { ...(was[tipLang] ?? {}), [name]: next } }));
-      await keepFarmCode(tipLang, next, name);
+      const kept = await keepFarmCode(tipLang, next, name);
+      if (!kept.ok) {
+        setError("Could not add that to your code: stop the running program and try again.");
+        return;
+      }
       if (tipLang !== language) {
-        setLanguage(tipLang);
-        setViolations([]);
-        void farmFile(tipLang, "select", name);
+        // Adding code in another language moves to that language's farm, so Run runs what you added.
+        const got = await farmFile(tipLang, "select", name);
+        if (got.ok) {
+          enterFarm(got);
+          return;
+        }
       }
       setRevision((r) => r + 1);
     },
-    [tipLang, language, entry, flush],
+    [tipLang, language, entry, flush, running, enterFarm],
   );
 
   const copySnippet = useCallback((id: string, code: string) => {
@@ -401,7 +448,7 @@ export default function FarmMode() {
     <div className="farm-wrap">
       <section className="farm-code">
         <div className="farm-bar">
-          <div className="farm-langs" role="tablist" aria-label="Language">
+          <div className="farm-langs" role="tablist" aria-label="Language" title="Each language has its own farm">
             {overview.languages.map((lang) => (
               <button
                 key={lang}
@@ -410,7 +457,9 @@ export default function FarmMode() {
                 aria-selected={lang === language}
                 className={`ws-btn${lang === language ? " on" : ""}`}
                 onClick={() => void pickLanguage(lang)}
-                title={LANGUAGE_TIPS[lang]}
+                title={`${LANGUAGE_TIPS[lang]}. Its own farm${
+                  overview.saves?.[lang] ? `: ${overview.saves[lang].w}×${overview.saves[lang].h}` : ""
+                }`}
                 disabled={running}
               >
                 {LANGUAGE_NAMES[lang] ?? lang}
@@ -535,8 +584,8 @@ export default function FarmMode() {
           <canvas ref={canvasRef} width={px} height={px} className="farm-canvas" />
         </div>
         <div className="farm-status">
-          <span>
-            {state.farm.w}×{state.farm.h} · time {state.farm.time.toFixed(1)}s · speed {state.farm.speed}×
+          <span title="Each language has its own farm, with its own items, research and code">
+            {LANGUAGE_NAMES[language] ?? language} farm · {state.farm.w}×{state.farm.h} · time {state.farm.time.toFixed(1)}s · speed {state.farm.speed}×
           </span>
           {run_ ? (
             <span className={`farm-run ${run_.status}`}>
@@ -652,7 +701,8 @@ export default function FarmMode() {
             {tips.length === 0 ? <p className="farm-needs">Loading…</p> : null}
             {(() => {
               const needle = tipSearch.trim().toLowerCase();
-              const levelOf = (n: string) => (overview.unlocks ?? []).find((u) => u.name === n)?.level ?? 0;
+              // The tips are for tipLang, whose farm is not always the one you are on.
+              const levelOf = (n: string) => overview.levels?.[tipLang]?.[n] ?? 0;
               const missingFor = (t: FarmTip) => t.needs.filter((n) => levelOf(n) < (t.levels[n] ?? 1));
               const shown = tips.filter(
                 (t) =>

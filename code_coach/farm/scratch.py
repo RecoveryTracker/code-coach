@@ -89,7 +89,7 @@ class _ScratchHost(FarmHost):
         assert self.world is not None
         return self.world
 
-    def save(self) -> None:
+    def save(self, language: str | None = None) -> None:
         return None
 
     def _say(self, kind: str, text: str) -> None:

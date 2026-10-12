@@ -1,7 +1,8 @@
 """Running a player's program against the farm, and keeping the farm.
 
-There is one farm (one save) and at most one program running on it. The
-program is a real Python, Node or Dart process; a thread here reads its
+Each language - Original, Python, JavaScript, Dart - has its own farm and its
+own save; the one you are on is the current one, and at most one program runs,
+on that farm. The program is a real Python, Node or Dart process; a thread here reads its
 drone commands one line at a time, does each on the World, and paces the
 answers so the program takes the game time it would take in the game -
 an action at the start is half a second - sped up by the time warp you
@@ -12,8 +13,11 @@ When nothing is running, the farm still lives: each time the screen asks
 for it, it moves on by the real time since it last asked (a few seconds at
 most, so a closed tab does not come back to a harvest).
 
-The save sits next to the progress file - farm_save.json - with the code
-you last wrote in each language.
+The saves sit next to the progress file: farm_save.json says which language
+you are on, and farm_save_<language>.json holds that language's farm, its code
+files, the open tab and its time warp. A save from before there were separate
+farms (one farm_save.json with everything) is split up on first load: see
+`FarmHost._migrate`.
 """
 
 from __future__ import annotations
@@ -92,9 +96,47 @@ def _starter_files() -> dict[str, dict[str, str]]:
 
 
 def save_path() -> Path:
+    """The small file that says which language's farm you are on."""
     from code_coach.progress.store import active_store
 
     return active_store().path.with_name("farm_save.json")
+
+
+def language_save_path(language: str, base: Path | None = None) -> Path:
+    """One language's farm, its files and its time warp."""
+    return (base or save_path()).with_name(f"farm_save_{language}.json")
+
+
+#: The layout farm_save.json has when it is only the pointer to the current language.
+LAYOUT = 2
+#: What the single-file save of the days before separate farms is kept as.
+BACKUP_SUFFIX = ".before-per-language"
+
+
+def _clean_files(raw: Any) -> dict[str, str]:
+    """A language's files as saved, minus anything that is not a file name or a text."""
+    if not isinstance(raw, dict):
+        return {}
+    return {str(k): str(v) for k, v in raw.items() if FILE_NAME.match(str(k))}
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    """Write a save the way a save is always written: whole, then moved into place."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload), encoding="utf-8")
+    # Windows refuses to replace a file another process has open for a
+    # moment - a virus scanner or the indexer looking at the save it
+    # just saw change. It lets go in a few milliseconds, so wait for it
+    # rather than lose the save.
+    for attempt in range(SAVE_TRIES):
+        try:
+            os.replace(tmp, path)
+            break
+        except PermissionError:
+            if attempt == SAVE_TRIES - 1:
+                raise
+            time.sleep(SAVE_WAIT)
 
 
 #: (Drone has a field called `time`, which would hide the module inside its body.)
@@ -168,86 +210,202 @@ class FarmHost:
         self.lock = threading.RLock()
         #: Drones take turns under this, in game-time order.
         self.turns = threading.Condition(self.lock)
-        self.world: World | None = None
+        #: One farm per language, built the first time it is looked at.
+        self.worlds: dict[str, World] = {}
+        self._unbuilt: dict[str, Any] = {}
         #: Each language's files (name -> code), and which one Run runs.
         self.files: dict[str, dict[str, str]] = _starter_files()
         self.entry: dict[str, str] = {lang: "main" for lang in LANGUAGES}
+        #: The language you are on: its farm is the one on screen.
         self.language = "original"
-        self.warp: float = 1
+        #: Each language's time warp.
+        self.warps: dict[str, float] = {lang: 1 for lang in LANGUAGES}
         self.run: Run | None = None
         self.output: list[dict[str, Any]] = []
         self._next_run = 1
         self._last_look = time.monotonic()
         self._last_save = 0.0
         self._path: Path | None = None
+        #: The language farm_save.json last said, so it is only rewritten when it changes.
+        self._pointer: str | None = None
+
+    @property
+    def world(self) -> World | None:
+        """The current language's farm, if it has been built."""
+        return self.worlds.get(self.language)
+
+    @world.setter
+    def world(self, value: World) -> None:
+        self.worlds[self.language] = value
+        self._unbuilt.pop(self.language, None)
+
+    @property
+    def warp(self) -> float:
+        return self.warps[self.language]
+
+    @warp.setter
+    def warp(self, value: float) -> None:
+        self.warps[self.language] = value
 
     # ── Saving ──────────────────────────────────────────────────────────
 
     def _load(self) -> World:
+        """The current language's farm; reads the saves the first time (or if the store moved)."""
         path = save_path()
-        if self.world is not None and self._path == path:
-            return self.world
+        if self._path != path:
+            self._read_saves(path)
+        return self._world_for(self.language)
+
+    def _world_for(self, language: str) -> World:
+        """A language's farm, built from its save the first time it is asked for."""
+        world = self.worlds.get(language)
+        if world is None:
+            raw = self._unbuilt.pop(language, None)
+            try:
+                world = World.from_json(raw) if isinstance(raw, dict) else World()
+            except (ValueError, KeyError, TypeError):
+                world = World()
+            self.worlds[language] = world
+        return world
+
+    def _read_saves(self, path: Path) -> None:
         self._path = path
-        self.world = World()
+        self.worlds = {}
+        self._unbuilt = {}
         self.files = _starter_files()
         self.entry = {lang: "main" for lang in LANGUAGES}
+        self.warps = {lang: 1 for lang in LANGUAGES}
         self.output = []
+        self._pointer = None
+        self._migrate(path)
+        self.language = "original"
         if path.exists():
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
-                self.world = World.from_json(raw.get("world", {}))
-                saved = raw.get("files")
-                if isinstance(saved, dict):
-                    for lang, files in saved.items():
-                        if lang in LANGUAGES and isinstance(files, dict):
-                            kept = {str(k): str(v) for k, v in files.items() if FILE_NAME.match(str(k))}
-                            if kept:
-                                self.files[lang] = kept
-                else:
-                    # A save from before files: its one program becomes "main".
-                    for lang, code in raw.get("code", {}).items():
-                        if lang in LANGUAGES:
-                            self.files[lang]["main"] = str(code)
-                for lang, name in (raw.get("entry") or {}).items():
-                    if lang in LANGUAGES and name in self.files[lang]:
-                        self.entry[lang] = name
-                for lang in LANGUAGES:
-                    if self.entry[lang] not in self.files[lang]:
-                        self.entry[lang] = next(iter(self.files[lang]))
-                self.language = raw.get("language") if raw.get("language") in LANGUAGES else "original"
-                self.warp = float(raw.get("warp", 1))
-            except (OSError, ValueError, KeyError, TypeError):
-                self.world = World()
+                if isinstance(raw, dict) and raw.get("language") in LANGUAGES:
+                    self.language = raw["language"]
+                    self._pointer = self.language
+            except (OSError, ValueError):
+                pass
+        for lang in LANGUAGES:
+            self._read_language(lang, path)
         self._last_look = time.monotonic()
-        return self.world
 
-    def save(self) -> None:
-        with self.lock:
-            world = self._load()
-            payload = {
-                "world": world.to_json(), "files": self.files, "entry": self.entry,
-                "language": self.language,
-                "warp": self.warp,
+    def _read_language(self, language: str, base: Path) -> None:
+        path = language_save_path(language, base)
+        if not path.exists():
+            return
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                return
+            kept = _clean_files(raw.get("files"))
+            if kept:
+                self.files[language] = kept
+            name = raw.get("entry")
+            self.entry[language] = name if name in self.files[language] else next(iter(self.files[language]))
+            if isinstance(raw.get("world"), dict):
+                self._unbuilt[language] = raw["world"]
+            self.warps[language] = float(raw.get("warp", 1))
+        except (OSError, ValueError, TypeError):
+            return
+
+    def _migrate(self, path: Path) -> None:
+        """Split a save from before separate farms into one save per language.
+
+        The old farm_save.json held one farm, the code of every language and
+        the language you were on. The farm (and the time warp) go to that
+        language; the others start fresh farms but keep the code they had.
+        The old file is kept, beside the new ones, as
+        farm_save.json.before-per-language - copied there first, so nothing is
+        lost if anything after that fails.
+        """
+        if not path.exists():
+            return
+        try:
+            old = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(old, dict) or old.get("layout") == LAYOUT:
+            return
+        if not any(key in old for key in ("world", "files", "code", "entry")):
+            return
+        files = _starter_files()
+        entry = {lang: "main" for lang in LANGUAGES}
+        saved = old.get("files")
+        if isinstance(saved, dict):
+            for lang, group in saved.items():
+                kept = _clean_files(group) if lang in LANGUAGES else {}
+                if kept:
+                    files[lang] = kept
+        elif isinstance(old.get("code"), dict):
+            # A save from before files: its one program becomes "main".
+            for lang, code in old["code"].items():
+                if lang in LANGUAGES:
+                    files[lang]["main"] = str(code)
+        tabs = old.get("entry")
+        for lang, name in (tabs.items() if isinstance(tabs, dict) else ()):
+            if lang in LANGUAGES and name in files[lang]:
+                entry[lang] = name
+        language = old.get("language") if old.get("language") in LANGUAGES else "original"
+        try:
+            warp = float(old.get("warp", 1))
+        except (TypeError, ValueError):
+            warp = 1.0
+
+        backup = path.with_name(path.name + BACKUP_SUFFIX)
+        number = 1
+        while backup.exists() and backup.read_bytes() != path.read_bytes():
+            number += 1
+            backup = path.with_name(f"{path.name}{BACKUP_SUFFIX}.{number}")
+        if not backup.exists():
+            shutil.copy2(path, backup)
+        for lang in LANGUAGES:
+            payload: dict[str, Any] = {
+                "files": files[lang], "entry": entry[lang], "warp": warp if lang == language else 1,
             }
-            path = save_path()
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(payload), encoding="utf-8")
-            # Windows refuses to replace a file another process has open for a
-            # moment - a virus scanner or the indexer looking at the save it
-            # just saw change. It lets go in a few milliseconds, so wait for it
-            # rather than lose the save.
-            for attempt in range(SAVE_TRIES):
-                try:
-                    os.replace(tmp, path)
-                    break
-                except PermissionError:
-                    if attempt == SAVE_TRIES - 1:
-                        raise
-                    time.sleep(SAVE_WAIT)
+            if lang == language and isinstance(old.get("world"), dict):
+                payload["world"] = old["world"]
+            _write_json(language_save_path(lang, path), payload)
+        _write_json(path, {"layout": LAYOUT, "language": language})
+
+    def save(self, language: str | None = None) -> None:
+        """Keep a language's farm (the current one's, by default) and which language is current."""
+        with self.lock:
+            self._load()
+            self._write_language(language or self.language)
+            self._write_pointer()
             self._last_save = time.monotonic()
 
+    def _write_language(self, language: str) -> None:
+        _write_json(language_save_path(language), {
+            "world": self._world_for(language).to_json(), "files": self.files[language],
+            "entry": self.entry[language], "warp": self.warps[language],
+        })
+
+    def _write_pointer(self) -> None:
+        path = save_path()
+        if self._pointer != self.language or not path.exists():
+            _write_json(path, {"layout": LAYOUT, "language": self.language})
+            self._pointer = self.language
+
+    def _switch(self, language: str) -> None:
+        """Go to another language's farm (holding the lock); the one left is kept first."""
+        if language == self.language:
+            return
+        self._write_language(self.language)
+        self.language = language
+        self._world_for(language)
+        self.output = []
+        self._last_look = time.monotonic()
+
+    def _busy_elsewhere(self, language: str) -> bool:
+        """A program is running, on another language's farm than `language`."""
+        run = self.run
+        return run is not None and run.status in ("starting", "running") and run.language != language
+
     def reset(self) -> None:
+        """Start the current language's farm over; the other farms, and everyone's code, stay."""
         self.stop_run(wait=True)
         with self.lock:
             self._load()
@@ -271,7 +429,8 @@ class FarmHost:
         with self.lock:
             world = self._load()
             self._catch_up()
-            run = self.run
+            # A run belongs to the farm it ran on; another language's farm shows none.
+            run = self.run if self.run is not None and self.run.language == self.language else None
             farm = world.snapshot()
             items = world.items
             simulation = None
@@ -328,8 +487,18 @@ class FarmHost:
                     "Items": list(data.ITEMS), "Grounds": list(data.GROUNDS), "Hats": list(data.HATS),
                 },
                 "languages": [lang for lang in LANGUAGES if self.language_available(lang)],
+                "levels": {lang: dict(self._world_for(lang).unlocks) for lang in LANGUAGES},
+                "saves": {lang: self._summary(lang) for lang in LANGUAGES},
             })
             return payload
+
+    def _summary(self, language: str) -> dict[str, Any]:
+        """A line about one language's farm, for the other languages' tabs."""
+        world = self._world_for(language)
+        return {
+            "w": world.w, "h": world.h, "time": round(world.time, 1),
+            "items": {k: int(v) for k, v in world.items.items() if v >= 1},
+        }
 
     def unlock_list(self) -> list[dict[str, Any]]:
         world = self._load()
@@ -384,17 +553,21 @@ class FarmHost:
         """Each language's file that Run runs."""
         return {lang: self.files[lang].get(self.entry[lang], "") for lang in LANGUAGES}
 
-    def keep_code(self, language: str, code: str, file: str = "") -> None:
+    def keep_code(self, language: str, code: str, file: str = "") -> bool:
+        """Keep the text of a file, and go to that language's farm.
+
+        Refused (False) if a program is running on another language's farm."""
         if language not in LANGUAGES:
-            return
+            return False
         with self.lock:
             self._load()
             name = file or self.entry[language]
-            if name not in self.files[language]:
-                return
+            if name not in self.files[language] or self._busy_elsewhere(language):
+                return False
             self.files[language][name] = code
-            self.language = language
+            self._switch(language)
             self.save()
+            return True
 
     def file_op(self, language: str, action: str, name: str, new_name: str = "") -> dict[str, Any]:
         """Add, rename, delete or pick (to run) one of a language's files."""
@@ -402,6 +575,8 @@ class FarmHost:
             return {"ok": False, "error": f"{language} is not a farm language."}
         with self.lock:
             self._load()
+            if self._busy_elsewhere(language):
+                return {"ok": False, "error": "Stop the running program before you go to another language's farm."}
             files = self.files[language]
 
             def bad_name(n: str) -> str:
@@ -440,7 +615,7 @@ class FarmHost:
                 self.entry[language] = name
             else:
                 return {"ok": False, "error": f"Unknown file action {action}."}
-            self.language = language
+            self._switch(language)
             self.save()
             return {"ok": True}
 
@@ -473,13 +648,15 @@ class FarmHost:
             return {"ok": False, "error": f"{language} is not available on this machine."}
         self.stop_run(wait=True)
         with self.lock:
-            world = self._load()
+            self._load()
             entry = file or self.entry[language]
             if entry not in self.files[language]:
                 return {"ok": False, "error": f"There is no file called {entry}."}
             self.files[language][entry] = code
             self.entry[language] = entry
-            self.language = language
+            # The program runs on its own language's farm.
+            self._switch(language)
+            world = self._world_for(language)
             from code_coach.farm import gate
 
             unlocked = world.unlocked_features()
@@ -723,12 +900,15 @@ class FarmHost:
                 self._say("print" if name == "print" else "out", _prefix(run) + (str(args[0]) if args else ""))
             self._last_look = time.monotonic()
             if time.monotonic() - self._last_save > 10:
-                self.save()
+                self.save(run.language)
             self.turns.notify_all()
             return reply
 
     def _world_of(self, run: "Run") -> World:
-        return run.world if run.world is not None else self._load()
+        if run.world is not None:
+            return run.world
+        self._load()
+        return self._world_for(run.language)
 
     def _argv_for(self, run: "Run", file: str) -> list[str]:
         """The command that runs another of the program's files from the top."""
@@ -913,7 +1093,7 @@ class FarmHost:
             if run.finished:
                 return
             run.finished = True
-            world = self._load()
+            world = self._world_of(run)
             main = run.drones.get(0)
             if main is not None:
                 world.x, world.y, world.hat = main.x, main.y, main.hat
@@ -933,7 +1113,7 @@ class FarmHost:
             else:
                 run.status = "done"
                 self._say("info", "Your program finished.")
-            self.save()
+            self.save(run.language)
         shutil.rmtree(run.workdir, ignore_errors=True)
 
     def _finish_simulation(self, run: "Run") -> None:

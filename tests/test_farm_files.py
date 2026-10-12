@@ -18,7 +18,7 @@ import unittest
 
 from code_coach.engine import dart_path
 from code_coach.farm import data
-from code_coach.farm.runner import STARTER_CODE, FarmHost, save_path
+from code_coach.farm.runner import LANGUAGES, STARTER_CODE, FarmHost, save_path
 
 HAS_NODE = shutil.which("node") is not None
 HAS_DART = dart_path() is not None
@@ -29,13 +29,15 @@ LEVELS = dict(Loops=1, Speed=1, Expand=2, Plant=1, Senses=1, Operators=1, Variab
 
 def host(**levels: int) -> FarmHost:
     h = FarmHost()
-    h.warp = 0
-    world = h._load()
-    for name, level in (levels or LEVELS).items():
-        world.unlocks[name] = level
-    world.width, world.height = data.FARM_SIZES[2]
-    world._fill()
-    world.advance(5)
+    h._load()
+    for lang in LANGUAGES:  # every language has a farm of its own: set each up alike
+        h.warps[lang] = 0
+        world = h._world_for(lang)
+        for name, level in (levels or LEVELS).items():
+            world.unlocks[name] = level
+        world.width, world.height = data.FARM_SIZES[2]
+        world._fill()
+        world.advance(5)
     return h
 
 

@@ -2385,7 +2385,8 @@ def brain_result(body: BrainResultRequest) -> dict:
 
 @app.get("/api/farm")
 def farm_overview() -> dict:
-    """The farm when the screen opens: field, items, research, functions, your code."""
+    """The current language's farm when the screen opens: field, items, research, functions,
+    and every language's code. (`levels` is every language's research, for the Playbook.)"""
     from code_coach.farm.runner import HOST
 
     return HOST.overview()
@@ -2428,8 +2429,8 @@ def farm_code(body: FarmCodeRequest) -> dict:
     """Keep what you have written, per language, without running it."""
     from code_coach.farm.runner import HOST
 
-    HOST.keep_code(body.language, body.code, body.file)
-    return {"ok": True}
+    ok = HOST.keep_code(body.language, body.code, body.file)
+    return {"ok": ok}
 
 
 @app.post("/api/farm/file")

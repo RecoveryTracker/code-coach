@@ -136,7 +136,15 @@ code_coach/farm/
 - **Simulation**: `simulate()` starts a child Run on its own World
   (`World.for_simulation`). The caller's whole run waits, and starting
   globals go in via env `FARM_GLOBALS`.
-- The save is `farm_save.json` beside the progress file.
+- **One save per language**: Original, Python, JavaScript and Dart each have their own
+  farm (World), code files, open tab and time warp, in `farm_save_<language>.json`
+  beside the progress file; `farm_save.json` only says which language is current. `FarmHost`
+  holds one World per language (built lazily, `_world_for`); `_load()` is the current one;
+  `start`/`file_op`/`keep_code` switch to the language they name (refused while a run
+  is on another language's farm); `reset` clears only the current farm, keeping the code.
+  `overview().levels` is every language's research, for the Playbook. The old single-file
+  save is split on first load (`_migrate`) and kept as `farm_save.json.before-per-language`;
+  tests that run several languages on one host must set up every language's world (see `host()`).
 - **Playbook** (`farm/playbook.py`, the Playbook button): tips and paste-able
   snippets in all four languages. `tests/test_farm_playbook.py` gates every
   snippet against exactly its research and runs the key ones on a real farm.

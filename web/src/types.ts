@@ -1013,9 +1013,15 @@ export type FarmOverview = FarmState & {
   files: Record<string, Record<string, string>>;
   /** Each language's file that Run runs. */
   entry: Record<string, string>;
+  /** The language you are on: its farm is the one in this answer (state, items, research, field). */
   language: string;
   warps: number[];
+  /** The current language's research. */
   unlocks: FarmUnlock[];
+  /** Every language's research levels, name to level - each language has its own farm. */
+  levels: Record<string, Record<string, number>>;
+  /** A line about each language's farm: its size, game time and what is in the barn. */
+  saves: Record<string, { w: number; h: number; time: number; items: Record<string, number> }>;
   features: string[];
   functions: FarmFunction[];
   languages: string[];

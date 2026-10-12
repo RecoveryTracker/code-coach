@@ -131,10 +131,11 @@ def growing_times(w, entity: str) -> list[float]:
 def run_files(world, language: str, files: dict[str, str], entry: str = "main"):
     """Run a program of several files, the way the Run button does."""
     h = FarmHost()
-    h.warp = 0
     h._load()
+    h.language = language  # the farm under test is this language's own
+    h.warp = 0
     h.world = world
-    h.save = lambda: None
+    h.save = lambda language=None: None
     for name, text in files.items():
         if name != entry:
             added = h.file_op(language, "add", name)

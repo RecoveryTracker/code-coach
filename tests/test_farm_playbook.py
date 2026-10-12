@@ -101,10 +101,11 @@ def finish(h: FarmHost, timeout: float = 90.0) -> str:
 def run(world: World, language: str, code: str) -> tuple[FarmHost, str]:
     """Run a program on a farm the way the Run button does, at full warp."""
     h = FarmHost()
-    h.warp = 0
     h._load()
+    h.language = language  # the farm under test is this language's own
+    h.warp = 0
     h.world = world
-    h.save = lambda: None  # the farm under test is the one handed in, not a file on disk
+    h.save = lambda language=None: None  # the farm under test is the one handed in, not a file on disk
     started = h.start(language, code)
     if not started["ok"]:
         return h, f"refused: {started}"

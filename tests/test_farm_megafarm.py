@@ -16,7 +16,7 @@ import unittest
 
 from code_coach.engine import dart_path
 from code_coach.farm import data
-from code_coach.farm.runner import FarmHost
+from code_coach.farm.runner import LANGUAGES, FarmHost
 
 HAS_NODE = shutil.which("node") is not None
 HAS_DART = dart_path() is not None
@@ -27,13 +27,15 @@ LEVELS = dict(Loops=1, Speed=1, Expand=2, Plant=1, Senses=1, Operators=1, Variab
 
 def host() -> FarmHost:
     h = FarmHost()
-    h.warp = 0
-    world = h._load()
-    for name, level in LEVELS.items():
-        world.unlocks[name] = level
-    world.width, world.height = data.FARM_SIZES[2]
-    world._fill()
-    world.advance(5)  # every square's grass ripe
+    h._load()
+    for lang in LANGUAGES:  # every language has a farm of its own: set each up alike
+        h.warps[lang] = 0
+        world = h._world_for(lang)
+        for name, level in LEVELS.items():
+            world.unlocks[name] = level
+        world.width, world.height = data.FARM_SIZES[2]
+        world._fill()
+        world.advance(5)  # every square's grass ripe
     return h
 
 
@@ -130,7 +132,7 @@ class PythonMegafarmTests(unittest.TestCase):
 
     def test_megafarm_must_be_bought(self) -> None:
         h = host()
-        h._load().unlocks["Megafarm"] = 0
+        h._world_for("python").unlocks["Megafarm"] = 0
         h.start("python", "def f():\n    harvest()\nspawn_drone(f)\n")
         self.assertEqual(finish(h), "error")
         self.assertIn("Megafarm", h.run.error)

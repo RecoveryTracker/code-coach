@@ -240,7 +240,11 @@ export function runFarm(language: string, code: string, file = ""): Promise<Farm
   return request("/api/farm/run", { method: "POST", body: JSON.stringify({ language, code, file }) });
 }
 
-/** Add, rename, delete or select one of a language's files; answers with the whole farm. */
+/**
+ * Add, rename, delete or select one of a language's files; answers with the whole farm.
+ * Each language has its own farm, so this also takes you to that language's farm: the answer
+ * is that farm's overview.
+ */
 export function farmFile(
   language: string,
   action: "add" | "rename" | "delete" | "select",
@@ -257,7 +261,8 @@ export function stopFarm(): Promise<{ ok: boolean }> {
   return request("/api/farm/stop", { method: "POST", body: "{}" });
 }
 
-/** Keep what is written in a language, without running it. */
+/** Keep what is written in a language, without running it. `ok` is false if it was refused
+ * (a program is running on another language's farm). */
 export function keepFarmCode(language: string, code: string, file = ""): Promise<{ ok: boolean }> {
   return request("/api/farm/code", { method: "POST", body: JSON.stringify({ language, code, file }) });
 }
