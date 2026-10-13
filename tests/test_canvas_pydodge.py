@@ -181,7 +181,8 @@ class TestShape:
         assert {s.track for s in STEPS} == {"Dodge (Python)"}
         assert {s.language for s in STEPS} == {"python"}
         assert all(s.kind == "canvas" for s in STEPS)
-        assert [s.id for s in ALL_STEPS if s.language == "python"] == [s.id for s in STEPS]
+        # Registered, in order, among the Python steps (other Python tracks may follow).
+        assert [s.id for s in ALL_STEPS if s.track == "Dodge (Python)"] == [s.id for s in STEPS]
         # The other tracks stay JavaScript, in their own order, ahead of this one.
         order = [s.track for s in ALL_STEPS]
         assert order.index("Dodge") == 0

@@ -34,13 +34,14 @@ from code_coach.canvas.content_snake import SNAKE_STEPS
 from code_coach.canvas.content_towers import TOWER_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
 from code_coach.canvas.content_pydodge import PYDODGE_STEPS
+from code_coach.canvas.content_pysnake import PYSNAKE_STEPS
 
 #: Every track, in the order they are taught. Within a track, each step
 #: starts from the last one finished.
 STEPS: tuple[Step, ...] = (
     DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + ASTEROIDS_STEPS
     + TOWER_STEPS + DUNGEON_STEPS + FARM_STEPS
-    + TODO_STEPS + PYDODGE_STEPS + BLANK_STEPS
+    + TODO_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + BLANK_STEPS
 )
 
 HERE = Path(__file__).resolve().parent
