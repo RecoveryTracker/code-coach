@@ -6,6 +6,11 @@ a stand-in canvas, where a step's check plays it by hand - so many frames,
 this key held - and looks at what happened. Both load harness.js first, so
 the game the check plays is the game you watched.
 
+Python tracks (content_pydodge.py) are the same game played in Python: the
+program runs in a child process on the server and the browser draws what it
+records. See pyharness/ - and run_py_check below, which plays a step's
+Python check the way run_check plays a JavaScript one.
+
 The To-do track (content_dom.py) is the exception: it works on a web page,
 and a page's check needs a real browser, so it runs in one - see dom.py.
 """
@@ -23,17 +28,19 @@ from code_coach.canvas.content_breakout import BREAKOUT_STEPS
 from code_coach.canvas.content_asteroids import ASTEROIDS_STEPS
 from code_coach.canvas.content_blank import BLANK_STEPS
 from code_coach.canvas.content_dom import TODO_STEPS
+from code_coach.canvas.content_dungeon import DUNGEON_STEPS
 from code_coach.canvas.content_platformer import PLATFORMER_STEPS
 from code_coach.canvas.content_snake import SNAKE_STEPS
 from code_coach.canvas.content_towers import TOWER_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
+from code_coach.canvas.content_pydodge import PYDODGE_STEPS
 
 #: Every track, in the order they are taught. Within a track, each step
 #: starts from the last one finished.
 STEPS: tuple[Step, ...] = (
     DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + ASTEROIDS_STEPS
-    + TOWER_STEPS + FARM_STEPS
-    + TODO_STEPS + BLANK_STEPS
+    + TOWER_STEPS + DUNGEON_STEPS + FARM_STEPS
+    + TODO_STEPS + PYDODGE_STEPS + BLANK_STEPS
 )
 
 HERE = Path(__file__).resolve().parent
@@ -110,4 +117,10 @@ def check_step(step_id: str, code: str) -> CheckResult | None:
         return CheckResult(True, "")
     if found.kind == "dom":
         return CheckResult(False, "This step is checked in your browser, not here.")
+    if found.language == "python":
+        return run_py_check(code, found.check)
     return run_check(code, found.check, found.world)
+
+
+# Last, because pyharness.check imports CheckResult and TIMEOUT_SECONDS from here.
+from code_coach.canvas.pyharness.check import run_py_check  # noqa: E402

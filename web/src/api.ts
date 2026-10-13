@@ -6,6 +6,9 @@ import type {
   FarmState,
   CanvasCheck,
   CanvasList,
+  PyFrame,
+  PyEvent,
+  PyStart,
   CheckAnswerResult,
   ConceptTopic,
   CssCheck,
@@ -317,6 +320,39 @@ export function fetchCanvasPage(
   return request("/api/canvas/page", {
     method: "POST",
     body: JSON.stringify({ step_id, code, mode, storage }),
+  });
+}
+
+/** Run a Python step's program on the server; the first draw calls and its session. */
+export function startPyCanvas(step_id: string, code: string): Promise<PyStart> {
+  return request("/api/pycanvas/start", {
+    method: "POST",
+    body: JSON.stringify({ step_id, code }),
+  });
+}
+
+/** Run the next frame of a Python session: the keys held, and what happened since the last. */
+export function stepPyCanvas(
+  session: string,
+  dt: number,
+  keys: string[],
+  events: PyEvent[],
+): Promise<PyFrame> {
+  return request("/api/pycanvas/step", {
+    method: "POST",
+    body: JSON.stringify({ session, frames: 1, dt, keys, events }),
+  });
+}
+
+/** End a Python session. `keepalive` lets it finish while the page is going away. */
+export function stopPyCanvas(session: string): void {
+  void fetch("/api/pycanvas/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session }),
+    keepalive: true,
+  }).catch(() => {
+    /* best effort: the server also ends an idle session by itself */
   });
 }
 

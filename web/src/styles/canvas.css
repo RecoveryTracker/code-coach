@@ -197,3 +197,20 @@
     height: 360px;
   }
 }
+
+/* A Python step's game is a real canvas the server draws on. */
+.py-canvas {
+  image-rendering: auto;
+}
+
+.canvas-lang {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-muted, #8b98a8);
+}

@@ -151,11 +151,19 @@ class PayloadTests(unittest.TestCase):
         this is not gated the way the code banks are."""
         from code_coach.api import server
 
-        first = server.concepts()
-        progress = server._store.load()
-        progress.language = "sql"
-        server._store.save(progress)
-        self.assertEqual(len(server.concepts()), len(first))
+        from code_coach.concepts import topics
+
+        # A language's own topics (its semantics, the interview banks for
+        # Python and JavaScript) are shown to that language only, so the
+        # counts differ. What is not language-specific is shown to everyone.
+        shared = {t.id for t in topics() if not t.languages}
+        for language in ("python", "sql", "javascript"):
+            progress = server._store.load()
+            progress.language = language
+            server._store.save(progress)
+            offered = {t["id"] for t in server.concepts()}
+            with self.subTest(language=language):
+                self.assertTrue(shared <= offered, shared - offered)
 
 
 if __name__ == "__main__":

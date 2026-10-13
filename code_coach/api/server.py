@@ -38,6 +38,9 @@ from code_coach.api.schemas import (
     CanvasCheckRequest,
     CanvasPageRequest,
     CanvasPassedRequest,
+    PyCanvasStartRequest,
+    PyCanvasStepRequest,
+    PyCanvasStopRequest,
     BrainResultRequest,
     FarmCodeRequest,
     FarmFileRequest,
@@ -2485,6 +2488,7 @@ def canvas_list() -> dict:
                 "id": s.id,
                 "track": s.track,
                 "kind": s.kind,
+                "language": s.language,
                 "title": s.title,
                 "teaches": s.teaches,
                 "goal": s.goal,
@@ -2573,6 +2577,59 @@ def canvas_passed(body: CanvasPassedRequest) -> CanvasCheckResponse:
     done = progress.record_canvas(body.step_id)
     _store.save(progress)
     return CanvasCheckResponse(passed=True, message="", done=done)
+
+
+def _py_session_gone(session: str) -> HTTPException:
+    return HTTPException(
+        status_code=404,
+        detail=f"No game session {session!r}: it was stopped, replaced by a newer one, or idle too long. Press Run.",
+    )
+
+
+@app.post("/api/pycanvas/start")
+def pycanvas_start(body: PyCanvasStartRequest) -> dict:
+    """Run a Python Canvas step's program in a child process; draw its first calls.
+
+    {session, calls, logs, error}. Each call is [name, args, fill_style,
+    stroke_style, state]. The session is "" when the program failed to start
+    (a syntax error, a crash, an endless loop): the error says why and there
+    is nothing to step. See canvas/pyharness/.
+    """
+    from code_coach.canvas import step
+    from code_coach.canvas.pyharness.session import REGISTRY
+
+    found = step(body.step_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown step {body.step_id}")
+    if found.language != "python":
+        raise HTTPException(status_code=400, detail=f"{body.step_id} is not a Python step")
+    return REGISTRY.start(body.step_id, body.code)
+
+
+@app.post("/api/pycanvas/step")
+def pycanvas_step(body: PyCanvasStepRequest) -> dict:
+    """Run the next frame(s) of a session. {calls, logs, error}."""
+    from code_coach.canvas.pyharness.session import REGISTRY, Unknown
+
+    try:
+        return REGISTRY.step(
+            body.session, body.frames, body.dt, body.keys,
+            [e.model_dump() for e in body.events],
+        )
+    except Unknown:
+        raise _py_session_gone(body.session) from None
+
+
+@app.post("/api/pycanvas/stop")
+def pycanvas_stop(body: PyCanvasStopRequest) -> dict:
+    """End a session: its process is stopped and its folder deleted."""
+    from code_coach.canvas.pyharness.session import REGISTRY, Unknown
+
+    try:
+        REGISTRY.stop(body.session)
+    except Unknown:
+        raise _py_session_gone(body.session) from None
+    return {"ok": True}
 
 
 @app.get("/api/flutter")

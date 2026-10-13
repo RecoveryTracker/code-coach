@@ -1038,6 +1038,8 @@ export type CanvasStep = {
   track: string;
   /** "dom" for a step on a web page (To-do), checked in the browser; "canvas" for the rest. */
   kind: "canvas" | "dom";
+  /** What you write: JavaScript runs in the browser, Python on the server (see PyCanvasView). */
+  language: "javascript" | "python";
   title: string;
   teaches: string;
   goal: string;
@@ -1057,6 +1059,38 @@ export type CanvasStep = {
 export type CanvasList = { harness: string; steps: CanvasStep[] };
 
 export type CanvasCheck = { passed: boolean; message: string; done: number };
+
+/** One recorded drawing call: name, args, fill_style, stroke_style, and the rest of the state. */
+export type PyCall = [
+  string,
+  (number | string | boolean)[],
+  string,
+  string,
+  {
+    lineWidth: number;
+    font: string;
+    textAlign: string;
+    textBaseline: string;
+    globalAlpha: number;
+  },
+];
+
+/** What a Python Canvas program did since the last request. */
+export type PyFrame = {
+  calls: PyCall[];
+  logs: string[];
+  error: { message: string; line: number | null } | null;
+  /** The program wants frames (on_frame, a timer) / key and click events. Neither: it is finished. */
+  frames: boolean;
+  input: boolean;
+};
+
+/** `session` is empty when the program could not start: the error says why. */
+export type PyStart = PyFrame & { session: string };
+
+export type PyEvent =
+  | { type: "keydown" | "keyup"; key: string }
+  | { type: "click" | "mousemove"; x: number; y: number };
 
 export type FlutterQuestion = {
   id: string;

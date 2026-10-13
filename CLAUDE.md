@@ -63,7 +63,9 @@ at the end. That means:
 - a file in the list must not change mid-run;
 - never `git add -A` at the end of a run.
 
-Parallel pytest (xdist) was tried and rejected: on this 4-core machine the
+The test fixtures remove their own scratch folders (they used to leave one per
+test in the temp directory - 190,000 of them - and every Python start scans
+that folder, which added minutes to the suite). Parallel pytest (xdist) was tried and rejected: on this 4-core machine the
 process start-up contention made tests time out.
 
 ## Editing on Windows
@@ -91,7 +93,9 @@ Most modes take content as a new module plus a one-line registration:
   `all_shape_ids`), `complexity.py`, and `tests/test_workbook.py`
   (`python_only` for JS-only shapes). The JavaScript book is numbered in
   order: 168-177 regex, 178-187 data, 188-197 game math, 198-207 building a
-  game, 208-217 async, 218-227 planets, 228-237 bodybuilding, 238-247 Node, 248-257 music, 258-267 cooking.
+  game, 208-217 async, 218-227 planets, 228-237 bodybuilding, 238-247 Node, 248-257 music, 258-267 cooking. The Python book is numbered
+  on its own: its scripting pages (pathlib, argparse, files, JSON, csv, logging,
+  exit codes, http.server, asyncio) are the last base pages, 342-351.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's
@@ -157,12 +161,49 @@ code_coach/farm/
 
 ## Canvas and Brain Drills
 
-- **Canvas**: JavaScript you can watch. Tracks: Dodge, Breakout, Snake,
-  Platformer, Asteroids, Tower defense, Farm, To-do, and From blank (five independent projects: a spec
+- **Canvas**: JavaScript (and now Python) you can watch. Tracks: Dodge, Breakout, Snake,
+  Platformer, Asteroids, Tower defense, Dungeon, Farm, To-do, and From blank (five independent projects: a spec
   and a check, no starter code). `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's
   solution. To-do is different - see below.
+- **Python Canvas** (`code_coach/canvas/pyharness/`, track "Dodge (Python)" in
+  `content_pydodge.py`). Python cannot draw in a browser, so the learner's
+  program runs on the server, in a child process (`python -I -u -X utf8
+  driver.py serve`), one frame per request, and `PyCanvasView.tsx` paints the
+  recorded draw calls on a real `<canvas>`. The learner writes `from canvas
+  import ctx, WIDTH, HEIGHT, on_frame, keys, ...` (`lib/canvas.py`: a snake_case
+  `ctx`, `on_frame(fn(dt))`, `keys`, `mouse`, `on_key_down/up`, `on_click`,
+  `after/every/cancel`, `now()`; dt is game seconds). Nothing is drawn in
+  Python: every `ctx` call is written down as `[name, args, fill_style,
+  stroke_style, {lineWidth, font, ...}]`. The protocol is JSON lines behind a
+  `PY` marker (`print` is caught and returned as `logs`; stdout is the
+  wire): `start {code}`, `step {frames, dt, keys, events}`, `stop`; every reply
+  is `{calls, logs, error: {message, line}|null, frames, input}`, the last two
+  saying whether the program still wants frames or input (neither: the page
+  stops asking). Lines are the learner's own (code is compiled as `game.py`).
+  A watchdog thread in the child stops a program that runs past its limit
+  (2 s a step) by raising in it; if it swallows that, the child exits (code 3);
+  the parent kills the process tree at limit + 2.5 s. Sessions
+  (`session.py`, routes `/api/pycanvas/start|step|stop`) live in a registry: at
+  most 4 (least recently used evicted), idle 60 s reaped (swept every 5 s),
+  child and temp folder removed on stop, evict, idle, crash and server exit; a
+  child whose server dies exits on stdin EOF, and its folder is swept (if over
+  an hour old) the next time a session starts. A check (`check.py`
+  `run_py_check`, dispatched by `Step.language == "python"` in
+  `check_step`) runs in one child (`driver.py check`): Python statements with
+  `cc` (frames, press, release, click, pointer, rects, arcs, texts, drawn,
+  time), `expect`, `near`, `g` (the learner's top-level names, get and set)
+  and `WIDTH`, `HEIGHT`; `random` is seeded 20260926 before the code loads.
+  It is not a security sandbox - it is the learner's own Python on their own
+  machine, with an empty working folder and a bare environment. **A new Python
+  track**: a `content_<name>.py` of `Step(language="python", ...)`, one line in
+  `canvas/__init__.py` STEPS, and a test file like
+  `tests/test_canvas_pydodge.py` (solutions pass, starters fail, MISTAKES fail,
+  OTHER_WAYS pass). Checks read fields with a `get()` helper so a dict or a
+  dataclass both pass. Verify by hand with the in-app browser: its pane is
+  hidden, so `requestAnimationFrame` never fires - stand a `setTimeout` in for
+  it on the page, press Run, and read canvas pixels.
 - **Brain Drills** (`code_coach/brain/`): seven timed reflex activities, in
   JavaScript or Python (`pythonic.py`; scores kept per language), and a
   "code age" from 20 to 80. Every item is modelled in

@@ -55,7 +55,7 @@ def _q(ask: str, answer: str, follow_up: str = "") -> Question:
 
 
 def topics(language: str | None = None) -> tuple[Topic, ...]:
-    """Every topic, from all three banks, in the order they are read.
+    """Every topic, from all four banks, in the order they are read.
 
     The split across files is only so none of them has to be scrolled past to
     reach the next; from the outside it is one bank.
@@ -67,8 +67,10 @@ def topics(language: str | None = None) -> tuple[Topic, ...]:
     from code_coach.concepts.bank import TOPICS
     from code_coach.concepts.bank2 import MORE_TOPICS
     from code_coach.concepts.bank3 import LANGUAGE_TOPICS
+    from code_coach.concepts.bank4 import INTERVIEW_TOPICS
+    from code_coach.concepts.bank5 import PYTHON_INTERVIEW_TOPICS
 
-    everything = TOPICS + MORE_TOPICS + LANGUAGE_TOPICS
+    everything = TOPICS + MORE_TOPICS + LANGUAGE_TOPICS + INTERVIEW_TOPICS + PYTHON_INTERVIEW_TOPICS
     if language is None:
         chosen = everything
     else:

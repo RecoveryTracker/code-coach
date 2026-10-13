@@ -43,6 +43,9 @@ class Step:
     #: page's <body>, and the stylesheet it is drawn with. Empty for the rest.
     html: str = ""
     css: str = ""
+    #: What the learner writes and what runs it: 'javascript' (in the browser,
+    #: checked in node) or 'python' (in a child process on the server).
+    language: str = "javascript"
 
     @property
     def kind(self) -> str:

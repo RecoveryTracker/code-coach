@@ -31,6 +31,10 @@ from code_coach.typing.snippets_jslifting import JSLIFTING_BLOCKS, JSLIFTING_LIN
 from code_coach.typing.snippets_jsmusic import JSMUSIC_BLOCKS, JSMUSIC_LINES
 from code_coach.typing.snippets_jsnode import JSNODE_BLOCKS, JSNODE_LINES
 from code_coach.typing.snippets_jsplanets import JSPLANETS_BLOCKS, JSPLANETS_LINES
+from code_coach.typing.snippets_pydata import PYDATA_BLOCKS, PYDATA_LINES
+from code_coach.typing.snippets_pygame import PYGAME_BLOCKS, PYGAME_LINES
+from code_coach.typing.snippets_pyscript import PYSCRIPT_BLOCKS, PYSCRIPT_LINES
+from code_coach.typing.snippets_pysci import PYSCI_BLOCKS, PYSCI_LINES
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -565,6 +569,36 @@ THEMES: tuple[Theme, ...] = (
         blocks=code_blocks_for("python"),
         language="python",
     ),
+    # Themed Python: the same language, written about games, data,
+    # scripts, and the planets / a training log / music / recipes.
+    Theme(
+        "pygame", "Python Game Code",
+        "Entities, vectors, a fixed-timestep loop, collisions, tile grids and pygame calls.",
+        passages=PYGAME_LINES,
+        blocks=PYGAME_BLOCKS,
+        language="python",
+    ),
+    Theme(
+        "pydata", "Python Data Code",
+        "Counter, defaultdict, itertools, functools, dataclasses, csv, json and statistics.",
+        passages=PYDATA_LINES,
+        blocks=PYDATA_BLOCKS,
+        language="python",
+    ),
+    Theme(
+        "pyscript", "Python Scripting Code",
+        "pathlib, argparse, logging, subprocess, asyncio, contextlib and a small server.",
+        passages=PYSCRIPT_LINES,
+        blocks=PYSCRIPT_BLOCKS,
+        language="python",
+    ),
+    Theme(
+        "pysci", "Python Science Code",
+        "Planets, one-rep maxes, plate math, MIDI frequencies, recipes and formatted tables.",
+        passages=PYSCI_LINES,
+        blocks=PYSCI_BLOCKS,
+        language="python",
+    ),
     Theme(
         "jscode", "JavaScript Code",
         "Destructuring, arrows and promises, plus the JavaScript solutions.",
@@ -714,7 +748,7 @@ THEMES: tuple[Theme, ...] = (
 #: then its close relatives (TypeScript after JavaScript, PostgreSQL
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
-    "python": ("pycode",),
+    "python": ("pycode", "pygame", "pydata", "pyscript", "pysci"),
     "javascript": ("jscode", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode"),
     "dart": ("dartcode",),
     "sql": ("sqlcode", "postgresqlcode"),

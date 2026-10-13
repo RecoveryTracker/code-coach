@@ -297,6 +297,7 @@ class ReferenceRunTests(unittest.TestCase):
         from code_coach.workbook.emit_jsnode import SHAPE_IDS as JSNODE_SHAPES
         from code_coach.workbook.emit_jsmusic import SHAPE_IDS as JSMUSIC_SHAPES
         from code_coach.workbook.emit_jscooking import SHAPE_IDS as JSCOOKING_SHAPES
+        from code_coach.workbook.emit_pyscript import SHAPE_IDS as PYSCRIPT_SHAPES
         from code_coach.workbook.emit_python21 import SHAPE_IDS as PY21
 
         python_only = (
@@ -370,6 +371,7 @@ class ReferenceRunTests(unittest.TestCase):
             | set(JSNODE_SHAPES)
             | set(JSMUSIC_SHAPES)
             | set(JSCOOKING_SHAPES)
+            | set(PYSCRIPT_SHAPES)
         )
         shapes = {e.shape for _, e in _one_per_shape("dart")}
         self.assertEqual(shapes, set(all_shape_ids()) - python_only)

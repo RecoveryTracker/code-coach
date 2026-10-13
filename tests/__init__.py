@@ -23,6 +23,8 @@ one in the first place, whichever way the suite was started.
 
 from __future__ import annotations
 
+import atexit
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -31,5 +33,7 @@ from code_coach.progress.store import ProgressStore, use_store
 #: Kept on the module so it is not garbage collected mid-run, and so a
 #: test that wants to know where it landed can ask.
 SANDBOX = Path(tempfile.mkdtemp(prefix="code-coach-suite-"))
+# And gone when the run is: it used to be left behind, one per run, for good.
+atexit.register(shutil.rmtree, SANDBOX, ignore_errors=True)
 
 use_store(ProgressStore(SANDBOX / "progress.json"))

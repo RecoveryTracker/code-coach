@@ -840,6 +840,37 @@ class CanvasPassedRequest(BaseModel):
     step_id: str = ""
 
 
+class PyCanvasStartRequest(BaseModel):
+    """Run a Python Canvas step's program in a session of its own."""
+
+    step_id: str = ""
+    code: str = Field(default="", max_length=200_000)
+
+
+class PyCanvasEvent(BaseModel):
+    """Something that happened on the canvas since the last step."""
+
+    type: Literal["keydown", "keyup", "click", "mousemove"]
+    key: str = Field(default="", max_length=40)
+    x: float = 0
+    y: float = 0
+
+
+class PyCanvasStepRequest(BaseModel):
+    """Run `frames` more frames: the keys held, and what happened since the last step."""
+
+    session: str = ""
+    frames: int = Field(default=1, ge=1, le=120)
+    #: Seconds per frame; the program's dt. 1/60 when omitted.
+    dt: float | None = Field(default=None, gt=0, le=0.1)
+    keys: list[str] = Field(default_factory=list, max_length=40)
+    events: list[PyCanvasEvent] = Field(default_factory=list, max_length=200)
+
+
+class PyCanvasStopRequest(BaseModel):
+    session: str = ""
+
+
 class FlutterCheckRequest(BaseModel):
     """One Flutter question, and the choice picked for it."""
 

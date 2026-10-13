@@ -72,6 +72,7 @@ from code_coach.workbook.content_jslifting import JSLIFTING_PAGES
 from code_coach.workbook.content_jsnode import JSNODE_PAGES
 from code_coach.workbook.content_jsmusic import JSMUSIC_PAGES
 from code_coach.workbook.content_jscooking import JSCOOKING_PAGES
+from code_coach.workbook.content_pyscript import PYSCRIPT_PAGES
 from code_coach.workbook.content_last import LAST_PAGES
 from code_coach.workbook.content_library import LIBRARY_PAGES
 from code_coach.workbook.content_machinery import MACHINERY_PAGES
@@ -730,6 +731,7 @@ _BASE_PAGES = (
     + JSNODE_PAGES
     + JSMUSIC_PAGES
     + JSCOOKING_PAGES
+    + PYSCRIPT_PAGES
 )
 
 # Review pages are built from the pages above rather than written out, so

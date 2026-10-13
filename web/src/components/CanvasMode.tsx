@@ -28,6 +28,7 @@ import { checkCanvas, fetchCanvas, fetchCanvasAnswer, fetchCanvasPage, recordCan
 import { defineEditorThemes, editorThemeFor, useSkin } from "../skins";
 import type { CanvasCheck, CanvasList, CanvasStep } from "../types";
 import { EditorPane } from "./EditorPane";
+import PyCanvasView from "./PyCanvasView";
 import "../styles/canvas.css";
 
 const LAST_KEY = "code-coach:canvas-last";
@@ -144,6 +145,9 @@ export default function CanvasMode() {
   const [stored, setStored] = useState<Record<string, string>>({});
   const [checkPage, setCheckPage] = useState("");
   const [checkRuns, setCheckRuns] = useState(0);
+  // A Python step's preview runs the program on the server (PyCanvasView):
+  // this is the program and step it was last Run with.
+  const [pyRun, setPyRun] = useState({ id: "", code: "" });
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const checkFrameRef = useRef<HTMLIFrameElement | null>(null);
   const codeRef = useRef("");
@@ -189,6 +193,7 @@ export default function CanvasMode() {
   const number = item ? trackSteps.indexOf(item) + 1 : 0;
   const tracks = list ? [...new Set(list.steps.map((s) => s.track))] : [];
   const onPage = item?.kind === "dom";
+  const onPython = item?.language === "python";
 
   const run = useCallback(
     (source?: string, keepLines = false) => {
@@ -197,6 +202,11 @@ export default function CanvasMode() {
       const step = list.steps.find((s) => s.id === chosenRef.current);
       const program = source ?? codeRef.current;
       const ticket = ++runTicket.current;
+      if (step?.language === "python") {
+        setPyRun({ id: step.id, code: program });
+        setRuns((n) => n + 1);
+        return;
+      }
       if (step?.kind === "dom") {
         // The server builds a page step's page, so the preview loads the
         // same page a check does.
@@ -343,6 +353,17 @@ export default function CanvasMode() {
     }
   }, [item, checking, checkInBrowser]);
 
+  /** What a Python program printed, and how it ended, into the console. */
+  const pyLog = useCallback((texts: string[]) => {
+    setLines((was) => {
+      const room = MAX_LINES - was.length;
+      return room <= 0 ? was : [...was, ...texts.slice(0, room).map((text) => ({ tone: "log" as const, text }))];
+    });
+  }, []);
+  const pyError = useCallback((text: string) => {
+    setLines((was) => (was.length >= MAX_LINES ? was : [...was, { tone: "error" as const, text }]));
+  }, []);
+
   const reset = useCallback(() => {
     if (!item) return;
     writeStore(DRAFT_KEY(item.id), null);
@@ -386,19 +407,21 @@ export default function CanvasMode() {
       <nav className="lessons-list">
         <h2>Canvas</h2>
         <p className="lessons-intro">
-          JavaScript you can watch. Each step is one change to the same
+          JavaScript and Python you can watch. Each step is one change to the same
           program, and Check runs it - holding keys and counting frames, or
           clicking and typing on the page - to see that it does what the
           step asks.
         </p>
         {tracks.map((track) => {
           const steps = list.steps.filter((s) => s.track === track);
+          const python = steps[0]?.language === "python";
           const passed = steps.filter((s) => s.checked && s.done).length;
           const checked = steps.filter((s) => s.checked).length;
           return (
             <div key={track} className="wb-section">
               <h4 className="wb-section-head">
                 {track}
+                <span className="canvas-lang">{python ? "Python" : "JavaScript"}</span>
                 <span className="wb-section-count">
                   {passed}/{checked}
                 </span>
@@ -425,7 +448,7 @@ export default function CanvasMode() {
         <header>
           <h3>
             {item.track} {number}. {item.title}
-            <span className="predict-lang">JavaScript</span>
+            <span className="predict-lang">{onPython ? "Python" : "JavaScript"}</span>
           </h3>
         </header>
         <p className="canvas-teaches">{item.teaches}</p>
@@ -460,8 +483,8 @@ export default function CanvasMode() {
                 revision={revision}
                 onChange={onChange}
                 onRun={() => run()}
-                language="javascript"
-                fileName={onPage ? "app.js" : "game.js"}
+                language={onPython ? "python" : "javascript"}
+                fileName={onPage ? "app.js" : onPython ? "game.py" : "game.js"}
               />
             </div>
             {onPage && file !== "app.js" ? (
@@ -475,17 +498,33 @@ export default function CanvasMode() {
             ) : null}
           </div>
           <div className="canvas-side">
-            <iframe
-              key={runs}
-              ref={frameRef}
-              className={`canvas-frame${onPage ? " page" : ""}`}
-              title={onPage ? "Your page" : "Your game"}
-              sandbox={onPage ? "allow-scripts allow-forms" : "allow-scripts"}
-              srcDoc={page}
-              onLoad={() => {
-                if (!onPage) frameRef.current?.focus();
-              }}
-            />
+            {onPython ? (
+              // Not until Run has been pressed for this step (the step-change
+              // effect does it): there is no program to start before that.
+              pyRun.id === item.id ? (
+                <PyCanvasView
+                  key={runs}
+                  stepId={pyRun.id}
+                  code={pyRun.code}
+                  onLog={pyLog}
+                  onError={pyError}
+                />
+              ) : (
+                <div className="canvas-frame" />
+              )
+            ) : (
+              <iframe
+                key={runs}
+                ref={frameRef}
+                className={`canvas-frame${onPage ? " page" : ""}`}
+                title={onPage ? "Your page" : "Your game"}
+                sandbox={onPage ? "allow-scripts allow-forms" : "allow-scripts"}
+                srcDoc={page}
+                onLoad={() => {
+                  if (!onPage) frameRef.current?.focus();
+                }}
+              />
+            )}
             {onPage ? (
               <p className="canvas-tip">
                 The page is live: click and type in it. Run reloads it.
@@ -504,7 +543,9 @@ export default function CanvasMode() {
             )}
             <div className="canvas-console" aria-live="polite">
               {lines.length === 0 ? (
-                <span className="canvas-console-empty">console.log output and errors show here</span>
+                <span className="canvas-console-empty">
+                  {onPython ? "print() output and errors show here" : "console.log output and errors show here"}
+                </span>
               ) : (
                 lines.map((l, i) => (
                   <div key={i} className={`canvas-line ${l.tone}`}>

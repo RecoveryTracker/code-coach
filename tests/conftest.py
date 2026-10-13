@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import faulthandler
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -123,6 +124,18 @@ def _room_on_the_clock():
             os.environ[TIMEOUT_ENV] = previous
 
 
+def _tidy(folder: str) -> None:
+    """Remove a test's scratch folder when it is done with it.
+
+    These were never removed: one folder per test, about 190,000 of them in
+    the temp directory by the time anyone looked, and every Python process
+    started from there scans that directory when it imports anything - the
+    reason the suite grew minutes longer. A background thread may still write
+    a save as the test ends, so a folder that will not go is left, not an error.
+    """
+    shutil.rmtree(folder, ignore_errors=True)
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _isolated_progress_store():
     """Point the app at a temporary store for the whole run."""
@@ -134,6 +147,7 @@ def _isolated_progress_store():
         yield
     finally:
         use_store(previous)
+        _tidy(folder)
 
 
 @pytest.fixture(autouse=True)
@@ -155,3 +169,4 @@ def _fresh_progress_per_test():
     finally:
         use_store(previous)
         server._store = was
+        _tidy(folder)
