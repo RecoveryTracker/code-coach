@@ -168,7 +168,8 @@ code_coach/farm/
   frames, held keys, the mouse. Each step's starter is the previous step's
   solution. To-do is different - see below.
 - **Python Canvas** (`code_coach/canvas/pyharness/`, tracks "Dodge (Python)" in
-  `content_pydodge.py` and "Snake (Python)" in `content_pysnake.py`). Python cannot draw in a browser, so the learner's
+  `content_pydodge.py`, "Snake (Python)" in `content_pysnake.py` and "Breakout (Python)"
+  in `content_pybreakout.py`). Python cannot draw in a browser, so the learner's
   program runs on the server, in a child process (`python -I -u -X utf8
   driver.py serve`), one frame per request, and `PyCanvasView.tsx` paints the
   recorded draw calls on a real `<canvas>`. The learner writes `from canvas

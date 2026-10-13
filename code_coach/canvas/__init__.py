@@ -33,6 +33,7 @@ from code_coach.canvas.content_platformer import PLATFORMER_STEPS
 from code_coach.canvas.content_snake import SNAKE_STEPS
 from code_coach.canvas.content_towers import TOWER_STEPS
 from code_coach.canvas.content_farm import FARM_STEPS
+from code_coach.canvas.content_pybreakout import PYBREAKOUT_STEPS
 from code_coach.canvas.content_pydodge import PYDODGE_STEPS
 from code_coach.canvas.content_pysnake import PYSNAKE_STEPS
 
@@ -41,7 +42,7 @@ from code_coach.canvas.content_pysnake import PYSNAKE_STEPS
 STEPS: tuple[Step, ...] = (
     DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + ASTEROIDS_STEPS
     + TOWER_STEPS + DUNGEON_STEPS + FARM_STEPS
-    + TODO_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + BLANK_STEPS
+    + TODO_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + PYBREAKOUT_STEPS + BLANK_STEPS
 )
 
 HERE = Path(__file__).resolve().parent
