@@ -597,6 +597,8 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         emit_jsmusic,
         emit_jscooking,
         emit_pyscript,
+        emit_pyweb,
+        emit_pydata,
     )
 
     if emit_pg.handles(shape):
@@ -640,6 +642,10 @@ def solution(language: str, shape: str, args: dict) -> str | None:
         return emit_jscooking.solution(language, shape, args)
     if emit_pyscript.handles(shape):
         return emit_pyscript.solution(language, shape, args)
+    if emit_pyweb.handles(shape):
+        return emit_pyweb.solution(language, shape, args)
+    if emit_pydata.handles(shape):
+        return emit_pydata.solution(language, shape, args)
     if emit_rust3.handles(shape):
         return emit_rust3.solution(language, shape, args)
     if emit_topup.handles(shape):
@@ -857,6 +863,8 @@ def all_shape_ids() -> tuple[str, ...]:
         emit_jsmusic,
         emit_jscooking,
         emit_pyscript,
+        emit_pyweb,
+        emit_pydata,
     )
 
     return (
@@ -930,4 +938,6 @@ def all_shape_ids() -> tuple[str, ...]:
         + emit_jsmusic.SHAPE_IDS
         + emit_jscooking.SHAPE_IDS
         + emit_pyscript.SHAPE_IDS
+        + emit_pyweb.SHAPE_IDS
+        + emit_pydata.SHAPE_IDS
     )

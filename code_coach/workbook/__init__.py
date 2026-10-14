@@ -171,6 +171,8 @@ def expected_output(shape: str, args: dict) -> str:
         emit_jsmusic,
         emit_jscooking,
         emit_pyscript,
+        emit_pyweb,
+        emit_pydata,
     )
 
     if emit_pg.handles(shape):
@@ -201,6 +203,10 @@ def expected_output(shape: str, args: dict) -> str:
         return emit_jscooking.expected_output(shape, args, _value)
     if emit_pyscript.handles(shape):
         return emit_pyscript.expected_output(shape, args, _value)
+    if emit_pyweb.handles(shape):
+        return emit_pyweb.expected_output(shape, args, _value)
+    if emit_pydata.handles(shape):
+        return emit_pydata.expected_output(shape, args, _value)
     if emit_rust3.handles(shape):
         return emit_rust3.expected_output(shape, args, _value)
     if emit_topup.handles(shape):

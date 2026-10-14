@@ -27,6 +27,7 @@ from code_coach.canvas.content import STEPS as DODGE_STEPS, Step
 from code_coach.canvas.content_breakout import BREAKOUT_STEPS
 from code_coach.canvas.content_asteroids import ASTEROIDS_STEPS
 from code_coach.canvas.content_blank import BLANK_STEPS
+from code_coach.canvas.content_debug import DEBUG_STEPS
 from code_coach.canvas.content_dom import TODO_STEPS
 from code_coach.canvas.content_dungeon import DUNGEON_STEPS
 from code_coach.canvas.content_platformer import PLATFORMER_STEPS
@@ -37,7 +38,9 @@ from code_coach.canvas.content_pyasteroids import PYASTEROIDS_STEPS
 from code_coach.canvas.content_pybreakout import PYBREAKOUT_STEPS
 from code_coach.canvas.content_pydodge import PYDODGE_STEPS
 from code_coach.canvas.content_pyblank import PYBLANK_STEPS
+from code_coach.canvas.content_pydebug import PYDEBUG_STEPS
 from code_coach.canvas.content_pydungeon import PYDUNGEON_STEPS
+from code_coach.canvas.content_pyinvaders import PYINVADERS_STEPS
 from code_coach.canvas.content_pyplatformer import PYPLATFORMER_STEPS
 from code_coach.canvas.content_pysnake import PYSNAKE_STEPS
 from code_coach.canvas.content_pytowers import PYTOWERS_STEPS
@@ -47,8 +50,9 @@ from code_coach.canvas.content_pytowers import PYTOWERS_STEPS
 STEPS: tuple[Step, ...] = (
     DODGE_STEPS + BREAKOUT_STEPS + SNAKE_STEPS + PLATFORMER_STEPS + ASTEROIDS_STEPS
     + TOWER_STEPS + DUNGEON_STEPS + FARM_STEPS
-    + TODO_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + PYBREAKOUT_STEPS + PYASTEROIDS_STEPS
-    + PYPLATFORMER_STEPS + PYTOWERS_STEPS + PYDUNGEON_STEPS + BLANK_STEPS + PYBLANK_STEPS
+    + TODO_STEPS + DEBUG_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + PYBREAKOUT_STEPS + PYASTEROIDS_STEPS
+    + PYPLATFORMER_STEPS + PYTOWERS_STEPS + PYDUNGEON_STEPS + PYINVADERS_STEPS
+    + BLANK_STEPS + PYBLANK_STEPS + PYDEBUG_STEPS
 )
 
 HERE = Path(__file__).resolve().parent

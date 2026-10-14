@@ -1207,9 +1207,9 @@ void main() {
 #: The groups, in the order the playbook shows them.
 # The rest of the playbook lives in two more files, imported here, after Entry
 # and _entry exist, because they build their entries with them.
-from code_coach.farm import playbook_economy, playbook_patterns  # noqa: E402
+from code_coach.farm import playbook_economy, playbook_patterns, playbook_round2  # noqa: E402
 
-ENTRIES = ENTRIES + playbook_economy.ENTRIES + playbook_patterns.ENTRIES
+ENTRIES = ENTRIES + playbook_economy.ENTRIES + playbook_patterns.ENTRIES + playbook_round2.ENTRIES
 
 GROUPS = tuple(dict.fromkeys(entry.group for entry in ENTRIES))
 

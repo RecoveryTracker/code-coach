@@ -95,7 +95,8 @@ Most modes take content as a new module plus a one-line registration:
   order: 168-177 regex, 178-187 data, 188-197 game math, 198-207 building a
   game, 208-217 async, 218-227 planets, 228-237 bodybuilding, 238-247 Node, 248-257 music, 258-267 cooking. The Python book is numbered
   on its own: its scripting pages (pathlib, argparse, files, JSON, csv, logging,
-  exit codes, http.server, asyncio) are the last base pages, 342-351.
+  exit codes, http.server, asyncio) are 342-351, then web servers and HTTP (352-361) and data practice
+  (362-371) - the last base pages; Review pages are numbered after them.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's
@@ -162,7 +163,8 @@ code_coach/farm/
 ## Canvas and Brain Drills
 
 - **Canvas**: JavaScript (and now Python) you can watch. Tracks: Dodge, Breakout, Snake,
-  Platformer, Asteroids, Tower defense, Dungeon, Farm, To-do, and From blank (five independent projects: a spec
+  Platformer, Asteroids, Tower defense, Dungeon, Farm, To-do, Debug it (ten
+  programs each with one bug to find), and From blank (five independent projects: a spec
   and a check, no starter code). `canvas/harness.js` runs in the browser preview and in node
   (`node_check.js`, with a stand-in canvas). The check plays the program:
   frames, held keys, the mouse. Each step's starter is the previous step's

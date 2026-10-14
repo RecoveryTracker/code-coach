@@ -198,7 +198,7 @@ def for_shape(shape: str) -> Cost | None:
     from code_coach.workbook import emit_jsasync
     from code_coach.workbook import emit_jslifting, emit_jsplanets
     from code_coach.workbook import emit_jscooking, emit_jsmusic, emit_jsnode
-    from code_coach.workbook import emit_pyscript
+    from code_coach.workbook import emit_pydata, emit_pyscript, emit_pyweb
 
     return (
         complexity_more.for_shape(shape)
@@ -214,4 +214,6 @@ def for_shape(shape: str) -> Cost | None:
         or emit_jsmusic.for_shape(shape)
         or emit_jscooking.for_shape(shape)
         or emit_pyscript.for_shape(shape)
+        or emit_pyweb.for_shape(shape)
+        or emit_pydata.for_shape(shape)
     )
