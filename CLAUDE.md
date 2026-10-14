@@ -169,8 +169,8 @@ code_coach/farm/
   solution. To-do is different - see below.
 - **Python Canvas** (`code_coach/canvas/pyharness/`, tracks "Dodge (Python)" in
   `content_pydodge.py`, "Snake (Python)" in `content_pysnake.py`, "Breakout (Python)"
-  in `content_pybreakout.py`, and Asteroids, Platformer, Tower defense and Dungeon
-  (Python) in the other `content_py*.py` files). Python cannot draw in a browser, so the learner's
+  in `content_pybreakout.py`, and Asteroids, Platformer, Tower defense, Dungeon and
+  From blank (Python) in the other `content_py*.py` files). Python cannot draw in a browser, so the learner's
   program runs on the server, in a child process (`python -I -u -X utf8
   driver.py serve`), one frame per request, and `PyCanvasView.tsx` paints the
   recorded draw calls on a real `<canvas>`. The learner writes `from canvas
