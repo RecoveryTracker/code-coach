@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkDrill, fetchDrills } from "../api";
+import { award } from "../lib/momentum";
 import type { MarkupCheck, MarkupDrill, MarkupList } from "../types";
 import { LAST_KEYS } from "../lastKeys";
 
@@ -148,6 +149,8 @@ export default function Drills() {
       const got = await checkDrill({ drill_id: drill.id, typed });
       setResult(got);
       if (got.passed) {
+        // Typing the markup out by heart is a typing run.
+        award("typing_run", `markup:${drill.id}`);
         setList((was) =>
           was
             ? {

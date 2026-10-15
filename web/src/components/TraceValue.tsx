@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkTrace, fetchTraces } from "../api";
+import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type { TraceCheck, TraceList, TraceMoment } from "../types";
 import { LAST_KEYS } from "../lastKeys";
@@ -102,6 +103,7 @@ export default function TraceValue() {
         const got = await checkTrace({ trace_id: moment.id, answer });
         setResult(got);
         if (got.passed) {
+          award("trace", moment.id);
           setList((was) =>
             was
               ? {

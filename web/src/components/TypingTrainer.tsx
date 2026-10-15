@@ -13,6 +13,7 @@ import type {
   TypingSection,
   TypingShape,
 } from "../types";
+import { award } from "../lib/momentum";
 import TypingCoursePanel from "./TypingCourse";
 import TypingGuidePanel from "./TypingGuide";
 import TypingKeyboard, { type KeyStat } from "./TypingKeyboard";
@@ -739,6 +740,11 @@ export default function TypingTrainer() {
       .then((result) => {
         setOutcome(result);
         setRecordRevision((n) => n + 1);
+        // A finished run with real typing in it (not a skipped or mashed one). Each run
+        // is its own key, so a second run today pays: typing is the reps.
+        if (total >= 10 && accuracy >= 50) {
+          award("typing_run", `${drill.section}:${drill.mode}:${result.record.runs}`);
+        }
       })
       .catch(() => {
         /* a failed save shouldn't hide the results you just earned */

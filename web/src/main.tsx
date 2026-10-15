@@ -11,6 +11,8 @@ import "./styles/reference.css";
 import "./styles/markup.css";
 import "./styles/skin-tokens.css";
 import "./styles/skins.css";
+import "./styles/momentum.css";
+import { MomentumToasts } from "./components/MomentumToasts";
 import { applySkin, savedSkin } from "./skins";
 
 // Before the first render rather than in an effect, so a Light or
@@ -22,5 +24,7 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <App />
     </ErrorBoundary>
+    {/* Outside the boundary: a screen that throws must not take the rewards down with it. */}
+    <MomentumToasts />
   </StrictMode>,
 );

@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { answerCase, fetchCases, queryCase, revealCase } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import type { CaseInfo, CaseList } from "../types";
 
 const LAST_KEY = LAST_KEYS.cases;
@@ -131,6 +132,7 @@ export default function CaseFiles() {
       setReveal(null);
       const next = { ...solved, [item.id]: Math.max(solved[item.id] ?? 0, i + 1) };
       if (i + 1 >= item.steps.length) {
+        award("casefile", item.id);
         setEnding(got.ending);
         next[item.id] = 0; // solved: a fresh go next time, for the reps
         setList((was) =>

@@ -264,6 +264,41 @@ code_coach/farm/
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from.
 
+## Momentum (one sense of progress across every mode)
+
+A cross-app layer: XP, levels, a day streak with freezes, three daily quests and a
+chest. It rewards and never punishes: no leaderboard, nothing online, no loss
+wording ("you'll lose your streak" is out; a streak not yet added to today is shown
+dimmed, not red). Server: `code_coach/momentum/` - `rules.py` is pure (the `XP`
+price table, levels, combo, luck, `simulate()` for the streak, quests, chest),
+`engine.py` is `Momentum` (the lock, `momentum.json` beside the progress file,
+written with the farm's `_write_json`, corrupt file kept as `.bad`). Routes:
+`GET /api/momentum`, `POST /api/momentum/award {kind,key}` (unknown kind is 400,
+a storage problem answers `{ok:false}` and never raises), `POST /api/momentum/chest`.
+
+- **The client sends a kind and a key, never an amount.** Call `award("kind", key)`
+  (`web/src/lib/momentum.ts`, fire and forget) exactly once at a mode's real success
+  moment (a passing Check, a finished run), with the id of the thing done. The same
+  kind and key pays once a day. Kinds are written as string literals: a test reads
+  `web/src` and checks every one is in `rules.XP` and every `XP` kind is used (or
+  listed, with a reason, in `rules.UNUSED_KINDS`). A new mode needs a kind in `XP`
+  and one `award` call; do not award on a failure or on a page view.
+- **Formulas**: level n begins at `50*n*(n-1)` XP; the combo is x1.0 +0.1 per award
+  under 10 minutes after the last, max x2.0; about 1 award in 6 is lucky (x2..x5);
+  the streak is consecutive days with a non-repeat award, today not yet counted does
+  not break it, one missed day is bridged by a freeze (spent when you return), a
+  freeze is earned at every 7th streak day (max 2) or from the chest, two missed days
+  end it. Days are kept ~400; older ones fold into a `baseline` so the streak survives.
+- **Screen**: `components/MomentumHud.tsx` (the strip in the mode bar and its popover;
+  it is one button, flame + number only below 640px), `components/MomentumToasts.tsx`
+  (mounted in `main.tsx`, bottom-centre, pointer-events none except the level-up card,
+  CSS-only confetti), `lib/momentumView.ts` (the pure what-to-show logic, tested in
+  node by `tests/test_momentum_view.py`). Brain Drills keeps its own stamps/streak.
+- **Testing by hand** writes to the real `momentum.json` like everything else: use the
+  sandbox copy (API with `USERPROFILE`/`HOME` pointed at a temp folder, `VITE_API_PORT`
+  and `VITE_UI_PORT` for the UI). In the dev UI the store is the module the app loaded,
+  with its `?t=` suffix: import that exact URL to call `award` from the console.
+
 ## Checking the UI
 
 Use the in-app browser at a desktop size (1400x900), and measure the DOM

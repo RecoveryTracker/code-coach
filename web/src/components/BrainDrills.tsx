@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
+import { award } from "../lib/momentum";
 import {
   answeredCount,
   backTarget,
@@ -146,6 +147,9 @@ export default function BrainDrills() {
         const got = await postBrainResult({
           activity: activity.id, seconds, errors: misses.length, total, checkId: s.checkId, language,
         });
+        // Momentum, apart from the stamps and code age above: the round, and the whole check.
+        award("brain_round", `${activity.id}:${s.checkId || "solo"}:${Date.now().toString(36)}`);
+        if (s.checkId && s.checkLeft.length === 0) award("check_age", s.checkId);
         setScreen({
           name: "done", activity, seconds, misses, total, age: got.age, best: got.best,
           checkId: s.checkId, checkLeft: s.checkLeft, checkAges: [...s.checkAges, got.age],
@@ -299,6 +303,9 @@ function Round({
   // Set while a right answer's flash is on screen, so nothing else moves you.
   const busy = useRef(false);
   const finishing = useRef(false);
+  // This round's own name, for Momentum: every round's questions are new, so each
+  // answer is its own thing to be paid for once.
+  const roundId = useRef(Date.now().toString(36));
   // A fast typist's keystrokes must not skip a miss before it has been read.
   const guard = useRef(0);
   const input = useRef<HTMLInputElement | null>(null);
@@ -412,6 +419,7 @@ function Round({
       const right = same(given, item.answer);
       const next = recordAnswer(rs, rs.index, given, right);
       if (right) {
+        award("brain_item", `${activity.id}:${roundId.current}:${rs.index}`);
         busy.current = true;
         setFlash(true);
         window.setTimeout(() => {
@@ -427,7 +435,7 @@ function Round({
       guard.current = performance.now() + 300;
       commit(next);
     },
-    [items, item, rs, showing, reviewing, count, finish, commit],
+    [items, item, rs, showing, reviewing, count, finish, commit, activity.id],
   );
 
   const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});

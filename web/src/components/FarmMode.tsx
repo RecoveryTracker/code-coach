@@ -29,6 +29,7 @@ import {
   setFarmWarp,
   stopFarm,
 } from "../api";
+import { award } from "../lib/momentum";
 import type { FarmLine, FarmOverview, FarmState, FarmTip, FarmViolation } from "../types";
 import { FarmCode } from "./farm/FarmCode";
 import { FarmDocs } from "./farm/FarmDocs";
@@ -308,6 +309,10 @@ export default function FarmMode() {
     async (name: string) => {
       try {
         const got = await buyFarmUnlock(name);
+        if (got.ok) {
+          const level = got.unlocks?.find((u) => u.name === name)?.level ?? 0;
+          award("farm_buy", `${got.language}:${name}:${level}`);
+        }
         apply(got);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));

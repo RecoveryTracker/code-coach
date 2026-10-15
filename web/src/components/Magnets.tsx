@@ -40,6 +40,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkMagnet, fetchMagnets } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import type { MagnetCheck, MagnetList, MagnetPuzzle } from "../types";
 
 /** Which puzzle you were on. */
@@ -175,6 +176,7 @@ export default function Magnets() {
       });
       setResult(got);
       if (got.passed) {
+        award("magnets", puzzle.id);
         setList((was) =>
           was
             ? {

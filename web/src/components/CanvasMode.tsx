@@ -25,6 +25,7 @@ import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { checkCanvas, fetchCanvas, fetchCanvasAnswer, fetchCanvasPage, recordCanvasPass } from "../api";
+import { award } from "../lib/momentum";
 import { defineEditorThemes, editorThemeFor, useSkin } from "../skins";
 import type { CanvasCheck, CanvasList, CanvasStep } from "../types";
 import { EditorPane } from "./EditorPane";
@@ -366,6 +367,7 @@ export default function CanvasMode() {
         got = await checkCanvas(id, codeRef.current);
       }
       if (got.passed) {
+        award("canvas_step", id);
         setList((was) =>
           was ? { ...was, steps: was.steps.map((s) => (s.id === id ? { ...s, done: got.done } : s)) } : was,
         );

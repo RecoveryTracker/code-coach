@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import "../styles/tickets.css";
+import { award } from "../lib/momentum";
 
 // ── Types and requests ───────────────────────────────────────
 //
@@ -313,6 +314,7 @@ export default function Tickets() {
       const got = await checkTicket(proj.id, tick.id, code);
       setResult(got);
       if (got.passed) {
+        award("ticket", `${proj.id}:${tick.id}`);
         setList((was) =>
           was
             ? {

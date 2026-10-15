@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { checkError, fetchErrors } from "../api";
 import type { ErrorCheck, ErrorCrash, ErrorList } from "../types";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 
 /** Which one you were on. */
 const LAST_KEY = LAST_KEYS.errors;
@@ -108,6 +109,7 @@ export default function Errors() {
       });
       setResult(got);
       if (got.passed) {
+        award("errors", item.id);
         setList((was) =>
           was
             ? {

@@ -24,6 +24,7 @@ import {
   tryBugHunt,
 } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import type {
   BugHunt as Hunt,
   BugHuntFix,
@@ -259,6 +260,7 @@ export default function BugHunt({ language }: { language: string }) {
       const got = await fixBugHunt(hunt.id, code);
       setFix(got);
       if (got.passed) {
+        award("bughunt", hunt.id);
         setList((was) =>
           was
             ? {

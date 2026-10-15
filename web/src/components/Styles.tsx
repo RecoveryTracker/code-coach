@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkCss, fetchCssQuizzes } from "../api";
+import { award } from "../lib/momentum";
 import Drills from "./Drills";
 import type { CssCheck, CssList, CssQuiz } from "../types";
 import { CSS_HALF_KEY, LAST_KEYS } from "../lastKeys";
@@ -205,6 +206,8 @@ function StyleQuizzes({ tabs }: { tabs: React.ReactNode }) {
         const got = await checkCss({ quiz_id: quiz.id, choice });
         setResult(got);
         if (got.passed) {
+          // "Say what the browser makes of it": the same skill as Predict.
+          award("predict", `css:${quiz.id}`);
           setList((was) =>
             was
               ? {

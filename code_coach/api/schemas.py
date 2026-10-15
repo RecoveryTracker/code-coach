@@ -1103,3 +1103,10 @@ class CaseAnswerResponse(BaseModel):
     lesson: str = ""
     ending: str = ""
     done: int = 0
+
+
+class MomentumAwardRequest(BaseModel):
+    """One real success, for Momentum. The client names it; the server prices it."""
+
+    kind: str = ""
+    key: str = ""

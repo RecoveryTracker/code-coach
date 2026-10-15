@@ -25,6 +25,7 @@ import {
   fetchWorkbook,
   saveWorkbookDraft,
 } from "../api";
+import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type {
   ExplainResult,
@@ -341,6 +342,7 @@ export default function Workbook({ language }: Props) {
       });
       setResult(got);
       if (got.passed) {
+        award("workbook_page", `${page.id}:${exercise.id}`);
         setDone((was) => new Set(was).add(exercise.id));
         setMine((was) => ({ ...was, [exercise.id]: code }));
       }

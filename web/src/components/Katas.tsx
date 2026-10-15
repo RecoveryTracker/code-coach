@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { checkKata, explainCode, fetchKataAnswer, fetchKatas } from "../api";
+import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type {
   ExplainResult,
@@ -279,6 +280,7 @@ export default function Katas() {
       const got = await checkKata({ kata_id: kata.id, code });
       setResult(got);
       if (got.passed) {
+        award("kata", kata.id);
         // The count in the sidebar is the thing that says "again"; it
         // has to move the moment it changes, not on the next reload.
         setList((was) =>

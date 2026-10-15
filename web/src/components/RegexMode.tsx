@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkRegex, fetchRegex, fetchRegexAnswer } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import { explainPattern } from "../lib/regexExplain";
 import type { RegexCheck, RegexList, RegexTaskInfo } from "../types";
 
@@ -125,6 +126,7 @@ export default function RegexMode({ language }: { language: string }) {
       const got = await checkRegex(item.id, pattern, language);
       setResult(got);
       if (got.passed) {
+        award("regex", item.id);
         setList((was) =>
           was
             ? {

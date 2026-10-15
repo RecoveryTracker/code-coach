@@ -6,6 +6,7 @@ FastAPI server for the Code Coach IAE.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
@@ -45,6 +46,7 @@ from code_coach.api.schemas import (
     PyWebStartRequest,
     PyWebStopRequest,
     BrainResultRequest,
+    MomentumAwardRequest,
     FarmCodeRequest,
     FarmFileRequest,
     FarmUnlockRequest,
@@ -2408,6 +2410,40 @@ def brain_result(body: BrainResultRequest) -> dict:
                           language=body.language)
     best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
     return {"age": result.age, "best": best}
+
+
+# ── Momentum: XP, streak, quests and the chest, across every mode ───────
+
+
+@app.get("/api/momentum")
+def momentum_summary() -> dict:
+    """Where you stand today: level, streak, quests, chest, the last 14 days."""
+    from code_coach import momentum
+
+    try:
+        return momentum.summary()
+    except Exception:  # a broken save file must not stop the app
+        logging.getLogger(__name__).exception("momentum summary failed")
+        return {"ok": False}
+
+
+@app.post("/api/momentum/award")
+def momentum_award(body: MomentumAwardRequest) -> dict:
+    """Pay out one success (a kind and a key; the server knows what it is worth)."""
+    from code_coach import momentum
+
+    try:
+        return momentum.award(body.kind, body.key)
+    except momentum.UnknownKind:
+        raise HTTPException(status_code=400, detail=f"Unknown kind {body.kind!r}") from None
+
+
+@app.post("/api/momentum/chest")
+def momentum_chest() -> dict:
+    """Open today's chest, once a day, when all three quests are done."""
+    from code_coach import momentum
+
+    return momentum.claim_chest()
 
 
 @app.get("/api/farm")

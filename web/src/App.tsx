@@ -24,6 +24,8 @@ import { ExplainPanel } from "./components/ExplainPanel";
 import { EditorPane } from "./components/EditorPane";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { SkinPicker } from "./components/SkinPicker";
+import { MomentumHud } from "./components/MomentumHud";
+import { award } from "./lib/momentum";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ScriptLibrary } from "./components/ScriptLibrary";
 import { StudyPanel } from "./components/StudyPanel";
@@ -309,6 +311,8 @@ export default function App() {
   const languageRef = useRef("python");
   /** Endless type-along window the current buffers belong to — likewise. */
   const windowRef = useRef(0);
+  /** "dictation" (type-along) or "build" (from memory): which kind of success Momentum counts. */
+  const roleRef = useRef("");
 
   /** The exercises on screen, so a draft can be stamped with its own. */
   const stepsRef = useRef<PracticeSession["steps"]>([]);
@@ -375,6 +379,13 @@ export default function App() {
         // Current exercise complete → flag for auto-advance (not lesson jump).
         const curPassed = Boolean(data.checks[idx]?.passed);
         setExerciseDone(curPassed);
+        // A real success: Run on a passing exercise, or the moment live checking
+        // sees it pass. (Once a day per exercise: the server dedupes.)
+        if (curPassed && (run || !exerciseDoneRef.current)) {
+          const key = `${drillId}:${windowRef.current}:${idx}`;
+          if (roleRef.current === "build") award("lesson", key);
+          else award("drill", key);
+        }
       } catch {
         setResult(
           (prev) =>
@@ -416,6 +427,7 @@ export default function App() {
       stepsRef.current = s.steps;
       setProgress(s.progress);
       drillRef.current = s.drill_id;
+      roleRef.current = s.lesson_role ?? "";
       levelRef.current = s.dictation_level ?? 1;
       languageRef.current = s.language ?? "python";
       windowRef.current = s.window ?? 0;
@@ -1219,6 +1231,7 @@ export default function App() {
   const modeBar = (
     <>
       <div className="typing-topbar mode-bar">
+        <MomentumHud onStart={() => go("session")} />
         <span className="ws-brand-inline">Code Coach</span>
         <div className="panel-actions">
           {panelLanguage}

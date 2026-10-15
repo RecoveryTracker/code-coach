@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkPuzzle, fetchPuzzleAnswer, fetchPuzzles } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import type { KataCaseResult, PuzzleCheck, PuzzleInfo, PuzzleList, PuzzlePartInfo } from "../types";
 
 const LAST_KEY = LAST_KEYS.puzzles;
@@ -151,6 +152,7 @@ export default function Puzzles({ language }: { language: string }) {
     try {
       const got = await checkPuzzle(item.id, part, code, language);
       setResult(got);
+      if (got.passed) award("puzzle", `${item.id}:${part}`);
       if (got.passed && part === 1 && !opened.includes(key)) {
         const next = [...opened, key];
         setOpened(next);

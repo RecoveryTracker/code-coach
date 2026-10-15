@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { checkPredict, fetchPredicts } from "../api";
+import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type { PredictCheck, PredictList, PredictPuzzle } from "../types";
 import { LAST_KEYS } from "../lastKeys";
@@ -145,6 +146,7 @@ export default function Predict() {
       const got = await checkPredict({ puzzle_id: puzzle.id, guess });
       setResult(got);
       if (got.passed) {
+        award("predict", puzzle.id);
         setList((was) =>
           was
             ? {

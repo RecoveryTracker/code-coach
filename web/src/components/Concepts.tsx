@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchConcepts } from "../api";
+import { award } from "../lib/momentum";
 import type { ConceptTopic } from "../types";
 
 type Props = {
@@ -19,6 +20,7 @@ export default function Concepts({ language }: Props) {
   const [topics, setTopics] = useState<ConceptTopic[]>([]);
   const [openTopic, setOpenTopic] = useState<string | null>(null);
   const [shown, setShown] = useState<Set<string>>(new Set());
+  const [gotIt, setGotIt] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   // Most of the bank is about the machine and is the same whatever you write,
@@ -145,6 +147,19 @@ export default function Concepts({ language }: Props) {
                           {question.follow_up}
                         </p>
                       ) : null}
+                      {/* Revealing is not the win: saying it first and being right is.
+                          So the card counts when you say you had it. */}
+                      <button
+                        type="button"
+                        className="ws-btn"
+                        disabled={gotIt.has(key)}
+                        onClick={() => {
+                          award("concept", key);
+                          setGotIt((was) => new Set(was).add(key));
+                        }}
+                      >
+                        {gotIt.has(key) ? "Counted" : "I had it"}
+                      </button>
                     </div>
                   ) : (
                     <p className="concept-hint">

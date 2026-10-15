@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { checkFlutter, fetchFlutter } from "../api";
 import { LAST_KEYS } from "../lastKeys";
+import { award } from "../lib/momentum";
 import type { FlutterCheck, FlutterList, FlutterQuestion } from "../types";
 
 /** Which one you were on. Same shape as the keys in lastKeys.ts. */
@@ -95,6 +96,8 @@ export default function FlutterMode() {
       const got = await checkFlutter(item.id, picked);
       setResult(got);
       if (got.passed) {
+        // "Say what the widget code builds": the same skill as Predict.
+        award("predict", `flutter:${item.id}`);
         setList((was) =>
           was
             ? {

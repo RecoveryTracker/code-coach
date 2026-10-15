@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { checkAnswer } from "../api";
+import { award } from "../lib/momentum";
 import type { CheckAnswerResult, StudyInfo } from "../types";
 
 type Props = {
@@ -36,13 +37,13 @@ export function StudyPanel({ study, getCode }: Props) {
     setChecking(true);
     setCheckError(false);
     try {
-      setCheck(
-        await checkAnswer({
-          code: getCode(),
-          pattern_id: patternId,
-          problem_number: problemNo,
-        }),
-      );
+      const got = await checkAnswer({
+        code: getCode(),
+        pattern_id: patternId,
+        problem_number: problemNo,
+      });
+      setCheck(got);
+      if (got.ok && got.matches) award("leetcode", `${patternId}:${problemNo}`);
     } catch {
       setCheckError(true);
     } finally {
