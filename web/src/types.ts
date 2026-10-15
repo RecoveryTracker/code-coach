@@ -931,10 +931,35 @@ export type FarmCell = {
   giant?: [number, number, number];
 };
 
+/**
+ * Something a drone just did, so the screen can show it: a harvest pops the
+ * crop and floats "+4 Hay", a failed one puffs. `n` counts up for the life of
+ * the farm - the screen plays each event once, by remembering the highest `n`
+ * it has seen. Moves are not events (the drone is drawn where it is).
+ */
+export type FarmEvent = {
+  n: number;
+  /** Farm time (seconds) when it happened. */
+  t: number;
+  k: "harvest" | "plant" | "till" | "water" | "fertilize" | "swap" | "hat" | "unlock";
+  x: number;
+  y: number;
+  /** Which drone: 0 is the program's own. */
+  d: number;
+  /** The plant harvested or planted. */
+  e?: string;
+  /** What a harvest paid, by item. */
+  items?: Record<string, number>;
+  /** False when the action did nothing (harvest of an unripe plant, plant on bad ground...). */
+  ok: boolean;
+};
+
 export type FarmSnapshot = {
   w: number;
   h: number;
   time: number;
+  /** The most recent events, oldest first, at most about 60: each has a unique rising `n`. */
+  events?: FarmEvent[];
   drone: { x: number; y: number; hat: string };
   /** Every drone on the farm (Megafarm); the first is the program's own. */
   drones?: { x: number; y: number; hat: string }[];
@@ -1036,8 +1061,9 @@ export type FarmStart = { ok: boolean; run?: number; error?: string; violations?
 export type CanvasStep = {
   id: string;
   track: string;
-  /** "dom" for a step on a web page (To-do), checked in the browser; "canvas" for the rest. */
-  kind: "canvas" | "dom";
+  /** "dom" for a step on a web page (To-do), checked in the browser; "web" for a Python web app a real
+   *  server runs (see PyWebView); "canvas" for the rest. */
+  kind: "canvas" | "dom" | "web";
   /** What you write: JavaScript runs in the browser, Python on the server (see PyCanvasView). */
   language: "javascript" | "python";
   title: string;
@@ -1091,6 +1117,41 @@ export type PyStart = PyFrame & { session: string };
 export type PyEvent =
   | { type: "keydown" | "keyup"; key: string }
   | { type: "click" | "mousemove"; x: number; y: number };
+
+/** A route the Python web app declared, as the Try it panel offers it. */
+export type PyWebRoute = { method: string; path: string };
+
+/** `session` is empty when the app could not start: the error says why. */
+export type PyWebStart = {
+  session: string;
+  error: { message: string; line: number | null } | null;
+  logs: string[];
+  host: string | null;
+  port: number | null;
+  routes: PyWebRoute[];
+};
+
+/** What to send to a running app. A form body is already encoded. */
+export type PyWebSend = {
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+  path: string;
+  headers: Record<string, string>;
+  body: string;
+};
+
+/** The app's own answer (redirects are not followed). `status` is 0 when there was none: see `error`. */
+export type PyWebResponse = {
+  status: number;
+  reason: string;
+  headers: [string, string][];
+  /** The body as text, or base64 when `binary`. */
+  body: string;
+  binary: boolean;
+  truncated: boolean;
+  seconds: number;
+  logs: string[];
+  error: string;
+};
 
 export type FlutterQuestion = {
   id: string;

@@ -29,6 +29,7 @@ import { defineEditorThemes, editorThemeFor, useSkin } from "../skins";
 import type { CanvasCheck, CanvasList, CanvasStep } from "../types";
 import { EditorPane } from "./EditorPane";
 import PyCanvasView from "./PyCanvasView";
+import PyWebView from "./PyWebView";
 import "../styles/canvas.css";
 
 const LAST_KEY = "code-coach:canvas-last";
@@ -104,6 +105,29 @@ function previewPage(harness: string, code: string, world = ""): string {
   // Line numbers do not depend on the number written in, so measure once.
   const start = before(0).split("\n").length;
   return before(start) + safe(code) + "\n</script></body></html>";
+}
+
+/** `code` between backticks, as <code>. */
+function inlineCode(text: string) {
+  return text.split("`").map((piece, i) => (i % 2 ? <code key={i}>{piece}</code> : piece));
+}
+
+/**
+ * A web step's lesson: paragraphs split by blank lines, and a paragraph whose
+ * lines are all indented four spaces is a block of code.
+ */
+function Teaches({ text }: { text: string }) {
+  return (
+    <div className="canvas-teaches canvas-teaches-web">
+      {text.split("\n\n").map((block, i) => {
+        const lines = block.split("\n");
+        if (lines.every((l) => l.startsWith("    "))) {
+          return <pre key={i}>{lines.map((l) => l.slice(4)).join("\n")}</pre>;
+        }
+        return <p key={i}>{inlineCode(block)}</p>;
+      })}
+    </div>
+  );
 }
 
 /** index.html or style.css, to read beside app.js - highlighted, not editable. */
@@ -194,6 +218,8 @@ export default function CanvasMode() {
   const tracks = list ? [...new Set(list.steps.map((s) => s.track))] : [];
   const onPage = item?.kind === "dom";
   const onPython = item?.language === "python";
+  // A Web (Python) step: a real server runs the app and the preview is a Try it panel (PyWebView).
+  const onWeb = item?.kind === "web";
 
   const run = useCallback(
     (source?: string, keepLines = false) => {
@@ -408,9 +434,9 @@ export default function CanvasMode() {
         <h2>Canvas</h2>
         <p className="lessons-intro">
           JavaScript and Python you can watch. Each step is one change to the same
-          program, and Check runs it - holding keys and counting frames, or
-          clicking and typing on the page - to see that it does what the
-          step asks.
+          program, and Check runs it - holding keys and counting frames,
+          clicking and typing on the page, or sending real requests to your web
+          app - to see that it does what the step asks.
         </p>
         {tracks.map((track) => {
           const steps = list.steps.filter((s) => s.track === track);
@@ -451,7 +477,7 @@ export default function CanvasMode() {
             <span className="predict-lang">{onPython ? "Python" : "JavaScript"}</span>
           </h3>
         </header>
-        <p className="canvas-teaches">{item.teaches}</p>
+        {onWeb ? <Teaches text={item.teaches} /> : <p className="canvas-teaches">{item.teaches}</p>}
         <p className="wb-prompt canvas-goal">
           <strong>Your turn:</strong> {item.goal}
         </p>
@@ -484,7 +510,7 @@ export default function CanvasMode() {
                 onChange={onChange}
                 onRun={() => run()}
                 language={onPython ? "python" : "javascript"}
-                fileName={onPage ? "app.js" : onPython ? "game.py" : "game.js"}
+                fileName={onPage ? "app.js" : onWeb ? "app.py" : onPython ? "game.py" : "game.js"}
               />
             </div>
             {onPage && file !== "app.js" ? (
@@ -502,15 +528,25 @@ export default function CanvasMode() {
               // Not until Run has been pressed for this step (the step-change
               // effect does it): there is no program to start before that.
               pyRun.id === item.id ? (
-                <PyCanvasView
-                  key={runs}
-                  stepId={pyRun.id}
-                  code={pyRun.code}
-                  onLog={pyLog}
-                  onError={pyError}
-                />
+                onWeb ? (
+                  <PyWebView
+                    key={runs}
+                    stepId={pyRun.id}
+                    code={pyRun.code}
+                    onLog={pyLog}
+                    onError={pyError}
+                  />
+                ) : (
+                  <PyCanvasView
+                    key={runs}
+                    stepId={pyRun.id}
+                    code={pyRun.code}
+                    onLog={pyLog}
+                    onError={pyError}
+                  />
+                )
               ) : (
-                <div className="canvas-frame" />
+                <div className={onWeb ? "pyweb" : "canvas-frame"} />
               )
             ) : (
               <iframe
@@ -538,13 +574,17 @@ export default function CanvasMode() {
                   </>
                 ) : null}
               </p>
-            ) : (
+            ) : onWeb ? null : (
               <p className="canvas-tip">Click the game to give it the keyboard.</p>
             )}
             <div className="canvas-console" aria-live="polite">
               {lines.length === 0 ? (
                 <span className="canvas-console-empty">
-                  {onPython ? "print() output and errors show here" : "console.log output and errors show here"}
+                  {onWeb
+                    ? "print() output and the traceback of a route that crashed show here"
+                    : onPython
+                      ? "print() output and errors show here"
+                      : "console.log output and errors show here"}
                 </span>
               ) : (
                 lines.map((l, i) => (
@@ -586,7 +626,9 @@ export default function CanvasMode() {
                   ? "Click again to hide the result"
                   : onPage
                     ? "Use the page and see if it does what the step asks"
-                    : "Play it and see if it does what the step asks"
+                    : onWeb
+                      ? "Make real requests to your app and see if it answers what the step asks"
+                      : "Play it and see if it does what the step asks"
               }
             >
               {checking ? "Checking…" : "Check"}

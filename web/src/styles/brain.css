@@ -166,8 +166,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-.brain-play-top .ws-btn {
+.brain-play-nav {
   margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .brain-stage {
@@ -215,6 +218,28 @@
   margin: 0;
   color: var(--danger, #f28b82);
   font-weight: 600;
+  font-size: 1.4em;
+}
+
+/* A miss stays up until you move on: the right answer is the point of it. */
+.brain-miss {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid var(--danger, #f28b82);
+  border-radius: 10px;
+}
+
+.brain-given {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.brain-paused {
+  font-size: 0.8em;
+  opacity: 0.6;
 }
 
 .brain-input {
@@ -320,4 +345,230 @@
   background: var(--accent, #6ea8fe);
   color: #0b0f16;
   font-weight: 600;
+}
+
+/* Reading an answered question: the right answer, what you said, why. */
+.brain-hit {
+  border-color: var(--success, #3dd68c);
+}
+
+.brain-hit .brain-correct {
+  color: var(--success, #3dd68c);
+}
+
+.brain-why {
+  margin: 0;
+  max-width: 52ch;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.brain-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* The question picker: a grid of numbered cells. */
+.brain-picker-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 8, 12, 0.6);
+}
+
+.brain-picker {
+  width: 100%;
+  max-width: 460px;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 14px;
+  background: var(--bg-elevated, #10141c);
+  box-sizing: border-box;
+}
+
+.brain-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brain-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 8px;
+}
+
+.brain-cell {
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #232c38);
+  background: transparent;
+  color: var(--text, #cdd9e5);
+  font: 600 15px ui-monospace, Consolas, monospace;
+  cursor: pointer;
+}
+
+.brain-cell.right {
+  background: rgba(61, 214, 140, 0.22);
+  border-color: var(--success, #3dd68c);
+}
+
+.brain-cell.missed {
+  background: rgba(242, 139, 130, 0.25);
+  border-color: var(--danger, #f28b82);
+}
+
+.brain-cell.current {
+  outline: 3px solid var(--accent, #6ea8fe);
+  outline-offset: 1px;
+}
+
+.brain-cell:hover,
+.brain-cell:focus-visible {
+  border-color: var(--accent, #6ea8fe);
+}
+
+.brain-picker-legend,
+.brain-picker-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.brain-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 2px 0 8px;
+  vertical-align: -1px;
+  border-radius: 3px;
+  border: 1px solid var(--border, #232c38);
+}
+
+.brain-key:first-child {
+  margin-left: 0;
+}
+
+.brain-key.right {
+  background: rgba(61, 214, 140, 0.4);
+  border-color: var(--success, #3dd68c);
+}
+
+.brain-key.missed {
+  background: rgba(242, 139, 130, 0.45);
+  border-color: var(--danger, #f28b82);
+}
+
+/* Run it / Explain my code under a question. */
+.brain-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 12px;
+  background: var(--bg-elevated, #10141c);
+  min-width: 0;
+}
+
+.brain-tools-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.brain-tools-why {
+  font-size: 13px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.brain-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.brain-tool-head {
+  align-self: flex-start;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #8b98a8);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.brain-tool-head:hover,
+.brain-tool-head:focus-visible {
+  color: var(--text, #cdd9e5);
+}
+
+.brain-run {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.brain-run-out,
+.brain-run-err {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg, #0d1117);
+  font: 14px/1.4 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.brain-run-err {
+  color: var(--danger, #f28b82);
+}
+
+.brain-verdict {
+  margin: 0;
+  font-weight: 600;
+}
+
+.brain-explain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.brain-explain .explain-row {
+  flex-wrap: wrap;
+}
+
+.brain-explain .explain-code {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.brain-prog summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.brain-prog pre {
+  margin-top: 6px;
 }

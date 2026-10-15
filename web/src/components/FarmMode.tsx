@@ -1,20 +1,21 @@
 /**
- * Farm: The Farmer Was Replaced, in Python, JavaScript or Dart.
+ * Farm: The Farmer Was Replaced, in Original, Python, JavaScript or Dart.
  *
- * The code goes on the left, the farm on the right, and the program runs
- * for real - a Python, Node or Dart process whose every drone command is
- * done by the farm in the server and paced to game time. This screen just
- * watches: it polls the farm a few times a second while a program runs
- * (and every half second when none does, because the farm keeps growing)
- * and draws whatever it is told.
+ * Laid out like the game: the farm fills the whole screen (FarmScene), and everything
+ * else floats over it - a HUD across the top, a menu bottom-left, and windows you can
+ * drag, resize, fold up and close (Code, Output, Research, Docs, Playbook).
  *
- * Research is the game's: harvest, spend the harvest on unlocks, and the
- * unlocks give the drone new commands and you new parts of the language.
- * A program that uses a part you have not bought yet is refused before it
- * runs, with the line and the unlock it needs.
+ * The program runs for real - a Python, Node or Dart process whose every drone command
+ * is done by the farm in the server and paced to game time. This screen just watches:
+ * it polls the farm a few times a second while a program runs (and every half second
+ * when none does, because the farm keeps growing) and draws whatever it is told.
+ *
+ * Research is the game's: harvest, spend the harvest on unlocks, and the unlocks give
+ * the drone new commands and you new parts of the language. A program that uses a part
+ * you have not bought yet is refused before it runs, with the line and the unlock it needs.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   buyFarmUnlock,
@@ -28,67 +29,21 @@ import {
   setFarmWarp,
   stopFarm,
 } from "../api";
-import { drawFarm } from "../lib/farmDraw";
-import type {
-  FarmFunction,
-  FarmLine,
-  FarmOverview,
-  FarmState,
-  FarmTip,
-  FarmUnlock,
-  FarmViolation,
-} from "../types";
-import { EditorPane } from "./EditorPane";
+import type { FarmLine, FarmOverview, FarmState, FarmTip, FarmViolation } from "../types";
+import { FarmCode } from "./farm/FarmCode";
+import { FarmDocs } from "./farm/FarmDocs";
+import { FarmHud } from "./farm/FarmHud";
+import { FarmMenu } from "./farm/FarmMenu";
+import { FarmOutput } from "./farm/FarmOutput";
+import { FarmPlaybook } from "./farm/FarmPlaybook";
+import { FarmScene } from "./farm/FarmScene";
+import { FarmWindow } from "./farm/FarmWindow";
+import { ResearchTree } from "./farm/ResearchTree";
+import { droneDoing, useFarmEvents } from "./farm/farmEvents";
+import { EXTENSIONS, LANGUAGE_NAMES } from "./farm/farmShared";
+import { HUD_H, WINDOW_IDS, useFarmWindows, type Area, type WinId } from "./farm/useFarmWindows";
+import { WINDOW_DEFS } from "./farm/windowDefs";
 import "../styles/farm.css";
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  original: "Original",
-  python: "Python",
-  javascript: "JavaScript",
-  dart: "Dart",
-};
-const LANGUAGE_TIPS: Record<string, string> = {
-  original: "The game's own language: Python's syntax, and every operation costs ticks, as in the game",
-  python: "Real Python - only drone commands cost game time",
-  javascript: "Real JavaScript (Node) - only drone commands cost game time",
-  dart: "Real Dart - only drone commands cost game time",
-};
-const EXTENSIONS: Record<string, string> = { original: ".py", python: ".py", javascript: ".js", dart: ".dart" };
-const FEATURE_UNLOCKS: Record<string, string> = {
-  while: "Loops", if: "Speed", for: "Expand 2", operators: "Operators", variables: "Variables",
-  functions: "Functions", lists: "Lists", dicts: "Dictionaries", import: "Import",
-};
-
-/** Items.Weird_Substance, spelled the way each language spells it. */
-function spellValue(group: string, member: string, language: string): string {
-  const pascal = member.split("_").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join("");
-  if (group === "Directions") return language === "dart" ? member.toLowerCase() : member;
-  if (language === "javascript") return `${group}.${pascal}`;
-  if (language === "dart") return `${group}.${pascal.charAt(0).toLowerCase()}${pascal.slice(1)}`;
-  return `${group}.${member}`;
-}
-
-function itemName(item: string): string {
-  return item.replace(/_/g, " ");
-}
-
-function costText(cost: Record<string, number> | null): string {
-  if (!cost) return "";
-  return Object.entries(cost)
-    .map(([item, n]) => `${n.toLocaleString()} ${itemName(item)}`)
-    .join(" + ");
-}
-
-/** How a function reads in the chosen language, with its parameters. */
-function signature(f: FarmFunction, language: string): string {
-  const name = language === "javascript" ? f.js : language === "dart" ? f.dart : f.py;
-  const params = f.params.map((p) => {
-    const bare = p.replace(/=.*/, "").replace(/^\*/, language === "javascript" || language === "dart" ? "..." : "*");
-    if (language === "python" || language === "original") return p;
-    return p.includes("=") ? `${bare}?` : bare;
-  });
-  return `${name}(${params.join(", ")})`;
-}
 
 export default function FarmMode() {
   const [overview, setOverview] = useState<FarmOverview | null>(null);
@@ -100,10 +55,8 @@ export default function FarmMode() {
   const [revision, setRevision] = useState(0);
   const [lines, setLines] = useState<FarmLine[]>([]);
   const [violations, setViolations] = useState<FarmViolation[]>([]);
-  const [panel, setPanel] = useState<"research" | "docs" | "playbook" | null>("research");
   const [tips, setTips] = useState<FarmTip[]>([]);
   const [copied, setCopied] = useState("");
-  // The Playbook's own controls: a search, "ready to run" only, and which groups are open.
   // The language the tips are shown in. The game's own comes first and is where it starts:
   // the tips are about that language before they are about any other.
   const [tipLang, setTipLang] = useState<string>(() => {
@@ -113,15 +66,9 @@ export default function FarmMode() {
       return "original";
     }
   });
-  const [tipSearch, setTipSearch] = useState("");
-  const [readyOnly, setReadyOnly] = useState(false);
-  const [shut, setShut] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const sinceRef = useRef(0);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const boxRef = useRef<HTMLDivElement | null>(null);
-  const [px, setPx] = useState(480);
   const filesRef = useRef(files);
   filesRef.current = files;
   const saveTimer = useRef<number | null>(null);
@@ -131,6 +78,34 @@ export default function FarmMode() {
 
   /** Bumped each time the screen moves to another language's farm, so a poll for the old one is dropped. */
   const farmGen = useRef(0);
+  /** The same, as state: the action log starts afresh on a new farm. */
+  const [epoch, setEpoch] = useState(0);
+
+  // The size of the screen the windows float over.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [area, setArea] = useState<Area>({ w: 0, h: 0 });
+  const ready = !!overview && !!state;
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => setArea((was) => (was.w === el.clientWidth && was.h === el.clientHeight ? was : { w: el.clientWidth, h: el.clientHeight }));
+    measure();
+    const watcher = new ResizeObserver(measure);
+    watcher.observe(el);
+    // A hidden pane may not run the observer; the window's own event still says the size changed.
+    window.addEventListener("resize", measure);
+    return () => {
+      watcher.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [ready]);
+  const wins = useFarmWindows(area);
+  const { reveal } = wins;
+  /** Windows that open after the screen has settled take the keyboard focus (the first ones are just there). */
+  const settled = useRef(false);
+  useEffect(() => {
+    if (ready && area.w > 0) settled.current = true;
+  }, [ready, area.w]);
 
   const apply = useCallback((o: FarmOverview) => {
     setOverview(o);
@@ -144,6 +119,7 @@ export default function FarmMode() {
   const enterFarm = useCallback(
     (o: FarmOverview) => {
       farmGen.current += 1;
+      setEpoch((n) => n + 1);
       apply(o);
       setLanguage(o.languages.includes(o.language) ? o.language : "python");
       setFiles(o.files);
@@ -206,23 +182,14 @@ export default function FarmMode() {
     lastStatus.current = status;
   }, [state?.run?.status, running, apply]);
 
-  // Fit the farm to its column.
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    const fit = () => setPx(Math.max(240, Math.min(620, Math.floor(el.clientWidth))));
-    fit();
-    const watcher = new ResizeObserver(fit);
-    watcher.observe(el);
-    return () => watcher.disconnect();
-  }, [overview]);
+  // What the drone just did: the counters pop, the action log fills.
+  const { log, pops } = useFarmEvents(state?.farm, epoch);
 
+  // An error or a refusal has to be seen: bring the Output window up.
+  const hasProblem = !!error || violations.length > 0;
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !state) return;
-    const ctx = canvas.getContext("2d");
-    if (ctx) drawFarm(ctx, state.farm, px);
-  }, [state, px]);
+    if (hasProblem) reveal("output");
+  }, [hasProblem, reveal]);
 
   /** Keep a waiting edit now, before anything that reads the files back. */
   const flush = useCallback(async () => {
@@ -364,18 +331,20 @@ export default function FarmMode() {
     )
       return;
     const o = await resetFarm();
+    setEpoch((n) => n + 1);
     apply(o);
     setLines([]);
     sinceRef.current = o.outputEnd;
   }, [apply, language]);
 
   // The Playbook is fetched the first time it is opened.
+  const playbookOpen = wins.layout.wins.playbook.open;
   useEffect(() => {
-    if (panel !== "playbook" || tips.length > 0) return;
+    if (!playbookOpen || tips.length > 0) return;
     fetchFarmPlaybook()
       .then((got) => setTips(got.entries))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [panel, tips.length]);
+  }, [playbookOpen, tips.length]);
 
   const chooseTipLang = useCallback((next: string) => {
     setTipLang(next);
@@ -416,8 +385,10 @@ export default function FarmMode() {
         }
       }
       setRevision((r) => r + 1);
+      // What you added lands in the editor: show it.
+      reveal("code");
     },
-    [tipLang, language, entry, flush, running, enterFarm],
+    [tipLang, language, entry, flush, running, enterFarm, reveal],
   );
 
   const copySnippet = useCallback((id: string, code: string) => {
@@ -430,372 +401,113 @@ export default function FarmMode() {
       .catch(() => setError("Copy was blocked here: use Add to my code instead."));
   }, []);
 
-  const unlocks = useMemo(() => {
-    const list = overview?.unlocks ?? [];
-    const rank = (u: FarmUnlock) =>
-      u.missing ? 4 : u.available ? (u.affordable ? 0 : 1) : u.level > 0 ? 2 : 3;
-    return [...list].sort((a, b) => rank(a) - rank(b));
-  }, [overview]);
-
   if (error && !overview) return <div className="lessons-empty">Could not load the farm: {error}</div>;
   if (!overview || !state) return <div className="lessons-empty">Loading the farm…</div>;
 
-  const items = Object.entries(state.items).filter(([, n]) => n > 0);
-  const run_ = state.run;
-  const features = new Set(overview.features);
+  const multiFile = Object.keys(files[language] ?? {}).length > 1;
+  const code = wins.layout.wins.code;
+  const codeRect = wins.rects.code;
 
-  return (
-    <div className="farm-wrap">
-      <section className="farm-code">
-        <div className="farm-bar">
-          <div className="farm-langs" role="tablist" aria-label="Language" title="Each language has its own farm">
-            {overview.languages.map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                role="tab"
-                aria-selected={lang === language}
-                className={`ws-btn${lang === language ? " on" : ""}`}
-                onClick={() => void pickLanguage(lang)}
-                title={`${LANGUAGE_TIPS[lang]}. Its own farm${
-                  overview.saves?.[lang] ? `: ${overview.saves[lang].w}×${overview.saves[lang].h}` : ""
-                }`}
-                disabled={running}
-              >
-                {LANGUAGE_NAMES[lang] ?? lang}
-              </button>
-            ))}
-          </div>
-          <div className="farm-actions">
-            {running ? (
-              <button type="button" className="ws-btn primary" onClick={stop}>
-                Stop
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="ws-btn primary"
-                onClick={() => void run()}
-                disabled={busy}
-                title="Run (Ctrl+Enter)"
-              >
-                {busy ? "Starting…" : `Run ${file}`}
-              </button>
-            )}
-            <label className="farm-warp" title="Time warp: how many game seconds pass per real second">
-              Warp
-              <select value={state.warp} onChange={(e) => void warp(Number(e.target.value))}>
-                {overview.warps.map((w) => (
-                  <option key={w} value={w}>
-                    {w === 0 ? "max" : `${w}×`}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
-        {/* The program's files, like the game's code windows. The open tab is
-            the one Run runs; the others are there to be imported. */}
-        <div className="farm-files" role="tablist" aria-label="Files">
-          {Object.keys(files[language] ?? {}).map((name) => (
-            <span key={name} className={`farm-file${name === file ? " on" : ""}`}>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={name === file}
-                onClick={() => void openFile(name)}
-                onDoubleClick={() => void renameFile(name)}
-                disabled={running}
-                title="Double-click to rename"
-              >
-                {name}
-                {EXTENSIONS[language]}
-              </button>
-              {Object.keys(files[language] ?? {}).length > 1 ? (
-                <button
-                  type="button"
-                  className="farm-file-x"
-                  onClick={() => void deleteFile(name)}
-                  disabled={running}
-                  aria-label={`Delete ${name}`}
-                  title={`Delete ${name}`}
-                >
-                  ×
-                </button>
-              ) : null}
-            </span>
-          ))}
-          <button
-            type="button"
-            className="farm-file-add"
-            onClick={() => void addFile()}
-            disabled={running}
-            title="Add a file - with Import researched, your files can import each other"
-          >
-            +
-          </button>
-        </div>
-        <div className="farm-editor">
-          <EditorPane
-            code={files[language]?.[file] ?? ""}
+  // The farm is centred in what the Code window leaves (if it sits on the left) and the HUD leaves.
+  const insetX =
+    !wins.narrow && code.open && !code.min && codeRect.x <= area.w * 0.3
+      ? Math.round(Math.min(codeRect.x + codeRect.w, area.w * 0.55))
+      : 0;
+
+  const content = (id: WinId) => {
+    switch (id) {
+      case "code":
+        return (
+          <FarmCode
+            overview={overview}
+            language={language}
+            files={files[language] ?? {}}
+            file={file}
+            running={running}
+            busy={busy}
             revision={revision}
+            warp={state.warp}
+            onWarp={(v) => void warp(v)}
+            onPickLanguage={(l) => void pickLanguage(l)}
+            onOpenFile={(n) => void openFile(n)}
+            onAddFile={() => void addFile()}
+            onRenameFile={(n) => void renameFile(n)}
+            onDeleteFile={(n) => void deleteFile(n)}
             onChange={onChange}
             onRun={() => void run()}
-            language={language === "original" ? "python" : language}
-            fileName={`${file}${EXTENSIONS[language]}`}
+            onStop={stop}
+            onStartOver={() => void startOver()}
           />
-        </div>
-        <div className="farm-output" aria-live="polite">
-          {violations.map((v, i) => (
-            <div key={`v${i}`} className="farm-line error">
-              {v.file && Object.keys(files[language] ?? {}).length > 1 ? `${v.file}, line` : "Line"} {v.line}:{" "}
-              {v.message} <code>{v.snippet}</code>
-            </div>
-          ))}
-          {error ? <div className="farm-line error">{error}</div> : null}
-          {lines.length === 0 && !violations.length && !error ? (
-            <div className="farm-line info">Output, and anything you quick_print, shows here.</div>
-          ) : null}
-          {lines.map((l, i) => (
-            <div key={i} className={`farm-line ${l.kind}`}>
-              {l.text}
-            </div>
-          ))}
-        </div>
-      </section>
+        );
+      case "output":
+        return <FarmOutput lines={lines} violations={violations} error={error} run={state.run} multiFile={multiFile} />;
+      case "research":
+        return <ResearchTree unlocks={overview.unlocks} items={state.items} onBuy={(n) => void buy(n)} />;
+      case "docs":
+        return <FarmDocs overview={overview} language={language} />;
+      case "playbook":
+        return (
+          <FarmPlaybook
+            overview={overview}
+            tips={tips}
+            tipLang={tipLang}
+            onTipLang={chooseTipLang}
+            copied={copied}
+            onAdd={(c) => void addSnippet(c)}
+            onCopy={copySnippet}
+          />
+        );
+    }
+  };
 
-      <section className="farm-field">
-        <div className="farm-items">
-          {items.length === 0 ? <span className="farm-item muted">Nothing harvested yet</span> : null}
-          {items.map(([item, n]) => (
-            <span key={item} className="farm-item" title={item}>
-              <b>{n.toLocaleString()}</b> {itemName(item)}
-            </span>
-          ))}
+  const top = wins.layout.order[wins.layout.order.length - 1];
+  return (
+    <div ref={rootRef} className="fm-root">
+      <FarmScene snap={state.farm} insetX={insetX} insetY={HUD_H} sim={!!state.simulation} />
+      <FarmHud
+        items={state.items}
+        farm={state.farm}
+        language={language}
+        run={state.run}
+        multiFile={multiFile}
+        doing={droneDoing(state.farm, running)}
+        warp={state.warp}
+        warps={overview.warps}
+        onWarp={(v) => void warp(v)}
+        pops={pops}
+        log={log}
+      />
+      {state.simulation ? (
+        <div className="fm-sim" role="status">
+          Simulating <b>{state.simulation.file}</b>
+          {state.simulation.speedup ? ` at ${state.simulation.speedup}×` : " as fast as it goes"} - this is
+          the simulation&apos;s farm; your real farm is paused and won&apos;t change.
         </div>
-        {state.simulation ? (
-          <div className="farm-sim-banner" role="status">
-            Simulating <b>{state.simulation.file}</b>
-            {state.simulation.speedup ? ` at ${state.simulation.speedup}×` : " as fast as it goes"} - this is
-            the simulation&apos;s farm; your real farm is paused and won&apos;t change.
-          </div>
-        ) : null}
-        <div ref={boxRef} className={`farm-canvas-box${state.simulation ? " sim" : ""}`}>
-          <canvas ref={canvasRef} width={px} height={px} className="farm-canvas" />
-        </div>
-        <div className="farm-status">
-          <span title="Each language has its own farm, with its own items, research and code">
-            {LANGUAGE_NAMES[language] ?? language} farm · {state.farm.w}×{state.farm.h} · time {state.farm.time.toFixed(1)}s · speed {state.farm.speed}×
-          </span>
-          {run_ ? (
-            <span className={`farm-run ${run_.status}`}>
-              {run_.status === "running"
-                ? `running · ${run_.commands} commands${run_.drones && run_.drones > 1 ? ` · ${run_.drones} drones` : ""}`
-                : run_.status === "error"
-                  ? `stopped with an error${run_.line ? ` on line ${run_.line}` : ""}${run_.file && Object.keys(files[language] ?? {}).length > 1 ? ` of ${run_.file}` : ""}`
-                  : run_.status}
-            </span>
-          ) : null}
-        </div>
-        <div className="farm-tabs">
-          <button
-            type="button"
-            className={`ws-btn${panel === "research" ? " on" : ""}`}
-            onClick={() => setPanel(panel === "research" ? null : "research")}
-          >
-            Research
-          </button>
-          <button
-            type="button"
-            className={`ws-btn${panel === "docs" ? " on" : ""}`}
-            onClick={() => setPanel(panel === "docs" ? null : "docs")}
-          >
-            Commands
-          </button>
-          <button
-            type="button"
-            className={`ws-btn${panel === "playbook" ? " on" : ""}`}
-            onClick={() => setPanel(panel === "playbook" ? null : "playbook")}
-          >
-            Playbook
-          </button>
-          <button type="button" className="ws-btn farm-reset" onClick={() => void startOver()}>
-            Start over
-          </button>
-        </div>
-
-        {panel === "research" ? (
-          <div className="farm-panel">
-            {unlocks.map((u) => {
-              const maxed = u.cost === null;
-              return (
-                <div
-                  key={u.name}
-                  className={`farm-unlock${u.available ? " open" : ""}${u.affordable && u.available ? " ready" : ""}${maxed ? " done" : ""}`}
-                >
-                  <div className="farm-unlock-head">
-                    <strong>{u.name.replace(/_/g, " ")}</strong>
-                    {u.upgradable || u.level > 0 ? (
-                      <span className="farm-level">
-                        {u.level}/{u.max}
-                      </span>
-                    ) : null}
-                    {u.missing ? <span className="farm-level">not in Code Coach yet</span> : null}
-                    {u.available ? (
-                      <button
-                        type="button"
-                        className="ws-btn primary"
-                        disabled={!u.affordable}
-                        onClick={() => void buy(u.name)}
-                      >
-                        {u.level > 0 && u.upgradable ? "Upgrade" : "Unlock"} · {costText(u.cost)}
-                      </button>
-                    ) : null}
-                  </div>
-                  <p>{u.about}</p>
-                  {!u.available && !maxed && !u.missing ? (
-                    <p className="farm-needs">Needs {u.needs.join(" and ") || "nothing"}.</p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {panel === "playbook" ? (
-          <div className="farm-panel">
-            <div className="farm-langs farm-tip-langs" role="tablist" aria-label="Tip language">
-              {(overview.languages ?? ["original", "python", "javascript", "dart"]).map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  role="tab"
-                  aria-selected={tipLang === l}
-                  className={`ws-btn${tipLang === l ? " on" : ""}`}
-                  onClick={() => chooseTipLang(l)}
-                >
-                  {LANGUAGE_NAMES[l] ?? l}
-                </button>
-              ))}
-            </div>
-            <p className="farm-needs">
-              {tipLang === "original"
-                ? "Written in the game's own language: this is what the tips look like in the game itself. "
-                : "Same tips in " + (LANGUAGE_NAMES[tipLang] ?? tipLang) + ". "}
-              Add one to your code, then press Run.
-            </p>
-            <div className="farm-tip-controls">
-              <input
-                type="search"
-                className="farm-tip-search"
-                placeholder="Search the tips (pumpkin, maze, drone…)"
-                value={tipSearch}
-                onChange={(e) => setTipSearch(e.target.value)}
-                aria-label="Search the playbook"
-              />
-              <label className="farm-tip-ready">
-                <input type="checkbox" checked={readyOnly} onChange={(e) => setReadyOnly(e.target.checked)} />
-                Ready to run
-              </label>
-            </div>
-            {tips.length === 0 ? <p className="farm-needs">Loading…</p> : null}
-            {(() => {
-              const needle = tipSearch.trim().toLowerCase();
-              // The tips are for tipLang, whose farm is not always the one you are on.
-              const levelOf = (n: string) => overview.levels?.[tipLang]?.[n] ?? 0;
-              const missingFor = (t: FarmTip) => t.needs.filter((n) => levelOf(n) < (t.levels[n] ?? 1));
-              const shown = tips.filter(
-                (t) =>
-                  (!needle || `${t.title} ${t.tip} ${t.group}`.toLowerCase().includes(needle)) &&
-                  (!readyOnly || missingFor(t).length === 0),
-              );
-              if (tips.length > 0 && shown.length === 0) {
-                return <p className="farm-needs">Nothing matches{readyOnly ? " yet - try without Ready to run" : ""}.</p>;
-              }
-              const groups = [...new Set(shown.map((t) => t.group))];
-              return groups.map((group) => {
-                const inGroup = shown.filter((t) => t.group === group);
-                // A search opens everything it found; otherwise a group is open unless shut.
-                const open = needle ? true : !shut[group];
-                return (
-                  <div key={group}>
-                    <button
-                      type="button"
-                      className="farm-group farm-group-btn"
-                      aria-expanded={open}
-                      onClick={() => setShut((was) => ({ ...was, [group]: open }))}
-                    >
-                      <span>{open ? "▾" : "▸"}</span> {group} <span className="farm-group-count">{inGroup.length}</span>
-                    </button>
-                    {open
-                      ? inGroup.map((t) => {
-                          const code = t.snippets[tipLang] ?? "";
-                          const missing = missingFor(t);
-                          return (
-                            <div key={t.id} className={`farm-tip${missing.length ? " locked" : ""}`}>
-                              <strong>{t.title}</strong>
-                              <p>{t.tip}</p>
-                              {missing.length ? (
-                                <p className="farm-needs">
-                                  Needs{" "}
-                                  {missing
-                                    .map((n) => n.replace(/_/g, " ") + ((t.levels[n] ?? 1) > 1 ? ` level ${t.levels[n]}` : ""))
-                                    .join(" and ")}
-                                  .
-                                </p>
-                              ) : null}
-                              {code ? <pre className="farm-snippet">{code}</pre> : null}
-                              {code ? (
-                                <div className="farm-tip-actions">
-                                  <button type="button" className="ws-btn" onClick={() => void addSnippet(code)}>
-                                    Add to my code
-                                  </button>
-                                  <button type="button" className="ws-btn" onClick={() => copySnippet(t.id, code)}>
-                                    {copied === t.id ? "Copied" : "Copy"}
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })
-                      : null}
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        ) : null}
-
-        {panel === "docs" ? (
-          <div className="farm-panel">
-            <p className="farm-needs">
-              Language you have:{" "}
-              {Object.keys(FEATURE_UNLOCKS).map((f) => (
-                <span key={f} className={`farm-feature${features.has(f) ? " on" : ""}`} title={`From ${FEATURE_UNLOCKS[f]}`}>
-                  {f}
-                </span>
-              ))}
-            </p>
-            {Object.entries(overview.names ?? {}).map(([group, members]) => (
-              <p key={group} className="farm-values">
-                <span className="farm-needs">{group}: </span>
-                {members.map((m) => (
-                  <code key={m}>{spellValue(group, m, language)}</code>
-                ))}
-              </p>
-            ))}
-            {overview.functions
-              .slice()
-              .sort((a, b) => Number(b.unlocked) - Number(a.unlocked))
-              .map((f) => (
-                <div key={f.py} className={`farm-fn${f.unlocked ? "" : " locked"}`}>
-                  <code>{signature(f, language)}</code>
-                  <span>{f.unlocked ? f.doc : `needs ${f.unlock}`}</span>
-                </div>
-              ))}
-          </div>
-        ) : null}
-      </section>
+      ) : null}
+      {area.w > 0
+        ? WINDOW_IDS.filter((id) => wins.layout.wins[id].open).map((id) => (
+            <FarmWindow
+              key={id}
+              id={id}
+              title={WINDOW_DEFS[id].title}
+              icon={WINDOW_DEFS[id].icon}
+              rect={wins.rects[id]}
+              z={10 + wins.layout.order.indexOf(id)}
+              focused={top === id}
+              minimised={wins.layout.wins[id].min}
+              narrow={wins.narrow}
+              area={area}
+              autoFocus={settled.current}
+              onFocus={() => wins.focus(id)}
+              onCommit={(r) => wins.commitRect(id, r)}
+              onMinimise={() => wins.toggleMin(id)}
+              onClose={() => wins.close(id)}
+            >
+              {content(id)}
+            </FarmWindow>
+          ))
+        : null}
+      <FarmMenu isOpen={(id) => wins.layout.wins[id].open} onToggle={wins.toggle} onReset={wins.reset} />
     </div>
   );
 }

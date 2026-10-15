@@ -13,8 +13,11 @@ South-West corner, and the field wraps at its edges.
 
 from __future__ import annotations
 
+import itertools
 import math
 import random as _random
+import time as _time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -125,6 +128,14 @@ class Maze:
 
 # ── The world ───────────────────────────────────────────────────────────
 
+#: Event numbers (`n`) come from one counter for the whole process, seeded from the
+#: clock: they only ever rise, across farms, resets and server restarts, so a screen
+#: that remembers the last `n` it drew never mistakes a new event for an old one.
+_EVENT_NUMBERS = itertools.count(int(_time.time() * 1000))
+#: How many recent events a World keeps for the screen.
+EVENT_CAP = 60
+
+
 class World:
     def __init__(self, seed: int | None = None) -> None:
         self.rng = _random.Random(seed)
@@ -155,6 +166,10 @@ class World:
         #: Words printed above the drone: (text, game time it fades).
         self.smoke: list[tuple[str, float]] = []
         self._pumpkins: dict[tuple[int, int], tuple[int, int, int]] | None = None
+        #: What the drones just did (not moves), oldest first, for the screen to animate.
+        self.events: deque[dict[str, Any]] = deque(maxlen=EVENT_CAP)
+        #: Which drone is acting; the runner sets it around each command (0 is the program's own).
+        self.drone_id = 0
         self._fill()
 
     # ── Size and squares ────────────────────────────────────────────────
@@ -741,9 +756,35 @@ class World:
         return {"Entities": "Bush", "Items": "Hay", "Grounds": "Soil", "Hats": "Straw_Hat",
                 "Unlocks": "Carrots"}[group]
 
+    def _record(self, kind: str, x: int, y: int, ok: bool, entity: str | None = None,
+                items: dict[str, int | float] | None = None) -> None:
+        """Write down one action for the screen. Called after the action has taken its time."""
+        event: dict[str, Any] = {
+            "n": next(_EVENT_NUMBERS),
+            "t": round(self.clock if self.clock is not None else self.time, 3),
+            "k": kind, "x": x, "y": y, "d": self.drone_id, "ok": bool(ok),
+        }
+        if entity:
+            event["e"] = entity
+        if items:
+            event["items"] = items
+        self.events.append(event)
+
     def _do_harvest(self, args, language):
-        ok = self._harvest_here()
-        return ok, self._act(ok)
+        x, y = self.x, self.y
+        entity = self.here().entity
+        before = dict(self.items)
+        done = self._harvest_here()
+        # What it paid is read off the stores, so every harvest path (plain, giant
+        # pumpkin, cactus patch, sunflower, maze treasure, infected) reports its real credit.
+        paid = {
+            item: (int(gain) if float(gain).is_integer() else round(gain, 4))
+            for item, amount in self.items.items()
+            if (gain := amount - before.get(item, 0)) > 0
+        }
+        seconds = self._act(done)
+        self._record("harvest", x, y, bool(paid), entity, paid)
+        return done, seconds
 
     def _do_can_harvest(self, args, language):
         t = self.here()
@@ -776,7 +817,9 @@ class World:
             t.size = self.rng.randrange(data.CACTUS_SIZES) if entity == "Cactus" else 0
             t.companion = self._pick_companion(entity, self.x, self.y)
             self._changed()
-        return ok, self._act(ok)
+        seconds = self._act(ok)
+        self._record("plant", self.x, self.y, ok, entity)
+        return ok, seconds
 
     def _do_move(self, args, language):
         direction = self._direction(args, "move", language)
@@ -796,7 +839,9 @@ class World:
         i = self._index(self.x, self.y)
         t = self.tiles[i]
         if self.maze and self.maze.inside(self.x, self.y):
-            return None, self._act(False)
+            seconds = self._act(False)
+            self._record("till", self.x, self.y, False, t.entity)
+            return None, seconds
         t.ground = "Soil" if t.ground == "Grassland" else "Grassland"
         if t.ground == "Soil" and t.entity == "Grass":
             t.entity = None
@@ -804,7 +849,9 @@ class World:
             t.companion = None
         self._grass(i)
         self._changed()
-        return None, self._act(True)
+        seconds = self._act(True)
+        self._record("till", self.x, self.y, True, t.entity)
+        return None, seconds
 
     def _do_swap(self, args, language):
         direction = self._direction(args, "swap", language)
@@ -813,13 +860,17 @@ class World:
         b = self.at(self.x + dx, self.y + dy)
         fixed = ("Hedge", "Treasure", "Apple", "Dinosaur")
         if a.entity in fixed or b.entity in fixed:
-            return None, self._act(False)
+            seconds = self._act(False)
+            self._record("swap", self.x, self.y, False, a.entity)
+            return None, seconds
         for attr in ("entity", "need", "grown", "infected", "petals", "size", "companion"):
             va, vb = getattr(a, attr), getattr(b, attr)
             setattr(a, attr, vb)
             setattr(b, attr, va)
         self._changed()
-        return None, self._act(True)
+        seconds = self._act(True)
+        self._record("swap", self.x, self.y, True, b.entity)
+        return None, seconds
 
     def _do_measure(self, args, language):
         direction = self._direction(args, "measure", language, optional=True)
@@ -888,7 +939,11 @@ class World:
         if ok:
             self.items[item] -= n
             self._changed()
-        return ok, self._act(ok)
+        seconds = self._act(ok)
+        kind = {"Water": "water", "Fertilizer": "fertilize"}.get(item)
+        if kind:
+            self._record(kind, self.x, self.y, ok, t.entity)
+        return ok, seconds
 
     def _weird(self, n: int) -> bool:
         t = self.here()
@@ -961,7 +1016,9 @@ class World:
     def _do_unlock(self, args, language):
         name = self._member(args[0] if args else None, "Unlocks", "unlock", language)
         ok = self.buy(name)
-        return ok, self._act(ok)
+        seconds = self._act(ok)
+        self._record("unlock", self.x, self.y, ok, name)
+        return ok, seconds
 
     def _do_num_unlocked(self, args, language):
         thing = args[0] if args else None
@@ -993,7 +1050,9 @@ class World:
         if hat == "Dinosaur_Hat" and not self.level("Dinosaurs"):
             raise Refusal(f"{spell_value('Hats.Dinosaur_Hat', language)} needs Dinosaurs.")
         if hat == self.hat:
-            return None, self._act(True)
+            seconds = self._act(True)
+            self._record("hat", self.x, self.y, True, hat)
+            return None, seconds
         if self.hat == "Dinosaur_Hat":
             self._take_off_dinosaur()
         self.hat = hat
@@ -1010,7 +1069,9 @@ class World:
                 here.companion = None
                 self.apple_next = self._free_spot()
         self._changed()
-        return None, self._act(True)
+        seconds = self._act(True)
+        self._record("hat", self.x, self.y, True, hat)
+        return None, seconds
 
     def _do_set_execution_speed(self, args, language):
         speed = args[0] if args else 0
@@ -1262,5 +1323,6 @@ class World:
             "drones": [{"x": self.x, "y": self.y, "hat": self.hat}],
             "tiles": tiles, "maze": maze, "tail": [list(p) for p in self.tail],
             "smoke": [text for text, until in self.smoke if until > self.time],
+            "events": list(self.events),
             "speed": round(self.speed_factor(), 4),
         }

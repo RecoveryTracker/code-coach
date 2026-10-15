@@ -861,6 +861,7 @@ class FarmHost:
                 return self._wait_for(run, drone, args, world)
             world.x, world.y, world.hat = drone.x, drone.y, drone.hat
             world.clock = drone.time
+            world.drone_id = drone.id
             world.run_ticks = drone.ticks
             if spent:
                 world.spend_ticks(spent)
@@ -889,6 +890,7 @@ class FarmHost:
             drone.time = world.clock if world.clock is not None else drone.time
             drone.ticks = world.run_ticks
             world.clock = None
+            world.drone_id = 0
             if drone.id == 0:
                 pass
             else:

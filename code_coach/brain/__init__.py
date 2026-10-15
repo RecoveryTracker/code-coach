@@ -556,7 +556,8 @@ def round_payload(activity_id: str, seed: int | None = None, language: str = "ja
     return {
         "activity": activity_id,
         "language": language,
-        "items": [{"prompt": i.prompt, "answer": i.answer, "explain": i.explain, "show": i.show}
+        "items": [{"prompt": i.prompt, "answer": i.answer, "explain": i.explain, "show": i.show,
+                   "check": i.check}
                   for i in items],
     }
 

@@ -46,11 +46,16 @@ class Step:
     #: What the learner writes and what runs it: 'javascript' (in the browser,
     #: checked in node) or 'python' (in a child process on the server).
     language: str = "javascript"
+    #: What the step is worked on: 'canvas' (a picture the program draws) or 'web'
+    #: (a Python web app a real server runs, checked with real HTTP requests).
+    surface: str = "canvas"
 
     @property
     def kind(self) -> str:
-        """'dom' for a step on a web page, checked in the browser; else 'canvas'."""
-        return "dom" if self.html else "canvas"
+        """'dom' for a step on a web page, checked in the browser; 'web' for a Python web app; else 'canvas'."""
+        if self.html:
+            return "dom"
+        return "web" if self.surface == "web" else "canvas"
 
 
 _SETUP = """const canvas = document.querySelector('canvas');

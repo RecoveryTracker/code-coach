@@ -158,6 +158,10 @@ code_coach/farm/
   upgrade bought, capped at 10 s) and "Explain my code" glosses the game's
   commands (`farm/explain_farm.py`). Free mode's Explain button and the coach's
   share `components/ExplainPanel.tsx`.
+- **Events**: every action that changes a square (harvest, plant, till, water, fertilize, swap, hat, unlock;
+  never moves) is written by `World._record` into a 60-deep ring, sent as `snapshot()["events"]` (oldest first,
+  `FarmEvent` in `web/src/types.ts`). `n` comes from one process-wide counter, so it only rises; `d` is the drone
+  (`World.drone_id`, set by `FarmHost._command`); a harvest's `items` are read off the barn's change. `tests/test_farm_events.py`.
 - Not built yet: the leaderboard (deliberately skipped).
 
 ## Canvas and Brain Drills
@@ -208,11 +212,57 @@ code_coach/farm/
   dataclass both pass. Verify by hand with the in-app browser: its pane is
   hidden, so `requestAnimationFrame` never fires - stand a `setTimeout` in for
   it on the page, press Run, and read canvas pixels.
+- **Python web** (`code_coach/canvas/pyweb/`, track "Web (Python)" in
+  `content_pyweb_track.py`, ids `pywa-NN-name`, a Link Saver bookmarks app in 12
+  steps). A step has `surface="web"` (so `Step.kind == "web"`, `language="python"`)
+  and its preview is `PyWebView.tsx`, a "Try it" panel (method, path, form/JSON
+  body, status line, headers, text and a sandboxed Rendered tab, a cookie jar,
+  Follow for a redirect). The learner writes `from web import app, request,
+  Response, json_response, redirect, abort, render, safe, escape`
+  (`lib/web.py`, standard library only, on `ThreadingHTTPServer`): `@app.get/post/put/delete/patch`
+  and `@app.route(path, methods=[...])`, `<name>` and `<int:id>` holes, `request`
+  (`.args` first values, `.args_all` lists, `.form`, `.json` (None, or 400 for bad
+  JSON), `.headers`, `.cookies`, `.body`), returns of str / dict / list /
+  `(body, status[, headers])` / `Response` (`set_cookie`, `delete_cookie`),
+  `@app.errorhandler(404)` (returns like a route: a bare page is 200),
+  404, 405 with `Allow`, HEAD from GET, OPTIONS 204, a 500 plus the traceback
+  (learner lines only) in the console; `render("$x", x=v)` escapes values unless
+  `safe(...)`. The learner never calls `app.run` (a harmless note). A child
+  (`driver.py serve`, `python -I -u -X utf8`, empty folder, bare env) runs the program
+  as `app.py`, serves it on `127.0.0.1` port 0 and speaks `PW`-marked JSON lines:
+  `start {code, limit}` -> `{error, logs, host, port, routes, pid}`, `logs`, `stop`;
+  a watchdog raises in a route that runs over its 3 s (exit code 3 if ignored).
+  `session.py` is `WebRegistry(PyRegistry)` (max 4, idle 120 s) and the **server**
+  process makes the request with `http.client` (never following redirects, 1 MB,
+  5 s): routes `/api/pyweb/start|request|stop` give `{status, reason, headers:
+  [[k, v]], body, binary (base64), truncated, seconds, logs, error}`. A check
+  (`check.py` `run_pyweb_check`, dispatched by `Step.kind == "web"` in `check_step`)
+  runs in one child (`driver.py check`): the app on a thread and the check body in
+  the main thread, over real sockets, with `cc` (`get/post/put/delete(path, form=,
+  json=, body=, headers=, cookies=)`, `request`, `follow(resp)` (one hop, 303 and
+  302-after-POST become GET), `jar = True` with `cc.cookies`, `logs()`), a response
+  (`.status .reason .headers .text .json() .cookies .cookie(name) .location
+  .content_type .snippet()`, `.expect_status(*codes, why=)`, `.expect_type(prefix)`,
+  `.expect_json()`), `expect`, `near`. Checks never read the learner's names, so any
+  program that behaves right passes. **A new step**: add a block to
+  `content_pyweb_track.py` (the starter is the last solution, name every route the
+  check asks for in the goal) and a MISTAKES / OTHER_WAYS entry in
+  `tests/test_canvas_pywebapp.py`; library and session behaviour is in
+  `tests/test_pyweb_lib.py`.
 - **Brain Drills** (`code_coach/brain/`): seven timed reflex activities, in
   JavaScript or Python (`pythonic.py`; scores kept per language), and a
   "code age" from 20 to 80. Every item is modelled in
   Python and held to node in `tests/test_brain.py`. (Not called "Brain
-  Age", which is Nintendo's trademark.)
+  Age", which is Nintendo's trademark.) In a round you can go Back (Alt+Left),
+  open the Questions grid and jump anywhere, and Run / Explain an answered
+  question's code (`BrainTools.tsx`, `BrainPicker.tsx`). The rules live in the
+  pure `web/src/lib/brainRound.ts` (tested in `tests/test_brain_round.py`):
+  an answer counts once, the round ends only when every question is answered,
+  and the clock stops on any answered question (reading a miss, Back, a jump
+  to a finished cell). "Run it" is `/api/visualize` and "Explain" is
+  `/api/explain`, both told the drill's language (`language` in the request;
+  blank = the app's saved one). `round_payload` carries each item's `check`
+  code, which the loop and final-value programs are built from.
 
 ## Checking the UI
 

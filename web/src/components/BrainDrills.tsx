@@ -8,13 +8,35 @@
  * check, charted day by day.
  *
  * Everything is keyboard: type and Enter for typed answers, left/right
- * arrows (or F/J) for the two-way ones, Esc to leave a round.
+ * arrows (or F/J) for the two-way ones, Esc to leave a round. Alt+Left goes
+ * back a question; "Questions" opens a grid to jump to any of them. An
+ * answered question can be run and explained in place.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
+import {
+  answeredCount,
+  backTarget,
+  clockElapsed,
+  clockFor,
+  clockStart,
+  forwardTarget,
+  isComplete,
+  jumpTo,
+  missesOf,
+  newRound,
+  nextOpen,
+  recordAnswer,
+  resumeTarget,
+  type BrainItem,
+  type Clock,
+  type RoundState,
+} from "../lib/brainRound";
 import "../styles/brain.css";
+import BrainPicker from "./BrainPicker";
+import BrainTools from "./BrainTools";
 
 export type BrainLanguage = "javascript" | "python";
 const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python" };
@@ -51,7 +73,7 @@ export type BrainSummary = {
   checkAges: { day: string; age: number }[];
   trainedToday: boolean;
 };
-export type BrainItem = { prompt: string; answer: string; explain: string; show: string };
+export type { BrainItem };
 type Miss = { item: BrainItem; given: string };
 
 type Screen =
@@ -243,7 +265,13 @@ export default function BrainDrills() {
   );
 }
 
-/** One activity, start to finish: countdown, items, then onDone. */
+/**
+ * One activity, start to finish: countdown, questions, then onDone.
+ *
+ * You can go Back, open the question picker and jump anywhere (see
+ * lib/brainRound.ts for the rules): an answered question is shown read-only,
+ * with its code to run and explain, and the clock waits while you look.
+ */
 function Round({
   activity,
   language,
@@ -261,19 +289,29 @@ function Round({
 }) {
   const [items, setItems] = useState<BrainItem[] | null>(null);
   const [count, setCount] = useState(3);
-  const [index, setIndex] = useState(0);
+  const [rs, setRs] = useState<RoundState>(() => newRound(0));
   const [typed, setTyped] = useState("");
-  const [flash, setFlash] = useState<"" | "ok" | "bad">("");
+  const [flash, setFlash] = useState(false);
   const [showing, setShowing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const misses = useRef<Miss[]>([]);
-  const started = useRef(0);
+  const [picker, setPicker] = useState(false);
+  const clock = useRef<Clock | null>(null);
+  // Set while a right answer's flash is on screen, so nothing else moves you.
   const busy = useRef(false);
+  const finishing = useRef(false);
+  // A fast typist's keystrokes must not skip a miss before it has been read.
+  const guard = useRef(0);
   const input = useRef<HTMLInputElement | null>(null);
+  const nextBtn = useRef<HTMLButtonElement | null>(null);
+  const questionsBtn = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetchBrainRound(activity.id, language).then((r) => alive && setItems(r.items));
+    fetchBrainRound(activity.id, language).then((r) => {
+      if (!alive) return;
+      setItems(r.items);
+      setRs(newRound(r.items.length));
+    });
     return () => {
       alive = false;
     };
@@ -286,123 +324,284 @@ function Round({
     return () => window.clearTimeout(id);
   }, [items, count]);
   useEffect(() => {
-    if (count === 0 && items && !started.current) started.current = performance.now();
+    if (count === 0 && items && !clock.current) clock.current = clockStart(performance.now());
   }, [count, items]);
   useEffect(() => {
     if (count > 0) return;
-    const id = window.setInterval(() => setElapsed((performance.now() - started.current) / 1000), 100);
+    const id = window.setInterval(() => {
+      const c = clock.current;
+      if (c && c.pausedAt === null) setElapsed(clockElapsed(c, performance.now()));
+    }, 100);
     return () => window.clearInterval(id);
   }, [count]);
 
-  const item = items?.[index];
+  const total = items?.length ?? 0;
+  const item = items?.[rs.index];
+  const record = rs.answers[rs.index] ?? null;
+  const reviewing = record !== null;
+  const answered = answeredCount(rs);
 
-  // Variable Recall: show what to remember, then hide it.
+  // Variable Recall: show what to remember, then hide it. Landing on an
+  // unanswered one - by answering, Back or the picker - shows it again; an
+  // answered one is only reviewed, with the variables in view.
   useEffect(() => {
-    if (count > 0 || !item?.show) return;
+    if (count > 0 || !item?.show || reviewing) {
+      setShowing(false);
+      return;
+    }
     setShowing(true);
     const id = window.setTimeout(() => setShowing(false), activity.showSeconds * 1000);
     return () => window.clearTimeout(id);
-  }, [count, item, activity.showSeconds]);
+  }, [count, rs.index, reviewing, item?.show, activity.showSeconds]);
 
   useEffect(() => {
-    if (count === 0 && !showing) input.current?.focus();
-  }, [count, showing, index]);
+    if (count !== 0 || picker) return;
+    if (reviewing) nextBtn.current?.focus();
+    else if (!showing) input.current?.focus();
+  }, [count, showing, rs.index, reviewing, picker]);
+
+  // Move to a new round state, keeping the clock in line with it: stopped
+  // while you look at an answered question, running on an open one.
+  const commit = useCallback((next: RoundState) => {
+    const now = performance.now();
+    setRs(next);
+    setTyped("");
+    setFlash(false);
+    if (clock.current) {
+      clock.current = clockFor(clock.current, next, now);
+      setElapsed(clockElapsed(clock.current, now));
+    }
+  }, []);
+
+  const finish = useCallback(
+    (state: RoundState) => {
+      if (!items || finishing.current || !isComplete(state)) return;
+      finishing.current = true;
+      const seconds = clock.current ? clockElapsed(clock.current, performance.now()) : 0;
+      onDone(seconds, missesOf(state, items), items.length);
+    },
+    [items, onDone],
+  );
+
+  const go = useCallback(
+    (i: number) => {
+      setPicker(false);
+      if (!items || count > 0 || busy.current || finishing.current || i < 0) return;
+      if (i !== rs.index) commit(jumpTo(rs, i));
+    },
+    [items, count, rs, commit],
+  );
+
+  const back = useCallback(() => go(backTarget(rs)), [go, rs]);
+
+  // Next: on from the question you are reading; from the end of a finished
+  // round, that is the end of the round.
+  const forward = useCallback(() => {
+    if (!items || busy.current) return;
+    if (isComplete(rs) && rs.index + 1 >= rs.answers.length) {
+      finish(rs);
+      return;
+    }
+    const t = forwardTarget(rs);
+    if (t >= 0) go(t);
+  }, [items, rs, go, finish]);
 
   const answer = useCallback(
     (given: string) => {
-      if (!items || !item || busy.current || showing) return;
-      busy.current = true;
+      if (!items || !item || busy.current || showing || reviewing || count > 0) return;
       const right = same(given, item.answer);
-      if (!right) misses.current.push({ item, given });
-      setFlash(right ? "ok" : "bad");
-      window.setTimeout(
-        () => {
-          setFlash("");
-          setTyped("");
+      const next = recordAnswer(rs, rs.index, given, right);
+      if (right) {
+        busy.current = true;
+        setFlash(true);
+        window.setTimeout(() => {
           busy.current = false;
-          if (index + 1 >= items.length) {
-            onDone((performance.now() - started.current) / 1000, misses.current, items.length);
-          } else {
-            setIndex(index + 1);
-          }
-        },
-        right ? 120 : 700,
-      );
-    },
-    [items, item, index, showing, onDone],
-  );
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onQuit();
+          if (isComplete(next)) finish(next);
+          else commit(jumpTo(next, nextOpen(next, rs.index)));
+        }, 120);
         return;
       }
-      if (count > 0 || activity.kind !== "pick") return;
-      const left = e.key === "ArrowLeft" || e.key.toLowerCase() === "f";
-      const right = e.key === "ArrowRight" || e.key.toLowerCase() === "j";
-      if (left || right) {
-        e.preventDefault();
-        answer(activity.choices[left ? 0 : 1]);
+      // Wrong: it is now an answered question, shown with the right answer
+      // until you say you have read it - and the clock is stopped, so
+      // reading it costs no score.
+      guard.current = performance.now() + 300;
+      commit(next);
+    },
+    [items, item, rs, showing, reviewing, count, finish, commit],
+  );
+
+  const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  onKeyRef.current = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (picker) {
+        setPicker(false);
+        questionsBtn.current?.focus();
+      } else {
+        onQuit();
       }
-    };
+      return;
+    }
+    if (picker || count > 0) return;
+    if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      e.preventDefault();
+      if (e.key === "ArrowLeft") back();
+      else forward();
+      return;
+    }
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (reviewing) {
+      if (e.repeat || (e.key !== "Enter" && e.key !== " ")) return;
+      // On some other button, Enter or Space is that button's.
+      const el = e.target as HTMLElement | null;
+      const control = el?.closest?.("button, a, input, select, textarea");
+      if (control && !(control as HTMLElement).dataset.primary) return;
+      e.preventDefault();
+      if (performance.now() >= guard.current) forward();
+      return;
+    }
+    if (activity.kind !== "pick") return;
+    const left = e.key === "ArrowLeft" || e.key.toLowerCase() === "f";
+    const right = e.key === "ArrowRight" || e.key.toLowerCase() === "j";
+    if (left || right) {
+      e.preventDefault();
+      answer(activity.choices[left ? 0 : 1]);
+    }
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => onKeyRef.current(e);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [count, activity, answer, onQuit]);
+  }, []);
+
+  const ready = !!items && count === 0;
+  const lastOne = !!items && isComplete(rs) && rs.index + 1 >= rs.answers.length;
+  const skipTo = reviewing && !isComplete(rs) ? resumeTarget(rs) : -1;
+  const plain = forwardTarget(rs);
 
   return (
     <div className="brain-wrap brain-play">
       <div className="brain-play-top">
         <strong>{activity.title}</strong>
         {checkSize && checkStep ? <span className="brain-check-step">Code age check · {checkStep} of {checkSize}</span> : null}
-        <span className="brain-progress">
-          {Math.min(index + 1, activity.count)} / {activity.count}
+        <span className="brain-progress" title={`${answered} of ${total} answered`}>
+          {total ? `${rs.index + 1} / ${total}` : ""}
+          {answered ? ` · ${answered} answered` : ""}
         </span>
-        <span className="brain-clock">{count > 0 ? "" : `${elapsed.toFixed(1)}s`}</span>
-        <button type="button" className="ws-btn" onClick={onQuit} title="Esc">
-          Quit
-        </button>
+        <span className="brain-clock">
+          {count > 0 ? "" : `${elapsed.toFixed(1)}s`}
+          {ready && reviewing && !flash ? " · paused" : ""}
+        </span>
+        <div className="brain-play-nav">
+          <button
+            type="button"
+            className="ws-btn"
+            onClick={back}
+            disabled={!ready || backTarget(rs) < 0}
+            title="Back to the previous question (Alt+Left)"
+          >
+            ← Back
+          </button>
+          <button
+            type="button"
+            className="ws-btn"
+            ref={questionsBtn}
+            onClick={() => setPicker(true)}
+            disabled={!ready}
+            aria-haspopup="dialog"
+            title="All the questions in this round - jump to any"
+          >
+            Questions
+          </button>
+          <button type="button" className="ws-btn" onClick={onQuit} title="Esc">
+            Quit
+          </button>
+        </div>
       </div>
       {!items ? (
         <div className="brain-stage">Getting ready…</div>
       ) : count > 0 ? (
         <div className="brain-stage brain-count">{count}</div>
       ) : (
-        <div className={`brain-stage${flash ? ` ${flash}` : ""}`}>
-          <p className="brain-question">{showing ? "Remember these:" : activity.question}</p>
-          <pre className="brain-code">{showing ? item?.show : item?.prompt}</pre>
-          {flash === "bad" && item ? <p className="brain-correct">It's {item.answer}</p> : null}
-          {showing ? null : activity.kind === "type" ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (typed.trim()) answer(typed);
-              }}
-            >
-              <input
-                ref={input}
-                className="brain-input"
-                value={typed}
-                onChange={(e) => setTyped(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                aria-label="Your answer"
-              />
-            </form>
-          ) : (
-            <div className="brain-picks">
-              {activity.choices.map((choice, k) => (
-                <button key={choice} type="button" className="ws-btn brain-pick" onClick={() => answer(choice)}>
-                  {k === 0 ? "← " : ""}
-                  {choice}
-                  {k === 1 ? " →" : ""}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <>
+          <div className={`brain-stage${flash ? " ok" : reviewing ? (record?.right ? " ok" : " bad") : ""}`}>
+            {reviewing && item?.show ? (
+              <>
+                <p className="brain-question">You were shown:</p>
+                <pre className="brain-code">{item.show}</pre>
+              </>
+            ) : null}
+            <p className="brain-question">{showing ? "Remember these:" : activity.question}</p>
+            <pre className="brain-code">{showing ? item?.show : item?.prompt}</pre>
+            {reviewing && item && record ? (
+              <div className={`brain-miss${record.right ? " brain-hit" : ""}`} role="status">
+                <p className="brain-correct">{record.right ? `Right: ${item.answer}` : `It's ${item.answer}`}</p>
+                {record.right && record.given.trim() === item.answer ? null : (
+                  <p className="brain-given">You said {record.given || "nothing"}</p>
+                )}
+                {item.explain ? <p className="brain-why">{item.explain}</p> : null}
+                <div className="brain-review-actions">
+                  <button type="button" className="ws-btn brain-go" onClick={forward} ref={nextBtn} data-primary="true">
+                    {lastOne ? "Finish (Enter)" : plain >= 0 ? `Next: ${plain + 1} (Enter)` : "Next (Enter)"}
+                  </button>
+                  {skipTo >= 0 && skipTo !== plain ? (
+                    <button type="button" className="ws-btn" onClick={() => go(skipTo)}>
+                      Next unanswered: {skipTo + 1}
+                    </button>
+                  ) : null}
+                </div>
+                <span className="brain-paused">clock paused</span>
+              </div>
+            ) : showing ? null : activity.kind === "type" ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (typed.trim()) answer(typed);
+                }}
+              >
+                <input
+                  ref={input}
+                  className="brain-input"
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Your answer"
+                />
+              </form>
+            ) : (
+              <div className="brain-picks">
+                {activity.choices.map((choice, k) => (
+                  <button key={choice} type="button" className="ws-btn brain-pick" onClick={() => answer(choice)}>
+                    {k === 0 ? "← " : ""}
+                    {choice}
+                    {k === 1 ? " →" : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {item ? (
+            <BrainTools
+              key={rs.index}
+              activityId={activity.id}
+              item={item}
+              language={language}
+              unlocked={reviewing}
+            />
+          ) : null}
+        </>
       )}
+      {picker && items ? (
+        <BrainPicker
+          state={rs}
+          onPick={go}
+          onClose={() => {
+            setPicker(false);
+            questionsBtn.current?.focus();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -41,6 +41,9 @@ from code_coach.api.schemas import (
     PyCanvasStartRequest,
     PyCanvasStepRequest,
     PyCanvasStopRequest,
+    PyWebRequestRequest,
+    PyWebStartRequest,
+    PyWebStopRequest,
     BrainResultRequest,
     FarmCodeRequest,
     FarmFileRequest,
@@ -1162,6 +1165,14 @@ def visualize(body: VisualizeRequest) -> VisualizeResponse:
         call = suggest_call(code, examples, language=lang.id)
 
     result = trace_code(code, call=call, language=lang.id)
+    error = result.get("error")
+    if isinstance(error, dict):
+        # Node's tracer reports a thrown error as {type, message, line}; the
+        # response wants text. Left as a dict, any JavaScript that threw
+        # (a SyntaxError included) was an Internal Server Error.
+        where = f" on line {error['line']}" if error.get("line") else ""
+        error = f"{error.get('type') or 'Error'}{where}: {error.get('message', '')}"
+        result = {**result, "error": error}
     return VisualizeResponse(
         ok=bool(result.get("ok")),
         steps=result.get("steps", []),
@@ -1184,9 +1195,15 @@ def explain(body: ExplainRequest) -> ExplainResponse:
     """Plain-English walkthrough of the student's current code + why it
     outputs what it does. Local AST + traced run — no cloud AI."""
     from code_coach.explain import explain_code
-    from code_coach.languages import get_language
+    from code_coach.languages import LANGUAGES, get_language
 
-    lang = get_language(getattr(_store.load(), "language", "python"))
+    # What the request asked for, when it names a language we have; otherwise
+    # the one being worked in. (get_language alone would turn a typo into
+    # Python, which is worse than the saved language.)
+    asked = (body.language or "").strip().lower()
+    if asked not in {x.id for x in LANGUAGES}:
+        asked = ""
+    lang = get_language(asked or getattr(_store.load(), "language", "python"))
     if "explainer" not in lang.ready:
         # Reading the code needs a reader for that language. Without this,
         # SQL came back as "Python can't run this — there's a syntax error",
@@ -1216,7 +1233,14 @@ def explain(body: ExplainRequest) -> ExplainResponse:
         # uses. Without a call there's nothing to run but the definitions, so
         # the walkthrough stands on its own rather than reporting a non-run.
         call = suggest_call(code, [], language=lang.id)
-        trace = trace_code(code, call=call, language=lang.id) if call else None
+        # A screen that names its own language is showing a whole program (a
+        # drill's snippet), so with no function to call the program itself is
+        # what gets run; the editor's code may be definitions only.
+        trace = (
+            trace_code(code, call=call, language=lang.id)
+            if call or (asked and code.strip())
+            else None
+        )
         return ExplainResponse(**explain_js(code, trace))
 
     return ExplainResponse(**explain_code(body.code or ""))
@@ -2629,6 +2653,62 @@ def pycanvas_stop(body: PyCanvasStopRequest) -> dict:
         REGISTRY.stop(body.session)
     except Unknown:
         raise _py_session_gone(body.session) from None
+    return {"ok": True}
+
+
+def _web_session_gone(session: str) -> HTTPException:
+    return HTTPException(
+        status_code=404,
+        detail=f"No web session {session!r}: it was stopped, replaced by a newer one, or idle too long. Press Run.",
+    )
+
+
+@app.post("/api/pyweb/start")
+def pyweb_start(body: PyWebStartRequest) -> dict:
+    """Run a Web (Python) step's app in a child process that serves it on 127.0.0.1.
+
+    {session, error, logs, host, port, routes}. The session is "" when the app
+    failed to start (a syntax error, a crash, an endless loop): the error says
+    why. See canvas/pyweb/.
+    """
+    from code_coach.canvas import step
+    from code_coach.canvas.pyweb.session import REGISTRY
+
+    found = step(body.step_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"Unknown step {body.step_id}")
+    if found.kind != "web":
+        raise HTTPException(status_code=400, detail=f"{body.step_id} is not a web step")
+    return REGISTRY.start(body.step_id, body.code)
+
+
+@app.post("/api/pyweb/request")
+def pyweb_request(body: PyWebRequestRequest) -> dict:
+    """Make one request to a running app; its real answer (redirects are not followed).
+
+    {status, reason, headers: [[name, value]], body, binary (body is base64),
+    truncated, seconds, logs, error}. The server process makes the request
+    (http.client, 127.0.0.1 only; at most 1 MB back and 5 seconds).
+    """
+    from code_coach.canvas.pyweb.session import REGISTRY, Unknown
+
+    if not body.path.startswith("/"):
+        raise HTTPException(status_code=400, detail="The path must start with /")
+    try:
+        return REGISTRY.request(body.session, body.method, body.path, body.headers, body.body)
+    except Unknown:
+        raise _web_session_gone(body.session) from None
+
+
+@app.post("/api/pyweb/stop")
+def pyweb_stop(body: PyWebStopRequest) -> dict:
+    """End a session: its process is stopped and its folder deleted."""
+    from code_coach.canvas.pyweb.session import REGISTRY, Unknown
+
+    try:
+        REGISTRY.stop(body.session)
+    except Unknown:
+        raise _web_session_gone(body.session) from None
     return {"ok": True}
 
 

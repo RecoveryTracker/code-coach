@@ -97,6 +97,11 @@ class ChatResponse(BaseModel):
 
 class ExplainRequest(BaseModel):
     code: str = ""
+    # Read the code as this language rather than the one being worked in.
+    # Blank (or an id nobody knows) means the saved one, which is right
+    # everywhere except a screen showing a snippet in a language of its own,
+    # like a Brain Drills question in a language the app isn't set to.
+    language: str = ""
 
 
 class ExplainLine(BaseModel):
@@ -868,6 +873,27 @@ class PyCanvasStepRequest(BaseModel):
 
 
 class PyCanvasStopRequest(BaseModel):
+    session: str = ""
+
+
+class PyWebStartRequest(BaseModel):
+    """Run a Web (Python) step's app in a session of its own."""
+
+    step_id: str = ""
+    code: str = Field(default="", max_length=200_000)
+
+
+class PyWebRequestRequest(BaseModel):
+    """One request to make to a running app, as a browser would."""
+
+    session: str = ""
+    method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] = "GET"
+    path: str = Field(default="/", max_length=2000)
+    headers: dict[str, str] = Field(default_factory=dict, max_length=30)
+    body: str = Field(default="", max_length=1_000_000)
+
+
+class PyWebStopRequest(BaseModel):
     session: str = ""
 
 

@@ -9,6 +9,9 @@ import type {
   PyFrame,
   PyEvent,
   PyStart,
+  PyWebResponse,
+  PyWebSend,
+  PyWebStart,
   CheckAnswerResult,
   ConceptTopic,
   CssCheck,
@@ -347,6 +350,34 @@ export function stepPyCanvas(
 /** End a Python session. `keepalive` lets it finish while the page is going away. */
 export function stopPyCanvas(session: string): void {
   void fetch("/api/pycanvas/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session }),
+    keepalive: true,
+  }).catch(() => {
+    /* best effort: the server also ends an idle session by itself */
+  });
+}
+
+/** Run a Web (Python) step's app on the server; its session, routes and the first console lines. */
+export function startPyWeb(step_id: string, code: string): Promise<PyWebStart> {
+  return request("/api/pyweb/start", {
+    method: "POST",
+    body: JSON.stringify({ step_id, code }),
+  });
+}
+
+/** Make one request to a running app. It comes back as the app answered, whatever the status. */
+export function requestPyWeb(session: string, send: PyWebSend): Promise<PyWebResponse> {
+  return request("/api/pyweb/request", {
+    method: "POST",
+    body: JSON.stringify({ session, ...send }),
+  });
+}
+
+/** End a web session. `keepalive` lets it finish while the page is going away. */
+export function stopPyWeb(session: string): void {
+  void fetch("/api/pyweb/stop", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ session }),
@@ -780,10 +811,11 @@ export function chatWithCoach(message: string): Promise<{ reply: string }> {
   });
 }
 
-/** Plain-English walkthrough of the current editor code. */
-export function explainCode(code: string): Promise<ExplainResult> {
+/** Plain-English walkthrough of the current editor code. Blank `language` reads the code as the app's saved language; a snippet in a
+ *  language of its own (a Brain Drills question) says which. */
+export function explainCode(code: string, language = ""): Promise<ExplainResult> {
   return request("/api/explain", {
     method: "POST",
-    body: JSON.stringify({ code }),
+    body: JSON.stringify(language ? { code, language } : { code }),
   });
 }

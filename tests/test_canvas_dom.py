@@ -321,8 +321,10 @@ class ShapeTests(unittest.TestCase):
         ids = [s.id for s in ALL_STEPS]
         for s in TODO_STEPS:
             self.assertIn(s.id, ids)
-        # The other tracks are all drawn on a canvas.
-        self.assertEqual({s.kind for s in ALL_STEPS if s.track != "To-do"}, {"canvas"})
+        # Only this track is a page in the browser; the others are drawn on a
+        # canvas, or (Web (Python)) are a server that real requests are sent to.
+        self.assertEqual({s.kind for s in ALL_STEPS if s.track != "To-do"}, {"canvas", "web"})
+        self.assertEqual({s.kind for s in ALL_STEPS if s.track == "To-do"}, {"dom"})
 
     def test_each_step_starts_where_the_last_one_finished(self) -> None:
         for before, after in zip(TODO_STEPS, TODO_STEPS[1:]):

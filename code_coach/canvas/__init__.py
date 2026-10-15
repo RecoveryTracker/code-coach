@@ -44,6 +44,7 @@ from code_coach.canvas.content_pyinvaders import PYINVADERS_STEPS
 from code_coach.canvas.content_pyplatformer import PYPLATFORMER_STEPS
 from code_coach.canvas.content_pysnake import PYSNAKE_STEPS
 from code_coach.canvas.content_pytowers import PYTOWERS_STEPS
+from code_coach.canvas.content_pyweb_track import PYWEBAPP_STEPS
 
 #: Every track, in the order they are taught. Within a track, each step
 #: starts from the last one finished.
@@ -52,7 +53,7 @@ STEPS: tuple[Step, ...] = (
     + TOWER_STEPS + DUNGEON_STEPS + FARM_STEPS
     + TODO_STEPS + DEBUG_STEPS + PYDODGE_STEPS + PYSNAKE_STEPS + PYBREAKOUT_STEPS + PYASTEROIDS_STEPS
     + PYPLATFORMER_STEPS + PYTOWERS_STEPS + PYDUNGEON_STEPS + PYINVADERS_STEPS
-    + BLANK_STEPS + PYBLANK_STEPS + PYDEBUG_STEPS
+    + BLANK_STEPS + PYBLANK_STEPS + PYDEBUG_STEPS + PYWEBAPP_STEPS
 )
 
 HERE = Path(__file__).resolve().parent
@@ -129,6 +130,8 @@ def check_step(step_id: str, code: str) -> CheckResult | None:
         return CheckResult(True, "")
     if found.kind == "dom":
         return CheckResult(False, "This step is checked in your browser, not here.")
+    if found.kind == "web":
+        return run_pyweb_check(code, found.check)
     if found.language == "python":
         return run_py_check(code, found.check)
     return run_check(code, found.check, found.world)
@@ -136,3 +139,4 @@ def check_step(step_id: str, code: str) -> CheckResult | None:
 
 # Last, because pyharness.check imports CheckResult and TIMEOUT_SECONDS from here.
 from code_coach.canvas.pyharness.check import run_py_check  # noqa: E402
+from code_coach.canvas.pyweb.check import run_pyweb_check  # noqa: E402
