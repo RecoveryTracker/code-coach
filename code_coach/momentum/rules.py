@@ -59,6 +59,37 @@ XP: dict[str, int] = {
 #: Kinds the server knows that no screen sends yet, and why. Empty is the goal.
 UNUSED_KINDS: dict[str, str] = {}
 
+#: Kinds only the server pays, from what it sees for itself (the Farm's world is
+#: authoritative, so the Farm never asks the browser to say a milestone happened).
+#: `POST /api/momentum/award` refuses them (400, like any kind not in `XP`); the
+#: number here is the default base, and the caller may name another (a milestone
+#: carries its own price, a welcome-back is worked out from what is ripe).
+SERVER_XP: dict[str, int] = {
+    "farm_milestone": 25,
+    "farm_return": 15,
+}
+
+#: Kinds paid once ever per key, not once a day: a milestone is a first, and a
+#: first happens once. Everything else keeps the once-a-day rule.
+LIFETIME_KINDS = frozenset({"farm_milestone"})
+
+#: Awards nobody did on purpose: they keep the combo and count for the streak, but
+#: they are not "a thing solved" or "a mode used" for a quest.
+PASSIVE_KINDS = frozenset(SERVER_XP)
+
+#: The Farm's welcome-back: opening it after this many seconds away offers a small
+#: payout, `WELCOME_BASE` plus one XP per ten ripe tiles, at most `WELCOME_BONUS_MAX` extra.
+WELCOME_AWAY = 30 * 60
+WELCOME_BASE = SERVER_XP["farm_return"]
+WELCOME_PER = 10
+WELCOME_BONUS_MAX = 10
+
+
+def welcome_xp(ripe: int) -> int:
+    """The base pay for a welcome-back with `ripe` tiles ripe: 15, +1 per 10 ripe, up to 25."""
+    return WELCOME_BASE + min(WELCOME_BONUS_MAX, max(0, int(ripe)) // WELCOME_PER)
+
+
 #: A one-key answer in Brain Drills pays two XP; it keeps the combo alive and
 #: counts for the streak, but it is not "a thing solved" for a quest.
 MICRO_KINDS = frozenset({"brain_item"})
@@ -310,18 +341,24 @@ class DayStats:
     kinds: Mapping[str, int] = field(default_factory=dict)
     #: Kinds used today that were not used on any of the six days before.
     fresh_kinds: frozenset[str] = frozenset()
+    #: Things counted without being awards (no XP of their own): `farm_items`, the
+    #: items the day's farm harvests. Quests read them; they do not count for the streak.
+    counters: Mapping[str, int] = field(default_factory=dict)
 
     def count(self, kinds: Iterable[str]) -> int:
         return sum(int(self.kinds.get(k, 0)) for k in kinds)
 
+    def counter(self, name: str) -> int:
+        return int(self.counters.get(name, 0))
+
     @property
     def things(self) -> int:
-        """Awards that count as a thing solved (not the two-XP micro ones)."""
-        return sum(n for k, n in self.kinds.items() if k not in MICRO_KINDS)
+        """Awards that count as a thing solved (not the two-XP micro ones, nor the passive ones)."""
+        return sum(n for k, n in self.kinds.items() if k not in MICRO_KINDS | PASSIVE_KINDS)
 
     @property
     def modes(self) -> int:
-        return sum(1 for k, n in self.kinds.items() if n and k not in MICRO_KINDS)
+        return sum(1 for k, n in self.kinds.items() if n and k not in MICRO_KINDS | PASSIVE_KINDS)
 
 
 @dataclass(frozen=True)
@@ -346,7 +383,7 @@ POOL: tuple[Quest, ...] = (
     Quest("xp100", "xp", "Earn 100 XP", 100, lambda s: s.xp),
     Quest("xp200", "xp", "Earn 200 XP", 200, lambda s: s.xp),
     Quest("newmode", "new", "Try a mode you haven't used this week", 1,
-          lambda s: len(s.fresh_kinds - MICRO_KINDS)),
+          lambda s: len(s.fresh_kinds - MICRO_KINDS - PASSIVE_KINDS)),
     Quest("fix", "fix", "Fix something (Bug Hunt, Errors or Tickets)", 1,
           _kinds(*sorted(FIX_KINDS))),
     Quest("read", "read", "Predict or Trace 2 programs", 2, _kinds("predict", "trace")),
@@ -356,6 +393,10 @@ POOL: tuple[Quest, ...] = (
           _kinds("canvas_step", "farm_buy")),
     Quest("kata", "kata", "Finish a Forms kata", 1, _kinds("kata")),
     Quest("pattern", "pattern", "Solve a Regex or a Puzzle", 1, _kinds("regex", "puzzle")),
+    # The Farm today: at most one of these a day (one group).
+    Quest("farm_items", "farm", "Harvest 50 items on the farm", 50,
+          lambda s: s.counter("farm_items")),
+    Quest("farm_research", "farm", "Buy a research upgrade on the farm", 1, _kinds("farm_buy")),
 )
 
 QUESTS_PER_DAY = 3

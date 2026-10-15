@@ -541,6 +541,10 @@ def satisfy(test: EngineCase, d: date, results: list[dict]) -> dict:
     for rounds in range(4):
         if all(q["done"] for q in last["quests"]):
             break
+        # The farm quest counts items the farm harvested (no award of its own): the host tells the engine.
+        farm = test.m.record_farm_items("python", 100, 100)
+        if farm.get("quest"):
+            results.append(farm["quest"])
         for kind in XP:
             test.n += 1
             last = test.m.award(kind, f"sat-{rounds}-{kind}-{test.n}")
@@ -568,7 +572,7 @@ class QuestRules(unittest.TestCase):
         groups = {q.group for q in rules.POOL}
         self.assertGreaterEqual(len(groups), rules.QUESTS_PER_DAY + 3)
         everything = rules.DayStats(xp=10_000, awards=99, kinds={k: 9 for k in XP},
-                                    fresh_kinds=frozenset(XP))
+                                    fresh_kinds=frozenset(XP), counters={"farm_items": 10_000})
         nothing = rules.DayStats()
         for q in rules.POOL:
             self.assertGreaterEqual(q.have(everything), q.need, q.id)

@@ -1,4 +1,5 @@
 import type { BrainItem, BrainSummary } from "./components/BrainDrills";
+import type { AwardResult } from "./lib/momentumView";
 import type {
   FarmOverview,
   FarmTip,
@@ -234,6 +235,14 @@ export function postBrainResult(body: {
 /** The farm when its screen opens. */
 export function fetchFarm(): Promise<FarmOverview> {
   return request("/api/farm");
+}
+
+/**
+ * Take today's welcome-back XP. The pay is the server's: it checks the farm really was opened
+ * after an absence, and pays once a day. `ok` false with a `reason` means nothing was paid.
+ */
+export function claimFarmWelcome(): Promise<AwardResult & { reason?: string }> {
+  return request("/api/farm/welcome/claim", { method: "POST", body: "{}" });
 }
 
 /** The farm now, with the output since line `since`. */

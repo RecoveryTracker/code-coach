@@ -49,6 +49,10 @@ const out = {};
 
 out.awards = input.awards.map((r) => { id = 0; return brief(V.toastsForAward(r, next)); });
 out.ids = (() => { id = 100; return V.toastsForAward(input.awards[3], next).map((t) => t.id); })();
+out.answers = input.answer_lists.map((list) => { id = 0; return brief(V.toastsForAnswers(list, next)); });
+out.answers_single = (() => { id = 0; return brief(V.toastsForAnswers(input.awards[0], next)); })();
+out.answers_none = [null, undefined, []].map((x) => V.toastsForAnswers(x, () => 1).length);
+out.welcome = input.welcomes.map((w) => V.welcomeView(w));
 out.chests = input.chests.map((r) => { id = 0; return brief(V.toastsForChest(r, next)); });
 
 // The stack: each scenario is [current kinds, incoming kinds] -> kinds left, in display order.
@@ -113,6 +117,28 @@ AWARDS = [
     award(freeze_used="2026-10-14"),                                          # 7 a freeze spent
     award(freeze_earned=True),                                                # 8 earned, not extended
     award(gained=0, base=0, combo_mult=1.0),                                  # 9 nothing paid
+    award(label="Farm: first pumpkin! (Python)", base=20, gained=20),         # 10 a milestone
+    award(label="Farm: first pumpkin! (Python)", base=20, gained=44, combo=3, combo_mult=1.1,
+          lucky=2),                                                           # 11 milestone + combo + luck
+    award(label="Farm: first hay! (Original)", repeat=True, gained=0),        # 12 a labelled repeat
+    award(label=None),                                                        # 13 label explicitly null
+    award(label="", base=20, gained=20),                                      # 14 empty label
+    award(label="Welcome back", base=15, gained=16, combo_mult=1.1, combo=2,
+          level_up={"level": 3, "title": "Learner"}),                         # 15 the welcome-back
+]
+
+ANSWER_LISTS = [
+    [AWARDS[10], award(label="Farm: first carrot! (Python)", base=15, gained=15), AWARDS[12]],
+    [award(gained=0, base=0, quests=[quest("Harvest 50 items on the farm", 50, 50, just=True)])],
+    [],
+    [AWARDS[5], AWARDS[10]],
+]
+
+WELCOMES = [
+    {"minutes": 95, "ripe": 0, "xp": 15, "language": "python"},
+    {"minutes": 40, "ripe": 1, "xp": 15, "language": "original"},
+    {"minutes": 600, "ripe": 37, "xp": 18, "language": "javascript"},
+    {"minutes": 31, "ripe": 1234, "xp": 25, "language": "dart"},
 ]
 
 CHESTS = [
@@ -129,6 +155,8 @@ STACKS = [
     [["quest", "streak", "lucky"], ["xp"]],
     [["xp"], ["combo", "xp", "combo", "xp", "combo"]],
     [["level", "xp"], ["level"]],
+    [["xp", "combo"], ["milestone", "xp", "combo", "milestone", "quest"]],
+    [["milestone", "xp", "combo"], ["level", "xp"]],
 ]
 
 MULTS = [1.4, 2, 1.1000000000000001, 1.25, 1.0, 1.96]
@@ -156,7 +184,7 @@ def results() -> dict:
     try:
         (tmp / "harness.mjs").write_text(HARNESS, encoding="utf-8")
         (tmp / "in.json").write_text(json.dumps({
-            "awards": AWARDS, "chests": CHESTS, "stacks": STACKS, "summaries": summaries,
+            "awards": AWARDS, "answer_lists": ANSWER_LISTS, "welcomes": WELCOMES, "chests": CHESTS, "stacks": STACKS, "summaries": summaries,
             "mults": MULTS, "days": days, "bars": bars}), encoding="utf-8")
         built = subprocess.run(
             [NODE, str(ESBUILD), str(LIB / "momentumView.ts"), "--bundle", "--format=esm", "--platform=node",
@@ -221,6 +249,82 @@ class ToastsForAwards(unittest.TestCase):
         self.assertEqual([t[1] for t in b], ["Chest: +120 XP", "Freeze earned", "Level 7"])
         self.assertEqual(b[2][2], "Practitioner")
         self.assertEqual(c, [])
+
+
+class TheLabelToast(unittest.TestCase):
+    """A server-paid award says what it was for, first, then what it paid."""
+
+    def test_the_label_leads_and_then_the_xp(self) -> None:
+        self.assertEqual(results()["awards"][10], [["milestone", "Farm: first pumpkin! (Python)", None, 2500],
+                                                   ["xp", "+20 XP", None, 2500]])
+
+    def test_the_label_is_one_line_before_a_combo_and_a_lucky_bonus(self) -> None:
+        got = results()["awards"][11]
+        self.assertEqual([t[0] for t in got], ["milestone", "xp", "combo", "lucky"])
+        self.assertEqual(got[0][1], "Farm: first pumpkin! (Python)")
+        self.assertEqual(got[1][1], "+22 XP")  # 44 paid with lucky x2: the plain part is 22
+        self.assertEqual(got[3][1], "Lucky! x2 (+22)")
+
+    def test_a_repeat_says_nothing_even_with_a_label(self) -> None:
+        self.assertEqual(results()["awards"][12], [])
+
+    def test_no_label_or_an_empty_one_adds_no_line(self) -> None:
+        self.assertEqual(results()["awards"][13], [["xp", "+20 XP", None, 2500]])
+        self.assertEqual(results()["awards"][14], [["xp", "+20 XP", None, 2500]])
+        self.assertEqual(results()["awards"][0], [["xp", "+20 XP", None, 2500]])
+
+    def test_the_welcome_back_is_a_label_and_a_level_card_can_follow(self) -> None:
+        got = results()["awards"][15]
+        self.assertEqual([t[0] for t in got], ["milestone", "xp", "combo", "level"])
+        self.assertEqual(got[0][1], "Welcome back")
+        self.assertEqual(got[1][1], "+16 XP")
+
+    def test_a_list_of_answers_is_told_oldest_first_each_in_its_own_order(self) -> None:
+        a, quest_only, empty, with_failure = results()["answers"]
+        self.assertEqual([t[1] for t in a], ["Farm: first pumpkin! (Python)", "+20 XP",
+                                             "Farm: first carrot! (Python)", "+15 XP"])  # the repeat adds none
+        self.assertEqual(quest_only, [["quest", "Quest done: Harvest 50 items on the farm", None, 2500]])
+        self.assertEqual(empty, [])
+        self.assertEqual([t[1] for t in with_failure], ["Farm: first pumpkin! (Python)", "+20 XP"],
+                         "an answer the server could not keep is skipped, the rest still shown")
+
+    def test_one_answer_or_nothing_also_works(self) -> None:
+        self.assertEqual(results()["answers_single"], [["xp", "+20 XP", None, 2500]])
+        self.assertEqual(results()["answers_none"], [0, 0, 0])
+
+    def test_a_milestone_outranks_an_xp_line_but_not_a_level_card(self) -> None:
+        # In a crowd the XP and combo lines give way before the label does.
+        got = results()["stacks"][7]
+        self.assertEqual([k for k, _ in got], ["milestone", "milestone", "quest"])
+        # [milestone, xp, combo] + [level, xp]: the combo goes, then the older xp line; the level card leads.
+        self.assertEqual([k for k, _ in results()["stacks"][8]], ["level", "milestone", "xp"])
+
+
+class TheWelcomeCard(unittest.TestCase):
+    def test_what_is_ripe_in_words(self) -> None:
+        quiet, one, some, many = results()["welcome"]
+        self.assertEqual(quiet["body"], "The farm is quiet and still.")
+        self.assertEqual(one["body"], "1 tile is ripe.")
+        self.assertEqual(some["body"], "37 tiles are ripe.")
+        self.assertEqual(many["body"], "1,234 tiles are ripe.")
+
+    def test_the_buttons_and_title(self) -> None:
+        for w in results()["welcome"]:
+            self.assertEqual((w["title"], w["claim"], w["dismiss"]),
+                             ("Welcome back", "Claim welcome-back XP", "Not now"))
+
+    def test_it_is_honest_that_the_farm_waits(self) -> None:
+        for w in results()["welcome"]:
+            self.assertIn("nothing grows while you are away", w["note"])
+
+    def test_no_clock_no_pressure_and_nothing_about_losing_anything(self) -> None:
+        banned = ("lose", "lost", "miss", "expire", "hurry", "last chance", "only", "left", "ago", "hour", "minute",
+                  "count", "!", "don't", "before", "soon", "rot", "wilt", "die")
+        for w in results()["welcome"]:
+            for field in ("title", "body", "note", "claim", "dismiss"):
+                text = w[field].lower()
+                for word in banned:
+                    self.assertNotIn(word, text, f"{field}: {w[field]!r}")
 
 
 class TheStack(unittest.TestCase):

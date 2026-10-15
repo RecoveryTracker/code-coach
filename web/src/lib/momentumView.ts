@@ -57,6 +57,11 @@ export interface AwardResult extends MomentumSummary {
   streak_extended: boolean;
   freeze_used: string | null;
   freeze_earned: boolean;
+  /**
+   * What it was for, when the server paid it of its own accord ("Farm: first pumpkin! (Python)",
+   * "Welcome back"). Null or missing for an award a screen asked for.
+   */
+  label?: string | null;
 }
 
 /** POST /api/momentum/chest */
@@ -77,6 +82,7 @@ export type ToastKind =
   | "streak"
   | "freeze"
   | "chest"
+  | "milestone"
   | "level";
 
 export interface Toast {
@@ -103,6 +109,7 @@ const PRIORITY: Record<ToastKind, number> = {
   streak: 4,
   freeze: 4,
   chest: 4,
+  milestone: 4,
   level: 5,
 };
 
@@ -141,6 +148,8 @@ function levelToast(next: () => number, up: LevelUp): Toast {
 export function toastsForAward(r: AwardResult | null | undefined, next: () => number): Toast[] {
   if (!r || !r.ok || r.repeat) return [];
   const out: Toast[] = [];
+  // What it was for comes first ("Farm: first pumpkin!"), then what it paid.
+  if (r.label) out.push(make(next, "milestone", r.label));
   const lucky = r.lucky && r.lucky > 1 ? r.lucky : null;
   const plain = lucky ? r.gained / lucky : r.gained;
   if (r.gained > 0) out.push(make(next, "xp", xpText(plain)));
@@ -159,6 +168,18 @@ export function toastsForAward(r: AwardResult | null | undefined, next: () => nu
   if (r.freeze_used) out.push(make(next, "freeze", "Freeze used - your streak is safe"));
   if (r.level_up) out.push(levelToast(next, r.level_up));
   return out;
+}
+
+/**
+ * The toasts for answers the server worked out without being asked (a farm milestone a program
+ * earned, a quest its harvest finished): one answer or a list, oldest first, told in order.
+ */
+export function toastsForAnswers(
+  answers: AwardResult | AwardResult[] | null | undefined,
+  next: () => number,
+): Toast[] {
+  const list = Array.isArray(answers) ? answers : answers ? [answers] : [];
+  return list.flatMap((r) => toastsForAward(r, next));
 }
 
 /** The toasts for opening the chest. */
@@ -300,5 +321,48 @@ export function hudView(s: MomentumSummary | null | undefined): HudView {
     bestText: `Best streak ${s?.best_streak ?? 0}`,
     bars: bars(s?.days_last_14 ?? []),
     totalText: `${(s?.xp_total ?? 0).toLocaleString("en-US")} XP in all`,
+  };
+}
+
+// ── The Farm's welcome-back card ────────────────────────────────────────
+
+/** What the server offers when the Farm is opened after a while away (GET /api/farm). */
+export interface WelcomeBack {
+  /** About how long the farm had not been looked at. */
+  minutes: number;
+  /** Squares with something ripe (plain grass not counted), as the farm stood when it was opened. */
+  ripe: number;
+  /** The base pay for claiming it; the combo and any luck come on top. */
+  xp: number;
+  language: string;
+}
+
+export interface WelcomeView {
+  title: string;
+  body: string;
+  /** The honest line: the farm does not run while the app is closed. */
+  note: string;
+  claim: string;
+  dismiss: string;
+}
+
+/**
+ * Words for the card. It says what is ripe and offers a small payout; there is no
+ * clock on it and nothing in it is about what could be lost. A farm with nothing ripe
+ * is simply quiet, and the base still pays.
+ */
+export function welcomeView(w: WelcomeBack): WelcomeView {
+  const ripe = Math.max(0, Math.round(w.ripe));
+  return {
+    title: "Welcome back",
+    body:
+      ripe === 0
+        ? "The farm is quiet and still."
+        : ripe === 1
+          ? "1 tile is ripe."
+          : `${ripe.toLocaleString("en-US")} tiles are ripe.`,
+    note: "The farm waits for you: nothing grows while you are away.",
+    claim: "Claim welcome-back XP",
+    dismiss: "Not now",
   };
 }

@@ -170,7 +170,24 @@ class World:
         self.events: deque[dict[str, Any]] = deque(maxlen=EVENT_CAP)
         #: Which drone is acting; the runner sets it around each command (0 is the program's own).
         self.drone_id = 0
+        #: What the last harvest did beyond the items: {"giant": n} for an n x n giant pumpkin,
+        #: {"patch": n} for a sorted patch of n cacti, {"treasure": True} for a maze's gold.
+        self.facts: dict[str, Any] = {}
+        #: Told what happened, as listener(world, kind, payload): kind "event" with the event
+        #: just recorded, kind "buy" with {"unlock", "level"} once research is bought. The
+        #: host's real farms have one (the Farm's milestones); a simulation or scratch farm
+        #: has none. A listener that raises is ignored - it must never break the farm.
+        self.listener: Any = None
         self._fill()
+
+    def _notify(self, kind: str, payload: dict[str, Any]) -> None:
+        listener = self.listener
+        if listener is None:
+            return
+        try:
+            listener(self, kind, payload)
+        except Exception:  # noqa: BLE001 - nothing watching may stop the farm
+            pass
 
     # ── Size and squares ────────────────────────────────────────────────
 
@@ -313,6 +330,7 @@ class World:
             self.maze = None
             self.tail = []
             self._fill()
+        self._notify("buy", {"unlock": unlock, "level": self.unlocks[unlock]})
         return True
 
     def entity_unlocked(self, entity: str) -> bool:
@@ -394,6 +412,11 @@ class World:
             t.grown = min(t.need, t.grown + seconds * rate)
             if t.grown >= t.need:
                 self._ripened(i)
+
+    def ripe_tiles(self) -> int:
+        """Squares with something planted that is ripe now. Plain grass is left out: it
+        regrows by itself in half a second, so it is never something you tended."""
+        return sum(1 for t in self.tiles if t.entity in PLANTS and t.entity != "Grass" and t.ripe)
 
     def _ripened(self, i: int) -> None:
         t = self.tiles[i]
@@ -492,6 +515,7 @@ class World:
         if self.maze and self.maze.inside(self.x, self.y):
             if (self.x, self.y) == self.maze.treasure:
                 self.items["Gold"] += self.maze.m * self.maze.m * 2 ** max(0, self.level("Mazes") - 1)
+                self.facts["treasure"] = True
             self._remove_maze()
             return True
         if t.entity is None or t.entity in ("Apple", "Dinosaur"):
@@ -510,6 +534,7 @@ class World:
                     infected = infected or self.tiles[j].infected
                     self._empty(j)
             self._gain("Pumpkin", amount, infected)
+            self.facts["giant"] = n
             return True
         if entity == "Cactus":
             patch = self._cactus_patch(self.x, self.y)
@@ -517,6 +542,7 @@ class World:
             for p in patch:
                 self._empty(self._index(*p))
             self._gain("Cactus", len(patch) ** 2 * self._yield("Cactus"), infected)
+            self.facts["patch"] = len(patch)
             return True
         if entity == "Sunflower":
             flowers = [s for s in self.tiles if s.entity == "Sunflower"]
@@ -769,11 +795,13 @@ class World:
         if items:
             event["items"] = items
         self.events.append(event)
+        self._notify("event", event)
 
     def _do_harvest(self, args, language):
         x, y = self.x, self.y
         entity = self.here().entity
         before = dict(self.items)
+        self.facts = {}
         done = self._harvest_here()
         # What it paid is read off the stores, so every harvest path (plain, giant
         # pumpkin, cactus patch, sunflower, maze treasure, infected) reports its real credit.

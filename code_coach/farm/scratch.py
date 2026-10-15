@@ -80,6 +80,9 @@ class _ScratchHost(FarmHost):
 
     def __init__(self, world: World) -> None:
         super().__init__()
+        # A throwaway farm with every upgrade bought: nothing on it is progress, so it tells
+        # Momentum nothing (no milestones, no items, no welcome-back).
+        self.rewards = None
         self.world = world
         self.warp = 0  # unpaced
         self.lines: list[tuple[str, str]] = []

@@ -977,6 +977,72 @@
   }
 }
 
+/* ---- the welcome-back card -------------------------------------------- */
+
+/* Over the scene and the windows, under the HUD and the menu. Calm: no motion, nothing
+   counting down. Placed by FarmMode (beside the Code window, or above the menu when narrow). */
+.fm-welcome {
+  position: absolute;
+  z-index: 150;
+  box-sizing: border-box;
+  width: min(300px, calc(100% - 24px));
+  padding: 12px 14px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(240, 194, 75, 0.55);
+  background: var(--fm-panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.fm-welcome.narrow {
+  width: auto;
+}
+
+.fm-welcome-title {
+  margin: 0 28px 2px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fm-accent);
+}
+
+.fm-welcome-body {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fm-welcome-note {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: var(--fm-dim);
+}
+
+.fm-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fm-welcome-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fm-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fm-welcome-x:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fm-text);
+}
+
 /* ---- small screens ---------------------------------------------------- */
 
 @media (max-width: 900px) {

@@ -1,3 +1,5 @@
+import type { AwardResult, WelcomeBack } from "./lib/momentumView";
+
 // ── Typing trainer ──────────────────────────────────────────
 
 export type TypingKey = {
@@ -994,6 +996,12 @@ export type FarmState = {
   output: FarmLine[];
   outputEnd: number;
   warp: number;
+  /**
+   * What the farm paid Momentum since the last look (a milestone a program earned, a quest its
+   * harvest finished), oldest first. Already paid: the screen only shows it. Only present when
+   * there is some.
+   */
+  momentum?: AwardResult[];
 };
 
 export type FarmUnlock = {
@@ -1052,6 +1060,8 @@ export type FarmOverview = FarmState & {
   languages: string[];
   /** The game's named values, by group, in their Python spelling. */
   names: Record<string, string[]>;
+  /** The welcome-back card to show (only in the answer to opening the farm; null when none). */
+  welcome_back?: WelcomeBack | null;
 };
 
 export type FarmViolation = { feature: string; line: number; snippet: string; message: string; file?: string };
