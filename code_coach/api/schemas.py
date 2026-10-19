@@ -1110,3 +1110,29 @@ class MomentumAwardRequest(BaseModel):
 
     kind: str = ""
     key: str = ""
+
+
+class GotchaAnswerRequest(BaseModel):
+    """One answer to a Gotchas card: which option (0-3, as shown) was picked."""
+
+    id: str = ""
+    language: str = "python"
+    chosen: int = -1
+
+
+class GotchaRunRequest(BaseModel):
+    """Run a card's own program for real (never arbitrary code: the card is named by id)."""
+
+    id: str = ""
+    language: str = "python"
+
+
+class GotchaUserRequest(BaseModel):
+    """A quiz the user found and typed or pasted in: the code, the options they saw, their guess."""
+
+    language: str = "python"
+    code: str = ""
+    options: list[str] = []
+    #: Index into `options` of the one they think is right, if they have a guess.
+    guess: int | None = None
+    why: str = ""

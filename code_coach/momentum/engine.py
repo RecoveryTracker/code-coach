@@ -68,6 +68,36 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     write(path, payload)
 
 
+def read_state(path: Path, clean: Callable[[Any], dict[str, Any] | None],
+               fresh: Callable[[], dict[str, Any]], label: str) -> dict[str, Any]:
+    """A save file read the way every save beside the progress file is read.
+
+    Missing or unreadable (a scanner holding it): a fresh state. Present but not a
+    save at all (broken JSON, wrong shape, `clean` answering None): the file is kept
+    as `<name>.bad` - it is the user's, however broken, and one .bad is kept - and a
+    fresh state starts. Shared with Gotchas so both files fail the same way."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return fresh()
+    except OSError as exc:
+        log.warning("%s: cannot read %s: %s", label, path, exc)
+        return fresh()
+    try:
+        state = clean(json.loads(text))
+    except ValueError:
+        state = None
+    if state is not None:
+        return state
+    bad = path.with_name(path.name + ".bad")
+    try:
+        os.replace(path, bad)
+        log.warning("%s: %s was not readable; kept as %s and started fresh", label, path, bad)
+    except OSError as exc:
+        log.warning("%s: %s was not readable and could not be set aside: %s", label, path, exc)
+    return fresh()
+
+
 def _fresh() -> dict[str, Any]:
     return {"version": VERSION, "xp": 0, "best_streak": 0, "freezes": 0,
             "combo": {"count": 0, "last_at": None}, "lifetime": {}, "baseline": None,
@@ -198,28 +228,7 @@ class Momentum:
         return self._path if self._path is not None else save_path()
 
     def _load(self) -> dict[str, Any]:
-        path = self.path
-        try:
-            text = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return _fresh()
-        except OSError as exc:
-            log.warning("momentum: cannot read %s: %s", path, exc)
-            return _fresh()
-        try:
-            state = _clean(json.loads(text))
-        except ValueError:
-            state = None
-        if state is not None:
-            return state
-        # Keep what was there: it is the user's, however broken. One .bad is kept.
-        bad = path.with_name(path.name + ".bad")
-        try:
-            os.replace(path, bad)
-            log.warning("momentum: %s was not readable; kept as %s and started fresh", path, bad)
-        except OSError as exc:
-            log.warning("momentum: %s was not readable and could not be set aside: %s", path, exc)
-        return _fresh()
+        return read_state(self.path, _clean, _fresh, "momentum")
 
     def _save(self, state: dict[str, Any], today: date) -> None:
         self._prune(state, today)

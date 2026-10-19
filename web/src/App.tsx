@@ -43,6 +43,7 @@ import Magnets from "./components/Magnets";
 import BugHunt from "./components/BugHunt";
 import CaseFiles from "./components/CaseFiles";
 import BrainDrills from "./components/BrainDrills";
+import Gotchas from "./components/Gotchas";
 import CanvasMode from "./components/CanvasMode";
 import FarmMode from "./components/FarmMode";
 import FlutterMode from "./components/FlutterMode";
@@ -267,6 +268,7 @@ export default function App() {
   const canvasOpen = mode === "canvas";
   const farmOpen = mode === "farm";
   const brainOpen = mode === "brain";
+  const gotchasOpen = mode === "gotchas";
   const ticketsOpen = mode === "tickets";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
@@ -1344,6 +1346,15 @@ export default function App() {
       <div className="typing-shell">
         {modeBar}
         <BrainDrills />
+      </div>
+    );
+  }
+
+  if (gotchasOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        <Gotchas />
       </div>
     );
   }

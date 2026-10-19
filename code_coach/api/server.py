@@ -46,6 +46,9 @@ from code_coach.api.schemas import (
     PyWebStartRequest,
     PyWebStopRequest,
     BrainResultRequest,
+    GotchaAnswerRequest,
+    GotchaRunRequest,
+    GotchaUserRequest,
     MomentumAwardRequest,
     FarmCodeRequest,
     FarmFileRequest,
@@ -2410,6 +2413,139 @@ def brain_result(body: BrainResultRequest) -> dict:
                           language=body.language)
     best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
     return {"age": result.age, "best": best}
+
+
+# ── Gotchas: an endless feed of trap questions ───────────────────────────
+
+
+def _gotcha_language(language: str) -> str:
+    from code_coach import gotchas
+
+    if language not in gotchas.LANGUAGES:
+        raise HTTPException(status_code=400, detail=f"Unknown language {language!r}")
+    return language
+
+
+@app.get("/api/gotchas")
+def gotchas_summary(language: str = "python") -> dict:
+    """The deck at a glance: total, seen, right, best streak, and today's Daily 5."""
+    from code_coach import gotchas
+
+    return {**gotchas.STORE.summary(_gotcha_language(language)), "title": gotchas.title(language)}
+
+
+@app.get("/api/gotchas/next")
+def gotchas_next(language: str = "python", exclude: str = "", daily: bool = False) -> dict:
+    """One card, answer withheld. `exclude` is a comma-separated list of ids to skip (the ones just seen)."""
+    from code_coach import gotchas
+
+    language = _gotcha_language(language)
+    ids = {part for part in exclude.split(",") if part}
+    item, why = gotchas.STORE.pick(language, ids, daily=daily)
+    return {**gotchas.STORE.present(item), "why_picked": why, "title": gotchas.title(language),
+            "summary": gotchas.STORE.summary(language)}
+
+
+@app.post("/api/gotchas/answer")
+def gotchas_answer(body: GotchaAnswerRequest) -> dict:
+    """Mark an answer: the right option, the trap and the explanation, and what it did to the stats."""
+    from code_coach import gotchas
+
+    try:
+        return gotchas.STORE.answer(_gotcha_language(body.language), body.id, body.chosen)
+    except (gotchas.UnknownCard, gotchas.BadChoice) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+def _tidy_run(text: str) -> str:
+    import re as _re
+
+    return _re.sub(r"(?:[A-Za-z]:)?[^\s\"']*?[\\/](snippet\.(?:py|js))", r"\1", text)[:2000]
+
+
+def _run_payload(result) -> dict:
+    return {"stdout": result.stdout.rstrip()[:2000], "error": _tidy_run(result.stderr.strip()),
+            "seconds": round(result.seconds, 2), "timed_out": result.timed_out}
+
+
+@app.post("/api/gotchas/run")
+def gotchas_run(body: GotchaRunRequest) -> dict:
+    """Run a card's program in the real interpreter - the 'Run it' button, shown after answering."""
+    from code_coach import gotchas
+    from code_coach.gotchas.runner import RunnerUnavailable, run_program
+
+    language = _gotcha_language(body.language)
+    try:
+        item, _ = gotchas.STORE.find(language, body.id)
+    except gotchas.UnknownCard as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    try:
+        return _run_payload(run_program(language, item.code))
+    except RunnerUnavailable as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+def _gotcha_user_card(item) -> dict:
+    return {"id": item.id, "language": item.language, "code": item.code, "added": item.added,
+            "options": len(item.options), "answer": item.answer}
+
+
+def _gotcha_build(body: GotchaUserRequest):
+    from code_coach.gotchas import user
+
+    language = _gotcha_language(body.language)
+    try:
+        built = user.build(language, body.code, body.options, body.guess)
+    except user.CardRefused as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return language, built
+
+
+@app.get("/api/gotchas/user")
+def gotchas_user_list(language: str = "") -> dict:
+    """The cards the user added (all languages when none is named). Answers are included: they are theirs."""
+    from code_coach import gotchas
+
+    if language:
+        _gotcha_language(language)
+    return {"cards": [_gotcha_user_card(it) for it in gotchas.STORE.my_cards(language or None)]}
+
+
+@app.post("/api/gotchas/user/preview")
+def gotchas_user_preview(body: GotchaUserRequest) -> dict:
+    """Run the pasted code and show the card it would become, without saving anything."""
+    language, built = _gotcha_build(body)
+    return {"saved": False, "output": built.stdout, "raises": built.raises, "matched": built.matched,
+            "notes": built.notes, "options": [built.answer, *built.wrong], "answer": built.answer}
+
+
+@app.post("/api/gotchas/user")
+def gotchas_user_add(body: GotchaUserRequest) -> dict:
+    """Run the pasted code for real and keep it as a card; the real output is the right answer."""
+    from code_coach import gotchas
+    from code_coach.gotchas import user
+
+    language, built = _gotcha_build(body)
+    try:
+        item = gotchas.STORE.add_card(
+            language, user.check_code(body.code), built.answer, built.wrong, built.raises,
+            "Added by you", user.why_text(built.answer, built.raises, body.why))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return {"saved": True, "id": item.id, "output": built.stdout, "raises": built.raises,
+            "matched": built.matched, "notes": built.notes, "options": [built.answer, *built.wrong],
+            "answer": built.answer, "summary": gotchas.STORE.summary(language)}
+
+
+@app.delete("/api/gotchas/user/{item_id}")
+def gotchas_user_delete(item_id: str, language: str = "python") -> dict:
+    """Delete one of the user's own cards (a built-in card is not theirs to delete: 400)."""
+    from code_coach import gotchas
+
+    language = _gotcha_language(language)
+    if not gotchas.STORE.delete_card(language, item_id):
+        raise HTTPException(status_code=400, detail=f"No card of yours called {item_id!r}")
+    return {"deleted": item_id, "summary": gotchas.STORE.summary(language)}
 
 
 # ── Momentum: XP, streak, quests and the chest, across every mode ───────

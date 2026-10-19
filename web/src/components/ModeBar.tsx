@@ -35,6 +35,11 @@ export const MODES = [
     title: "A minute of quick-fire JavaScript reflexes a day, scored as your code age",
   },
   {
+    id: "gotchas",
+    label: "Gotchas",
+    title: "Python and JavaScript quiz cards where the obvious answer is a trap - one at a time, endless",
+  },
+  {
     id: "workbook",
     label: "Workbook",
     title: "Pages of small exercises you solve by typing",

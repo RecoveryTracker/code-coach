@@ -1,6 +1,15 @@
 import type { BrainItem, BrainSummary } from "./components/BrainDrills";
 import type { AwardResult } from "./lib/momentumView";
 import type {
+  GotchaAnswer,
+  GotchaCard,
+  GotchaLang,
+  GotchaRun,
+  GotchaSummary,
+  GotchaUserCard,
+  GotchaUserResult,
+} from "./lib/gotchas";
+import type {
   FarmOverview,
   FarmTip,
   FarmStart,
@@ -826,5 +835,56 @@ export function explainCode(code: string, language = ""): Promise<ExplainResult>
   return request("/api/explain", {
     method: "POST",
     body: JSON.stringify(language ? { code, language } : { code }),
+  });
+}
+
+// ── Gotchas: an endless feed of trap questions ──────────────────────────
+
+export function fetchGotchas(language: GotchaLang): Promise<GotchaSummary> {
+  return request(`/api/gotchas?language=${encodeURIComponent(language)}`);
+}
+
+/** One card, answer withheld. `exclude` is the ids just seen; `daily` serves today's unfinished Daily 5 card. */
+export function fetchGotchaNext(language: GotchaLang, exclude: string, daily: boolean): Promise<GotchaCard> {
+  return request(
+    `/api/gotchas/next?language=${encodeURIComponent(language)}&exclude=${encodeURIComponent(exclude)}`
+      + `&daily=${daily ? "true" : "false"}`,
+  );
+}
+
+export function answerGotcha(body: { id: string; language: GotchaLang; chosen: number }): Promise<GotchaAnswer> {
+  return request("/api/gotchas/answer", { method: "POST", body: JSON.stringify(body) });
+}
+
+/** Run a card's own program for real: the Run it button, after answering. */
+export function runGotcha(body: { id: string; language: GotchaLang }): Promise<GotchaRun> {
+  return request("/api/gotchas/run", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function fetchGotchaUserCards(language: GotchaLang): Promise<{ cards: GotchaUserCard[] }> {
+  return request(`/api/gotchas/user?language=${encodeURIComponent(language)}`);
+}
+
+export interface GotchaUserForm {
+  language: GotchaLang;
+  code: string;
+  options: string[];
+  guess: number | null;
+  why: string;
+}
+
+/** Run the pasted code and show the card it would become; nothing is saved. */
+export function previewGotchaUser(body: GotchaUserForm): Promise<GotchaUserResult> {
+  return request("/api/gotchas/user/preview", { method: "POST", body: JSON.stringify(body) });
+}
+
+/** Run the pasted code for real and keep it as a card of your own. */
+export function saveGotchaUser(body: GotchaUserForm): Promise<GotchaUserResult> {
+  return request("/api/gotchas/user", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function deleteGotchaUser(language: GotchaLang, id: string): Promise<{ deleted: string; summary: GotchaSummary }> {
+  return request(`/api/gotchas/user/${encodeURIComponent(id)}?language=${encodeURIComponent(language)}`, {
+    method: "DELETE",
   });
 }

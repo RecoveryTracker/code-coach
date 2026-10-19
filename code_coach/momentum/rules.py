@@ -54,6 +54,10 @@ XP: dict[str, int] = {
     "brain_item": 2,
     "brain_round": 30,
     "check_age": 50,
+    # Gotchas: a trap question answered right (key `gotcha:<language>:<id>`, so once a
+    # day per card), and the day's Daily 5 finished (key `daily:<language>:<date>`).
+    "gotcha": 12,
+    "gotcha_daily": 30,
 }
 
 #: Kinds the server knows that no screen sends yet, and why. Empty is the goal.

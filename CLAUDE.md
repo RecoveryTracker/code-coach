@@ -278,6 +278,76 @@ code_coach/farm/
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from.
 
+## Gotchas (the "Python Quiz" feed)
+
+Built 2026-10-19 (mode id `gotchas`, tab "Gotchas" after Session/Brain Drills in `ModeBar.tsx`, branch in
+`App.tsx`). An endless feed of trap questions, one at a time: a short program on a dark card with a
+glowing "Python Quiz" / "JavaScript Quiz" title, four answers (click, 1-4 or A-D), instant right/wrong, the
+one-line trap and a plain "Why", a **Run it** button, **Next** (Enter, Space, right arrow), a streak
+("5 in a row"), "Deck: 34/80 seen", a language switch (remembered in `code-coach:gotchas-language`, Python
+by default). It is not part of the session queue (no `lastKeys.ts` entry).
+
+```text
+code_coach/gotchas/
+  content_py.py / content_js.py   the built-in cards (90 Python, 72 JavaScript): id, code, answer, 3 wrong, trap, why
+  items.py       Item; make("python") builds a card (ids are py-<slug> / js-<slug>)
+  runner.py      run_program(): the real runtime, throwaway folder, bare env, no stdin, 5 s, 64 KB
+  store.py       GotchaStore: picking, answering, the Daily 5, the user's cards; gotchas.json / gotchas_user.json
+  user.py        'Add a quiz I found': run, check, build the options
+web/src/lib/gotchas.ts       streak, key map, deck line, recent ids, error text (tested in node)
+web/src/lib/codeColors.ts    the tiny syntax colourer (runs join back into the source)
+web/src/components/Gotchas.tsx, GotchaAdd.tsx; styles/gotchas.css
+```
+
+- **The oracle rule, strictly.** The answer written in `content_*.py` is never trusted: `tests/test_gotchas_content.py`
+  runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
+  call and fails unless stdout is exactly the marked answer; the three wrong options may not equal the real output or
+  each other once whitespace is ignored; no randomness, clock, `id()`, `hash()`, input; nothing near 5 s. **A new card**:
+  add `q("slug", code, answer, [3 wrong], trap, why)` (the code prints ONE line; `raises=True` makes the answer an
+  error name and the program must print nothing first), run the test, and make the wrong options real misreads.
+  Event-loop JS cards collect steps into an array and print once. Keep programs environment-proof (no top-level
+  `var` globals, no `window`), because node runs them as CommonJS scripts.
+- **Serving** (`GotchaStore.pick`, in order): a card the user just added and not yet answered ("Yours"); the first two
+  cards of a language's deck while fewer than two are seen (so `py-score-90` is the very first card); a missed card
+  that is due (a miss is due 5-10 answers later; `ticks` counts answers per language); an unseen card, at random;
+  otherwise the card seen longest ago. `exclude` (the last 3 ids the client saw) is honoured unless it would leave
+  nothing. `/api/gotchas/next` never carries the answer, the trap or the why - `present()` sends code and four
+  options; `POST /api/gotchas/answer {id, language, chosen}` (chosen = index as shown) returns them. Options are
+  shuffled deterministically: a built-in card's right letter comes from a block-wise balanced shuffle (every four
+  consecutive cards use A-D once); options that are themselves A, B, C, D stay in order. Unknown id / language /
+  chosen is 400.
+- **Files** beside the progress file, written with Momentum's atomic writer and read with `momentum.engine.read_state`
+  (a broken file is kept as `.bad`): `gotchas.json` (per-card `seen/right/last_day/last_tick/due`, per-language
+  `ticks`, streak now/best, today's Daily 5) and `gotchas_user.json`. Nothing goes into the progress file's schema.
+- **Run it** is `POST /api/gotchas/run {id, language}`, not `/api/visualize`: the JavaScript tracer cannot run
+  anything that uses timers or promises (the event-loop cards), so the card's own program runs through `runner.py`
+  (the same runner that checks a user's card). It takes a card id, never arbitrary code.
+- **Daily 5**: five cards per language and calendar day, seeded by date+language, weighted missed 4 / unseen 3 /
+  right 1, made on the first request of the day from the record as it stood then and **kept in `gotchas.json`**, so the
+  set is the same all day. Any first answer to one of the five (from the Daily card or the plain feed) fills its dot;
+  the answer that fills the fifth says `just_completed`. The top card shows the five dots and "Done today".
+- **Add a quiz I found** (`/api/gotchas/user`: GET list, POST create, POST `/preview`, DELETE `/{id}`; 400 on a refusal
+  with the reason in words): the user pastes code (<= 60 lines), optionally types up to 4 options and picks the one
+  they think is right. The server runs the code **twice** (different hash seeds) and takes the real stdout as the
+  truth; it refuses empty, too long, over 5 s, waiting for input, different output per run, nothing printed, a crash
+  after printing, a syntax error, or more than 10 lines / 300 chars of output. The real output is always the right
+  option; typed options that match it are kept as the right one, the rest are misreads; if none match the card says so
+  ("None of the options you typed match what it actually prints.") and the real output is added (replacing the
+  guessed option when all four slots were typed). Blank slots are filled only by `generate_distractors` (the same
+  list/tuple/dict with the last or first item dropped, a boolean flipped, an int off by one, only the first line,
+  one token fewer); no generator, or only one option => it asks for one more option instead of inventing junk
+  (minimum 2 options). Cards are served in the same feed with a "Yours" badge, first right after adding, and can be
+  deleted. Everything is typed or pasted; nothing is fetched from anywhere.
+- **Momentum**: `gotcha` (12 XP, `award("gotcha", cardAwardKey(...))` = key `gotcha:<language>:<id>`, once a day per
+  card, on each right answer only) and `gotcha_daily` (30 XP, key `daily:<language>:<date>`, when the fifth card is
+  answered). Both are in `rules.XP`, so the static kind test covers them.
+- **Look / accessibility**: the code is real text in a `<pre>`; token colours and card text are held to 4.5:1 by
+  `tests/test_gotchas_ts.py`; right/wrong also carry a mark and screen-reader text; all motion is CSS and off under
+  `prefers-reduced-motion`. At 375 px the page does not scroll sideways; only the code scrolls, inside the card.
+- **Testing by hand**: use the sandbox copy (see Momentum). Drive it with synthetic `keydown` events on `document.body`
+  from the console for volume (the card carries `data-card-id`); `form_input` turns `[1, 2]` into `1,2`, so fill option
+  fields through the native value setter instead.
+
 ## Momentum (one sense of progress across every mode)
 
 A cross-app layer: XP, levels, a day streak with freezes, three daily quests and a
