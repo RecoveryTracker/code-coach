@@ -19,6 +19,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import {
   buyFarmUnlock,
+  claimFarmWelcome,
   farmFile,
   fetchFarm,
   fetchFarmPlaybook,
@@ -29,7 +30,8 @@ import {
   setFarmWarp,
   stopFarm,
 } from "../api";
-import { award } from "../lib/momentum";
+import { award, inject } from "../lib/momentum";
+import type { WelcomeBack } from "../lib/momentumView";
 import type { FarmLine, FarmOverview, FarmState, FarmTip, FarmViolation } from "../types";
 import { FarmCode } from "./farm/FarmCode";
 import { FarmDocs } from "./farm/FarmDocs";
@@ -38,11 +40,12 @@ import { FarmMenu } from "./farm/FarmMenu";
 import { FarmOutput } from "./farm/FarmOutput";
 import { FarmPlaybook } from "./farm/FarmPlaybook";
 import { FarmScene } from "./farm/FarmScene";
+import { FarmWelcome } from "./farm/FarmWelcome";
 import { FarmWindow } from "./farm/FarmWindow";
 import { ResearchTree } from "./farm/ResearchTree";
 import { droneDoing, useFarmEvents } from "./farm/farmEvents";
 import { EXTENSIONS, LANGUAGE_NAMES } from "./farm/farmShared";
-import { HUD_H, WINDOW_IDS, useFarmWindows, type Area, type WinId } from "./farm/useFarmWindows";
+import { HUD_H, MENU_H, WINDOW_IDS, useFarmWindows, type Area, type WinId } from "./farm/useFarmWindows";
 import { WINDOW_DEFS } from "./farm/windowDefs";
 import "../styles/farm.css";
 
@@ -69,6 +72,8 @@ export default function FarmMode() {
   });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  /** The welcome-back card, when the farm was opened after a while away; gone once claimed or dismissed. */
+  const [welcome, setWelcome] = useState<WelcomeBack | null>(null);
   const sinceRef = useRef(0);
   const filesRef = useRef(files);
   filesRef.current = files;
@@ -109,6 +114,8 @@ export default function FarmMode() {
   }, [ready, area.w]);
 
   const apply = useCallback((o: FarmOverview) => {
+    // Whatever the farm paid Momentum while the answer was being made: show it (already paid).
+    if (o.momentum?.length) inject(o.momentum);
     setOverview(o);
     setState(o);
   }, []);
@@ -136,6 +143,8 @@ export default function FarmMode() {
   useEffect(() => {
     fetchFarm()
       .then(async (o) => {
+        // Only the answer to opening the farm carries the card (and never clears one already up).
+        if (o.welcome_back) setWelcome(o.welcome_back);
         if (!o.languages.includes(o.language)) {
           // Saved on a language this machine can't run (no Node, say): go to Python's farm instead.
           const got = await farmFile("python", "select", o.entry.python ?? "main");
@@ -156,6 +165,8 @@ export default function FarmMode() {
       const gen = farmGen.current;
       try {
         const s = await fetchFarmState(sinceRef.current);
+        // Paid and drained on the server: show it even if this poll is for a farm we have left.
+        if (s.momentum?.length) inject(s.momentum);
         if (!alive || gen !== farmGen.current) return;
         setState(s);
         if (s.output.length) {
@@ -320,6 +331,16 @@ export default function FarmMode() {
     },
     [apply],
   );
+
+  const claimWelcome = useCallback(async () => {
+    setWelcome(null);
+    try {
+      const got = await claimFarmWelcome();
+      if (got.ok) inject(got);
+    } catch {
+      /* the card is gone; the server being away is not worth a message */
+    }
+  }, []);
 
   const warp = useCallback(async (value: number) => {
     await setFarmWarp(value);
@@ -512,6 +533,17 @@ export default function FarmMode() {
             </FarmWindow>
           ))
         : null}
+      {welcome && area.w > 0 ? (
+        <FarmWelcome
+          welcome={welcome}
+          narrow={wins.narrow}
+          left={insetX > 0 ? insetX + 12 : 12}
+          top={HUD_H + 10}
+          bottom={MENU_H + 10}
+          onClaim={() => void claimWelcome()}
+          onDismiss={() => setWelcome(null)}
+        />
+      ) : null}
       <FarmMenu isOpen={(id) => wins.layout.wins[id].open} onToggle={wins.toggle} onReset={wins.reset} />
     </div>
   );

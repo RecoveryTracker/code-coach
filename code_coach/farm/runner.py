@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from code_coach.farm import data
+from code_coach.farm.milestones import FarmRewards
 from code_coach.farm.protocol import FUNCTIONS, MARK, STOP, answer, decode_request, refuse
 from code_coach.farm.world import Refusal, World, spell_function
 
@@ -228,6 +229,9 @@ class FarmHost:
         self._path: Path | None = None
         #: The language farm_save.json last said, so it is only rewritten when it changes.
         self._pointer: str | None = None
+        #: What this host tells Momentum (the Farm's milestones, items, welcome-back).
+        #: None - a throwaway farm (scratch) - tells it nothing.
+        self.rewards: FarmRewards | None = FarmRewards()
 
     @property
     def world(self) -> World | None:
@@ -238,6 +242,21 @@ class FarmHost:
     def world(self, value: World) -> None:
         self.worlds[self.language] = value
         self._unbuilt.pop(self.language, None)
+        self._wire(value, self.language)
+
+    def _wire(self, world: World, language: str) -> None:
+        """Have this farm tell the host's rewards what happens on it (see farm/milestones.py)."""
+
+        def listen(w: World, kind: str, payload: dict[str, Any]) -> None:
+            rewards = self.rewards
+            if rewards is None:
+                return
+            if kind == "event":
+                rewards.event(language, w, payload)
+            elif kind == "buy":
+                rewards.bought(language, payload["unlock"], payload["level"])
+
+        world.listener = listen
 
     @property
     def warp(self) -> float:
@@ -266,6 +285,7 @@ class FarmHost:
             except (ValueError, KeyError, TypeError):
                 world = World()
             self.worlds[language] = world
+            self._wire(world, language)
         return world
 
     def _read_saves(self, path: Path) -> None:
@@ -429,6 +449,8 @@ class FarmHost:
         with self.lock:
             world = self._load()
             self._catch_up()
+            if self.rewards is not None:
+                self.rewards.tick()
             # A run belongs to the farm it ran on; another language's farm shows none.
             run = self.run if self.run is not None and self.run.language == self.language else None
             farm = world.snapshot()
@@ -452,7 +474,7 @@ class FarmHost:
                 main = run.drones.get(0)
                 if main is not None:
                     farm["drone"] = {"x": main.x, "y": main.y, "hat": main.hat}
-            return {
+            payload = {
                 "farm": farm,
                 "simulation": simulation,
                 "items": {k: (int(v) if float(v).is_integer() else round(v, 2)) for k, v in items.items()},
@@ -467,6 +489,34 @@ class FarmHost:
                 "outputEnd": len(self.output),
                 "warp": self.warp,
             }
+            # What the farm paid Momentum since the screen last looked (milestones a program
+            # earned, a quest its harvest finished), oldest first - only when there is some.
+            paid = self.rewards.drain() if self.rewards is not None else []
+            if paid:
+                payload["momentum"] = paid
+            return payload
+
+    def welcome(self) -> dict[str, Any] | None:
+        """The Farm was opened: the welcome-back card (None if there is none to show).
+
+        The farm does not run while it is away - nothing grows in the app's absence, and
+        an idle farm only moves on while it is looked at - so what is ripe is what was
+        ripe when you left. The card says exactly that many; see Momentum.farm_visit."""
+        if self.rewards is None:
+            return None
+        with self.lock:
+            ripe = self._load().ripe_tiles()
+            language = self.language
+        card = self.rewards.visit(ripe)
+        if card is not None:
+            card["language"] = language
+        return card
+
+    def claim_welcome(self) -> dict[str, Any]:
+        """Take today's welcome-back XP (once a day, and only after a real absence)."""
+        if self.rewards is None:
+            return {"ok": False, "reason": "no_absence"}
+        return self.rewards.claim()
 
     def overview(self) -> dict[str, Any]:
         """Everything the screen needs when it opens."""
@@ -1016,6 +1066,8 @@ class FarmHost:
         except OSError as exc:
             raise Refusal(f"Could not start another drone: {exc}") from None
         run.drones[new.id] = new
+        if run.world is None and self.rewards is not None:
+            self.rewards.drone_spawned(run.language)  # a real farm's first drone (not a simulation's)
         threading.Thread(target=self._drive, args=(run, new), daemon=True).start()
         return new.id, seconds
 
@@ -1101,6 +1153,10 @@ class FarmHost:
                 world.x, world.y, world.hat = main.x, main.y, main.hat
             world.clock = None
             world.end_run()
+            if self.rewards is not None:
+                # What the run harvested goes to Momentum (the lifetime total, today's quest,
+                # the steps it crossed) before the run reads as over: whoever sees "done" sees it paid.
+                self.rewards.flush()
             if run.stop and not run.error:
                 run.status = "stopped"
                 self._say("info", "Stopped.")

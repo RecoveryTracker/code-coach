@@ -2452,7 +2452,20 @@ def farm_overview() -> dict:
     and every language's code. (`levels` is every language's research, for the Playbook.)"""
     from code_coach.farm.runner import HOST
 
-    return HOST.overview()
+    # Asked first: opening the farm is what the welcome-back is measured at (the overview's
+    # own look at the farm would count as "seen"). It is only in this answer, not in the
+    # overviews that answer a file operation or a purchase.
+    welcome = HOST.welcome()
+    return {**HOST.overview(), "welcome_back": welcome}
+
+
+@app.post("/api/farm/welcome/claim")
+def farm_welcome_claim() -> dict:
+    """Take today's welcome-back XP: once a day, and only after the farm was opened after an
+    absence. The pay is the server's (worked out from what was ripe when it was opened)."""
+    from code_coach.farm.runner import HOST
+
+    return HOST.claim_welcome()
 
 
 @app.get("/api/farm/playbook")

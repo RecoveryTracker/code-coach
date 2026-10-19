@@ -11,7 +11,11 @@ The file::
      "combo": {"count": 3, "last_at": 1768000000.0},
      "lifetime": {"kata": 12, ...},
      "baseline": null | {streak carried from days we no longer keep},
+     "once": ["farm_milestone:python:harvest_hay", ...],   # lifetime keys: paid once ever
+     "farm": {"totals": {"python": 412}, "last_seen": 1768000000.0 | null,
+              "away": null | {"day": "2026-10-15", "at": ..., "ripe": 4, "minutes": 95}},
      "days": {"2026-10-15": {"xp": 120, "awards": 6, "kinds": {...}, "keys": ["kata:x"],
+                              "counters": {"farm_items": 31},
                               "quests": [...], "done": [...],
                               "chest": false, "chest_xp": 0, "chest_freeze": false}}}
 
@@ -19,7 +23,9 @@ The streak, the freezes in hand and the best streak are always worked out again
 from the days (`rules.simulate`), never trusted from the file; the two copies in
 the file are written for convenience only. About 400 days are kept; older ones
 are folded into `baseline` first, and their `keys` (needed only for the
-once-a-day rule) are dropped after three days.
+once-a-day rule) are dropped after three days. `once` is the lifetime twin of
+a day's `keys` (for the kinds in `rules.LIFETIME_KINDS`); a file from before it
+existed loads with it empty, and so with `farm` and a day's `counters`.
 """
 
 from __future__ import annotations
@@ -64,7 +70,12 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def _fresh() -> dict[str, Any]:
     return {"version": VERSION, "xp": 0, "best_streak": 0, "freezes": 0,
-            "combo": {"count": 0, "last_at": None}, "lifetime": {}, "baseline": None, "days": {}}
+            "combo": {"count": 0, "last_at": None}, "lifetime": {}, "baseline": None,
+            "once": [], "farm": _fresh_farm(), "days": {}}
+
+
+def _fresh_farm() -> dict[str, Any]:
+    return {"totals": {}, "last_seen": None, "away": None}
 
 
 def _int(value: Any, default: int = 0) -> int:
@@ -85,12 +96,14 @@ def _clean_day(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
     kinds = raw.get("kinds") if isinstance(raw.get("kinds"), dict) else {}
+    counters = raw.get("counters") if isinstance(raw.get("counters"), dict) else {}
     return {
         "xp": _int(raw.get("xp")),
         "awards": _int(raw.get("awards")),
         "kinds": {str(k): _int(v) for k, v in kinds.items() if _int(v)},
         "keys": [str(k) for k in raw.get("keys", []) if isinstance(k, str)]
         if isinstance(raw.get("keys"), list) else [],
+        "counters": {str(k): _int(v) for k, v in counters.items() if _int(v)},
         "quests": [str(q) for q in raw.get("quests", [])] if isinstance(raw.get("quests"), list) else [],
         "done": [str(q) for q in raw.get("done", [])] if isinstance(raw.get("done"), list) else [],
         "chest": bool(raw.get("chest")),
@@ -120,11 +133,30 @@ def _clean(raw: Any) -> dict[str, Any] | None:
             "freezes": min(rules.MAX_FREEZES, _int(base.get("freezes"))),
             "gap": min(2, _int(base.get("gap"), 2)), "best": _int(base.get("best")),
         }
+    once = raw.get("once")
+    if isinstance(once, list):
+        state["once"] = list(dict.fromkeys(str(k) for k in once if isinstance(k, str)))
+    state["farm"] = _clean_farm(raw.get("farm"))
     for key, value in raw.get("days", {}).items():
         day = _clean_day(value)
         if day is not None and _iso(key):
             state["days"][str(key)] = day
     return state
+
+
+def _clean_farm(raw: Any) -> dict[str, Any]:
+    farm = _fresh_farm()
+    if not isinstance(raw, dict):
+        return farm
+    totals = raw.get("totals") if isinstance(raw.get("totals"), dict) else {}
+    farm["totals"] = {str(k): _int(v) for k, v in totals.items()}
+    seen = raw.get("last_seen")
+    farm["last_seen"] = float(seen) if isinstance(seen, (int, float)) and not isinstance(seen, bool) else None
+    away = raw.get("away")
+    if isinstance(away, dict) and _iso(away.get("day")):
+        farm["away"] = {"day": str(away["day"]), "at": float(away.get("at") or 0),
+                        "ripe": _int(away.get("ripe")), "minutes": _int(away.get("minutes"))}
+    return farm
 
 
 def _carry(state: dict[str, Any]) -> rules.Carry:
@@ -144,7 +176,8 @@ def _bonus(state: dict[str, Any]) -> dict[date, int]:
 
 
 def _new_day(today: date) -> dict[str, Any]:
-    return {"xp": 0, "awards": 0, "kinds": {}, "keys": [], "quests": rules.pick_quests(today),
+    return {"xp": 0, "awards": 0, "kinds": {}, "keys": [], "counters": {},
+            "quests": rules.pick_quests(today),
             "done": [], "chest": False, "chest_xp": 0, "chest_freeze": False}
 
 
@@ -227,7 +260,7 @@ class Momentum:
                 before.update(k for k, n in earlier["kinds"].items() if n)
         fresh = frozenset(k for k, n in day["kinds"].items() if n and k not in before)
         return rules.DayStats(xp=day["xp"], awards=day["awards"], kinds=dict(day["kinds"]),
-                              fresh_kinds=fresh)
+                              fresh_kinds=fresh, counters=dict(day.get("counters", {})))
 
     def _quests(self, state: dict[str, Any], today: date) -> list[dict[str, Any]]:
         day = state["days"].get(today.isoformat())
@@ -280,7 +313,33 @@ class Momentum:
             log.exception("momentum: award %s failed", kind)
             return {"ok": False}
 
-    def _award(self, kind: str, key: str) -> dict[str, Any]:
+    def award_server(self, kind: str, key: str, base: int | None = None,
+                     label: str = "") -> dict[str, Any]:
+        """Pay something only the server sees: a kind in `rules.SERVER_XP`, with its own base.
+
+        Never reachable from the browser (`award` and the route refuse these kinds).
+        `label` says what it was for ("Farm: first pumpkin!"); the answer carries it.
+        Raises `UnknownKind` for a kind not in the table; nothing else.
+        """
+        if kind not in rules.SERVER_XP:
+            raise UnknownKind(kind)
+        key = rules.clean_key(key)
+        try:
+            with self._lock:
+                return self._award(kind, key, base, str(label)[:120])
+        except Exception:
+            log.exception("momentum: server award %s failed", kind)
+            return {"ok": False}
+
+    def _repeat(self, state: dict[str, Any], today: date, before: rules.Streak) -> dict[str, Any]:
+        out = self._view(state, today, before)
+        return {**out, "repeat": True, "base": 0, "combo": state["combo"]["count"],
+                "combo_mult": rules.combo_multiplier(state["combo"]["count"]),
+                "lucky": None, "gained": 0, "level_up": None, "label": None,
+                "streak_extended": False, "freeze_used": None, "freeze_earned": False}
+
+    def _award(self, kind: str, key: str, base: int | None = None,
+               label: str = "") -> dict[str, Any]:
         state = self._load()
         now = self.clock()
         today = self._today()
@@ -293,17 +352,17 @@ class Momentum:
 
         before = rules.simulate(_counted(state), today, _carry(state), _bonus(state))
         token = f"{kind}:{key}"
-        if token in day["keys"]:
-            out = self._view(state, today, before)
-            return {**out, "repeat": True, "base": 0, "combo": state["combo"]["count"],
-                    "combo_mult": rules.combo_multiplier(state["combo"]["count"]),
-                    "lucky": None, "gained": 0, "level_up": None,
-                    "streak_extended": False, "freeze_used": None, "freeze_earned": False}
+        # A lifetime kind is paid once ever; every other kind once a day.
+        lifetime = kind in rules.LIFETIME_KINDS
+        if token in (state["once"] if lifetime else day["keys"]):
+            return self._repeat(state, today, before)
 
         level_before = rules.level_for(state["xp"])
         combo = rules.next_combo(state["combo"]["count"], state["combo"]["last_at"], now)
         mult = rules.combo_multiplier(combo)
-        base = rules.XP[kind]
+        if base is None:
+            base = rules.XP.get(kind) or rules.SERVER_XP[kind]
+        base = max(1, int(base))
         lucky = rules.roll_lucky(self.rng)
         gained = rules.payout(base, mult, lucky)
 
@@ -313,7 +372,7 @@ class Momentum:
         day["xp"] += gained
         day["awards"] += 1
         day["kinds"][kind] = day["kinds"].get(kind, 0) + 1
-        day["keys"].append(token)
+        (state["once"] if lifetime else day["keys"]).append(token)
 
         after = rules.simulate(_counted(state), today, _carry(state), _bonus(state))
         newly_used = [d for d in after.used if d not in before.used]
@@ -331,7 +390,7 @@ class Momentum:
         return {
             **out,
             "repeat": False, "base": base, "combo": combo, "combo_mult": mult,
-            "lucky": lucky, "gained": gained,
+            "lucky": lucky, "gained": gained, "label": label or None,
             "level_up": {"level": level_after, "title": out["title"]} if level_after > level_before else None,
             "streak_extended": after.today_counted and not before.today_counted,
             "freeze_used": newly_used[-1].isoformat() if newly_used else None,
@@ -369,3 +428,128 @@ class Momentum:
         return {**out, "gained": xp, "freeze_earned": freeze,
                 "level_up": ({"level": out["level"], "title": out["title"]}
                              if out["level"] > level_before else None)}
+
+    # ── what the Farm tells it (see code_coach/farm/milestones.py) ──────
+
+    def record_farm_items(self, language: str, main: int, items: int) -> dict[str, Any]:
+        """Add what a farm harvested: `main` (the crop items) to that language's lifetime
+        total, `items` (everything a harvest paid) to today's `farm_items` counter.
+
+        Answers `{"ok", "before", "after", "quest"}`: the lifetime total either side (so the
+        caller can tell which step it crossed) and, when this finished one of today's quests,
+        an award-shaped answer with `gained` 0 and that quest `just_done` (else None).
+        It never raises; a storage problem answers `{"ok": False}`.
+        """
+        try:
+            with self._lock:
+                return self._record_farm_items(str(language), max(0, int(main)), max(0, int(items)))
+        except Exception:
+            log.exception("momentum: farm items failed")
+            return {"ok": False}
+
+    def _record_farm_items(self, language: str, main: int, items: int) -> dict[str, Any]:
+        state = self._load()
+        today = self._today()
+        iso = today.isoformat()
+        day = state["days"].get(iso)
+        if day is None:
+            day = state["days"][iso] = _new_day(today)  # the day's quests are fixed from here
+        elif not day["quests"]:
+            day["quests"] = rules.pick_quests(today)
+        totals = state["farm"]["totals"]
+        before = totals.get(language, 0)
+        totals[language] = before + main
+        if items:
+            day["counters"]["farm_items"] = day["counters"].get("farm_items", 0) + items
+        out = self._view(state, today)
+        quest = None
+        stored = set(day["done"])
+        fresh = False
+        for q in out["quests"]:
+            if q["done"] and q["id"] not in stored:
+                q["just_done"] = True
+                day["done"].append(q["id"])
+                fresh = True
+        if fresh:
+            quest = {**out, "repeat": False, "base": 0, "combo": state["combo"]["count"],
+                     "combo_mult": 1.0, "lucky": None, "gained": 0, "level_up": None,
+                     "label": None, "streak_extended": False, "freeze_used": None,
+                     "freeze_earned": False}
+        self._save(state, today)
+        return {"ok": True, "before": before, "after": totals[language], "quest": quest}
+
+    def farm_touch(self) -> None:
+        """The Farm is on screen now (called now and then while it is polled)."""
+        try:
+            with self._lock:
+                state = self._load()
+                state["farm"]["last_seen"] = self.clock()
+                self._save(state, self._today())
+        except Exception:
+            log.exception("momentum: farm touch failed")
+
+    def farm_visit(self, ripe: int) -> dict[str, Any] | None:
+        """The Farm was just opened, with `ripe` tiles ripe. Remembers now as the last look.
+
+        Answers what the welcome-back card says - `{"minutes", "ripe", "xp"}` - when the last
+        look was `rules.WELCOME_AWAY` or more ago and today's welcome has not been claimed;
+        otherwise None (the first visit ever included: with no earlier look there was no
+        absence). An offer is kept (`farm.away`) so the claim can check it was real.
+        """
+        try:
+            with self._lock:
+                return self._farm_visit(max(0, int(ripe)))
+        except Exception:
+            log.exception("momentum: farm visit failed")
+            return None
+
+    def _farm_visit(self, ripe: int) -> dict[str, Any] | None:
+        state = self._load()
+        now = self.clock()
+        today = self._today()
+        iso = today.isoformat()
+        farm = state["farm"]
+        last = farm["last_seen"]
+        farm["last_seen"] = now
+        offer = None
+        gone = None if last is None else now - last
+        if gone is not None and gone >= rules.WELCOME_AWAY:
+            day = state["days"].get(iso)
+            if not (day and f"farm_return:{iso}" in day["keys"]):
+                minutes = int(gone // 60)
+                farm["away"] = {"day": iso, "at": last, "ripe": ripe, "minutes": minutes}
+                offer = {"minutes": minutes, "ripe": ripe, "xp": rules.welcome_xp(ripe)}
+        self._save(state, today)
+        return offer
+
+    def claim_welcome(self) -> dict[str, Any]:
+        """Pay today's welcome-back, once, and only if the Farm really was opened after an absence.
+
+        The pay is `rules.welcome_xp` of the ripe count the visit recorded - never a number the
+        browser names - through the normal award (combo, luck, quests, once a day by the
+        day's key). Not ok: `reason` is "no_absence" or "already_claimed".
+        """
+        try:
+            with self._lock:
+                return self._claim_welcome()
+        except Exception:
+            log.exception("momentum: welcome claim failed")
+            return {"ok": False, "reason": "error"}
+
+    def _claim_welcome(self) -> dict[str, Any]:
+        state = self._load()
+        today = self._today()
+        iso = today.isoformat()
+        away = state["farm"]["away"]
+        day = state["days"].get(iso)
+        if day and f"farm_return:{iso}" in day["keys"]:
+            return {**self._repeat(state, today, rules.simulate(
+                _counted(state), today, _carry(state), _bonus(state))),
+                "ok": False, "reason": "already_claimed"}
+        if not away or away["day"] != iso:
+            return {**self._view(state, today), "ok": False, "reason": "no_absence", "gained": 0}
+        got = self._award("farm_return", iso, rules.welcome_xp(away["ripe"]), "Welcome back")
+        state = self._load()
+        state["farm"]["away"] = None
+        self._save(state, today)
+        return got

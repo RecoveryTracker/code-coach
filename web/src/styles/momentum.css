@@ -376,6 +376,12 @@
   border-color: var(--success);
 }
 
+/* What the server paid of its own accord: a Farm milestone, the welcome-back. */
+.mt-toast.milestone {
+  color: #ffd25a;
+  border-color: #ffd25a;
+}
+
 .mt-toast.streak,
 .mt-toast.freeze {
   color: var(--accent);

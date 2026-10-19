@@ -162,6 +162,20 @@ code_coach/farm/
   never moves) is written by `World._record` into a 60-deep ring, sent as `snapshot()["events"]` (oldest first,
   `FarmEvent` in `web/src/types.ts`). `n` comes from one process-wide counter, so it only rises; `d` is the drone
   (`World.drone_id`, set by `FarmHost._command`); a harvest's `items` are read off the barn's change. `tests/test_farm_events.py`.
+- **Momentum tie-in** (`farm/milestones.py`; the engine side is in the Momentum section). The
+  host wires each real farm's `World.listener` (`FarmHost._wire`; a simulation's world and the
+  scratch host - `rewards = None` - have none) and tells `FarmRewards` what happened, so the
+  **server** pays: a table of firsts (`MILESTONES`: first harvest of each crop, giant pumpkin,
+  sorted cactus patch, maze treasure, first drone, every Expand size, 100/1,000/10,000 items
+  harvested) paid once ever per language, through `Momentum.award_server`. Items harvested are
+  batched (`flush` every 2 s and when a run ends) into the lifetime total and today's
+  `farm_items` counter (the "Harvest 50 items" quest). Answers wait in `FarmRewards.queue`;
+  `FarmHost.state()` drains them into `momentum` (a list, oldest first) and `FarmMode` shows
+  them with `lib/momentum.ts inject`. **The farm does not run while the app is closed**: an idle
+  farm moves on only while it is looked at (at most 2 s a look); only a running program
+  (server up) advances it. So the welcome-back card (`GET /api/farm` -> `welcome_back`,
+  `POST /api/farm/welcome/claim`) says what *was* ripe when you left, never that anything grew.
+  Not tracked: "ran clean after an error", and sizes/totals reached before this existed.
 - Not built yet: the leaderboard (deliberately skipped).
 
 ## Canvas and Brain Drills
@@ -294,6 +308,20 @@ a storage problem answers `{ok:false}` and never raises), `POST /api/momentum/ch
   (mounted in `main.tsx`, bottom-centre, pointer-events none except the level-up card,
   CSS-only confetti), `lib/momentumView.ts` (the pure what-to-show logic, tested in
   node by `tests/test_momentum_view.py`). Brain Drills keeps its own stamps/streak.
+- **Server-only kinds** (`rules.SERVER_XP`: `farm_milestone`, `farm_return`): paid by the server
+  from what it sees (`Momentum.award_server`, a base the caller names), refused by the award
+  route (400) and exempt from the "every kind is sent by a screen" test. `farm_milestone` is a
+  lifetime kind (`LIFETIME_KINDS`): its dedupe is the file's `once` list (paid once ever), not the
+  day's keys. Both are passive (`PASSIVE_KINDS`): they keep the combo and count for the streak but
+  are not a "thing solved" or a "mode used" for a quest. An award answer may carry a `label`
+  ("Farm: first pumpkin! (Python)") that the toast says first. Quests can also read per-day
+  counters (`DayStats.counters`, a day's `counters`; `record_farm_items`) that are not awards:
+  `farm_items` (quest "Harvest 50 items on the farm") and `farm_buy` ("Buy a research upgrade"),
+  both in group `farm`. The welcome-back: `farm_visit` (the Farm opened >= 30 min after the last
+  look, `farm.last_seen`, kept fresh by the polling's `farm_touch`; first visit ever = none) records
+  an offer in `farm.away`; `claim_welcome` pays `welcome_xp(ripe)` = 15 + 1 per 10 ripe (max +10)
+  as kind `farm_return`, once a day, only for an offer made today. To see the card in the sandbox,
+  set `farm.last_seen` back in its `momentum.json` while the Farm is closed.
 - **Testing by hand** writes to the real `momentum.json` like everything else: use the
   sandbox copy (API with `USERPROFILE`/`HOME` pointed at a temp folder, `VITE_API_PORT`
   and `VITE_UI_PORT` for the UI). In the dev UI the store is the module the app loaded,

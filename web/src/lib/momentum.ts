@@ -14,6 +14,7 @@ import { useSyncExternalStore } from "react";
 import {
   dismiss,
   enqueue,
+  toastsForAnswers,
   toastsForAward,
   toastsForChest,
 } from "./momentumView";
@@ -85,6 +86,24 @@ export function award(kind: string, key: string): void {
       });
   } catch {
     /* same */
+  }
+}
+
+/**
+ * Take in answers the server worked out for itself, oldest first: a Farm milestone a program
+ * earned, a quest its harvest finished, the welcome-back claim. They are already paid; this
+ * only shows them - the same toasts `award` shows, and the strip's numbers move to the newest.
+ */
+export function inject(answers: AwardResult | AwardResult[] | null | undefined): void {
+  try {
+    const list = (Array.isArray(answers) ? answers : answers ? [answers] : []).filter((r) => r && r.ok);
+    if (list.length === 0) return;
+    set({
+      summary: list[list.length - 1],
+      toasts: enqueue(state.toasts, toastsForAnswers(list, nextId)),
+    });
+  } catch {
+    /* showing a reward is never worth breaking a screen */
   }
 }
 
