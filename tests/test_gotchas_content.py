@@ -26,8 +26,14 @@ from pathlib import Path
 import pytest
 
 from code_coach.gotchas import DECKS, served_options
-from code_coach.gotchas.content_js import ITEMS as JS_ITEMS
-from code_coach.gotchas.content_py import ITEMS as PY_ITEMS
+from code_coach.gotchas.content_js import ITEMS as JS_ITEMS_1
+from code_coach.gotchas.content_js2 import ITEMS as JS_ITEMS_2
+from code_coach.gotchas.content_py import ITEMS as PY_ITEMS_1
+from code_coach.gotchas.content_py2 import ITEMS as PY_ITEMS_2
+
+#: The whole built-in deck, in the order it is served (the first modules, then the later ones).
+PY_ITEMS = DECKS["python"]
+JS_ITEMS = DECKS["javascript"]
 
 NODE = shutil.which("node")
 ALL = [*PY_ITEMS, *JS_ITEMS]
@@ -90,7 +96,10 @@ def _items_runnable():
 def test_there_are_enough_cards():
     assert len(PY_ITEMS) >= 60
     assert len(JS_ITEMS) >= 40
-    assert DECKS["python"] is PY_ITEMS and DECKS["javascript"] is JS_ITEMS
+    # the deck is the modules in order, and the later modules only ever add cards after the old ones
+    assert PY_ITEMS == (*PY_ITEMS_1, *PY_ITEMS_2)
+    assert JS_ITEMS == (*JS_ITEMS_1, *JS_ITEMS_2)
+    assert len(PY_ITEMS_1) >= 90 and len(JS_ITEMS_1) >= 72
 
 
 def test_the_first_cards_are_the_two_the_mode_started_from():
@@ -130,7 +139,8 @@ def test_the_four_options_differ_even_ignoring_whitespace():
 
 
 def test_no_card_depends_on_randomness_the_clock_or_identity():
-    banned = re.compile(r"\brandom\b|\bMath\.random\b|\bDate\b|\btime\b|\bid\(|\bhash\(|\bdatetime\b"
+    banned = re.compile(r"\brandom\b|\bMath\.random\b|\bDate\.now\b|\bnew Date\(\s*\)|\bDate\(\s*\)|\btime\b"
+                        r"|\bid\(|\bhash\(|\bdatetime\b"
                         r"|\bos\.environ\b|\binput\(|\bprocess\.argv\b")
     for it in ALL:
         assert not banned.search(it.code), f"{it.id} uses something that can differ between runs"

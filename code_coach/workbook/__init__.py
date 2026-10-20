@@ -500,6 +500,10 @@ def _cost_of(page: Page) -> dict | None:
     return {"label": found.label, "note": found.note}
 
 
+#: payload() answers, by language and page ids. Callers only read them.
+_PAYLOADS: dict[tuple[str, tuple[str, ...]], list[dict]] = {}
+
+
 def payload(language: str) -> list[dict]:
     """Every page, for the Workbook screen.
 
@@ -507,8 +511,17 @@ def payload(language: str) -> list[dict]:
     you ask, the same way the concept answers are, and having them client-side
     means "show me" is instant rather than another round trip.
     """
+    ps = pages(language)
+    # Building this runs every exercise's reference program (thousands of
+    # them) and cost most of a second on each visit to the screen. It is
+    # the same every time, so it is built once, and rebuilt only if the set
+    # of pages changes.
+    key = (language, tuple(p.id for p in ps))
+    cached = _PAYLOADS.get(key)
+    if cached is not None:
+        return cached
     out: list[dict] = []
-    for p in pages(language):
+    for p in ps:
         out.append(
             {
                 "id": p.id,
@@ -532,4 +545,5 @@ def payload(language: str) -> list[dict]:
                 ],
             }
         )
+    _PAYLOADS[key] = out
     return out

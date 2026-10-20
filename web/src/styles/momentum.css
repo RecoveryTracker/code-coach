@@ -28,6 +28,42 @@
   border-color: var(--border-strong);
 }
 
+/* Open: the same look as the other buttons when theirs is open (the Style button's). */
+.mhud-main.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
+  color: var(--accent);
+}
+
+/* A quest is a link: the label is a button that takes you to where it is done. */
+.mhud-q-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mhud-q-go:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.mhud-q-arrow {
+  opacity: 0.5;
+}
+
+.mhud-q-go:hover .mhud-q-arrow {
+  opacity: 1;
+}
+
 .mhud-main.chest-ready {
   border-color: var(--accent);
   box-shadow: 0 0 0 0 var(--accent-soft);

@@ -8,6 +8,8 @@
  */
 
 export interface MomentumQuest {
+  /** The mode (top-bar tab) where this is done. */
+  go?: string;
   id: string;
   label: string;
   have: number;

@@ -41,7 +41,14 @@ function Snowflake(): ReactNode {
   );
 }
 
-export function MomentumHud({ onStart }: { onStart: () => void }): ReactNode {
+export function MomentumHud({
+  onStart,
+  onGo,
+}: {
+  onStart: () => void;
+  /** Open a mode (a top-bar tab) by its id. */
+  onGo: (mode: string) => void;
+}): ReactNode {
   const { summary } = useMomentum();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -77,7 +84,7 @@ export function MomentumHud({ onStart }: { onStart: () => void }): ReactNode {
     <div className="mhud" ref={wrap}>
       <button
         type="button"
-        className={`mhud-main${v.chest === "ready" ? " chest-ready" : ""}`}
+        className={`mhud-main${v.chest === "ready" ? " chest-ready" : ""}${open ? " on" : ""}`}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Momentum: ${v.streakNote}. ${v.levelText}. Quests ${v.questText}.`}
@@ -130,10 +137,20 @@ export function MomentumHud({ onStart }: { onStart: () => void }): ReactNode {
           <ul className="mhud-quests">
             {quests.map((q) => (
               <li key={q.id} className={q.done ? "done" : ""}>
-                <span className="mhud-q-label">
+                {/* The whole label is the way there: the quest is a place to go, not text to read. */}
+                <button
+                  type="button"
+                  className="mhud-q-label mhud-q-go"
+                  title={`Go to ${q.go ?? "session"}`}
+                  onClick={() => {
+                    setOpen(false);
+                    onGo(q.go ?? "session");
+                  }}
+                >
                   <span className="mhud-q-tick" aria-hidden="true">{q.done ? "✓" : ""}</span>
                   {q.label}
-                </span>
+                  <span className="mhud-q-arrow" aria-hidden="true">→</span>
+                </button>
                 <span className="mhud-q-n">{q.have}/{q.need}</span>
                 <span className="mhud-bar thin" aria-hidden="true">
                   <span className="mhud-bar-fill" style={{ width: `${Math.round((q.have / Math.max(1, q.need)) * 100)}%` }} />

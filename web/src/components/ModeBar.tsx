@@ -154,30 +154,55 @@ export function isMode(value: string): value is Mode {
   return MODES.some((m) => m.id === value);
 }
 
+/** Free mode is the editor with the exercises paused. It is picked like
+ *  any tab and sits last in the row, at the far right. */
+const FREE_TITLE = "Code anything you like, with the exercises paused";
+
 export function ModeButtons({
   mode,
+  freeMode,
   onPick,
+  onFree,
 }: {
   mode: Mode;
+  /** Free mode is on (only ever together with the editor's screen). */
+  freeMode: boolean;
   onPick: (next: Mode) => void;
+  onFree: () => void;
 }): ReactNode {
+  const freeOn = freeMode && mode === "leetcode";
   return (
     <>
-      {MODES.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          /* The current one is marked rather than removed. A row that
-             drops the module you are in is a row that changes width and
-             moves every other name along with it. */
-          className={`ws-btn mode-btn${m.id === mode ? " on" : ""}`}
-          aria-current={m.id === mode ? "page" : undefined}
-          title={m.title}
-          onClick={() => onPick(m.id)}
-        >
-          {m.label}
-        </button>
-      ))}
+      {MODES.map((m) => {
+        /* One tab is lit at a time. In free mode the editor's screen is
+           the Free tab, not LeetCode, so picking Free puts LeetCode out
+           the way every other pick does. */
+        const on = m.id === "leetcode" ? mode === "leetcode" && !freeOn : m.id === mode;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            /* The current one is marked rather than removed. A row that
+               drops the module you are in is a row that changes width and
+               moves every other name along with it. */
+            className={`ws-btn mode-btn${on ? " on" : ""}`}
+            aria-current={on ? "page" : undefined}
+            title={m.title}
+            onClick={() => onPick(m.id)}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        className={`ws-btn mode-btn${freeOn ? " on" : ""}`}
+        aria-current={freeOn ? "page" : undefined}
+        title={FREE_TITLE}
+        onClick={onFree}
+      >
+        Free mode
+      </button>
     </>
   );
 }

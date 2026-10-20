@@ -290,6 +290,8 @@ by default). It is not part of the session queue (no `lastKeys.ts` entry).
 ```text
 code_coach/gotchas/
   content_py.py / content_js.py   the built-in cards (90 Python, 72 JavaScript): id, code, answer, 3 wrong, trap, why
+  content_py2.py / content_js2.py the second helping (116 Python, 82 JavaScript = 206 / 154 in all), assembled after the
+                 first modules in `gotchas/__init__.py` (so py-score-90 and py-loop-var-list stay the first two)
   items.py       Item; make("python") builds a card (ids are py-<slug> / js-<slug>)
   runner.py      run_program(): the real runtime, throwaway folder, bare env, no stdin, 5 s, 64 KB
   store.py       GotchaStore: picking, answering, the Daily 5, the user's cards; gotchas.json / gotchas_user.json
@@ -300,13 +302,14 @@ web/src/components/Gotchas.tsx, GotchaAdd.tsx; styles/gotchas.css
 ```
 
 - **The oracle rule, strictly.** The answer written in `content_*.py` is never trusted: `tests/test_gotchas_content.py`
-  runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
+  (it reads `DECKS`, so a new content module is covered once it is registered in `__init__.py`) runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
   call and fails unless stdout is exactly the marked answer; the three wrong options may not equal the real output or
   each other once whitespace is ignored; no randomness, clock, `id()`, `hash()`, input; nothing near 5 s. **A new card**:
   add `q("slug", code, answer, [3 wrong], trap, why)` (the code prints ONE line; `raises=True` makes the answer an
   error name and the program must print nothing first), run the test, and make the wrong options real misreads.
   Event-loop JS cards collect steps into an array and print once. Keep programs environment-proof (no top-level
-  `var` globals, no `window`), because node runs them as CommonJS scripts.
+  `var` globals, no `window`), because node runs them as CommonJS scripts. A fixed-date `Date` (`Date.UTC(...)`) is fine; `Date.now()`, `new Date()` and the word `time` are banned. A
+  program is at most 16 lines and 76 columns, so wrap a long `console.log(` onto two lines.
 - **Serving** (`GotchaStore.pick`, in order): a card the user just added and not yet answered ("Yours"); the first two
   cards of a language's deck while fewer than two are seen (so `py-score-90` is the very first card); a missed card
   that is due (a miss is due 5-10 answers later; `ticks` counts answers per language); an unseen card, at random;

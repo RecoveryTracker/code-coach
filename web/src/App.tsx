@@ -875,13 +875,24 @@ export default function App() {
    * what the button has always done.
    */
   const openFreeMode = useCallback(() => {
-    if (mode !== "leetcode") {
-      go("leetcode");
-      if (!freeMode) toggleFreeMode();
-      return;
-    }
-    toggleFreeMode();
+    // The Free tab only ever turns Free mode on, like any other tab: to
+    // leave it you pick another tab.
+    if (mode !== "leetcode") go("leetcode");
+    if (!freeMode) toggleFreeMode();
   }, [mode, go, freeMode, toggleFreeMode]);
+
+  /**
+   * Picking a tab. Free mode is a tab like the rest, so picking anything
+   * else switches it off: LeetCode on the editor's own screen gets the
+   * exercises back, and any other tab leaves the editor.
+   */
+  const pickMode = useCallback(
+    (next: Mode) => {
+      if (freeMode) toggleFreeMode();
+      go(next);
+    },
+    [freeMode, toggleFreeMode, go],
+  );
 
   /**
    * Clamp every stored size against what's actually on screen right now.
@@ -1112,35 +1123,7 @@ export default function App() {
      not the other, which is the drift this whole arrangement exists to
      stop. */
   const moduleRow = (
-    <>
-      <ModeButtons mode={mode} onPick={go} />
-      <button
-        type="button"
-        className={`ws-btn row-btn${progressOpen ? " primary" : ""}`}
-        onClick={() => setProgressOpen((o) => !o)}
-        title="Skills, type-along lines, and what's due for review"
-      >
-        Progress
-      </button>
-      <button
-        type="button"
-        className={`ws-btn row-btn${freeMode ? " primary" : ""}`}
-        onClick={openFreeMode}
-        aria-pressed={freeMode}
-        title={
-          freeMode
-            ? "Leave free mode and go back to the exercises"
-            : "Code anything you like, with the exercises paused"
-        }
-      >
-        {/* The name never changes, so you look for the same word to get
-            back. It used to become "Coach on", which reads as a
-            different button and is somewhere else on the row by the
-            time you want it. The blue pressed state already says it
-            is on, so no word is added for that either. */}
-        Free mode
-      </button>
-    </>
+    <ModeButtons mode={mode} freeMode={freeMode} onPick={pickMode} onFree={openFreeMode} />
   );
 
   const refreshFreeExplanation = async () => {
@@ -1233,13 +1216,33 @@ export default function App() {
   const modeBar = (
     <>
       <div className="typing-topbar mode-bar">
-        <MomentumHud onStart={() => go("session")} />
-        <span className="ws-brand-inline">Code Coach</span>
-        <div className="panel-actions">
-          {panelLanguage}
-          <SkinPicker />
-          {moduleRow}
+        {/* The settings, on the left and apart from the tabs: the
+            language and the look change the whole app and the progress
+            panel is a place, not a mode, so none of them behaves like a
+            tab. Everything to the right is a tab, Free mode included. */}
+        <div className="mode-bar-left">
+          {/* The level and streak sit above the buttons. */}
+          <MomentumHud
+            onStart={() => pickMode("session")}
+            onGo={(id) => {
+              if (isMode(id)) pickMode(id);
+            }}
+          />
+          <div className="mode-bar-left-row">
+            {panelLanguage}
+            <SkinPicker />
+            <button
+              type="button"
+              className={`ws-btn row-btn${progressOpen ? " on" : ""}`}
+              onClick={() => setProgressOpen((o) => !o)}
+              aria-pressed={progressOpen}
+              title="Skills, type-along lines, and what's due for review"
+            >
+              Progress
+            </button>
+          </div>
         </div>
+        <div className="panel-actions mode-tabs">{moduleRow}</div>
       </div>
       {progressOpen && progress && session ? (
         <ProgressPanel

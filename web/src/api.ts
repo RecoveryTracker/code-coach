@@ -74,16 +74,45 @@ import type {
   WorkbookData,
 } from "./types";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `${res.status} ${res.statusText}`);
+/** The API restarts itself whenever a source file changes, which takes a second
+ *  or two; a read that lands in that gap would show an error for something that
+ *  works a moment later. Reads are safe to repeat, so they wait it out. */
+const READ_RETRIES = 5;
+const READ_RETRY_MS = 400;
+
+/** The same read asked for twice at once (a screen mounting twice, two effects
+ *  wanting the same list) shares one trip. The workbook alone is 4 MB, and
+ *  fetching it twice side by side made each slower than one alone. */
+const readsInFlight = new Map<string, Promise<unknown>>();
+
+function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const isRead = !init?.method || init.method.toUpperCase() === "GET";
+  if (!isRead) return send<T>(path, init, false);
+  const shared = readsInFlight.get(path);
+  if (shared) return shared as Promise<T>;
+  const trip = send<T>(path, init, true).finally(() => readsInFlight.delete(path));
+  readsInFlight.set(path, trip);
+  return trip;
+}
+
+async function send<T>(path: string, init: RequestInit | undefined, isRead: boolean): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    let res: Response | null = null;
+    try {
+      res = await fetch(path, {
+        headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+        ...init,
+      });
+    } catch (e) {
+      if (!isRead || attempt >= READ_RETRIES) throw e;
+    }
+    if (res && res.ok) return res.json() as Promise<T>;
+    if (res && (!isRead || res.status < 500 || attempt >= READ_RETRIES)) {
+      const text = await res.text();
+      throw new Error(text || `${res.status} ${res.statusText}`);
+    }
+    await new Promise((done) => window.setTimeout(done, READ_RETRY_MS));
   }
-  return res.json() as Promise<T>;
 }
 
 export function fetchSkills(): Promise<SkillInfo[]> {

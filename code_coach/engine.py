@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -149,6 +150,30 @@ def load_code(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+#: How long a PATH lookup stays believed. Asking the OS is slow on Windows (a
+#: long PATH is hundreds of directory probes per name) and the question is
+#: asked dozens of times per screen: whether a compiler exists decides which
+#: Predict puzzles and session sources are offered. A minute is short enough
+#: that installing a tool shows up without a restart.
+_WHICH_TTL = 60.0
+_which_seen: dict[str, tuple[float, str | None]] = {}
+_REAL_WHICH = shutil.which
+
+
+def _which(name: str) -> str | None:
+    """`shutil.which`, remembered for a minute (and not at all if a test has
+    replaced `shutil.which`, so patching it still works)."""
+    if shutil.which is not _REAL_WHICH:
+        return shutil.which(name)
+    now = time.monotonic()
+    hit = _which_seen.get(name)
+    if hit is not None and now - hit[0] < _WHICH_TTL:
+        return hit[1]
+    found = _REAL_WHICH(name)
+    _which_seen[name] = (now, found)
+    return found
+
+
 #: Toolchains installed for this app rather than system-wide, because
 #: this machine has no package manager and putting four more compilers on
 #: the system PATH is not a thing a learning app should do to you. PATH is
@@ -158,7 +183,7 @@ _LOCAL_TOOLCHAINS = Path.home() / "toolchains"
 
 def _tool(name: str, *candidates: str) -> str | None:
     """The path to a toolchain binary: PATH first, then our own directory."""
-    found = shutil.which(name)
+    found = _which(name)
     if found:
         return found
     for rel in candidates:
@@ -185,7 +210,7 @@ def _interpreter_for(path: Path) -> list[str] | None:
         dart = dart_path()
         return [dart, "run", str(path)] if dart else None
     if suffix in (".js", ".mjs"):
-        node = shutil.which("node")
+        node = _which("node")
         return [node, str(path)] if node else None
     if suffix == ".go":
         go = _tool("go", "go/bin/go.exe", "go/bin/go")
@@ -259,7 +284,7 @@ _COMPILERS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     #
     # This sat harmlessly wrong for as long as no clang was on PATH here —
     # C fell through to MSVC, which never saw the flag. Installing Swift
-    # put its own clang on PATH, `shutil.which("clang")` started finding
+    # put its own clang on PATH, `_which("clang")` started finding
     # it, and seventy-five C tests failed at the link step on a machine
     # where nothing about C had changed.
     ".c": (("gcc", "clang"), ("-std=c17", *(("-lm",) if _IS_POSIX else ()))),
@@ -290,12 +315,12 @@ def _find_tsc() -> Path | None:
     )
     if local.exists():
         return local
-    found = shutil.which("tsc")
+    found = _which("tsc")
     return Path(found) if found else None
 
 
 def typescript_available() -> bool:
-    return _find_tsc() is not None and shutil.which("node") is not None
+    return _find_tsc() is not None and _which("node") is not None
 
 
 def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
@@ -314,7 +339,7 @@ def _run_typescript(path: Path, timeout: float) -> tuple[str, str, int]:
     teaching something adjacent to TypeScript.
     """
     tsc = _find_tsc()
-    node = shutil.which("node")
+    node = _which("node")
     if tsc is None or node is None:
         return (
             "",
@@ -662,7 +687,7 @@ def _compile_then_run(path: Path, timeout: float) -> tuple[str, str, int]:
     """Build the source, then run what came out."""
     suffix = path.suffix.lower()
     candidates, extra = _COMPILERS[suffix]
-    compiler = next((c for c in candidates if shutil.which(c)), None)
+    compiler = next((c for c in candidates if _which(c)), None)
     if compiler is None:
         if suffix in _MSVC_STD and _find_vcvars() is not None:
             return _run_msvc(path, timeout)
@@ -723,7 +748,7 @@ def dart_path() -> str | None:
 
     Flutter carries its own Dart in bin/, so installing Flutter is enough.
     """
-    found = shutil.which("dart")
+    found = _which("dart")
     if found:
         return found
     homes = [os.environ.get("FLUTTER_ROOT", ""), *FLUTTER_HOMES]
@@ -743,7 +768,7 @@ def dart_available() -> bool:
 
 def c_available() -> bool:
     """Whether C can be compiled here: gcc or clang, or MSVC on Windows."""
-    return bool(shutil.which("gcc") or shutil.which("clang") or msvc_available())
+    return bool(_which("gcc") or _which("clang") or msvc_available())
 
 
 def if_c(items) -> tuple:

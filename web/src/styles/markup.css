@@ -75,6 +75,49 @@
   gap: 6px;
 }
 
+/* The settings: language, look, progress. On the left, apart from the tabs. */
+.mode-bar {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.mode-bar-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding-right: 12px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+.mode-bar-left-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The tabs fill the rest of the row; Free mode is the last of them. */
+.mode-bar .mode-tabs {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+@media (max-width: 760px) {
+  .mode-bar-left {
+    flex: 1 1 100%;
+    border-right: 0;
+    padding-right: 0;
+  }
+  .mode-bar .mode-tabs {
+    flex-basis: 100%;
+  }
+}
+
 /* The module you are in. Marked, not removed: a row that drops the
    current name changes width and moves every other name along with it,
    which is the opposite of being able to find a word where you last

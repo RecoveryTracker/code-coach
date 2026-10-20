@@ -422,8 +422,33 @@ def pick_quests(day: date, pool: tuple[Quest, ...] = POOL, n: int = QUESTS_PER_D
     return [q.id for q in chosen]
 
 
+#: Where each quest is done, as a mode id of the top bar (web/src/components/ModeBar.tsx),
+#: so the popover can take you there. The quests that could be met in several places
+#: ("Solve 3 things", "Earn 100 XP", "Try a mode you haven't used this week", "Use 3 different
+#: modes") go to the Session queue, which deals whatever you have done least.
+QUEST_GO: dict[str, str] = {
+    "solve3": "session",
+    "solve5": "session",
+    "brain": "brain",
+    "typing": "typing",
+    "xp100": "session",
+    "xp200": "session",
+    "newmode": "session",
+    "fix": "bughunt",
+    "read": "predict",
+    "three_modes": "session",
+    "workbook2": "workbook",
+    "build": "canvas",
+    "kata": "katas",
+    "pattern": "regex",
+    "farm_items": "farm",
+    "farm_research": "farm",
+}
+
+
 def quest_progress(ids: Iterable[str], stats: DayStats) -> list[dict[str, Any]]:
-    """Each quest as the screen shows it: label, have (capped at need), need, done."""
+    """Each quest as the screen shows it: label, have (capped at need), need, done, and
+    `go`, the mode to open to work on it."""
     out = []
     for qid in ids:
         q = POOL_BY_ID.get(qid)
@@ -431,7 +456,7 @@ def quest_progress(ids: Iterable[str], stats: DayStats) -> list[dict[str, Any]]:
             continue
         have = max(0, int(q.have(stats)))
         out.append({"id": q.id, "label": q.label, "have": min(have, q.need),
-                    "need": q.need, "done": have >= q.need})
+                    "need": q.need, "done": have >= q.need, "go": QUEST_GO.get(q.id, "session")})
     return out
 
 

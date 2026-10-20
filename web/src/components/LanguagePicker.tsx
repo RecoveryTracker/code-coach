@@ -131,7 +131,7 @@ export function LanguagePicker({ current, onChanged }: Props) {
     <div className="lang-wrap" ref={wrap}>
       <button
         type="button"
-        className={`ws-btn${open ? " primary" : ""}${busy ? " working" : ""}`}
+        className={`ws-btn${open ? " on" : ""}${busy ? " working" : ""}`}
         onClick={() => setOpen((o) => !o)}
         title="Which language the drills are written in"
       >

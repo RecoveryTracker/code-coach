@@ -7,6 +7,7 @@ FastAPI server for the Code Coach IAE.
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
@@ -162,10 +163,45 @@ from code_coach.typing.keys import (
     keyboard_payload,
 )
 
+def _warm_caches() -> None:
+    """Answer the screens that are slow the first time, once, in the background.
+
+    The workbook builds thousands of reference programs, and a few screens ask
+    the machine which compilers exist; both are remembered after the first
+    answer, so the first person to open one used to wait for all of it. Doing
+    it once right after the server starts (and again after every restart, which
+    happens whenever a source file changes) means nobody does.
+    """
+    import threading
+
+    def run() -> None:
+        for name, call in (
+            ("session", lambda: session_queue(20)),
+            ("predict", predict_list),
+            ("katas", kata_list),
+            ("magnets", magnet_list),
+            ("workbook (python)", lambda: workbook("python")),
+            ("workbook (javascript)", lambda: workbook("javascript")),
+        ):
+            try:
+                call()
+            except Exception:  # a warm-up must never stop the server
+                logging.getLogger(__name__).exception("warming %s failed", name)
+
+    threading.Thread(target=run, daemon=True, name="warm-caches").start()
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    _warm_caches()
+    yield
+
+
 app = FastAPI(
     title="Code Coach",
     description="Coach-first Integrated Agent Environment API",
     version=__version__,
+    lifespan=_lifespan,
 )
 
 app.add_middleware(

@@ -117,14 +117,9 @@
   --r-warning-soft: #33280c;
 }
 
-/* A faint violet glow along the top bar, kept to that strip for the same
-   reason as Northern Lights: never behind the code you are reading. */
-:root[data-skin="purple"] .mode-bar {
-  background:
-    radial-gradient(ellipse 70% 150% at 25% 0%, rgb(124 58 237 / 0.22), transparent 70%),
-    radial-gradient(ellipse 50% 130% at 80% 0%, rgb(196 161 255 / 0.14), transparent 70%),
-    var(--r-bg-panel);
-}
+/* The top bar is a plain panel in every theme: a faded colour wash along the
+   top (this one used to have a violet glow) is a cliche, and the bar is what
+   you navigate with, so it should be the calmest thing on the screen. */
 
 /* ── Light: the conventional daytime look ───────────────────── */
 
@@ -180,16 +175,8 @@
   --r-warning-soft: #3a2f10;
 }
 
-/* The aurora itself: green and violet light low across the top of the
-   screen, behind the bar you navigate with. Kept to that strip, because
-   a glow behind the code would be a glow behind the thing you read. */
-:root[data-skin="aurora"] .mode-bar {
-  background:
-    radial-gradient(ellipse 60% 140% at 18% 0%, rgb(108 242 184 / 0.22), transparent 70%),
-    radial-gradient(ellipse 55% 140% at 62% 0%, rgb(160 120 255 / 0.2), transparent 70%),
-    radial-gradient(ellipse 45% 120% at 92% 0%, rgb(80 220 230 / 0.16), transparent 70%),
-    var(--r-bg-panel);
-}
+/* No glow across the top bar here either (it used to be an aurora wash):
+   the colour of this theme is in its palette, not a fade behind the tabs. */
 
 /* ── Arcade: bright primaries on a sky-blue day ──────────────── */
 
