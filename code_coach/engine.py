@@ -464,6 +464,49 @@ def _strip_cl_echo(text: str, source: Path) -> str:
     return "\n".join(kept).strip()
 
 
+def _msvc_compile(
+    path: Path, obj: Path, exe: Path, timeout: float, extra: str = ""
+) -> tuple[int, str]:
+    """Build `path` into `exe` with cl.exe inside a vcvars64 session.
+
+    Returns (0, "") on success, else (the failing exit code, the diagnostics).
+    `extra` is more cl switches, placed after the language-standard ones.
+    """
+    vcvars = _find_vcvars()
+    if vcvars is None:  # pragma: no cover - callers look before they leap
+        return 127, "No Visual Studio C++ toolchain was found."
+    command = (
+        f'call "{vcvars}" >nul && '
+        f'cl /nologo /EHsc {_MSVC_STD[path.suffix.lower()]} {extra} '
+        f'"{path}" /Fo"{obj}" /Fe"{exe}"'
+    )
+    # One string, not a list: an argv list gets re-quoted on the way to
+    # cmd and the quotes around these paths come out mangled. `/s` tells
+    # cmd to strip the outer quotes and run the rest verbatim.
+    try:
+        built = subprocess.run(
+            f'cmd /s /c "{command}"',
+            capture_output=True,
+            # The one place that does NOT want UTF-8. This is the
+            # compiler talking, not the student's program, and cl
+            # writes in the console codepage — so the locale codec
+            # is the right reader here and _TEXT_OUT is not. Forcing
+            # UTF-8 on it turned four compiler messages into
+            # mojibake and clashed with the errors= already here.
+            text=True,
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return 124, f"Compiler timed out after {timeout:g}s."
+
+    if built.returncode != 0 or not exe.exists():
+        # cl reports diagnostics on stdout, so that is the error text.
+        problem = _strip_cl_echo(built.stdout, path) or built.stderr.strip()
+        return built.returncode or 1, _cap_output(problem)
+    return 0, ""
+
+
 def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
     """Compile with cl.exe inside a vcvars64 session, then run the result.
 
@@ -471,43 +514,16 @@ def _run_msvc(path: Path, timeout: float) -> tuple[str, str, int]:
     the .exe are all named absolutely; the build products land in their own
     temp directory instead of beside the source.
     """
-    vcvars = _find_vcvars()
-    if vcvars is None:  # pragma: no cover - callers look before they leap
+    if _find_vcvars() is None:  # pragma: no cover - callers look before they leap
         return "", "No Visual Studio C++ toolchain was found.", 127
 
     with tempfile.TemporaryDirectory(prefix="code-coach-msvc-") as build:
         build_dir = Path(build)
         obj = build_dir / "program.obj"
         exe = build_dir / "program.exe"
-        command = (
-            f'call "{vcvars}" >nul && '
-            f'cl /nologo /EHsc {_MSVC_STD[path.suffix.lower()]} '
-            f'"{path}" /Fo"{obj}" /Fe"{exe}"'
-        )
-        # One string, not a list: an argv list gets re-quoted on the way to
-        # cmd and the quotes around these paths come out mangled. `/s` tells
-        # cmd to strip the outer quotes and run the rest verbatim.
-        try:
-            built = subprocess.run(
-                f'cmd /s /c "{command}"',
-                capture_output=True,
-                # The one place that does NOT want UTF-8. This is the
-                # compiler talking, not the student's program, and cl
-                # writes in the console codepage — so the locale codec
-                # is the right reader here and _TEXT_OUT is not. Forcing
-                # UTF-8 on it turned four compiler messages into
-                # mojibake and clashed with the errors= already here.
-                text=True,
-                errors="replace",
-                timeout=timeout,
-            )
-        except subprocess.TimeoutExpired:
-            return "", f"Compiler timed out after {timeout:g}s.", 124
-
-        if built.returncode != 0 or not exe.exists():
-            # cl reports diagnostics on stdout, so that is the error text.
-            problem = _strip_cl_echo(built.stdout, path) or built.stderr.strip()
-            return "", _cap_output(problem), built.returncode or 1
+        code, problem = _msvc_compile(path, obj, exe, timeout)
+        if code != 0:
+            return "", problem, code
 
         # A successful build says only the file name; that is not output.
         try:
@@ -769,6 +785,48 @@ def dart_available() -> bool:
 def c_available() -> bool:
     """Whether C can be compiled here: gcc or clang, or MSVC on Windows."""
     return bool(_which("gcc") or _which("clang") or msvc_available())
+
+
+def c_toolchains() -> list[str]:
+    """The C toolchains installed, in the order a plain Run prefers them: gcc, clang, msvc."""
+    found = [name for name in ("gcc", "clang") if _which(name)]
+    if msvc_available():
+        found.append("msvc")
+    return found
+
+
+def compile_c(
+    src: Path,
+    exe: Path,
+    timeout: float,
+    *,
+    toolchain: str | None = None,
+    flags: tuple[str, ...] = (),
+) -> tuple[bool, str]:
+    """Build one C file into `exe` the way Run does, without running it.
+
+    `toolchain` is "gcc", "clang" or "msvc" (None takes the first installed, as Run
+    does). `flags` go after the standard ones - cc switches, or cl switches for msvc.
+    Returns (built, the compiler's own words: warnings on success, errors on failure).
+    The caller runs `exe` and owns the folder both live in.
+    """
+    chosen = toolchain or next(iter(c_toolchains()), None)
+    if chosen is None:
+        return False, "No C compiler is installed (gcc, clang or Visual Studio)."
+    if chosen == "msvc":
+        code, text = _msvc_compile(src, exe.with_suffix(".obj"), exe, timeout, " ".join(flags))
+        return code == 0, text
+    if not _which(chosen):
+        return False, f"{chosen} isn't on your PATH."
+    try:
+        built = subprocess.run(
+            [chosen, str(src), *_COMPILERS[".c"][1], *flags, "-o", str(exe)],
+            capture_output=True, timeout=timeout, cwd=str(src.parent), **_TEXT_OUT,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"Compiler timed out after {timeout:g}s."
+    text = _cap_output(((built.stderr or "") + (built.stdout or "")).strip())
+    return built.returncode == 0 and exe.exists(), text
 
 
 def if_c(items) -> tuple:

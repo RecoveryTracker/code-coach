@@ -278,22 +278,31 @@ code_coach/farm/
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from.
 
-## Gotchas (the "Python Quiz" feed)
+## Gotchas (the "Python Quiz" / "JavaScript Quiz" / "C Quiz" feed)
 
 Built 2026-10-19 (mode id `gotchas`, tab "Gotchas" after Session/Brain Drills in `ModeBar.tsx`, branch in
 `App.tsx`). An endless feed of trap questions, one at a time: a short program on a dark card with a
-glowing "Python Quiz" / "JavaScript Quiz" title, four answers (click, 1-4 or A-D), instant right/wrong, the
+glowing "Python Quiz" / "JavaScript Quiz" / "C Quiz" title, four answers (click, 1-4 or A-D), instant right/wrong, the
 one-line trap and a plain "Why", a **Run it** button, **Next** (Enter, Space, right arrow), a streak
-("5 in a row"), "Deck: 34/80 seen", a language switch (remembered in `code-coach:gotchas-language`, Python
-by default). It is not part of the session queue (no `lastKeys.ts` entry).
+("5 in a row"), "Deck: 34/80 seen", a language switch (Python | JavaScript | C, remembered in
+`code-coach:gotchas-language`, Python by default; C is hidden when the server says there is no compiler). It is not
+part of the session queue (no `lastKeys.ts` entry).
 
 ```text
 code_coach/gotchas/
   content_py.py / content_js.py   the built-in cards (90 Python, 72 JavaScript): id, code, answer, 3 wrong, trap, why
-  content_py2.py / content_js2.py the second helping (116 Python, 82 JavaScript = 206 / 154 in all), assembled after the
-                 first modules in `gotchas/__init__.py` (so py-score-90 and py-loop-var-list stay the first two)
-  items.py       Item; make("python") builds a card (ids are py-<slug> / js-<slug>)
-  runner.py      run_program(): the real runtime, throwaway folder, bare env, no stdin, 5 s, 64 KB
+  content_py2.py / content_js2.py the second helping (116 Python, 82 JavaScript)
+  content_py3.py / content_js3.py the third helping, 2026-10-20 (118 Python, 110 JavaScript = 324 / 264 in all): about
+                 a third are easy-looking on purpose (type, len, slices, string methods, loops, simple functions) with a
+                 real tempting wrong answer, the rest medium and hard. Later modules are assembled after the earlier ones
+                 in `gotchas/__init__.py` (so py-score-90 and py-loop-var-list stay the first two). A fourth module is one
+                 import line and one `*_PY4` / `*_JS4` in `__init__.py`; `test_there_are_enough_cards` only checks that the
+                 known modules are a prefix of the deck, so it needs no change. Some JS cards need a recent node (toSorted/with:
+                 20, Object.groupBy: 21); the oracle runs whatever `node` is on the PATH.
+  content_c.py   the C cards (116, all in one module): compiled and run for real, see "C" below
+  items.py       Item; make("python") builds a card (ids are py-<slug> / js-<slug> / c-<slug>)
+  runner.py      run_program(): the real runtime, throwaway folder, bare env, no stdin, 5 s, 64 KB; C is built
+                 first (engine.compile_c), run_twice(), available_languages(), tidy_paths()
   store.py       GotchaStore: picking, answering, the Daily 5, the user's cards; gotchas.json / gotchas_user.json
   user.py        'Add a quiz I found': run, check, build the options
 web/src/lib/gotchas.ts       streak, key map, deck line, recent ids, error text (tested in node)
@@ -302,7 +311,8 @@ web/src/components/Gotchas.tsx, GotchaAdd.tsx; styles/gotchas.css
 ```
 
 - **The oracle rule, strictly.** The answer written in `content_*.py` is never trusted: `tests/test_gotchas_content.py`
-  (it reads `DECKS`, so a new content module is covered once it is registered in `__init__.py`) runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
+  (Python and JavaScript; it reads `DECKS`, so a new content module is covered once it is registered in `__init__.py`; the C
+  cards have their own, `tests/test_gotchas_c.py`) runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
   call and fails unless stdout is exactly the marked answer; the three wrong options may not equal the real output or
   each other once whitespace is ignored; no randomness, clock, `id()`, `hash()`, input; nothing near 5 s. **A new card**:
   add `q("slug", code, answer, [3 wrong], trap, why)` (the code prints ONE line; `raises=True` makes the answer an
@@ -310,6 +320,35 @@ web/src/components/Gotchas.tsx, GotchaAdd.tsx; styles/gotchas.css
   Event-loop JS cards collect steps into an array and print once. Keep programs environment-proof (no top-level
   `var` globals, no `window`), because node runs them as CommonJS scripts. A fixed-date `Date` (`Date.UTC(...)`) is fine; `Date.now()`, `new Date()` and the word `time` are banned. A
   program is at most 16 lines and 76 columns, so wrap a long `console.log(` onto two lines.
+- **C** (added 2026-10-20). The card is a whole program (`#include`, `int main(void)`; no `return 0;` needed) that
+  is compiled and run for real. `runner.run_program("c", code)` writes `snippet.c` in a throwaway folder, builds it
+  with the engine's own C code (`engine.compile_c`: gcc, else clang, else Visual Studio via vcvars64 - the same choice
+  a workbook Run makes; `-std=c17`, no warning flags), runs the exe with the bare env/no stdin/64 KB, and deletes the
+  folder. The compile has its own 15 s ceiling (`COMPILE_SECONDS`; Visual Studio alone needs ~3 s to start) and the
+  program gets the 5 s - a deliberate softening of "5 s total". **Compiler warnings are never output** (only a failed
+  build says anything). `RunResult.compile_error` marks a failed build; `error_name("c")` is `CompileError`, `exit
+  code N` (crash or non-zero return) or `timeout`; `last_error_line` of a failed build is the compiler's first
+  `error` line, with `snippet.c` instead of the temp path. **No compiler => no C**: `gotchas.available_languages()`
+  (`engine.c_available()`, looked up on each call so a test can say there is none) is returned as `languages` by
+  `GET /api/gotchas` and `/next`; every C route (`summary/next/answer/run/user/...`) answers 400 "No C compiler..."
+  and the front end hides the C button (and falls back to Python if "c" was remembered); `user.build("c")` is a
+  refusal. The C deck is still imported (`DECKS["c"]`), only not offered. The content tests skip with the reason
+  "no C compiler (clang, gcc or Visual Studio) is installed".
+- **Writing a C card: portability is the rule.** The answer must be byte-identical on Windows MSVC, clang and Linux
+  gcc, so: no undefined behaviour (signed overflow, out-of-bounds, uninitialised reads, two modifications between
+  sequence points like `i++ + ++i`, dangling pointers, aliasing games), nothing unspecified or implementation-defined
+  (plain `char` signedness - use `unsigned char`/`uint8_t`; `sizeof(long)`; struct padding; right shift of a negative;
+  argument evaluation order - a call inside printf's arguments must be pure; `%p`; round-half cases of `%.0f`, which
+  MSVC and glibc print differently; `a > b > c` and other chains newer clang rejects), `<stdint.h>` types welcome,
+  `%zu`/`%td` fine, an `unsigned long` is cast for `%lu`/`%lX`. Assumed on purpose: ASCII, a 32-bit `int`. ONE printed
+  line; no `raises` cards. `tests/test_gotchas_c.py` builds every card with this file's own subprocess calls
+  (`-std=c11 -Wall -Wextra -pedantic`) as clang/gcc at -O0 with `-fsigned-char`, at -O2, at -O1 with
+  `-funsigned-char`, and under `-fsanitize=address,undefined -fno-sanitize-recover` (falls back to UBSan alone, or
+  skips with a reason, if the compiler cannot run sanitizers; on Windows the clang runtime dir is put on the program's
+  PATH), and with Visual Studio at `/Od` and at `/O2 /J` (all cards in ONE cmd session; one `cl` start is seconds),
+  and fails unless every build prints exactly the marked answer, the same bytes as the baseline, nothing on stderr.
+  Warnings must be in `BENIGN_WARNINGS` (the trap itself, e.g. `if (x = 0)`); `NEVER_BENIGN` (sequence points,
+  uninitialised, bounds, format...) can never be added. The whole file takes ~2 minutes.
 - **Serving** (`GotchaStore.pick`, in order): a card the user just added and not yet answered ("Yours"); the first two
   cards of a language's deck while fewer than two are seen (so `py-score-90` is the very first card); a missed card
   that is due (a miss is due 5-10 answers later; `ticks` counts answers per language); an unseen card, at random;

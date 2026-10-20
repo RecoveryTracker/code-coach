@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { deleteGotchaUser, fetchGotchaUserCards, previewGotchaUser, saveGotchaUser } from "../api";
 import type { GotchaUserForm } from "../api";
-import { LANG_LABEL, MAX_LINES, errorText, lineCount } from "../lib/gotchas";
+import { LANG_LABEL, MAX_LINES, codeLabel, errorText, lineCount } from "../lib/gotchas";
 import type { GotchaLang, GotchaSummary, GotchaUserCard, GotchaUserResult } from "../lib/gotchas";
 
 const SLOTS = 4;
@@ -20,6 +20,7 @@ const SLOTS = 4;
 const PLACEHOLDER: Record<GotchaLang, string> = {
   python: "arr = [1, 2, 3]\nfor i in arr:\n    i = i * 2\nprint(arr)",
   javascript: "const a = [1, 2, 3];\na.forEach(n => { n = n * 2; });\nconsole.log(a);",
+  c: '#include <stdio.h>\n\nint main(void) {\n    int i = 5;\n    printf("%d\\n", i++ * 2);\n}',
 };
 
 export default function GotchaAdd({
@@ -118,6 +119,9 @@ export default function GotchaAdd({
           <p className="gq-add-lead">
             Saw a good one online? Paste the {LANG_LABEL[language]} program here. It is run for real, and what it
             actually prints becomes the right answer.
+            {language === "c"
+              ? " For C that means a whole program, with its #include lines and a main, that compiles and returns 0."
+              : ""}
           </p>
 
           <label className="gq-field" htmlFor="gq-add-code">
@@ -260,7 +264,7 @@ export default function GotchaAdd({
               <ul>
                 {mine.map((c) => (
                   <li key={c.id}>
-                    <code className="gq-mine-code">{c.code.split("\n")[0].slice(0, 70)}</code>
+                    <code className="gq-mine-code">{codeLabel(c.code)}</code>
                     <span className="gq-mine-meta">
                       {c.options} options, {c.added}
                     </span>

@@ -41,7 +41,7 @@ from typing import Any, Callable
 from .items import Item
 
 VERSION = 1
-LANGUAGES = ("python", "javascript")
+LANGUAGES = ("python", "javascript", "c")
 #: A missed card comes back after this many other answers, plus up to RETURN_SPREAD more.
 RETURN_AFTER = 5
 RETURN_SPREAD = 5

@@ -6,7 +6,8 @@ this file's own subprocess call - not the app's runner - and what it printed mus
 The three wrong options must not be what it printed, nor each other, once whitespace is ignored.
 
 Cards the user adds are a different thing (tests/test_gotchas_store.py) and never reach this file: it reads
-`DECKS`, the built-in content only.
+`DECKS`, the built-in content only. The C cards are compiled, not interpreted, and held to several compilers
+and the sanitizers: that is tests/test_gotchas_c.py.
 """
 
 from __future__ import annotations
@@ -28,8 +29,10 @@ import pytest
 from code_coach.gotchas import DECKS, served_options
 from code_coach.gotchas.content_js import ITEMS as JS_ITEMS_1
 from code_coach.gotchas.content_js2 import ITEMS as JS_ITEMS_2
+from code_coach.gotchas.content_js3 import ITEMS as JS_ITEMS_3
 from code_coach.gotchas.content_py import ITEMS as PY_ITEMS_1
 from code_coach.gotchas.content_py2 import ITEMS as PY_ITEMS_2
+from code_coach.gotchas.content_py3 import ITEMS as PY_ITEMS_3
 
 #: The whole built-in deck, in the order it is served (the first modules, then the later ones).
 PY_ITEMS = DECKS["python"]
@@ -97,8 +100,11 @@ def test_there_are_enough_cards():
     assert len(PY_ITEMS) >= 60
     assert len(JS_ITEMS) >= 40
     # the deck is the modules in order, and the later modules only ever add cards after the old ones
-    assert PY_ITEMS == (*PY_ITEMS_1, *PY_ITEMS_2)
-    assert JS_ITEMS == (*JS_ITEMS_1, *JS_ITEMS_2)
+    # (a prefix check, so a fourth module can be added after these without touching this test)
+    py_known = (*PY_ITEMS_1, *PY_ITEMS_2, *PY_ITEMS_3)
+    js_known = (*JS_ITEMS_1, *JS_ITEMS_2, *JS_ITEMS_3)
+    assert PY_ITEMS[:len(py_known)] == py_known
+    assert JS_ITEMS[:len(js_known)] == js_known
     assert len(PY_ITEMS_1) >= 90 and len(JS_ITEMS_1) >= 72
 
 

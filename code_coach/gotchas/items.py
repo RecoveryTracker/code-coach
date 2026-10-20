@@ -9,7 +9,7 @@ from textwrap import dedent
 @dataclass(frozen=True)
 class Item:
     id: str
-    language: str  # "python" | "javascript"
+    language: str  # "python" | "javascript" | "c"
     code: str
     #: What the program really prints (or, with `raises`, the name of the error it dies with).
     #: Written down by hand here and never trusted: tests/test_gotchas_content.py runs the
@@ -34,13 +34,17 @@ class Item:
         return (self.answer, *self.wrong)
 
 
+#: A built-in card's id starts with its language's prefix: py-score-90, js-typeof-null, c-int-division.
+PREFIX = {"python": "py", "javascript": "js", "c": "c"}
+
+
 def make(language: str):
     """A constructor for a content module: `q = make("python")`, then `q(id, code, answer, wrong, trap, why)`."""
 
     def build(id: str, code: str, answer: str, wrong: list[str], trap: str, why: str,
               raises: bool = False) -> Item:
         return Item(
-            id=f"{'py' if language == 'python' else 'js'}-{id}",
+            id=f"{PREFIX[language]}-{id}",
             language=language,
             code=dedent(code).strip("\n"),
             answer=answer,

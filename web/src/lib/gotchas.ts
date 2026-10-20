@@ -8,11 +8,35 @@
  * only keeps the running streak itself so the counter moves the instant an answer comes back.
  */
 
-export type GotchaLang = "python" | "javascript";
+export type GotchaLang = "python" | "javascript" | "c";
 
-export const GOTCHA_LANGS: readonly GotchaLang[] = ["python", "javascript"];
+export const GOTCHA_LANGS: readonly GotchaLang[] = ["python", "javascript", "c"];
 
-export const LANG_LABEL: Record<GotchaLang, string> = { python: "Python", javascript: "JavaScript" };
+export const LANG_LABEL: Record<GotchaLang, string> = { python: "Python", javascript: "JavaScript", c: "C" };
+
+/**
+ * The languages to offer, from what the server says it can run (`languages` in /api/gotchas): C only
+ * with a compiler installed. A server that says nothing (an older one) offers Python and JavaScript;
+ * a list with something unknown in it ignores that; the order is always Python, JavaScript, C.
+ */
+export function offeredLanguages(available: readonly string[] | null | undefined): GotchaLang[] {
+  if (!available) return ["python", "javascript"];
+  const offered = GOTCHA_LANGS.filter((l) => available.includes(l));
+  return offered.length > 0 ? offered : ["python"];
+}
+
+/** The remembered language if it is on offer, else Python (a saved "c" on a machine with no compiler). */
+export function chooseLanguage(saved: string | null | undefined, offered: readonly GotchaLang[]): GotchaLang {
+  const found = offered.find((l) => l === saved);
+  return found ?? offered[0] ?? "python";
+}
+
+/** A short label for one of your own cards: its first line of code that says something (not an #include or main). */
+export function codeLabel(code: string, max = 70): string {
+  const lines = code.replace(/\r\n/g, "\n").split("\n");
+  const real = lines.find((l) => l.trim() !== "" && !/^\s*(#include\b|int\s+main\s*\()/.test(l));
+  return (real ?? lines[0] ?? "").trim().slice(0, max);
+}
 
 export type DotState = "todo" | "right" | "wrong";
 
@@ -34,6 +58,8 @@ export interface GotchaSummary {
   streak_best: number;
   daily: GotchaDaily;
   title?: string;
+  /** The languages the server can run on this machine (C only with a compiler); absent on an older server. */
+  languages?: string[];
 }
 
 /** A card as sent before answering: no answer, no trap, no explanation. */
@@ -46,6 +72,7 @@ export interface GotchaCard {
   why_picked: "new" | "again" | "review" | "yours" | "daily";
   title: string;
   summary: GotchaSummary;
+  languages?: string[];
 }
 
 export interface GotchaAnswer {
@@ -68,6 +95,8 @@ export interface GotchaRun {
   error: string;
   seconds: number;
   timed_out: boolean;
+  /** C only: the program did not build, and `error` is the compiler's words. */
+  compile_error?: boolean;
 }
 
 export interface GotchaUserCard {

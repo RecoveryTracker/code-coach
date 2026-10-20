@@ -13,12 +13,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { answerGotcha, fetchGotchaNext, runGotcha } from "../api";
+import { answerGotcha, fetchGotchaNext, fetchGotchas, runGotcha } from "../api";
 import { tokenize } from "../lib/codeColors";
 import {
-  GOTCHA_LANGS,
   LANG_LABEL,
   cardAwardKey,
+  chooseLanguage,
   dailyAwardKey,
   dailyLine,
   deckLine,
@@ -26,6 +26,7 @@ import {
   excludeParam,
   isNextKey,
   keyToIndex,
+  offeredLanguages,
   optionLetter,
   optionState,
   recentIds,
@@ -46,9 +47,11 @@ import GotchaAdd from "./GotchaAdd";
 
 const LANG_KEY = "code-coach:gotchas-language";
 
+/** The remembered language (python when nothing is saved); the server's list of offered ones decides if it can be used. */
 function savedLanguage(): GotchaLang {
   try {
-    return window.localStorage.getItem(LANG_KEY) === "javascript" ? "javascript" : "python";
+    const saved = window.localStorage.getItem(LANG_KEY);
+    return saved === "javascript" || saved === "c" ? saved : "python";
   } catch {
     return "python";
   }
@@ -136,7 +139,7 @@ function RunIt({ card }: { card: GotchaCard }) {
       {out === "down" ? <p className="gq-run-note">Could not reach the app - is the API running?</p> : null}
       {out && out !== "busy" && out !== "down" ? (
         <div className="gq-run-out" data-testid="gq-run">
-          <div className="gq-run-label">It really prints</div>
+          <div className="gq-run-label">{out.compile_error ? "The compiler says" : "It really prints"}</div>
           {out.stdout ? <pre className="gq-run-text">{out.stdout}</pre> : null}
           {out.error ? <pre className="gq-run-text err">{out.error}</pre> : null}
           {!out.stdout && !out.error ? <p className="gq-run-note">It ran and printed nothing.</p> : null}
@@ -148,6 +151,8 @@ function RunIt({ card }: { card: GotchaCard }) {
 
 export default function Gotchas() {
   const [language, setLanguage] = useState<GotchaLang>(savedLanguage);
+  // Which languages the server can run here (C only with a compiler); null until it has said.
+  const [offered, setOffered] = useState<GotchaLang[] | null>(null);
   const [card, setCard] = useState<GotchaCard | null>(null);
   const [summary, setSummary] = useState<GotchaSummary | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -191,10 +196,23 @@ export default function Gotchas() {
   }, []);
 
   useEffect(() => {
+    // Python is always there, so ask the server about it first: its answer lists what else can be offered.
+    fetchGotchas("python")
+      .then((s) => alive.current && setOffered(offeredLanguages(s.languages)))
+      .catch(() => alive.current && setOffered(offeredLanguages(undefined)));
+  }, []);
+
+  useEffect(() => {
+    if (!offered) return;
+    const usable = chooseLanguage(language, offered);
+    if (usable !== language) {
+      setLanguage(usable); // a remembered "c" on a machine with no compiler
+      return;
+    }
     recent.current = [];
     setDailyMode(false);
     void load(language, false, true);
-  }, [language, load]);
+  }, [language, offered, load]);
 
   const pickLanguage = (next: GotchaLang) => {
     if (next === language) return;
@@ -287,8 +305,8 @@ export default function Gotchas() {
           <h2>Gotchas</h2>
           <p className="gq-sub">Short programs where the obvious answer is a trap. One at a time, no end.</p>
         </div>
-        <div className="gq-lang" role="group" aria-label="Language">
-          {GOTCHA_LANGS.map((l) => (
+        <div className="gq-lang" role="group" aria-label="Language" hidden={!offered}>
+          {(offered ?? []).map((l) => (
             <button
               key={l}
               type="button"

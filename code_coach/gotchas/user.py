@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .runner import LIMIT_SECONDS, RunnerUnavailable, error_name, last_error_line, run_program
+from .runner import LIMIT_SECONDS, RunnerUnavailable, error_name, last_error_line, run_twice
 
 MAX_LINES = 60
 MAX_CODE = 4_000
@@ -129,13 +129,16 @@ def check_code(code: str) -> str:
 def run_for_truth(language: str, code: str) -> tuple[str, bool]:
     """(what it printed, whether it died with an error). Refuses anything that cannot be a fair question."""
     try:
-        first = run_program(language, code, hashseed=0)
-        if not first.timed_out:
-            second = run_program(language, code, hashseed=1)
+        first, second = run_twice(language, code)
     except RunnerUnavailable as exc:
         raise CardRefused(str(exc)) from None
+    if first.compile_error:
+        raise CardRefused(f"It does not compile ({last_error_line(first)}). Fix the program, or paste the whole "
+                          "thing - it needs a main and its #includes.")
     if first.timed_out or second.timed_out:
         raise CardRefused(f"It ran for longer than {LIMIT_SECONDS:g} seconds, so it cannot be a quick question.")
+    if language == "c" and re.search(r"\b(scanf|fscanf|getchar|getc|fgets|gets|fgetc)\s*\(", code):
+        raise CardRefused("It waits for input; a card has to run on its own.")
     if "EOFError" in first.stderr or re.search(r"\binput\s*\(", code) and language == "python":
         raise CardRefused("It waits for input; a card has to run on its own.")
     if re.search(r"\b(prompt|readline)\s*\(", code) and language == "javascript":
@@ -150,6 +153,11 @@ def run_for_truth(language: str, code: str) -> tuple[str, bool]:
             raise CardRefused("It ran but printed nothing, so there is no answer to guess. Add a print.")
         return out, False
     err = error_name(language, first)
+    if language == "c":
+        raise CardRefused(f"It ended with {err}"
+                          + (", after printing something" if first.stdout.strip() else "")
+                          + ". A C card needs a program that prints its answer and returns 0 - a crash or a "
+                          "non-zero return means the answer would differ from one system to the next.")
     if first.stdout.strip() or not err or err in ("SyntaxError", "IndentationError", "TabError"):
         raise CardRefused("It stopped with an error"
                           + (f" ({last_error_line(first)})" if last_error_line(first) else "")
