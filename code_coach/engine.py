@@ -231,7 +231,9 @@ def _interpreter_for(path: Path) -> list[str] | None:
         # initialises the SDK and takes minutes; every run after is under
         # a second, including for a file it has not seen.
         dotnet = _tool("dotnet", "dotnet/dotnet.exe", "dotnet/dotnet")
-        return [dotnet, "run", str(path)] if dotnet else None
+        # NuGetAudit off: it fetches vulnerability data over the network and, when two builds overlap,
+        # prints a NU1900 warning into the program's output.
+        return [dotnet, "run", "-p:NuGetAudit=false", str(path)] if dotnet else None
     if suffix == ".odin":
         odin = _tool("odin", "odin/dist/odin.exe", "odin/odin.exe")
         return [odin, "run", str(path), "-file"] if odin else None

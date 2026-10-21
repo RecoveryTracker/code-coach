@@ -2457,12 +2457,17 @@ def brain_result(body: BrainResultRequest) -> dict:
 def _gotcha_language(language: str) -> str:
     from code_coach import gotchas
 
+    from code_coach.gotchas import langs, runner
+
     if language not in gotchas.LANGUAGES:
         raise HTTPException(status_code=400, detail=f"Unknown language {language!r}")
     if language not in gotchas.available_languages():
-        # C is compiled for real: with no compiler on this machine there is no C quiz to offer.
-        raise HTTPException(status_code=400, detail="No C compiler is installed (gcc, clang or Visual Studio), "
-                                                    "so the C quiz is not available on this computer.")
+        lang = langs.get(language)
+        if language not in runner.available_languages():
+            # Every program is run for real: with no toolchain on this machine there is no quiz to offer.
+            raise HTTPException(status_code=400, detail=f"{lang.missing or f'No {lang.name} toolchain is installed'}"
+                                                        f", so the {lang.name} quiz is not available on this computer.")
+        raise HTTPException(status_code=400, detail=f"The {lang.name} quiz has no cards yet.")
     return language
 
 
@@ -2470,11 +2475,14 @@ def _gotcha_language(language: str) -> str:
 def gotchas_summary(language: str = "python") -> dict:
     """The deck at a glance: total, seen, right, best streak, and today's Daily 5.
 
-    `languages` is which decks this machine can offer (C only where a C compiler is installed)."""
+    `languages` is which decks this machine can offer, `[{id, name, count, title}]` in display order (a
+    language whose toolchain is missing or that has no cards yet is left out); `syntax` is every language's
+    colouring rules (keywords, comments, strings) for the browser's colourer."""
     from code_coach import gotchas
+    from code_coach.gotchas import langs
 
     return {**gotchas.STORE.summary(_gotcha_language(language)), "title": gotchas.title(language),
-            "languages": gotchas.available_languages()}
+            "languages": gotchas.languages_payload(), "syntax": langs.syntax_payload()}
 
 
 @app.get("/api/gotchas/next")
@@ -2486,7 +2494,7 @@ def gotchas_next(language: str = "python", exclude: str = "", daily: bool = Fals
     ids = {part for part in exclude.split(",") if part}
     item, why = gotchas.STORE.pick(language, ids, daily=daily)
     return {**gotchas.STORE.present(item), "why_picked": why, "title": gotchas.title(language),
-            "summary": gotchas.STORE.summary(language), "languages": gotchas.available_languages()}
+            "summary": gotchas.STORE.summary(language), "languages": gotchas.languages_payload()}
 
 
 @app.post("/api/gotchas/answer")

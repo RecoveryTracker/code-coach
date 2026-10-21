@@ -173,11 +173,11 @@ class Serving(StoreCase):
     def test_unknown_things_are_refused(self) -> None:
         s = self.store()
         with self.assertRaises(gotchas.UnknownCard):
-            s.pick("ruby")
+            s.pick("cobol")
         with self.assertRaises(gotchas.UnknownCard):
             s.answer("python", "nope", 0)
         with self.assertRaises(gotchas.UnknownCard):
-            s.answer("ruby", "t-0", 0)
+            s.answer("cobol", "t-0", 0)
         for bad in (4, -1, 99):
             with self.assertRaises(gotchas.BadChoice):
                 s.answer("python", "t-0", bad)
@@ -577,19 +577,19 @@ class Routes(unittest.TestCase):
         self.assertEqual(ran["stdout"], "sync promise timeout")
 
     def test_unknown_ids_languages_and_choices_are_400(self) -> None:
-        self.assertEqual(self.status(server.gotchas_summary, "ruby"), 400)
-        self.assertEqual(self.status(server.gotchas_next, "ruby"), 400)
+        self.assertEqual(self.status(server.gotchas_summary, "cobol"), 400)
+        self.assertEqual(self.status(server.gotchas_next, "cobol"), 400)
         self.assertEqual(self.status(server.gotchas_answer,
                                      GotchaAnswerRequest(id="nope", language="python", chosen=0)), 400)
         self.assertEqual(self.status(server.gotchas_answer,
-                                     GotchaAnswerRequest(id="py-score-90", language="ruby", chosen=0)), 400)
+                                     GotchaAnswerRequest(id="py-score-90", language="cobol", chosen=0)), 400)
         self.assertEqual(self.status(server.gotchas_answer,
                                      GotchaAnswerRequest(id="py-score-90", language="python", chosen=7)), 400)
         self.assertEqual(self.status(server.gotchas_answer,
                                      GotchaAnswerRequest(id="js-typeof-null", language="python", chosen=0)), 400)
         self.assertEqual(self.status(server.gotchas_run, GotchaRunRequest(id="nope", language="python")), 400)
         self.assertEqual(self.status(server.gotchas_user_delete, "py-score-90", "python"), 400)
-        self.assertEqual(self.status(server.gotchas_user_list, "ruby"), 400)
+        self.assertEqual(self.status(server.gotchas_user_list, "cobol"), 400)
 
     def test_a_user_card_end_to_end_with_the_polls_example(self) -> None:
         # Without options: the card has the real output and two honest misreads.
@@ -633,7 +633,7 @@ class Routes(unittest.TestCase):
 
     def test_user_refusals_are_400_with_a_reason(self) -> None:
         for body in (GotchaUserRequest(language="python", code=""),
-                     GotchaUserRequest(language="ruby", code="print(1)"),
+                     GotchaUserRequest(language="cobol", code="print(1)"),
                      GotchaUserRequest(language="python", code="x = 1"),
                      GotchaUserRequest(language="python", code="print('a')", options=["b" * 300]),
                      GotchaUserRequest(language="python", code="\n".join(["pass"] * 70))):

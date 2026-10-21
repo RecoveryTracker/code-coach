@@ -278,117 +278,197 @@ code_coach/farm/
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from.
 
-## Gotchas (the "Python Quiz" / "JavaScript Quiz" / "C Quiz" feed)
+## Gotchas (the "<Language> Quiz" feed: 19 languages)
 
-Built 2026-10-19 (mode id `gotchas`, tab "Gotchas" after Session/Brain Drills in `ModeBar.tsx`, branch in
-`App.tsx`). An endless feed of trap questions, one at a time: a short program on a dark card with a
-glowing "Python Quiz" / "JavaScript Quiz" / "C Quiz" title, four answers (click, 1-4 or A-D), instant right/wrong, the
-one-line trap and a plain "Why", a **Run it** button, **Next** (Enter, Space, right arrow), a streak
-("5 in a row"), "Deck: 34/80 seen", a language switch (Python | JavaScript | C, remembered in
-`code-coach:gotchas-language`, Python by default; C is hidden when the server says there is no compiler). It is not
-part of the session queue (no `lastKeys.ts` entry).
+Built 2026-10-19 for Python, JavaScript and C; opened to every language the app can run on 2026-10-20 (mode id
+`gotchas`, tab "Gotchas" after Session/Brain Drills in `ModeBar.tsx`, branch in `App.tsx`). An endless feed of trap
+questions, one at a time: a short program on a dark card with a glowing "Rust Quiz" title in the language's own
+accent colour, four answers (click, 1-4 or A-D), instant right/wrong, the one-line trap and a plain "Why", a **Run
+it** button, **Next** (Enter, Space, right arrow), a streak ("5 in a row"), "Deck: 34/80 seen", and a language
+switch (see "The picker"). It is not part of the session queue (no `lastKeys.ts` entry).
 
 ```text
 code_coach/gotchas/
-  content_py.py / content_js.py   the built-in cards (90 Python, 72 JavaScript): id, code, answer, 3 wrong, trap, why
-  content_py2.py / content_js2.py the second helping (116 Python, 82 JavaScript)
-  content_py3.py / content_js3.py the third helping, 2026-10-20 (118 Python, 110 JavaScript = 324 / 264 in all): about
-                 a third are easy-looking on purpose (type, len, slices, string methods, loops, simple functions) with a
-                 real tempting wrong answer, the rest medium and hard. Later modules are assembled after the earlier ones
-                 in `gotchas/__init__.py` (so py-score-90 and py-loop-var-list stay the first two). A fourth module is one
-                 import line and one `*_PY4` / `*_JS4` in `__init__.py`; `test_there_are_enough_cards` only checks that the
-                 known modules are a prefix of the deck, so it needs no change. Some JS cards need a recent node (toSorted/with:
-                 20, Object.groupBy: 21); the oracle runs whatever `node` is on the PATH.
-  content_c.py   the C cards (116, all in one module): compiled and run for real, see "C" below
-  items.py       Item; make("python") builds a card (ids are py-<slug> / js-<slug> / c-<slug>)
-  runner.py      run_program(): the real runtime, throwaway folder, bare env, no stdin, 5 s, 64 KB; C is built
-                 first (engine.compile_c), run_twice(), available_languages(), tidy_paths()
+  langs.py       THE REGISTRY: one Lang per language (see below) + Syntax for the colourer
+  toolchains.py  how to build and run one program per language (engine's toolchain lookup) + availability probes
+  runner.py      run_program()/run_twice(): throwaway folder, bare env, no stdin, 5 s run, 15 s build, 64 KB
+  __init__.py    DECKS, found BY NAME: content_<stem>, content_<stem>2, 3...; available_languages(), languages_payload()
+  content_*.py   the cards. python=content_py/py2/py3 (324), javascript=content_js/js2/js3 (264), c=content_c (116);
+                 every other language is content_<id>.py (+ content_<id>2.py...) - 3 seed cards each so far
+  items.py       Item; make("rust") builds a card (ids are <prefix>-<slug>: py-, js-, c-, cpp-, rs-, cs-, kt-...)
   store.py       GotchaStore: picking, answering, the Daily 5, the user's cards; gotchas.json / gotchas_user.json
-  user.py        'Add a quiz I found': run, check, build the options
-web/src/lib/gotchas.ts       streak, key map, deck line, recent ids, error text (tested in node)
-web/src/lib/codeColors.ts    the tiny syntax colourer (runs join back into the source)
-web/src/components/Gotchas.tsx, GotchaAdd.tsx; styles/gotchas.css
+  user.py        'Add a quiz I found': run, check, build the options (any language)
+web/src/lib/gotchas.ts          streak, keys, deck line, language choosing (quick buttons, filter, arrows), accent hue
+web/src/lib/codeColors.ts       the syntax colourer; knows no language by name, takes the server's Syntax
+web/src/components/Gotchas.tsx, GotchaLangMenu.tsx, GotchaAdd.tsx; styles/gotchas.css
+tests/test_gotchas_langs.py     the one parametrised file: registry, loader, shape of every card, the oracle, routes
 ```
 
-- **The oracle rule, strictly.** The answer written in `content_*.py` is never trusted: `tests/test_gotchas_content.py`
-  (Python and JavaScript; it reads `DECKS`, so a new content module is covered once it is registered in `__init__.py`; the C
-  cards have their own, `tests/test_gotchas_c.py`) runs every card in the real interpreter (python with three `PYTHONHASHSEED`s, node twice) with its own subprocess
-  call and fails unless stdout is exactly the marked answer; the three wrong options may not equal the real output or
-  each other once whitespace is ignored; no randomness, clock, `id()`, `hash()`, input; nothing near 5 s. **A new card**:
-  add `q("slug", code, answer, [3 wrong], trap, why)` (the code prints ONE line; `raises=True` makes the answer an
-  error name and the program must print nothing first), run the test, and make the wrong options real misreads.
-  Event-loop JS cards collect steps into an array and print once. Keep programs environment-proof (no top-level
-  `var` globals, no `window`), because node runs them as CommonJS scripts. A fixed-date `Date` (`Date.UTC(...)`) is fine; `Date.now()`, `new Date()` and the word `time` are banned. A
-  program is at most 16 lines and 76 columns, so wrap a long `console.log(` onto two lines.
-- **C** (added 2026-10-20). The card is a whole program (`#include`, `int main(void)`; no `return 0;` needed) that
-  is compiled and run for real. `runner.run_program("c", code)` writes `snippet.c` in a throwaway folder, builds it
-  with the engine's own C code (`engine.compile_c`: gcc, else clang, else Visual Studio via vcvars64 - the same choice
-  a workbook Run makes; `-std=c17`, no warning flags), runs the exe with the bare env/no stdin/64 KB, and deletes the
-  folder. The compile has its own 15 s ceiling (`COMPILE_SECONDS`; Visual Studio alone needs ~3 s to start) and the
-  program gets the 5 s - a deliberate softening of "5 s total". **Compiler warnings are never output** (only a failed
-  build says anything). `RunResult.compile_error` marks a failed build; `error_name("c")` is `CompileError`, `exit
-  code N` (crash or non-zero return) or `timeout`; `last_error_line` of a failed build is the compiler's first
-  `error` line, with `snippet.c` instead of the temp path. **No compiler => no C**: `gotchas.available_languages()`
-  (`engine.c_available()`, looked up on each call so a test can say there is none) is returned as `languages` by
-  `GET /api/gotchas` and `/next`; every C route (`summary/next/answer/run/user/...`) answers 400 "No C compiler..."
-  and the front end hides the C button (and falls back to Python if "c" was remembered); `user.build("c")` is a
-  refusal. The C deck is still imported (`DECKS["c"]`), only not offered. The content tests skip with the reason
-  "no C compiler (clang, gcc or Visual Studio) is installed".
-- **Writing a C card: portability is the rule.** The answer must be byte-identical on Windows MSVC, clang and Linux
-  gcc, so: no undefined behaviour (signed overflow, out-of-bounds, uninitialised reads, two modifications between
-  sequence points like `i++ + ++i`, dangling pointers, aliasing games), nothing unspecified or implementation-defined
-  (plain `char` signedness - use `unsigned char`/`uint8_t`; `sizeof(long)`; struct padding; right shift of a negative;
-  argument evaluation order - a call inside printf's arguments must be pure; `%p`; round-half cases of `%.0f`, which
-  MSVC and glibc print differently; `a > b > c` and other chains newer clang rejects), `<stdint.h>` types welcome,
-  `%zu`/`%td` fine, an `unsigned long` is cast for `%lu`/`%lX`. Assumed on purpose: ASCII, a 32-bit `int`. ONE printed
-  line; no `raises` cards. `tests/test_gotchas_c.py` builds every card with this file's own subprocess calls
-  (`-std=c11 -Wall -Wextra -pedantic`) as clang/gcc at -O0 with `-fsigned-char`, at -O2, at -O1 with
-  `-funsigned-char`, and under `-fsanitize=address,undefined -fno-sanitize-recover` (falls back to UBSan alone, or
-  skips with a reason, if the compiler cannot run sanitizers; on Windows the clang runtime dir is put on the program's
-  PATH), and with Visual Studio at `/Od` and at `/O2 /J` (all cards in ONE cmd session; one `cl` start is seconds),
-  and fails unless every build prints exactly the marked answer, the same bytes as the baseline, nothing on stderr.
-  Warnings must be in `BENIGN_WARNINGS` (the trap itself, e.g. `if (x = 0)`); `NEVER_BENIGN` (sequence points,
-  uninitialised, bounds, format...) can never be added. The whole file takes ~2 minutes.
+### The registry (`gotchas/langs.py`)
+
+`LANGS` is the display order: Python, JavaScript, TypeScript, C, C++, Java, C#, Go, Rust, Dart, Kotlin, Swift, Ruby,
+PHP, Lua, Zig, Odin, Common Lisp, SQL (SQLite). Each `Lang` has: `id`, `name`, `title` ("Rust Quiz"), `prefix` (card id
+prefix), `ext`, `module` (the content file stem when it is not the id: python `py`, javascript `js`), `syntax` (keyword,
+type and constant sets, comment and string syntax; served to the browser in `/api/gotchas`), `banned` (regex + reason
+pairs: patterns a built-in card may not contain, so the answer is the same on every machine and every run), `check`
+(a free-form extra test, e.g. Go: ranging over a map needs a sort), `notes` (one paragraph of portability advice for card
+writers - read it before writing a deck), `reads_input` (a regex for stdin reads, refused in user cards), `raises`
+(whether a card may end in an uncaught error: Python and JavaScript only), `output_on_stderr` (Zig: `std.debug.print`
+writes to stderr, so on a clean exit the runner reports stderr as the output) and `missing` (the words for a missing
+toolchain). `toolchains.available(id)` is the probe: it rides on the engine's cached PATH lookups (`engine._which`, 60 s),
+so a language whose toolchain is missing is simply not offered.
+
+### How a language is run (`toolchains.plan`)
+
+`runner.run_program(language, code)` writes `snippet.<ext>` in a throwaway folder, builds it if the language builds
+(15 s ceiling), runs it (5 s, stdin closed, 64 KB, killed as a tree on a timeout) and deletes the folder. Python and
+JavaScript are run straight away; C is `engine.compile_c` (gcc, clang or Visual Studio); C++ and Rust use the engine's
+`_COMPILERS` (C++ falls back to MSVC); TypeScript is `tsc --strict` then node; Kotlin is `kotlinc` then `java -cp`; Swift
+is `swiftc` then the exe with the Swift runtime on PATH; Go, Zig and Odin are built (`go build`, `zig build-exe`, `odin
+build`) and the exe run; Ruby, PHP and Lua are run by the engine's interpreter; SQL is a tiny driver script on `sqlite3`
+that prints the rows of the LAST SELECT on one line (`a|b` per row, rows joined by `; `, NULL as NULL). Java (`java
+Main.java`), C# (`dotnet run file.cs`), Dart (`dart run`) and Lisp (ABCL) compile inside the run command: those are
+`Plan.one_step`, and the 5 s clock gets the 15 s build allowance on top (the test allows 9 s). **Environments**: the program
+gets `child_env()` (SYSTEMROOT, TEMP, TMP only); the one-step tools and the interpreters that need to find their install
+get a whitelist (`_TOOL_KEYS`: PATH, USERPROFILE, LOCALAPPDATA... never keys or tokens), with TEMP pointed into the folder
+so what they leave is deleted with it; compilers get the machine's own environment (they need it). Compiler warnings are
+never output; a failed build is `compile_error` with `snippet.rs:3:5: error...` (temp paths tidied) and its first error is
+what a refusal quotes. **No toolchain => not offered**: `gotchas.available_languages()` is the registry languages whose
+probe says yes AND that have at least one card; `/api/gotchas` and `/next` return them as `languages: [{id, name,
+count, title}]` (display order); every route answers 400 "No Go toolchain is installed, so the Go quiz is not available on
+this computer." (or "...has no cards yet.") for the rest, and the cards are still imported (`DECKS`), just not offered.
+
+### Adding a deck (what a content author does)
+
+Create `code_coach/gotchas/content_<id>.py` (or `content_<id>2.py`, `3`... for more) exposing `ITEMS`, written like the
+existing ones (`q = make("<id>")`, then `q("slug", code, answer, [3 wrong], trap, why)`). **Touch nothing else**: the loader
+finds the file by name, `__init__.py`, the registry and the tests need no edit. Cards are served in file order, so the first two
+of a language's first module are what a new player meets first (`py-score-90`, `py-loop-var-list`, `c-int-division`,
+`c-modulo-negative` stay first). Then run `pytest tests/test_gotchas_langs.py -k "<id>-deck"` (the test ids are `<id>-deck`,
+so `-k rust-deck` runs just Rust; for the short ids use `-k "c-deck"` / `"go-deck"`): it checks the shape (unique ids with the
+language's prefix, 16 lines and 76 columns at most, three distinct wrong options once whitespace is ignored, one-line
+options, a trap of 100 characters at most and a 1-4 sentence why, no banned patterns from the registry, no
+address-like answers) and then **runs every card for real** with the workbook's own runner (`engine.run_code`, a different code
+path from the quiz's), and again with the quiz's runner (one build, two runs: same output, under 5 s). A module that fails
+to import is skipped, recorded in `gotchas.LOAD_ERRORS` and fails `test_every_content_module_imports_cleanly` - it never takes
+the app down. A language with no cards yet is skipped by the tests ("no <X> cards yet") and not offered; one whose toolchain
+is not installed is skipped with the toolchain named. Python, JavaScript and C keep their own exhaustive oracles
+(`test_gotchas_content.py`, and `test_gotchas_c.py` for the compilers/sanitizers); the generic file only samples them.
+A language's `BANNED` list is the portability idea: make the answer the same on every machine and every run (no clock,
+randomness, input, addresses, hash or map/set iteration order, unspecified evaluation order); when a card trips
+one, change the card, never the list (unless the pattern is simply wrong).
+
+### The cards
+
+- **The oracle rule, strictly.** The answer written in `content_*.py` is never trusted: the tests run every card in the
+  real toolchain and fail unless stdout is exactly the marked answer (Python: three hash seeds; the rest: the workbook runner
+  once and the quiz runner twice from one build). **A new card**: `q("slug", code, answer, [3 wrong], trap, why)` - the code
+  prints ONE line (`raises=True`, Python and JavaScript only, makes the answer an error name and the program must print
+  nothing first); make the wrong options real misreads. Event-loop JS cards collect steps into an array and print once; keep JS
+  environment-proof (no top-level `var`, no `window`). A program is at most 16 lines and 76 columns.
+- **C**: the card is a whole program, compiled and run for real. `tests/test_gotchas_c.py` builds every card with this
+  file's own subprocess calls (`-std=c11 -Wall -Wextra -pedantic`) as clang/gcc at -O0 with `-fsigned-char`, at -O2, at -O1 with
+  `-funsigned-char`, under `-fsanitize=address,undefined`, and with Visual Studio at `/Od` and `/O2 /J`, and fails unless
+  every build prints exactly the marked answer, the same bytes as the baseline, nothing on stderr; warnings must be in
+  `BENIGN_WARNINGS` (never `NEVER_BENIGN`). Portable C only: no undefined behaviour, nothing implementation-defined (plain
+  `char`, `sizeof(long)`, `%p`, `%.0f` half cases, argument evaluation order). About 2 minutes.
+- **Seeds written while proving the runners** (3 each; extend them): TypeScript, C++, Java, C#, Go, Rust, Dart, Kotlin,
+  Swift, Ruby, PHP, Lua, Zig, Odin, Lisp, SQL. Traps found on the way are in each `Lang.notes`: Lua `print(a, b)` is
+  tab-separated; Zig prints to stderr; Swift `import Foundation` costs ~90 s the first time; TypeScript's lib is ES2020;
+  Odin refuses an untyped 1e21; Go loop variables are per-iteration; Rust prints floats without exponents.
 - **Serving** (`GotchaStore.pick`, in order): a card the user just added and not yet answered ("Yours"); the first two
-  cards of a language's deck while fewer than two are seen (so `py-score-90` is the very first card); a missed card
-  that is due (a miss is due 5-10 answers later; `ticks` counts answers per language); an unseen card, at random;
-  otherwise the card seen longest ago. `exclude` (the last 3 ids the client saw) is honoured unless it would leave
-  nothing. `/api/gotchas/next` never carries the answer, the trap or the why - `present()` sends code and four
-  options; `POST /api/gotchas/answer {id, language, chosen}` (chosen = index as shown) returns them. Options are
-  shuffled deterministically: a built-in card's right letter comes from a block-wise balanced shuffle (every four
-  consecutive cards use A-D once); options that are themselves A, B, C, D stay in order. Unknown id / language /
-  chosen is 400.
+  cards of a language's deck while fewer than two are seen; a missed card that is due (5-10 answers later; `ticks` counts
+  answers per language); an unseen card, at random; otherwise the card seen longest ago. `exclude` (the last 3 ids the client
+  saw) is honoured unless it would leave nothing. `/api/gotchas/next` never carries the answer, the trap or the why;
+  `POST /api/gotchas/answer {id, language, chosen}` returns them. Options are shuffled deterministically: a built-in card's
+  right letter comes from a block-wise balanced shuffle (every four consecutive cards use A-D once) - the balance tests only
+  look at decks of 40+ cards. Unknown id / language / chosen is 400.
 - **Files** beside the progress file, written with Momentum's atomic writer and read with `momentum.engine.read_state`
-  (a broken file is kept as `.bad`): `gotchas.json` (per-card `seen/right/last_day/last_tick/due`, per-language
-  `ticks`, streak now/best, today's Daily 5) and `gotchas_user.json`. Nothing goes into the progress file's schema.
-- **Run it** is `POST /api/gotchas/run {id, language}`, not `/api/visualize`: the JavaScript tracer cannot run
-  anything that uses timers or promises (the event-loop cards), so the card's own program runs through `runner.py`
-  (the same runner that checks a user's card). It takes a card id, never arbitrary code.
-- **Daily 5**: five cards per language and calendar day, seeded by date+language, weighted missed 4 / unseen 3 /
-  right 1, made on the first request of the day from the record as it stood then and **kept in `gotchas.json`**, so the
-  set is the same all day. Any first answer to one of the five (from the Daily card or the plain feed) fills its dot;
-  the answer that fills the fifth says `just_completed`. The top card shows the five dots and "Done today".
+  (a broken file is kept as `.bad`): `gotchas.json` (per-card `seen/right/last_day/last_tick/due`, per-language `ticks`,
+  streak now/best, today's Daily 5, **all keyed by language id and created lazily**, so an old file keeps loading and a
+  new language starts empty) and `gotchas_user.json`. Nothing goes into the progress file's schema.
+- **Run it** is `POST /api/gotchas/run {id, language}`, not `/api/visualize`: the card's own program runs through
+  `runner.py` (the same runner that checks a user's card). It takes a card id, never arbitrary code.
+- **Daily 5**: five cards per language and calendar day (fewer if the deck is smaller), seeded by date+language, weighted
+  missed 4 / unseen 3 / right 1, made on the first request of the day and **kept in `gotchas.json`**. Any first answer to
+  one of the five fills its dot; the answer that fills the last says `just_completed`.
 - **Add a quiz I found** (`/api/gotchas/user`: GET list, POST create, POST `/preview`, DELETE `/{id}`; 400 on a refusal
-  with the reason in words): the user pastes code (<= 60 lines), optionally types up to 4 options and picks the one
-  they think is right. The server runs the code **twice** (different hash seeds) and takes the real stdout as the
-  truth; it refuses empty, too long, over 5 s, waiting for input, different output per run, nothing printed, a crash
-  after printing, a syntax error, or more than 10 lines / 300 chars of output. The real output is always the right
-  option; typed options that match it are kept as the right one, the rest are misreads; if none match the card says so
-  ("None of the options you typed match what it actually prints.") and the real output is added (replacing the
-  guessed option when all four slots were typed). Blank slots are filled only by `generate_distractors` (the same
-  list/tuple/dict with the last or first item dropped, a boolean flipped, an int off by one, only the first line,
-  one token fewer); no generator, or only one option => it asks for one more option instead of inventing junk
-  (minimum 2 options). Cards are served in the same feed with a "Yours" badge, first right after adding, and can be
-  deleted. Everything is typed or pasted; nothing is fetched from anywhere.
-- **Momentum**: `gotcha` (12 XP, `award("gotcha", cardAwardKey(...))` = key `gotcha:<language>:<id>`, once a day per
-  card, on each right answer only) and `gotcha_daily` (30 XP, key `daily:<language>:<date>`, when the fifth card is
-  answered). Both are in `rules.XP`, so the static kind test covers them.
+  with the reason in words), for every language: the user pastes code (<= 60 lines), optionally types up to 4 options and
+  picks the one they think is right. The server runs it **twice** and takes the real stdout as the truth; it refuses empty,
+  too long, over 5 s, waiting for input (the language's `reads_input`), different output per run, nothing printed, a
+  crash or non-zero exit (every language but Python and JavaScript, whose cards may be error cards), a syntax error, more
+  than 10 lines / 300 chars of output - and a program that does not compile, quoting the compiler's first error. Typed options
+  that match the real output are kept as the right one, the rest are misreads; blank slots are filled only by
+  `generate_distractors`. Cards are served with a "Yours" badge, first right after adding, and can be deleted.
+- **Momentum**: `gotcha` (12 XP, key `gotcha:<language>:<id>`, once a day per card, on each right answer only) and
+  `gotcha_daily` (30 XP, key `daily:<language>:<date>`). The key is any string (`rules.clean_key`, 200 characters), so a
+  new language needs nothing; `tests/test_gotchas_langs.py` pays one for a new language.
+
+### The picker and the look
+
+- **The picker** (`GotchaLangMenu.tsx`; the rules are pure functions in `lib/gotchas.ts`, tested in node): up to 4 quick
+  buttons - the language on screen, then the last-used ones (`code-coach:gotchas-recent`), topped up with Python, JavaScript...
+  - always shown in registry order so nothing jumps; plus **More** (an accent outline and the `on` class while its menu is
+  open) listing every available language with its card count. The menu has a search box that filters as you type (names and
+  ids that start with the text first, then ones that contain it), arrow keys / Home / End, Enter to pick, Escape to close
+  (focus goes back to More) and closes on an outside click; `aria-activedescendant` keeps the focus in the search box. The
+  choice is remembered in `code-coach:gotchas-language`; an id the server does not offer falls back to Python (the saved
+  value is kept, so the language is back when its toolchain is). At 375 px the buttons wrap inside the pill and the menu is
+  full width; the page never scrolls sideways.
+- **Accent**: each card gets `--gq-accent` from `accentStyle(language)`: Python, JavaScript and C keep their old colours,
+  every other language a hue from a salted hash of its id at fixed saturation and lightness (`ACCENT_S/L`), which
+  `tests/test_gotchas_ts.py` holds to 4.5:1 on the card at EVERY hue, and to at least 5 degrees apart for the registry.
+- **Colouring** (`lib/codeColors.ts`): `tokenize(code, syntax)`; every character ends up in exactly one run, so the runs
+  join back into the source (tested for every card of every language, and for an odd string under every language's rules).
+  Rust lifetimes and Lisp quotes are not strings (`charLiterals`), Lua's `--[[ ]]`, Lisp's `#| |#`, SQL's keywords in any case, Go's
+  raw strings, `println!` macros and C-family `#directives` are handled by the data, not by name.
 - **Look / accessibility**: the code is real text in a `<pre>`; token colours and card text are held to 4.5:1 by
   `tests/test_gotchas_ts.py`; right/wrong also carry a mark and screen-reader text; all motion is CSS and off under
   `prefers-reduced-motion`. At 375 px the page does not scroll sideways; only the code scrolls, inside the card.
-- **Testing by hand**: use the sandbox copy (see Momentum). Drive it with synthetic `keydown` events on `document.body`
-  from the console for volume (the card carries `data-card-id`); `form_input` turns `[1, 2]` into `1,2`, so fill option
-  fields through the native value setter instead.
+- **Testing by hand**: use the sandbox copy (see Momentum), and note this machine's extra toolchains live in
+  `~/toolchains` and the rust proxy in `~/.cargo`: with `USERPROFILE` redirected, make a junction
+  (`New-Item -ItemType Junction -Path <temp home>\toolchains -Target C:\Users\Justin\toolchains`) and set `RUSTUP_HOME`
+  and `CARGO_HOME` to the real ones, or those languages vanish from the menu (which is also the quickest way to check an
+  unavailable language is hidden: delete the junction - only the junction - and restart the sandbox API). Drive it with synthetic
+  `keydown` events on `document.body` for volume (the card carries `data-card-id`); `form_input` turns `[1, 2]` into
+  `1,2`, so fill option fields through the native value setter instead. The hidden browser pane renders a beat late:
+  read state with JavaScript rather than trusting the first screenshot.
+
+### What card writers learned the hard way (per language)
+
+Each deck was written against the real toolchain and the oracle caught these; they are not in `langs.py` notes.
+- **Every language:** the harness `strip()`s output and compares the answer stripped, so an answer cannot start or end
+  with spaces (start a padding card with a visible character such as `[` or `|`); wrong options are compared after
+  collapsing whitespace, so options that differ only in spacing are rejected.
+- **TypeScript:** library is ES2020 with no node typings; `NaN == NaN`, `+null` and `switch (2) { case 1: }` are
+  `--strict` compile errors. **Java:** the launcher runs the first class in the file (helpers go nested or after `Main`);
+  use `Locale.ROOT` in `String.format`. **Go:** `fmt` prints maps sorted (printing a whole map is safe); recent-Go
+  features (`min`/`max`, `range N`, range-over-func) are fine on the registry's Go. **Rust:** avoid iterator-consumption
+  cards on `zip` over ranges (std-specialised, version dependent).
+- **C++:** clang errors on chained comparisons (`a > b > c`); `time` is banned even in a comment or string.
+  **C#:** any compiler warning (nullable CS86xx, unused variable) lands in stdout and breaks the card, so cards build
+  warning-free (`string?`); print doubles with `FormattableString.Invariant($"...")`; `cond ? 'a' : 0` types as `int`;
+  two concurrent `dotnet run` builds can print an NU1900 warning (a flake, not a card problem). **Kotlin:** `List` is
+  covariant, `listOf(a) + listOf(3)` appends an element when it type-checks. **Swift:** never import Foundation (a ~90 s
+  first build); `Set`/`Dictionary`/`.keys`/`.values` and any `[digits : x]` pattern trip the ban; `lazy` collections can
+  re-run closures on subscripting (use `first(where:)`); string ordering is by Unicode scalars.
+- **Ruby 4.0:** `1e15.to_s` is `"1.0e+15"` (stay away from that boundary); `Hash#inspect` and `Set#inspect` changed in
+  recent versions, so do not print them with `inspect`. **PHP 8.5:** warnings and deprecations print to **stdout** with the
+  temp path, so a card that triggers one fails (`"a"++`, a multi-character string-offset write, `null` as an array offset,
+  `${var}`, fractional float keys, `%` on floats, a bool-returning `usort` callback); skip version-dependent behaviour
+  (`round()` changed in 8.4, `range("1","3")`, negative array keys); `echo` uses `precision=14`, `json_encode` the shortest
+  round trip; no `mbstring`. **Lua 5.4:** a string operand in a bitwise op is an error; print a comparison instead of
+  `inf`/`nan`; runtime errors carry the script path. **Dart:** `e.runtimeType` of a `TypeError` is the private
+  `_TypeError` (use `e is TypeError`); `Future.catchError` throws if the handler's type does not match (use `.then<int>`).
+- **Zig:** literal-only arithmetic is folded at compile time (overflow, division, `if` on constants become compile errors),
+  so pass values through parameters or a mutated `var`; `{d:.N}` rounds the shortest decimal half up (pin it to a value
+  like 0.16); `var x: T = undefined;` and the word `args` are banned; build a `const out = .{...}` to stay within 76
+  columns. **Odin:** `[dynamic]int{1,2}` needs `#+feature dynamic-literals` (use `make` + `append`); do not print
+  non-ASCII; `%5.2f` zero-pads; a whole-number float prints without `.0`; literal-bound `4..<0` and `~5` on an untyped
+  constant are compile errors. **Lisp (ABCL):** `loop ... maximize` over nothing, fresh-binding-per-iteration closures and
+  `sort` on a list are implementation-dependent; use `format t` (`print` emits a leading newline). **SQL (SQLite):**
+  statements are split on `;` (none inside a string literal); `strftime` with fixed literals is the date route; always
+  `ORDER BY` unless the result is one row.
 
 ## Momentum (one sense of progress across every mode)
 

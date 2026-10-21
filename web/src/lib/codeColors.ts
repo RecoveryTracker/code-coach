@@ -2,9 +2,14 @@
  * A tiny syntax colourer for the short programs on a Gotchas card.
  *
  * Not a parser: it cuts source text into runs a stylesheet can colour (comments, strings, numbers,
- * keywords, the constants True/None/null, C's types and #preprocessor lines, names being called), and every character of the input ends
- * up in exactly one run, so joining the runs gives the source back. The card renders the runs as real
- * text in a <pre>, so the code can still be selected, read by a screen reader and copied.
+ * keywords, constants like True/None/null, type names, #preprocessor lines, names being called), and every
+ * character of the input ends up in exactly one run, so joining the runs gives the source back. The card
+ * renders the runs as real text in a <pre>, so the code can still be selected, read by a screen reader and
+ * copied.
+ *
+ * It knows no language by name. What a language looks like (its keyword and type sets, its comment and
+ * string syntax) is a `Syntax`, which the server sends with /api/gotchas (it is the registry in
+ * code_coach/gotchas/langs.py), so adding a language never touches this file.
  */
 
 export type Kind =
@@ -25,43 +30,81 @@ export interface Run {
   kind: Kind;
 }
 
-const PY_KEYWORDS = new Set(
-  ("and as assert async await break class continue def del elif else except finally for from global if import "
-    + "in is lambda nonlocal not or pass raise return try while with yield").split(" "),
-);
-const PY_CONSTS = new Set(["True", "False", "None"]);
-const JS_KEYWORDS = new Set(
-  ("async await break case catch class const continue default delete do else export extends finally for from "
-    + "function if import in instanceof let new of return static super switch this throw try typeof var void "
-    + "while with yield").split(" "),
-);
-const JS_CONSTS = new Set(["true", "false", "null", "undefined", "NaN", "Infinity"]);
+/** One language's colouring rules, as the server sends them. */
+export interface Syntax {
+  keywords: string[];
+  types: string[];
+  consts: string[];
+  /** What starts a comment that runs to the end of the line ("#", "//", "--", ";"). */
+  line: string[];
+  /** [open, close] pairs of comments that can span lines. */
+  block: string[][];
+  /** Characters that open a string; a backtick string may span lines. */
+  quotes: string;
+  /** Triple-quoted strings. */
+  triple: boolean;
+  /** Python's string prefixes (f"..", rb'..'). */
+  prefixes: boolean;
+  /** Lines starting with # are directives (#include, #define). */
+  directives: boolean;
+  /** A ' opens a string only when it closes within a few characters ('a', '\n'): Rust lifetimes, Lisp quote. */
+  charLiterals: boolean;
+  ignoreCase: boolean;
+  /** Lisp reading: a word runs to a space, bracket, quote or comment. */
+  lisp: boolean;
+}
 
-const C_KEYWORDS = new Set(
-  ("auto break case const continue default do else enum extern for goto if inline register restrict return "
-    + "sizeof static struct switch typedef union volatile while").split(" "),
-);
-const C_TYPES = new Set(
-  ("void char short int long float double signed unsigned bool _Bool size_t ssize_t ptrdiff_t FILE "
-    + "int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t intptr_t uintptr_t intmax_t uintmax_t").split(" "),
-);
-const C_CONSTS = new Set(["NULL", "true", "false", "EOF", "UINT_MAX", "INT_MAX", "INT_MIN", "CHAR_BIT"]);
+/** What an unknown language reads as: strings, numbers, // and # comments, no names coloured. */
+export const PLAIN_SYNTAX: Syntax = {
+  keywords: [],
+  types: [],
+  consts: [],
+  line: ["//", "#"],
+  block: [["/*", "*/"]],
+  quotes: "\"'",
+  triple: false,
+  prefixes: false,
+  directives: false,
+  charLiterals: false,
+  ignoreCase: false,
+  lisp: false,
+};
+
+interface Compiled {
+  syntax: Syntax;
+  keywords: Set<string>;
+  types: Set<string>;
+  consts: Set<string>;
+}
+
+const compiled = new WeakMap<Syntax, Compiled>();
+
+function compile(syntax: Syntax): Compiled {
+  let c = compiled.get(syntax);
+  if (!c) {
+    const fold = (words: string[]) => new Set(syntax.ignoreCase ? words.map((w) => w.toLowerCase()) : words);
+    c = { syntax, keywords: fold(syntax.keywords), types: fold(syntax.types), consts: fold(syntax.consts) };
+    compiled.set(syntax, c);
+  }
+  return c;
+}
 
 const IDENT_START = /[A-Za-z_$]/;
 const IDENT = /[A-Za-z0-9_$]/;
 const DIGIT = /[0-9]/;
+/** 'a', '\n', '\u{1F600}', '\x41': a character literal, as opposed to a lifetime or a quote mark. */
+const CHAR_LITERAL = /^'(?:\\(?:u\{[0-9A-Fa-f]+\}|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|.)|[^\\'\n])'/;
+const LISP_NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][+-]?\d+)?$/;
+const WS = " \t\n\r";
 
 /**
- * Cut `code` into coloured runs. `language` is "python", "javascript" or "c" (anything else reads as Python).
- * C's #include / #define lines are one "preproc" run each (up to a comment or the end of the line, a backslash
- * continuing it); its type names are "type".
+ * Cut `code` into coloured runs using `syntax` (an unknown language: `PLAIN_SYNTAX`).
+ * A directive line (#include <stdio.h>, #define X 1) is one "preproc" run up to a comment or the end of the
+ * line, a backslash continuing it; a type name is "type".
  */
-export function tokenize(code: string, language: string): Run[] {
-  const c = language === "c";
-  const js = language === "javascript";
-  const slashes = js || c; // JavaScript and C share // and /* */ comments
-  const keywords = c ? C_KEYWORDS : js ? JS_KEYWORDS : PY_KEYWORDS;
-  const consts = c ? C_CONSTS : js ? JS_CONSTS : PY_CONSTS;
+export function tokenize(code: string, syntax: Syntax = PLAIN_SYNTAX): Run[] {
+  const { keywords, types, consts } = compile(syntax);
+  const fold = (w: string) => (syntax.ignoreCase ? w.toLowerCase() : w);
   const runs: Run[] = [];
   const push = (text: string, kind: Kind) => {
     if (text === "") return;
@@ -73,21 +116,34 @@ export function tokenize(code: string, language: string): Run[] {
     }
   };
 
+  /** The end of a block comment that starts at i, or -1 if none does. */
+  const blockEnd = (i: number): number => {
+    for (const [open, close] of syntax.block) {
+      if (open && code.startsWith(open, i)) {
+        const end = code.indexOf(close, i + open.length);
+        return end === -1 ? code.length : end + close.length;
+      }
+    }
+    return -1;
+  };
+  const startsLineComment = (i: number): boolean => syntax.line.some((s) => s !== "" && code.startsWith(s, i));
+  const multiline = (q: string) => q === "`";
+
   let i = 0;
   const n = code.length;
   while (i < n) {
     const ch = code[i];
 
-    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") {
+    if (WS.includes(ch)) {
       let j = i + 1;
-      while (j < n && " \t\n\r".includes(code[j])) j++;
+      while (j < n && WS.includes(code[j])) j++;
       push(code.slice(i, j), "space");
       i = j;
       continue;
     }
 
-    // C's preprocessor lines: #include <stdio.h>, #define SQUARE(x) x * x
-    if (c && ch === "#") {
+    // Preprocessor / directive lines: #include <stdio.h>, #define SQUARE(x) x * x
+    if (syntax.directives && ch === "#") {
       let k = i - 1;
       while (k >= 0 && (code[k] === " " || code[k] === "\t")) k--;
       if (k < 0 || code[k] === "\n") {
@@ -106,17 +162,16 @@ export function tokenize(code: string, language: string): Run[] {
       }
     }
 
-    // Comments.
-    if ((!slashes && ch === "#") || (slashes && ch === "/" && code[i + 1] === "/")) {
-      let j = i;
-      while (j < n && code[j] !== "\n") j++;
-      push(code.slice(i, j), "comment");
-      i = j;
+    // Comments (block first: Lua's --[[ starts like its -- comment).
+    const be = blockEnd(i);
+    if (be !== -1) {
+      push(code.slice(i, be), "comment");
+      i = be;
       continue;
     }
-    if (slashes && ch === "/" && code[i + 1] === "*") {
-      const end = code.indexOf("*/", i + 2);
-      const j = end === -1 ? n : end + 2;
+    if (startsLineComment(i)) {
+      let j = i;
+      while (j < n && code[j] !== "\n") j++;
       push(code.slice(i, j), "comment");
       i = j;
       continue;
@@ -124,9 +179,18 @@ export function tokenize(code: string, language: string): Run[] {
 
     // Strings, with Python's prefixes (f"..", rb'..') and triple quotes.
     let quoteAt = -1;
-    if (ch === '"' || ch === "'" || (js && ch === "`")) {
-      quoteAt = i;
-    } else if (!js && !c && /[A-Za-z]/.test(ch)) {
+    if (syntax.quotes.includes(ch)) {
+      if (ch === "'" && syntax.charLiterals) {
+        const m = CHAR_LITERAL.exec(code.slice(i, i + 14));
+        if (m) {
+          push(m[0], "string");
+          i += m[0].length;
+          continue;
+        }
+      } else {
+        quoteAt = i;
+      }
+    } else if (syntax.prefixes && /[A-Za-z]/.test(ch)) {
       let j = i;
       while (j < n && j - i < 3 && /[A-Za-z]/.test(code[j])) j++;
       if (j < n && (code[j] === '"' || code[j] === "'") && /^(?:[rRbBuUfF]|[rR][bBfF]|[bBfF][rR])$/.test(code.slice(i, j))) {
@@ -135,7 +199,7 @@ export function tokenize(code: string, language: string): Run[] {
     }
     if (quoteAt !== -1) {
       const q = code[quoteAt];
-      const triple = !js && !c && code.startsWith(q.repeat(3), quoteAt);
+      const triple = syntax.triple && q !== "`" && code.startsWith(q.repeat(3), quoteAt);
       const closer = triple ? q.repeat(3) : q;
       let j = quoteAt + closer.length;
       while (j < n) {
@@ -147,7 +211,7 @@ export function tokenize(code: string, language: string): Run[] {
           j += closer.length;
           break;
         }
-        if (!triple && !(js && q === "`") && code[j] === "\n") break; // an unclosed string ends at the line
+        if (!triple && !multiline(q) && code[j] === "\n") break; // an unclosed string ends at the line
         j++;
       }
       j = Math.min(j, n);
@@ -156,10 +220,28 @@ export function tokenize(code: string, language: string): Run[] {
       continue;
     }
 
+    // Lisp reads words differently: anything up to a space, bracket, quote or comment.
+    if (syntax.lisp && !"()'`,;\"".includes(ch)) {
+      let j = i + 1;
+      while (j < n && !WS.includes(code[j]) && !"()'`,;\"".includes(code[j])) j++;
+      const word = code.slice(i, j);
+      let p = i - 1;
+      while (p >= 0 && WS.includes(code[p])) p--;
+      const lower = fold(word);
+      if (LISP_NUMBER.test(word)) push(word, "number");
+      else if (word.startsWith(":") || consts.has(lower)) push(word, "const");
+      else if (keywords.has(lower)) push(word, "keyword");
+      else if (types.has(lower)) push(word, "type");
+      else if (p >= 0 && code[p] === "(") push(word, "fn");
+      else push(word, "plain");
+      i = j;
+      continue;
+    }
+
     // Numbers.
     if (DIGIT.test(ch) || (ch === "." && DIGIT.test(code[i + 1] ?? ""))) {
       let j = i + 1;
-      while (j < n && (/[0-9A-Za-z_.]/.test(code[j]))) {
+      while (j < n && /[0-9A-Za-z_.]/.test(code[j])) {
         // 1e-5 / 1E+5: a sign belongs to the number right after an exponent letter
         j++;
         if ((code[j - 1] === "e" || code[j - 1] === "E") && (code[j] === "-" || code[j] === "+") && !/[xX]/.test(code.slice(i, j))) j++;
@@ -174,13 +256,15 @@ export function tokenize(code: string, language: string): Run[] {
       let j = i + 1;
       while (j < n && IDENT.test(code[j])) j++;
       const word = code.slice(i, j);
+      const lower = fold(word);
       let k = j;
       while (k < n && (code[k] === " " || code[k] === "\t")) k++;
       const afterDot = i > 0 && code[i - 1] === ".";
-      if (consts.has(word) && !afterDot) push(word, "const");
-      else if (keywords.has(word) && !afterDot) push(word, "keyword");
-      else if (c && C_TYPES.has(word) && !afterDot) push(word, "type");
-      else if (code[k] === "(" && k === j) push(word, "fn");
+      const macro = code[j] === "!" && "([{".includes(code[j + 1] ?? "");
+      if (consts.has(lower) && !afterDot) push(word, "const");
+      else if (keywords.has(lower) && !afterDot) push(word, "keyword");
+      else if (types.has(lower) && !afterDot) push(word, "type");
+      else if ((code[k] === "(" && k === j) || macro) push(word, "fn");
       else push(word, "plain");
       i = j;
       continue;

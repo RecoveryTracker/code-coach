@@ -15,8 +15,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { answerGotcha, fetchGotchaNext, fetchGotchas, runGotcha } from "../api";
 import { tokenize } from "../lib/codeColors";
+import type { Syntax } from "../lib/codeColors";
 import {
-  LANG_LABEL,
+  accentStyle,
   cardAwardKey,
   chooseLanguage,
   dailyAwardKey,
@@ -29,6 +30,7 @@ import {
   offeredLanguages,
   optionLetter,
   optionState,
+  pushRecent,
   recentIds,
   streakLabel,
   streakTier,
@@ -40,28 +42,41 @@ import type {
   GotchaLang,
   GotchaRun,
   GotchaSummary,
+  LangInfo,
 } from "../lib/gotchas";
 import { award } from "../lib/momentum";
 import "../styles/gotchas.css";
 import GotchaAdd from "./GotchaAdd";
+import GotchaLangMenu from "./GotchaLangMenu";
 
 const LANG_KEY = "code-coach:gotchas-language";
+const RECENT_KEY = "code-coach:gotchas-recent";
 
 /** The remembered language (python when nothing is saved); the server's list of offered ones decides if it can be used. */
 function savedLanguage(): GotchaLang {
   try {
     const saved = window.localStorage.getItem(LANG_KEY);
-    return saved === "javascript" || saved === "c" ? saved : "python";
+    return saved && /^[a-z]{1,12}$/.test(saved) ? saved : "python";
   } catch {
     return "python";
   }
 }
 
+/** The languages used lately, newest first (for the quick buttons). */
+function savedRecent(): string[] {
+  try {
+    const raw: unknown = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string").slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** The program, coloured, as real text in a <pre> (selectable, readable by a screen reader). */
-export function CodeBlock({ code, language }: { code: string; language: GotchaLang }) {
-  const runs = useMemo(() => tokenize(code, language), [code, language]);
+export function CodeBlock({ code, label, syntax }: { code: string; label: string; syntax?: Syntax }) {
+  const runs = useMemo(() => tokenize(code, syntax), [code, syntax]);
   return (
-    <pre className="gq-code" tabIndex={0} aria-label={`${LANG_LABEL[language]} code`}>
+    <pre className="gq-code" tabIndex={0} aria-label={`${label} code`}>
       <code>
         {runs.map((r, i) => (
           <span key={i} className={`tk-${r.kind}`}>
@@ -151,8 +166,11 @@ function RunIt({ card }: { card: GotchaCard }) {
 
 export default function Gotchas() {
   const [language, setLanguage] = useState<GotchaLang>(savedLanguage);
-  // Which languages the server can run here (C only with a compiler); null until it has said.
-  const [offered, setOffered] = useState<GotchaLang[] | null>(null);
+  // Which languages the server can run here, with their card counts; null until it has said.
+  const [offered, setOffered] = useState<LangInfo[] | null>(null);
+  // Every language's colouring rules, sent once with the first summary.
+  const [syntax, setSyntax] = useState<Record<string, Syntax>>({});
+  const [recentLangs, setRecentLangs] = useState<string[]>(savedRecent);
   const [card, setCard] = useState<GotchaCard | null>(null);
   const [summary, setSummary] = useState<GotchaSummary | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -198,7 +216,11 @@ export default function Gotchas() {
   useEffect(() => {
     // Python is always there, so ask the server about it first: its answer lists what else can be offered.
     fetchGotchas("python")
-      .then((s) => alive.current && setOffered(offeredLanguages(s.languages)))
+      .then((s) => {
+        if (!alive.current) return;
+        setSyntax(s.syntax ?? {});
+        setOffered(offeredLanguages(s.languages));
+      })
       .catch(() => alive.current && setOffered(offeredLanguages(undefined)));
   }, []);
 
@@ -206,7 +228,7 @@ export default function Gotchas() {
     if (!offered) return;
     const usable = chooseLanguage(language, offered);
     if (usable !== language) {
-      setLanguage(usable); // a remembered "c" on a machine with no compiler
+      setLanguage(usable); // a remembered language this machine cannot run
       return;
     }
     recent.current = [];
@@ -216,14 +238,23 @@ export default function Gotchas() {
 
   const pickLanguage = (next: GotchaLang) => {
     if (next === language) return;
+    const used = pushRecent(recentLangs, next);
+    setRecentLangs(used);
     try {
       window.localStorage.setItem(LANG_KEY, next);
+      window.localStorage.setItem(RECENT_KEY, JSON.stringify(used));
     } catch {
       /* a remembered choice is only a convenience */
     }
     setCard(null);
     setLanguage(next);
   };
+
+  // The switch shows each language's card count, kept current as you add or delete cards of your own.
+  const switchable = useMemo(
+    () => (offered ?? []).map((l) => (summary && l.id === summary.language ? { ...l, count: summary.total } : l)),
+    [offered, summary],
+  );
 
   const answer = useCallback(
     async (i: number) => {
@@ -305,19 +336,9 @@ export default function Gotchas() {
           <h2>Gotchas</h2>
           <p className="gq-sub">Short programs where the obvious answer is a trap. One at a time, no end.</p>
         </div>
-        <div className="gq-lang" role="group" aria-label="Language" hidden={!offered}>
-          {(offered ?? []).map((l) => (
-            <button
-              key={l}
-              type="button"
-              className={`gq-lang-btn${l === language ? " on" : ""}`}
-              aria-pressed={l === language}
-              onClick={() => pickLanguage(l)}
-            >
-              {LANG_LABEL[l]}
-            </button>
-          ))}
-        </div>
+        {offered ? (
+          <GotchaLangMenu languages={switchable} current={language} recent={recentLangs} onPick={pickLanguage} />
+        ) : null}
       </header>
 
       <DailyCard
@@ -361,6 +382,7 @@ export default function Gotchas() {
       {card ? (
         <article
           className={`gq-card ${language}${verdict ? ` ${verdict}` : ""}${loading ? " loading" : ""}`}
+          style={accentStyle(card.language)}
           key={card.id}
           aria-label="Quiz card"
           data-testid="gq-card"
@@ -380,7 +402,11 @@ export default function Gotchas() {
             </span>
           </div>
 
-          <CodeBlock code={card.code} language={card.language} />
+          <CodeBlock
+            code={card.code}
+            label={(offered ?? []).find((l) => l.id === card.language)?.name ?? card.language}
+            syntax={syntax[card.language]}
+          />
 
           <p className="gq-ask" id="gq-ask">
             What does this print? <span className="gq-hint">Click, or press 1-4 or A-D</span>
@@ -466,6 +492,7 @@ export default function Gotchas() {
 
       <GotchaAdd
         language={language}
+        name={(offered ?? []).find((l) => l.id === language)?.name ?? language}
         onChanged={(s) => setSummary(s)}
         onTry={() => {
           setDailyMode(false);

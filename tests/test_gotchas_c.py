@@ -571,12 +571,12 @@ def status(call, *args, **kw) -> int:
 def test_the_c_deck_over_the_routes():
     summary = server.gotchas_summary("c")
     assert (summary["total"], summary["seen"], summary["title"]) == (len(C_ITEMS), 0, "C Quiz")
-    assert summary["languages"] == ["python", "javascript", "c"]
-    assert server.gotchas_summary("python")["languages"] == ["python", "javascript", "c"]
+    assert {"id": "c", "name": "C", "count": len(C_ITEMS), "title": "C Quiz"} in summary["languages"]
+    assert [d["id"] for d in server.gotchas_summary("python")["languages"]][:2] == ["python", "javascript"]
     first = server.gotchas_next("c")
     assert first["id"] in {it.id for it in C_ITEMS[:2]} and first["title"] == "C Quiz"
     assert first["language"] == "c" and len(first["options"]) == 4
-    assert first["languages"] == ["python", "javascript", "c"]
+    assert {"id": "c", "name": "C", "count": len(C_ITEMS), "title": "C Quiz"} in first["languages"]
     for secret in ("answer", "answer_index", "trap", "why"):
         assert secret not in first
     card = next(it for it in C_ITEMS if it.id == first["id"])
@@ -643,9 +643,9 @@ def test_a_c_card_end_to_end_over_the_routes():
 
 def test_c_is_hidden_and_refused_when_no_compiler_is_installed(monkeypatch):
     monkeypatch.setattr(engine, "c_available", lambda: False)
-    assert gotchas.available_languages() == ["python", "javascript"]
-    assert server.gotchas_summary("python")["languages"] == ["python", "javascript"]
-    assert server.gotchas_next("javascript")["languages"] == ["python", "javascript"]
+    assert "c" not in gotchas.available_languages() and gotchas.available_languages()[:2] == ["python", "javascript"]
+    assert "c" not in [d["id"] for d in server.gotchas_summary("python")["languages"]]
+    assert "c" not in [d["id"] for d in server.gotchas_next("javascript")["languages"]]
     refused = {
         "summary": (server.gotchas_summary, "c"),
         "next": (server.gotchas_next, "c"),
@@ -675,7 +675,7 @@ def test_c_is_hidden_and_refused_when_no_compiler_is_installed(monkeypatch):
 
 def test_a_compiler_makes_c_available_and_an_unknown_language_is_still_400(monkeypatch):
     monkeypatch.setattr(engine, "c_available", lambda: True)
-    assert gotchas.available_languages() == ["python", "javascript", "c"]
+    assert "c" in gotchas.available_languages()
     for call in (server.gotchas_summary, server.gotchas_next, server.gotchas_user_list):
         assert status(call, "cobol") == 400
         assert status(call, "C") == 400, "language names are lower case"

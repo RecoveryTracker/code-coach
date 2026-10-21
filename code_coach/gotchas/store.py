@@ -39,9 +39,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .items import Item
+from .langs import ORDER as LANGUAGES  # every registered language id, in display order
 
 VERSION = 1
-LANGUAGES = ("python", "javascript", "c")
 #: A missed card comes back after this many other answers, plus up to RETURN_SPREAD more.
 RETURN_AFTER = 5
 RETURN_SPREAD = 5
@@ -235,6 +235,12 @@ class GotchaStore:
         from . import builtin_deck
 
         return builtin_deck(language)
+
+    def counts(self, languages: list[str] | tuple[str, ...]) -> dict[str, int]:
+        """How many cards each language has (built in plus yours), reading the user's file once."""
+        user = self._load_user()["cards"]
+        return {lang: len(self.builtin(lang)) + sum(1 for c in user if c["language"] == lang)
+                for lang in languages}
 
     def mine(self, language: str) -> list[Item]:
         return [_user_item(c) for c in self._load_user()["cards"] if c["language"] == language]
