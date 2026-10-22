@@ -27,6 +27,7 @@ import {
 } from "../api";
 import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
+import { WordsUsed } from "./WordsUsed";
 import type {
   ExplainResult,
   WorkbookCheck,
@@ -764,6 +765,7 @@ export default function Workbook({ language }: Props) {
               {walkthrough.error_note ? (
                 <p className="wb-walkthrough-error">{walkthrough.error_note}</p>
               ) : null}
+              <WordsUsed words={walkthrough.words} scope="walk" />
             </div>
           ) : null}
 

@@ -164,6 +164,8 @@ export type Runnable =
       run: string;
       /** Syntax Snap and Bracket Check: whether it parses IS the answer, so say so. */
       parseIsTheAnswer: boolean;
+      /** Error or Fine: whether running it raises IS the answer (the program is the snippet as shown). */
+      raisesIsTheAnswer?: boolean;
     }
   | { ok: false; reason: string };
 
@@ -184,8 +186,9 @@ function printLast(code: string, lang: BrainLang): string {
 /** The program behind one question, ready to run and show something. */
 export function runnableFor(activityId: string, item: BrainItem, lang: BrainLang): Runnable {
   const js = lang === "javascript";
-  const fine = (code: string, run = "", parseIsTheAnswer = false): Runnable => ({
-    ok: true, code, run, parseIsTheAnswer,
+  // (raisesIsTheAnswer is only present when it is true, so the other activities' shapes stay as they were.)
+  const fine = (code: string, run = "", parseIsTheAnswer = false, raisesIsTheAnswer = false): Runnable => ({
+    ok: true, code, run, parseIsTheAnswer, ...(raisesIsTheAnswer ? { raisesIsTheAnswer } : {}),
   });
   switch (activityId) {
     case "eval":
@@ -220,8 +223,14 @@ export function runnableFor(activityId: string, item: BrainItem, lang: BrainLang
       return js
         ? fine(item.prompt, `(0, eval)(${JSON.stringify(item.prompt)});`, true)
         : fine(item.prompt, "", true);
+    case "error":
+      // Error or Fine: run the snippet as shown - the traceback (or the quiet) is the answer.
+      return item.prompt ? fine(item.prompt, "", false, true) : { ok: false, reason: "There is no code to run here." };
     default:
-      return item.prompt ? fine(item.prompt) : { ok: false, reason: "There is no code to run here." };
+      // Every pack activity (see code_coach/brain/__init__.py): the program is `check` when the item has one
+      // (it prints the answer: "yes"/"no" for the picks), else the prompt itself, and its last line is printed.
+      if (!item.prompt) return { ok: false, reason: "There is no code to run here." };
+      return item.check ? fine(item.prompt, printLast(item.check, lang)) : fine(printLast(item.prompt, lang));
   }
 }
 

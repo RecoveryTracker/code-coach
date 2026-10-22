@@ -102,6 +102,9 @@ class ExplainRequest(BaseModel):
     # everywhere except a screen showing a snippet in a language of its own,
     # like a Brain Drills question in a language the app isn't set to.
     language: str = ""
+    # What the code is for, when a screen knows: a Brain Drills activity id. The glossary
+    # always teaches that activity's words first. Blank for every other caller.
+    context: str = ""
 
 
 class ExplainLine(BaseModel):
@@ -111,12 +114,39 @@ class ExplainLine(BaseModel):
     text: str
 
 
+class WordRef(BaseModel):
+    id: str
+    term: str
+
+
+class Word(BaseModel):
+    """One glossary entry (code_coach/glossary): a word, what it means, its rules, a verified example."""
+
+    id: str
+    term: str
+    language: str
+    definition: str
+    rules: list[str] = []
+    example: str = ""
+    example_output: str = ""
+    see_also: list[WordRef] = []
+    # Truthy / Falsy only: the values that count as false and as true.
+    counts_false: list[str] = []
+    counts_true: list[str] = []
+
+
+class GlossaryResponse(BaseModel):
+    words: list[Word] = []
+
+
 class ExplainResponse(BaseModel):
     ok: bool = True
     summary: str
     lines: list[ExplainLine] = []
     output_notes: list[str] = []
     error_note: str | None = None
+    # The vocabulary the code uses, with definitions and rules (see code_coach/glossary).
+    words: list[Word] = []
 
 
 class GotoLessonRequest(BaseModel):
@@ -1113,11 +1143,16 @@ class MomentumAwardRequest(BaseModel):
 
 
 class GotchaAnswerRequest(BaseModel):
-    """One answer to a Gotchas card: which option (0-3, as shown) was picked."""
+    """One answer to a Gotchas card: which option (0-3, as shown) was picked.
+
+    `confidence` ("sure" or "guess"; anything else counts as none) and `note` (your own reasoning, trimmed and
+    cut to 300 characters) are optional; the store cleans both, so a bad value is ignored, never a 422."""
 
     id: str = ""
     language: str = "python"
     chosen: int = -1
+    confidence: Any = ""
+    note: Any = ""
 
 
 class GotchaRunRequest(BaseModel):

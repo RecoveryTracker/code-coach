@@ -9,24 +9,33 @@
  * The browser never has the answer before it answers: /api/gotchas/next sends the program and
  * four options, and /api/gotchas/answer says which was right. The rules that are not pixels (the
  * streak, the keys, the deck line) live in lib/gotchas.ts, tested in node.
+ *
+ * Three things strengthen the think-then-check loop: "How sure are you?" (Sure / Just guessing, keys S and G,
+ * sent with the answer so a sure-but-wrong card comes back sooner and a guessed-right one comes back once),
+ * an optional "Add my reasoning" note (shown again beside the Why), and "My traps" (GotchaTraps.tsx), the
+ * cards you missed and have not mastered. While the cursor is in a text box every quiz shortcut is off.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { answerGotcha, fetchGotchaNext, fetchGotchas, runGotcha } from "../api";
-import { tokenize } from "../lib/codeColors";
 import type { Syntax } from "../lib/codeColors";
 import {
+  CONFIDENCE_CHOICES,
+  DEFAULT_CONFIDENCE,
+  NOTE_MAX,
   accentStyle,
   cardAwardKey,
   chooseLanguage,
+  clampNote,
   dailyAwardKey,
   dailyLine,
   deckLine,
   errorText,
   excludeParam,
-  isNextKey,
-  keyToIndex,
+  feedbackLine,
+  keyAction,
+  noteCounter,
   offeredLanguages,
   optionLetter,
   optionState,
@@ -36,18 +45,22 @@ import {
   streakTier,
 } from "../lib/gotchas";
 import type {
+  Confidence,
   GotchaAnswer,
   GotchaCard,
   GotchaDaily,
   GotchaLang,
   GotchaRun,
   GotchaSummary,
+  GotchaTrap,
   LangInfo,
 } from "../lib/gotchas";
 import { award } from "../lib/momentum";
 import "../styles/gotchas.css";
 import GotchaAdd from "./GotchaAdd";
+import { CodeBlock } from "./GotchaCode";
 import GotchaLangMenu from "./GotchaLangMenu";
+import GotchaTraps from "./GotchaTraps";
 
 const LANG_KEY = "code-coach:gotchas-language";
 const RECENT_KEY = "code-coach:gotchas-recent";
@@ -70,22 +83,6 @@ function savedRecent(): string[] {
   } catch {
     return [];
   }
-}
-
-/** The program, coloured, as real text in a <pre> (selectable, readable by a screen reader). */
-export function CodeBlock({ code, label, syntax }: { code: string; label: string; syntax?: Syntax }) {
-  const runs = useMemo(() => tokenize(code, syntax), [code, syntax]);
-  return (
-    <pre className="gq-code" tabIndex={0} aria-label={`${label} code`}>
-      <code>
-        {runs.map((r, i) => (
-          <span key={i} className={`tk-${r.kind}`}>
-            {r.text}
-          </span>
-        ))}
-      </code>
-    </pre>
-  );
 }
 
 function DailyCard({
@@ -179,6 +176,16 @@ export default function Gotchas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dailyMode, setDailyMode] = useState(false);
+  // How sure you are: kept for the session (not saved), so it stays as you left it from card to card.
+  const [confidence, setConfidence] = useState<Confidence>(DEFAULT_CONFIDENCE);
+  // Your reasoning for this card (optional), and whether its box is open.
+  const [note, setNote] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [trapsOpen, setTrapsOpen] = useState(false);
+  const wantCard = useRef("");
+  const noteBox = useRef<HTMLTextAreaElement | null>(null);
+  const noteBtn = useRef<HTMLButtonElement | null>(null);
+  const trapsBtn = useRef<HTMLButtonElement | null>(null);
   const recent = useRef<string[]>([]);
   const busy = useRef(false);
   const alive = useRef(true);
@@ -192,18 +199,20 @@ export default function Gotchas() {
     };
   }, []);
 
-  const load = useCallback(async (lang: GotchaLang, daily: boolean, first = false) => {
+  const load = useCallback(async (lang: GotchaLang, daily: boolean, first = false, cardId = "") => {
     const mine = ++requestId.current;
     setLoading(true);
     setError("");
     try {
-      const c = await fetchGotchaNext(lang, excludeParam(recent.current), daily);
+      const c = await fetchGotchaNext(lang, excludeParam(recent.current), daily, cardId);
       if (!alive.current || mine !== requestId.current) return;
       recent.current = recentIds(recent.current, c.id);
       setCard(c);
       setSummary(c.summary);
       setChosen(null);
       setResult(null);
+      setNote("");
+      setNoteOpen(false);
       if (first) setStreak(c.summary.streak);
       if (daily && c.why_picked !== "daily") setDailyMode(false);
     } catch (e) {
@@ -233,7 +242,9 @@ export default function Gotchas() {
     }
     recent.current = [];
     setDailyMode(false);
-    void load(language, false, true);
+    const want = wantCard.current; // "Try again" on a card of another language: switch, then serve that card
+    wantCard.current = "";
+    void load(language, false, true, want);
   }, [language, offered, load]);
 
   const pickLanguage = (next: GotchaLang) => {
@@ -262,7 +273,13 @@ export default function Gotchas() {
       busy.current = true;
       setChosen(i);
       try {
-        const r = await answerGotcha({ id: card.id, language: card.language, chosen: i });
+        const r = await answerGotcha({
+          id: card.id,
+          language: card.language,
+          chosen: i,
+          confidence,
+          ...(note.trim() ? { note: note.trim() } : {}),
+        });
         if (!alive.current) return;
         setResult(r);
         setStreak(r.streak);
@@ -278,8 +295,29 @@ export default function Gotchas() {
         busy.current = false;
       }
     },
-    [card, chosen, loading],
+    [card, chosen, loading, confidence, note],
   );
+
+  // "Try again" in My traps: close the panel and serve that card in the feed (a normal card, a normal answer).
+  const tryTrap = (t: GotchaTrap) => {
+    setTrapsOpen(false);
+    setDailyMode(false);
+    if (t.language !== language) {
+      wantCard.current = t.id;
+      pickLanguage(t.language);
+    } else {
+      void load(language, false, false, t.id);
+    }
+  };
+
+  const closeTraps = () => {
+    setTrapsOpen(false);
+    window.setTimeout(() => trapsBtn.current?.focus({ preventScroll: true }), 0);
+  };
+
+  useEffect(() => {
+    if (noteOpen) noteBox.current?.focus({ preventScroll: true });
+  }, [noteOpen]);
 
   const next = useCallback(() => {
     if (!result || loading) return;
@@ -299,35 +337,34 @@ export default function Gotchas() {
     if (result) nextRef.current?.focus({ preventScroll: true });
   }, [result]);
 
-  // Keyboard: 1-4 / A-D answer; Enter, Space and the right arrow go on.
+  // Keyboard (the decisions are `keyAction` in lib/gotchas.ts): 1-4 / A-D answer, S and G say how sure you are,
+  // Enter, Space and the right arrow go on. All of it is off while the cursor is in a text box or My traps is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const el = e.target as HTMLElement | null;
-      const tag = el?.tagName ?? "";
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el?.isContentEditable) return;
-      if (result) {
-        if (!isNextKey(e.key)) return;
-        // A focused button handles its own Enter and Space.
-        if ((tag === "BUTTON" || tag === "A" || tag === "SUMMARY") && e.key !== "ArrowRight") return;
-        e.preventDefault();
-        next();
-        return;
-      }
-      if (!card) return;
-      const i = keyToIndex(e.key, card.options.length);
-      if (i >= 0) {
-        e.preventDefault();
-        void answer(i);
-      }
+      const act = keyAction(e.key, {
+        tag: el?.tagName ?? "",
+        editable: !!el?.isContentEditable,
+        hasCard: !!card,
+        answered: !!result,
+        options: card?.options.length ?? 0,
+        panelOpen: trapsOpen,
+        ctrl: e.ctrlKey || e.metaKey || e.altKey,
+      });
+      if (act.kind === "none") return;
+      e.preventDefault();
+      if (act.kind === "next") next();
+      else if (act.kind === "answer") void answer(act.index);
+      else if (chosen === null) setConfidence(act.value);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [card, result, answer, next]);
+  }, [card, result, answer, next, trapsOpen, chosen]);
 
   const tier = streakTier(streak);
   const verdict = result ? (result.correct ? "right" : "wrong") : "";
   const answerIndex = result ? result.answer_index : null;
+  const sureLine = result ? feedbackLine(result.confidence, result.correct) : null;
 
   return (
     <div className="gq-wrap">
@@ -337,168 +374,264 @@ export default function Gotchas() {
           <p className="gq-sub">Short programs where the obvious answer is a trap. One at a time, no end.</p>
         </div>
         {offered ? (
-          <GotchaLangMenu languages={switchable} current={language} recent={recentLangs} onPick={pickLanguage} />
+          <div className="gq-head-tools">
+            <GotchaLangMenu languages={switchable} current={language} recent={recentLangs} onPick={pickLanguage} />
+            <button
+              type="button"
+              ref={trapsBtn}
+              className={`gq-traps-btn${trapsOpen ? " on" : ""}`}
+              aria-expanded={trapsOpen}
+              data-testid="gq-traps-btn"
+              onClick={() => setTrapsOpen((open) => !open)}
+            >
+              My traps
+            </button>
+          </div>
         ) : null}
       </header>
 
-      <DailyCard
-        daily={summary?.daily ?? null}
-        playing={dailyMode}
-        busy={loading}
-        onPlay={playDaily}
-      />
-
-      <div className="gq-status">
-        <span className="gq-deck" data-testid="gq-deck">
-          {summary ? deckLine(summary.seen, summary.total, summary.mine) : "Deck: ..."}
-        </span>
-        <span className="gq-streak-wrap" aria-live="polite">
-          {streak > 0 ? (
-            <span key={streak} className={`gq-streak tier${tier}`} data-testid="gq-streak">
-              <span aria-hidden="true">{"\u{1F525}"}</span> {streakLabel(streak)}
-            </span>
-          ) : (
-            <span className="gq-streak none" data-testid="gq-streak">
-              No streak yet
-            </span>
-          )}
-          {summary && summary.streak_best > 0 ? (
-            <span className="gq-best" title="Your longest run of right answers">
-              best {summary.streak_best}
-            </span>
-          ) : null}
-        </span>
-      </div>
-
-      {error ? (
-        <div className="gq-error" role="alert">
-          <p>{error}</p>
-          <button type="button" className="ws-btn" onClick={() => void load(language, dailyMode)}>
-            Try again
-          </button>
-        </div>
+      {trapsOpen ? (
+        <GotchaTraps
+          language={language}
+          languages={offered ?? []}
+          syntax={syntax}
+          onClose={closeTraps}
+          onTry={tryTrap}
+        />
       ) : null}
 
-      {card ? (
-        <article
-          className={`gq-card ${language}${verdict ? ` ${verdict}` : ""}${loading ? " loading" : ""}`}
-          style={accentStyle(card.language)}
-          key={card.id}
-          aria-label="Quiz card"
-          data-testid="gq-card"
-          data-card-id={card.id}
-          data-state={verdict || (chosen !== null ? "checking" : "asking")}
-        >
-          <div className="gq-card-top">
-            <h3 className="gq-title">{card.title}</h3>
-            <span className="gq-badges">
-              {dailyMode && summary ? (
-                <span className="gq-badge daily">
-                  Daily 5 - {summary.daily.done} of {summary.daily.total} done
-                </span>
-              ) : null}
-              {card.mine ? <span className="gq-badge mine">Yours</span> : null}
-              {card.why_picked === "again" ? <span className="gq-badge again">Back again</span> : null}
-            </span>
+      <div className="gq-feed" hidden={trapsOpen}>
+        <DailyCard
+          daily={summary?.daily ?? null}
+          playing={dailyMode}
+          busy={loading}
+          onPlay={playDaily}
+        />
+
+        <div className="gq-status">
+          <span className="gq-deck" data-testid="gq-deck">
+            {summary ? deckLine(summary.seen, summary.total, summary.mine) : "Deck: ..."}
+          </span>
+          <span className="gq-streak-wrap" aria-live="polite">
+            {streak > 0 ? (
+              <span key={streak} className={`gq-streak tier${tier}`} data-testid="gq-streak">
+                <span aria-hidden="true">{"\u{1F525}"}</span> {streakLabel(streak)}
+              </span>
+            ) : (
+              <span className="gq-streak none" data-testid="gq-streak">
+                No streak yet
+              </span>
+            )}
+            {summary && summary.streak_best > 0 ? (
+              <span className="gq-best" title="Your longest run of right answers">
+                best {summary.streak_best}
+              </span>
+            ) : null}
+          </span>
+        </div>
+
+        {error ? (
+          <div className="gq-error" role="alert">
+            <p>{error}</p>
+            <button type="button" className="ws-btn" onClick={() => void load(language, dailyMode)}>
+              Try again
+            </button>
           </div>
+        ) : null}
 
-          <CodeBlock
-            code={card.code}
-            label={(offered ?? []).find((l) => l.id === card.language)?.name ?? card.language}
-            syntax={syntax[card.language]}
-          />
-
-          <p className="gq-ask" id="gq-ask">
-            What does this print? <span className="gq-hint">Click, or press 1-4 or A-D</span>
-          </p>
-          <div className="gq-options" role="group" aria-labelledby="gq-ask">
-            {card.options.map((text, i) => {
-              const st = optionState(i, chosen, answerIndex);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className={`gq-option ${st}`}
-                  disabled={chosen !== null}
-                  aria-disabled={chosen !== null}
-                  data-testid={`gq-option-${i}`}
-                  onClick={() => void answer(i)}
-                >
-                  <span className="gq-key" aria-hidden="true">
-                    {optionLetter(i)}
-                  </span>
-                  <span className="gq-opt-text">{text}</span>
-                  <span className="gq-mark" aria-hidden="true" />
-                  <span className="gq-sr">
-                    {st === "right"
-                      ? " - your answer, correct"
-                      : st === "wrong"
-                        ? " - your answer, wrong"
-                        : st === "reveal"
-                          ? " - the right answer"
-                          : ""}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {result ? (
-            <div className="gq-after">
-              <p className={`gq-verdict ${verdict}`} role="status" data-testid="gq-verdict">
-                {result.correct ? "You got it" : "Not quite"}
-                {!result.correct ? (
-                  <span>
-                    {" - "}the answer is <strong className="gq-answer">{result.answer}</strong>
+        {card ? (
+          <article
+            className={`gq-card ${language}${verdict ? ` ${verdict}` : ""}${loading ? " loading" : ""}`}
+            style={accentStyle(card.language)}
+            key={card.id}
+            aria-label="Quiz card"
+            data-testid="gq-card"
+            data-card-id={card.id}
+            data-state={verdict || (chosen !== null ? "checking" : "asking")}
+          >
+            <div className="gq-card-top">
+              <h3 className="gq-title">{card.title}</h3>
+              <span className="gq-badges">
+                {dailyMode && summary ? (
+                  <span className="gq-badge daily">
+                    Daily 5 - {summary.daily.done} of {summary.daily.total} done
                   </span>
                 ) : null}
-              </p>
-              {!result.correct && result.again_soon ? (
-                <p className="gq-again">This one will come back in a few cards.</p>
-              ) : null}
-              <section className="gq-why" aria-label="Why">
-                <h4>Why</h4>
-                <p className="gq-trap">
-                  <span className="gq-trap-label">Trap</span> {result.trap}
-                </p>
-                <p className="gq-why-text">{result.why}</p>
-              </section>
-              {result.daily.just_completed ? (
-                <p className="gq-daily-win" role="status">
-                  That is your Daily 5 finished.
-                </p>
-              ) : null}
-              <div className="gq-actions">
-                <RunIt key={card.id} card={card} />
+                {card.mine ? <span className="gq-badge mine">Yours</span> : null}
+                {card.why_picked === "again" ? <span className="gq-badge again">Back again</span> : null}
+              </span>
+            </div>
+
+            <CodeBlock
+              code={card.code}
+              label={(offered ?? []).find((l) => l.id === card.language)?.name ?? card.language}
+              syntax={syntax[card.language]}
+            />
+
+            <p className="gq-ask" id="gq-ask">
+              What does this print? <span className="gq-hint">Click, or press 1-4 or A-D</span>
+            </p>
+            <div className="gq-sure" role="radiogroup" aria-label="How sure are you?" data-testid="gq-sure">
+              <span className="gq-sure-label">How sure are you?</span>
+              <span className="gq-sure-pills">
+                {CONFIDENCE_CHOICES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={confidence === c.id}
+                    className={`gq-sure-btn ${c.id}${confidence === c.id ? " on" : ""}`}
+                    disabled={chosen !== null}
+                    data-testid={`gq-sure-${c.id}`}
+                    onClick={() => setConfidence(c.id)}
+                  >
+                    {c.label} <span className="gq-sure-key" aria-hidden="true">{c.key}</span>
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="gq-options" role="group" aria-labelledby="gq-ask">
+              {card.options.map((text, i) => {
+                const st = optionState(i, chosen, answerIndex);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`gq-option ${st}`}
+                    disabled={chosen !== null}
+                    aria-disabled={chosen !== null}
+                    data-testid={`gq-option-${i}`}
+                    onClick={() => void answer(i)}
+                  >
+                    <span className="gq-key" aria-hidden="true">
+                      {optionLetter(i)}
+                    </span>
+                    <span className="gq-opt-text">{text}</span>
+                    <span className="gq-mark" aria-hidden="true" />
+                    <span className="gq-sr">
+                      {st === "right"
+                        ? " - your answer, correct"
+                        : st === "wrong"
+                          ? " - your answer, wrong"
+                          : st === "reveal"
+                            ? " - the right answer"
+                            : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!result ? (
+              <div className="gq-reason">
                 <button
                   type="button"
-                  className="ws-btn primary gq-next"
-                  ref={nextRef}
-                  onClick={next}
-                  disabled={loading}
-                  data-testid="gq-next"
+                  ref={noteBtn}
+                  className="gq-reason-toggle"
+                  aria-expanded={noteOpen}
+                  aria-controls="gq-reason-box"
+                  data-testid="gq-reason-toggle"
+                  onClick={() => setNoteOpen((open) => !open)}
                 >
-                  Next {"→"}
+                  {noteOpen ? "Hide my reasoning" : note.trim() ? "Edit my reasoning" : "Add my reasoning"}
                 </button>
+                {noteOpen ? (
+                  <div className="gq-reason-box" id="gq-reason-box">
+                    <textarea
+                      ref={noteBox}
+                      className="gq-reason-text"
+                      data-testid="gq-reason-text"
+                      rows={3}
+                      maxLength={NOTE_MAX}
+                      value={note}
+                      placeholder="Why do I think so? (optional)"
+                      aria-label="My reasoning (optional)"
+                      onChange={(e) => setNote(clampNote(e.target.value))}
+                      onKeyDown={(e) => {
+                        // Escape closes this box only; every other key is just typing here.
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNoteOpen(false);
+                          noteBtn.current?.focus({ preventScroll: true });
+                        }
+                      }}
+                    />
+                    <span className="gq-reason-count" data-testid="gq-reason-count">
+                      {noteCounter(note)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
-            </div>
-          ) : null}
-        </article>
-      ) : !error ? (
-        <div className="gq-card skeleton" aria-busy="true">
-          <p className="gq-run-note">Dealing a card...</p>
-        </div>
-      ) : null}
+            ) : null}
 
-      <GotchaAdd
-        language={language}
-        name={(offered ?? []).find((l) => l.id === language)?.name ?? language}
-        onChanged={(s) => setSummary(s)}
-        onTry={() => {
-          setDailyMode(false);
-          void load(language, false);
-        }}
-      />
+            {result ? (
+              <div className="gq-after">
+                <p className={`gq-verdict ${verdict}`} role="status" data-testid="gq-verdict">
+                  {result.correct ? "You got it" : "Not quite"}
+                  {!result.correct ? (
+                    <span>
+                      {" - "}the answer is <strong className="gq-answer">{result.answer}</strong>
+                    </span>
+                  ) : null}
+                </p>
+                {sureLine ? (
+                  <p className={`gq-sure-note ${result.confidence}`} role="status" data-testid="gq-feedback">
+                    {sureLine}
+                  </p>
+                ) : null}
+                {!result.correct && result.again_soon ? (
+                  <p className="gq-again">This one will come back in a few cards.</p>
+                ) : null}
+                <section className="gq-why" aria-label="Why">
+                  <h4>Why</h4>
+                  <p className="gq-trap">
+                    <span className="gq-trap-label">Trap</span> {result.trap}
+                  </p>
+                  <p className="gq-why-text">{result.why}</p>
+                  {result.note ? (
+                    <p className="gq-thought" data-testid="gq-thought">
+                      <span className="gq-thought-label">What you thought:</span> {result.note}
+                    </p>
+                  ) : null}
+                </section>
+                {result.daily.just_completed ? (
+                  <p className="gq-daily-win" role="status">
+                    That is your Daily 5 finished.
+                  </p>
+                ) : null}
+                <div className="gq-actions">
+                  <RunIt key={card.id} card={card} />
+                  <button
+                    type="button"
+                    className="ws-btn primary gq-next"
+                    ref={nextRef}
+                    onClick={next}
+                    disabled={loading}
+                    data-testid="gq-next"
+                  >
+                    Next {"→"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </article>
+        ) : !error ? (
+          <div className="gq-card skeleton" aria-busy="true">
+            <p className="gq-run-note">Dealing a card...</p>
+          </div>
+        ) : null}
+
+        <GotchaAdd
+          language={language}
+          name={(offered ?? []).find((l) => l.id === language)?.name ?? language}
+          onChanged={(s) => setSummary(s)}
+          onTry={() => {
+            setDailyMode(false);
+            void load(language, false);
+          }}
+        />
+      </div>
     </div>
   );
 }

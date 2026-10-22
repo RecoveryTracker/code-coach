@@ -508,6 +508,24 @@ export type ExplainLine = {
   text: string;
 };
 
+/** A related glossary word, as a "see also" chip. */
+export type WordRef = { id: string; term: string };
+
+/** One glossary entry (code_coach/glossary): a word, what it means, its rules, a verified example. */
+export type Word = {
+  id: string;
+  term: string;
+  language: string;
+  definition: string;
+  rules: string[];
+  example: string;
+  example_output: string;
+  see_also: WordRef[];
+  /** Truthy and Falsy only: the values that count as false and as true. */
+  counts_false: string[];
+  counts_true: string[];
+};
+
 /** Plain-English walkthrough of the current code. */
 export type ExplainResult = {
   ok: boolean;
@@ -515,6 +533,8 @@ export type ExplainResult = {
   lines: ExplainLine[];
   output_notes: string[];
   error_note: string | null;
+  /** The vocabulary the code uses; absent from an older server, empty when nothing matched. */
+  words?: Word[];
 };
 
 export type ConceptQuestion = {

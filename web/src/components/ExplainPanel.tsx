@@ -5,6 +5,7 @@
  */
 
 import type { ExplainResult } from "../types";
+import { WordsUsed } from "./WordsUsed";
 
 type Props = {
   explanation: ExplainResult | null;
@@ -58,6 +59,7 @@ export function ExplainPanel({ explanation, busy, error, onRefresh, onGripDown }
               ))}
             </div>
           ) : null}
+          <WordsUsed words={explanation.words} scope="coach" />
         </div>
       ) : (
         <div className="coach-explain-body">

@@ -18,45 +18,27 @@ the code under test). Code age is kept per language.
 
 from __future__ import annotations
 
+import importlib
 import json
 import math
+import pkgutil
 import random
 from dataclasses import asdict, dataclass, replace
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from . import pythonic
-from .items import Item
+from .items import Activity, Item
 
 # ── Items and activities ────────────────────────────────────────────────
 
 
-@dataclass(frozen=True)
-class Activity:
-    id: str
-    title: str
-    blurb: str
-    #: The question every item asks.
-    question: str
-    count: int
-    #: "type" (type the answer) or "pick" (one of two keys).
-    kind: str
-    #: Seconds per item at the sharpest (age 20) and at the slowest (age 80).
-    par: float
-    slow: float
-    make: Callable[[random.Random], Item]
-    #: For "pick": the two answers, left key first.
-    choices: tuple[str, str] = ("", "")
-    #: Variable Recall shows something first, for this many seconds.
-    show_seconds: float = 0.0
-    #: The Python version: its generator, and its wording where it differs.
-    make_py: Callable[[random.Random], Item] | None = None
-    question_py: str = ""
-    blurb_py: str = ""
+#: Python first: it is the language to practise.
+LANGUAGES = ("python", "javascript")
 
-
-LANGUAGES = ("javascript", "python")
+#: The headings of the home screen, in order (an Activity's `group` names one; others come after).
+GROUPS = ("Quick reads", "Predict the result", "Spot the problem", "Remember")
 
 
 def _num(x: float) -> str:
@@ -359,30 +341,81 @@ def _syntax_snap(rng: random.Random) -> Item:
     return Item(line, "valid" if ok else "invalid", why or ("Valid JavaScript." if ok else ""))
 
 
-ACTIVITIES: tuple[Activity, ...] = (
+_ORIGINALS: tuple[Activity, ...] = (
     Activity("eval", "Quick Eval", "What does it print? Twenty quick ones.",
              "What does console.log print?", 20, "type", 2.0, 9.0, _quick_eval,
-             make_py=pythonic.quick_eval, question_py="What does print() show?"),
+             make_py=pythonic.quick_eval, question_py="What does print() show?",
+             group="Quick reads", concepts=("expression", "operator", "precedence")),
     Activity("truthy", "Truthy or Falsy", "In an if, is it true or false? Left for falsy, right for truthy.",
              "Truthy or falsy?", 20, "pick", 0.9, 3.5, _truthy, ("falsy", "truthy"),
-             make_py=pythonic.truthy),
+             make_py=pythonic.truthy,
+             group="Quick reads", concepts=("truthy", "falsy")),
     Activity("loops", "Loop Count", "How many times does the loop run?",
              "How many times does the body run?", 10, "type", 3.0, 13.0, _loop_count,
-             make_py=pythonic.loop_count),
+             make_py=pythonic.loop_count,
+             group="Predict the result", concepts=("loop", "iteration", "range", "off-by-one")),
     Activity("trace", "Final Value", "Follow a few lines in your head.",
              "What is x at the end?", 8, "type", 4.0, 16.0, _final_value,
-             make_py=pythonic.final_value),
+             make_py=pythonic.final_value,
+             group="Predict the result", concepts=("variable", "assignment")),
     Activity("brackets", "Bracket Check", "Balanced or not? Left for no, right for yes.",
              "Balanced?", 16, "pick", 1.0, 4.5, _bracket_check, ("no", "yes"),
-             make_py=pythonic.bracket_check),
+             make_py=pythonic.bracket_check,
+             group="Spot the problem", concepts=("bracket", "nesting", "balanced")),
     Activity("recall", "Variable Recall", "Remember the variables, then answer from memory.",
              "What was it?", 6, "type", 2.5, 9.0, _recall, show_seconds=3.5,
-             make_py=pythonic.recall),
+             make_py=pythonic.recall,
+             group="Remember", concepts=("variable", "value")),
     Activity("syntax", "Syntax Snap", "Would JavaScript accept this line? Left for no, right for yes.",
              "Valid JavaScript?", 16, "pick", 1.4, 6.0, _syntax_snap, ("invalid", "valid"),
              make_py=pythonic.syntax_snap, question_py="Valid Python?",
-             blurb_py="Would Python accept this line? Left for no, right for yes."),
+             blurb_py="Would Python accept this line? Left for no, right for yes.",
+             group="Spot the problem", concepts=("syntax", "syntax error", "keyword")),
 )
+
+#: Pack name -> why it could not be loaded (a pack that fails to import is skipped, never fatal).
+LOAD_ERRORS: dict[str, str] = {}
+#: The packs that loaded, in the order their activities appear.
+PACKS: list[str] = []
+
+
+def _check_pack(name: str, acts: Any, taken: set[str]) -> tuple[Activity, ...]:
+    """A pack's ACTIVITIES, or an exception saying what is wrong with it."""
+    if not isinstance(acts, tuple) or not acts:
+        raise TypeError("ACTIVITIES must be a non-empty tuple of Activity")
+    for a in acts:
+        if not isinstance(a, Activity):
+            raise TypeError(f"{a!r} is not an Activity")
+        if a.id in taken:
+            raise ValueError(f"duplicate activity id {a.id!r}")
+        if a.make_py is None:
+            raise ValueError(f"{a.id}: a pack activity needs both generators (make and make_py)")
+        taken.add(a.id)
+    return acts
+
+
+def _discover() -> tuple[Activity, ...]:
+    """Import every `pack_<name>.py` beside this file, by name, and collect its ACTIVITIES."""
+    LOAD_ERRORS.clear()
+    PACKS.clear()
+    taken = {a.id for a in _ORIGINALS}
+    found: list[Activity] = []
+    for info in sorted(pkgutil.iter_modules(__path__), key=lambda m: m.name):
+        if not info.name.startswith("pack_"):
+            continue
+        try:
+            module = importlib.import_module(f"{__name__}.{info.name}")
+            acts = _check_pack(info.name, module.ACTIVITIES, set(taken))
+        except Exception as e:  # a broken pack is skipped and recorded, never fatal
+            LOAD_ERRORS[info.name] = f"{type(e).__name__}: {e}"
+            continue
+        taken.update(a.id for a in acts)
+        found.extend(acts)
+        PACKS.append(info.name)
+    return tuple(found)
+
+
+ACTIVITIES: tuple[Activity, ...] = _ORIGINALS + _discover()
 
 ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
 #: The Code age check: three activities, as the DS check was three tests.
@@ -499,6 +532,15 @@ def record(activity_id: str, seconds: float, errors: int, total: int, check_id: 
     return result
 
 
+def _groups() -> list[str]:
+    """The home screen's headings: GROUPS in order, then any other group an activity names, then "" as "More"."""
+    names = list(GROUPS)
+    for a in ACTIVITIES:
+        if a.group and a.group not in names:
+            names.append(a.group)
+    return [g for g in names if any(a.group == g for a in ACTIVITIES)]
+
+
 def summary(today: date | None = None, language: str = "javascript") -> dict[str, Any]:
     """Everything the home screen shows: each activity's best and last and
     the check ages by day (for one language), and the days trained (for the
@@ -540,10 +582,12 @@ def summary(today: date | None = None, language: str = "javascript") -> dict[str
         "activities": [
             {"id": a.id, "title": a.title, "blurb": a.blurb, "question": a.question, "count": a.count,
              "kind": a.kind, "choices": list(a.choices), "showSeconds": a.show_seconds,
+             "group": a.group, "concepts": list(a.concepts),
              "best": best.get(a.id), "last": last.get(a.id)}
             for a in (activity_for(x.id, language) for x in ACTIVITIES)
         ],
         "check": list(CHECK),
+        "groups": _groups(),
         "stamps": [{"day": d, "trained": d in days} for d in recent],
         "streak": streak,
         "checkAges": [{"day": d, "age": check_by_day[d]} for d in sorted(check_by_day)][-60:],

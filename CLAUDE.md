@@ -263,11 +263,18 @@ code_coach/farm/
   check asks for in the goal) and a MISTAKES / OTHER_WAYS entry in
   `tests/test_canvas_pywebapp.py`; library and session behaviour is in
   `tests/test_pyweb_lib.py`.
-- **Brain Drills** (`code_coach/brain/`): seven timed reflex activities, in
-  JavaScript or Python (`pythonic.py`; scores kept per language), and a
-  "code age" from 20 to 80. Every item is modelled in
-  Python and held to node in `tests/test_brain.py`. (Not called "Brain
-  Age", which is Nintendo's trademark.) In a round you can go Back (Alt+Left),
+- **Brain Drills** (`code_coach/brain/`): timed reflex activities in Python
+  (the default, listed first: the screen's `brain-language` falls back to
+  Python, and `/api/brain` and `/api/brain/round` default to it) or
+  JavaScript (scores kept per language), filed under headings on the home
+  screen (`Activity.group`, `GROUPS`: Quick reads, Predict the result, Spot
+  the problem, Remember), and a "code age" from 20 to 80 (the Code age check
+  is `CHECK`: eval, truthy, brackets). The original seven live in
+  `__init__.py` (JavaScript) and `pythonic.py`; every other activity is a
+  PACK (below). Every item is modelled by hand in Python and held to the
+  real runtime in `tests/test_brain.py` / `test_brain_python.py` (the seven)
+  and `tests/test_brain_packs.py` (every discovered activity). (Not called
+  "Brain Age", which is Nintendo's trademark.) In a round you can go Back (Alt+Left),
   open the Questions grid and jump anywhere, and Run / Explain an answered
   question's code (`BrainTools.tsx`, `BrainPicker.tsx`). The rules live in the
   pure `web/src/lib/brainRound.ts` (tested in `tests/test_brain_round.py`):
@@ -277,6 +284,132 @@ code_coach/farm/
   `/api/explain`, both told the drill's language (`language` in the request;
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from.
+- **Brain Drills packs** (how a new activity gets in; the Reading Pack in
+  `pack_reading.py` is the model). Add `code_coach/brain/pack_<name>.py`
+  exposing `ACTIVITIES: tuple[Activity, ...]` and touch nothing else:
+  `brain._discover()` imports `pack_*.py` by name, sorted, after the
+  originals; a pack that fails to import (or has a duplicate id, or no
+  `make_py`) is skipped, recorded in `brain.LOAD_ERRORS` and fails
+  `test_every_pack_imports_cleanly`. An `Activity` (`items.py`) carries both
+  languages (`make` JavaScript, `make_py` Python, `question_py`/`blurb_py`
+  where they differ), `kind` "type" or "pick" (two `choices`, left key
+  first), `par`/`slow` seconds per item (look at the existing ones),
+  `group`, `concepts` (plain lowercase words: the glossary resolves each one,
+  per language, to an entry by id, term or aka - so this is the one place the
+  mapping lives, and no glossary edit is needed. A word nobody has written an
+  entry for shows up in `tests/test_glossary.py`'s unresolved-concepts test;
+  add it as a `terms_brain_*.py` entry) and `oracle="value"`. Build a generator with
+  `_model.Pool([template, ...])`: a template is `(rng) -> Item`, or a table
+  row from `_model.row(fmt, answer, why, check=...)` with `$a $b $c $d $n
+  $w $v $k $x` holes; a pack wants >= 25 templates per language (the Reading
+  Pack has >= 40 for Python), and the tests run every template. **Answers are
+  modelled by hand** with the helpers in `_model.py` (`fdiv/fmod` by counting,
+  `py_slice`, `js_slice`, `py_show`, `js_show`...), never by asking the
+  runtime. The oracle (`OracleTests`, both languages, every template and
+  many seeds) runs `item.check` - or the prompt when `check` is blank - and
+  compares the printed value of its LAST line with `item.answer`; yes/no and
+  raises items build a `check` that prints "yes"/"no" (`yes_no_py/js`,
+  `raises_py/js`, or a snapshot comparison as Mutate or Copy does). The same
+  convention drives "Run it" (`runnableFor` in `brainRound.ts`: the
+  default case prints `check` or the prompt; `error` runs the snippet and
+  whether it raises is the answer). Rules the shape tests enforce: no
+  repeats in a round, prompts <= 220 characters and 10 lines, answers short,
+  non-empty, no stray spaces, Python says True/False/None and JavaScript
+  true/false/null/undefined, and a Python prompt never looks like
+  JavaScript (no `;`, `let `, `null`). Traps: node prints an array of more
+  than 6 items in grouped columns (`js_show` refuses one); never print
+  inside an item (Run it shows all of stdout); the oracle runs JavaScript in
+  a bare `vm` context, so no `structuredClone`/`setTimeout`; avoid `is` on
+  ints and strings in Python; `-0` is a real JavaScript answer. Helper
+  modules start with `_` so they are not mistaken for packs.
+
+## Glossary ("Words used": the vocabulary under Explain my code)
+
+Built 2026-10-21 because "Explain my code" said what each line does but never what *falsy* or *scope* means. The
+package `code_coach/glossary/` is plain data plus a matcher; `/api/explain` adds a `words` list to EVERY reader's answer
+(Python, JavaScript, the farm's language) in the handler, once - never inside `explain.py`, `explain_js.py` or
+`explain_farm.py` (a test greps for that). The same `WordsUsed` component (`web/src/components/WordsUsed.tsx`, rules in
+the pure `web/src/lib/words.ts`, `styles/words.css`) is rendered under every explanation: `ExplainPanel` (coach strip and
+Free mode), `BrainTools`, and the Workbook and Forms (`Katas.tsx`) walkthroughs. On a MISSED Brain Drills question,
+`QuestionWords` shows a quiet "Words in this question" line of chips that open the same cards.
+
+```text
+code_coach/glossary/
+  entry.py            Entry (frozen dataclass) + the writers: py(...), js(...), both(...)
+  terms_values.py     truthy/falsy/boolean, types, numbers, strings, mutable/immutable, reference
+  terms_basics.py     expression, operator, precedence, variable, scope, syntax, brackets, import...
+  terms_flow.py       condition, comparison, short-circuit, branch, loops, index/slice, exceptions, recursion
+  terms_functions.py  function, parameter/argument, return, closure, callback, class, generator, async...
+  terms_python.py     None, list/tuple/dict/set, range, ==/is, f-string, comprehension, lambda, self...
+  terms_javascript.py null/undefined/NaN, ==/===, template literal, arrow function, this, promise, event loop...
+  terms_brain_*.py    the vocabulary of the Brain Drills packs (added 2026-10-21, ~85 words per language):
+                      strings (whitespace, split, join, format, padding, ascii, palindrome...), collections
+                      (set operations, min/max, sorting, stable sort, key function / comparator, swap, step, map/
+                      filter/reduce in Python, enumerate in JS), functions (default and keyword arguments, mutable
+                      default, side effect, call stack, late binding, block scope, shadowing, nested loop,
+                      for-else, flag), classes (attribute/property, class vs instance attribute, static and class
+                      method, inheritance, override, super, MRO / prototype chain, isinstance / instanceof, string
+                      representation), logic (logical operators, De Morgan, truth table, bitwise, shifts, masks,
+                      chained comparison, leap year, FizzBuzz, primes, division), errors (runtime error, error
+                      message, TypeError / NameError / ReferenceError / IndexError..., traceback, line number, bug)
+  contexts.py         CONTEXTS: the seven ORIGINAL Brain Drills activities -> the words they always teach, plus
+                      concepts_for(): every other activity's `concepts`, read lazily from code_coach.brain
+  __init__.py         the loader (terms_* found BY NAME), find_words, lookup, resolve, context_words, words_for_context, payload
+```
+
+- **An entry** teaches one word in one language: `id` (kebab-case, unique per language), `term` (shown), `definition`
+  (1-2 plain sentences, 300 characters at most, no word that is not itself defined), `rules` (short bullets), `example` +
+  `out` (a small program in THAT language and exactly what it prints), `see` (ids in the same language), `aka`
+  (other spellings for lookup), `detect` (regexes), `priority`. A word that means the same in both languages is written
+  once with `both("id", "Term", "definition", python=dict(rules=..., example=..., out=...), javascript=dict(...))`, which
+  makes two separate entries, so a rule can never leak across languages. Use `py(...)` / `js(...)` for one language.
+- **Adding a term** is one more `*both(...)` / `*py(...)` / `*js(...)` in a `TERMS` list (or a new `terms_<theme>.py`
+  with `TERMS = [...]`: nothing to register). Then run `pytest tests/test_glossary.py`.
+- **The oracle rule applies to examples AND rules.** Every example is run for real (python, node) and must print
+  exactly `out`; the Truthy/Falsy `counts_false` / `counts_true` lists are run through `bool()` / `Boolean()`, the prose
+  rule that lists the falsy values is parsed and run too, and the hand-written claims in the test (not read from the
+  entries) are checked against the language. The rules of the `terms_brain_*` files are backed by `RULE_CHECKS` in the
+  test (one small program per claim, e.g. `sorted` stability, `str.index` raising, JS `replace` changing only the first
+  match, `Math.max()` being `-Infinity`, the leap-year rule against `calendar.isleap` / `Date`, De Morgan over all
+  four inputs, primes against a sieve): add a line there when you add a runnable rule. Write a rule only if you can say how a test would catch it being false.
+  Keep every rule language-correct: Python's empty list is falsy, JavaScript's is truthy; `%` takes the sign of the
+  right side in Python and the left in JavaScript; `round(2.5)` is 2 but `Math.round(2.5)` is 3.
+- **Detect hygiene.** A regex must never backtrack without end: `(?:[ \t]+[^\n]*\n?)*?` (an OPTIONAL newline after a
+  `[^\n]*`) once hung `find_words` on a class with a few methods - use `[ \t]+\S[^\n]*\n` for "one more indented line".
+  A test feeds a 40-method class and 300-line loops through every pattern. Generic words (`sum`, `state`, `counter`,
+  `character`, `bug`...) carry no `detect` or a priority <= 50, and a test checks that plain snippets (`x = 5`,
+  `if x > 3`, a one-method class...) wake none of the `terms_brain_*` cards.
+- **Matching** (`find_words(code, language, context=None, limit=8)`): context words first (all of them, in the
+  context's order), then the entries whose `detect` regexes hit the code - run on the code with comments removed and
+  string contents blanked, so a word inside a string is not code (a pattern starting `raw:` sees the code as written) -
+  sorted by `priority` (high first) then first appearance; never more than `limit`, no word twice. An unknown language,
+  junk or empty code: `[]` or just the context's words, never an error. `language_for` maps `tfwr` to Python and
+  `typescript` to JavaScript; any other app language has no glossary yet, so `words` is empty.
+- **Contexts** (what a Brain Drills activity always teaches, shown first by `find_words` and as the "Words in this
+  question" chips). The ORIGINAL seven keep their hand-written ids in `contexts.CONTEXTS` (eval: expression, evaluate,
+  operator, precedence; truthy: truthy, falsy; loops: loop, iteration, off-by-one, range (Python only); trace: variable,
+  assignment, reassign; brackets: bracket, balanced, nesting; recall: variable, value, assignment; syntax: syntax,
+  syntax-error, token, keyword). EVERY OTHER activity (every pack) is DERIVED, with no glossary edit: its
+  `Activity.concepts` are plain lowercase words, and `glossary.resolve(language, word)` turns each into an entry per
+  language - `lookup` first (id, term or aka), then ignoring case, hyphens, spaces and a plural (`type coercion` ==
+  `type-coercion`, `tostring` == `toString`, `closures` == `closure`; an id beats a term, which beats an aka). A concept a
+  language has no word for is skipped for that language (JavaScript has no `range`, Python no `tostring`); order is
+  kept, no word twice. The brain package is imported lazily inside `contexts.concepts_for`, so the glossary never
+  imports it at import time (a test holds that). `tests/test_glossary.py` checks, for every activity and both
+  languages, that the context is non-empty (>= 2 words when the activity lists >= 2 concepts), and
+  `test_concepts_that_resolve_in_neither_language_are_few_and_visible` fails (naming the words) when an activity has more
+  than `MAX_UNRESOLVED_PER_ACTIVITY` concepts that no entry answers to. **Teaching a pack author's new word** = writing
+  the entry in a `terms_brain_<theme>.py` (or any `terms_*.py`) with the word as its id, term or an `aka`; a word that
+  genuinely exists in only one language is fine - prefer a counterpart under the same word when there is one
+  (`nonlocal` -> JS closure, `keyword argument` -> JS options object, `method resolution order` -> JS prototype chain,
+  `isinstance` <-> `instanceof`, `self` -> `this`). `BrainTools` passes `activityId` as `context`; every other caller
+  passes nothing.
+- **API**: `POST /api/explain` takes an optional `context` and answers `words: [{id, term, language, definition, rules,
+  example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged);
+  `GET /api/glossary?language=&term=&context=` gives one word (id, term or alias), a context's words, or the whole
+  language, and never an error (unknown means `[]`). "See also" chips jump to a card already on screen or fetch the word.
+- **Not yet**: other app languages (C, Go...), the Workbook/Predict modes passing a `context` of their own, and a
+  syntax-error-aware match (Free mode with a typo shows the words of the code, not "syntax error").
 
 ## Gotchas (the "<Language> Quiz" feed: 19 languages)
 
@@ -296,12 +429,16 @@ code_coach/gotchas/
   content_*.py   the cards. python=content_py/py2/py3 (324), javascript=content_js/js2/js3 (264), c=content_c (116);
                  every other language is content_<id>.py (+ content_<id>2.py...) - 3 seed cards each so far
   items.py       Item; make("rust") builds a card (ids are <prefix>-<slug>: py-, js-, c-, cpp-, rs-, cs-, kt-...)
-  store.py       GotchaStore: picking, answering, the Daily 5, the user's cards; gotchas.json / gotchas_user.json
+  store.py       GotchaStore: picking, answering (+ confidence and note), the Daily 5, My traps, the user's cards;
+                 gotchas.json / gotchas_user.json
   user.py        'Add a quiz I found': run, check, build the options (any language)
 web/src/lib/gotchas.ts          streak, keys, deck line, language choosing (quick buttons, filter, arrows), accent hue
 web/src/lib/codeColors.ts       the syntax colourer; knows no language by name, takes the server's Syntax
-web/src/components/Gotchas.tsx, GotchaLangMenu.tsx, GotchaAdd.tsx; styles/gotchas.css
+web/src/components/Gotchas.tsx, GotchaLangMenu.tsx, GotchaAdd.tsx, GotchaTraps.tsx, GotchaCode.tsx; styles/gotchas.css
 tests/test_gotchas_langs.py     the one parametrised file: registry, loader, shape of every card, the oracle, routes
+tests/test_gotchas_store.py     serving, answering, the Daily 5, user cards, routes
+tests/test_gotchas_confidence.py  confidence, notes, scheduling offsets, My traps (store and routes)
+tests/test_gotchas_ts.py        the browser-side rules in node (keys, wording, sorting) and the stylesheet's contrast
 ```
 
 ### The registry (`gotchas/langs.py`)
@@ -377,20 +514,23 @@ one, change the card, never the list (unless the pattern is simply wrong).
   tab-separated; Zig prints to stderr; Swift `import Foundation` costs ~90 s the first time; TypeScript's lib is ES2020;
   Odin refuses an untyped 1e21; Go loop variables are per-iteration; Rust prints floats without exponents.
 - **Serving** (`GotchaStore.pick`, in order): a card the user just added and not yet answered ("Yours"); the first two
-  cards of a language's deck while fewer than two are seen; a missed card that is due (5-10 answers later; `ticks` counts
-  answers per language); an unseen card, at random; otherwise the card seen longest ago. `exclude` (the last 3 ids the client
+  cards of a language's deck while fewer than two are seen; a card that is due (`ticks` counts
+  answers per language; a miss is due 5-10 answers later, a miss you were Sure about 2-4 later and ahead of the
+  rest, a right answer you only guessed 10-20 later: see "How sure, my reasoning, my traps"); an unseen card, at random; otherwise the card seen longest ago. `exclude` (the last 3 ids the client
   saw) is honoured unless it would leave nothing. `/api/gotchas/next` never carries the answer, the trap or the why;
-  `POST /api/gotchas/answer {id, language, chosen}` returns them. Options are shuffled deterministically: a built-in card's
+  `POST /api/gotchas/answer {id, language, chosen, confidence?, note?}` returns them (`GET /api/gotchas/next?card=<id>` serves one
+  named card the same way, answer hidden: that is My traps' Try again). Options are shuffled deterministically: a built-in card's
   right letter comes from a block-wise balanced shuffle (every four consecutive cards use A-D once) - the balance tests only
   look at decks of 40+ cards. Unknown id / language / chosen is 400.
 - **Files** beside the progress file, written with Momentum's atomic writer and read with `momentum.engine.read_state`
   (a broken file is kept as `.bad`): `gotchas.json` (per-card `seen/right/last_day/last_tick/due`, per-language `ticks`,
   streak now/best, today's Daily 5, **all keyed by language id and created lazily**, so an old file keeps loading and a
-  new language starts empty) and `gotchas_user.json`. Nothing goes into the progress file's schema.
+  new language starts empty) and `gotchas_user.json`. Per card also `sure_right/sure_wrong/guess_right/guess_wrong`,
+  `sure_run`, `due_kind`, `note` and `notes` (all optional on load: an old file without them is a card with no claims). Nothing goes into the progress file's schema.
 - **Run it** is `POST /api/gotchas/run {id, language}`, not `/api/visualize`: the card's own program runs through
   `runner.py` (the same runner that checks a user's card). It takes a card id, never arbitrary code.
 - **Daily 5**: five cards per language and calendar day (fewer if the deck is smaller), seeded by date+language, weighted
-  missed 4 / unseen 3 / right 1, made on the first request of the day and **kept in `gotchas.json`**. Any first answer to
+  missed 4 (any card still due, so a sure-and-wrong or shaky one counts as missed) / unseen 3 / right 1, made on the first request of the day and **kept in `gotchas.json`**. Any first answer to
   one of the five fills its dot; the answer that fills the last says `just_completed`.
 - **Add a quiz I found** (`/api/gotchas/user`: GET list, POST create, POST `/preview`, DELETE `/{id}`; 400 on a refusal
   with the reason in words), for every language: the user pastes code (<= 60 lines), optionally types up to 4 options and
@@ -403,6 +543,47 @@ one, change the card, never the list (unless the pattern is simply wrong).
 - **Momentum**: `gotcha` (12 XP, key `gotcha:<language>:<id>`, once a day per card, on each right answer only) and
   `gotcha_daily` (30 XP, key `daily:<language>:<date>`). The key is any string (`rules.clean_key`, 200 characters), so a
   new language needs nothing; `tests/test_gotchas_langs.py` pays one for a new language.
+
+### How sure, my reasoning, my traps
+
+Added 2026-10-21 to strengthen the think-hard-then-read-why loop. None of it touches Momentum (XP, keys and prices are unchanged).
+
+- **How sure are you?** A two-way control above the answers, `Sure | Just guessing` (default Sure; clicks, or the keys **S** and **G**
+  which *set* it, only before answering; kept for the session in component state, never saved). It is sent with the answer as
+  `confidence: "sure" | "guess"`; the store cleans it (`clean_confidence`: anything else, any type, is "", never a 422) and counts it
+  per card (`sure_right`, `sure_wrong`, `guess_right`, `guess_wrong`; `seen`/`right` keep counting every answer). After the reveal
+  (`feedbackLine` in `lib/gotchas.ts`, the wording is held to no loss/shame words by a test): sure and wrong says "You were sure -
+  this one is worth remembering"; right but guessed says "Right - but you guessed, so it will come back"; sure and right is the plain
+  success; a wrong guess is the ordinary miss. The answer reply adds `confidence`, `comes_back` and `note`; `again_soon` is still
+  just `not correct`.
+- **Scheduling** (`store.RETURNS`, `return_offset`: the offset is inside the range, spread by a hash of card + answer count, so it
+  is the same on every run): a **miss** (wrong, with a guess or no claim) is due **5-10** answers later; a **sure-and-wrong** miss
+  **2-4** later (`due_kind` `sure_wrong`); a **right-but-guessed** card is "shaky" and comes back once **10-20** later (`shaky`).
+  Among due cards the order is sure_wrong, then miss, then shaky, then the earlier due (`DUE_RANK`). A shaky card answered right
+  and Sure (or right with no claim) is done like any right card; answered right with a guess again it is shaky again; answered wrong
+  it is a miss. The browser withholds the last 3 cards it showed (`exclude`), so in the feed a +2 card shows from +3.
+- **Mastered / "missed and not yet mastered"**: a card is in **My traps** when it was answered WRONG at least once (`seen - right
+  >= 1`) and its last two answers have not both been right AND marked Sure (`sure_run < MASTERED_RUN = 2`; `sure_run` counts the
+  current run of right-and-Sure answers, a guess, an unclaimed answer or a miss resets it). An old record has `sure_run` 0, so an old
+  missed card shows until it is answered right-and-Sure twice. A card that was only ever right (even if guessed) is not a trap.
+- **Your reasoning**: an "Add my reasoning" button under the answers (collapsed; one textarea, 300 characters with a counter,
+  placeholder "Why do I think so? (optional)"), before answering only. Sent as `note` (trimmed, cut to 300 by `clean_note`); kept as
+  the card's last `note` and a `notes` history of the last 3 `{day, note, correct}`. After the reveal the Why panel shows "What you
+  thought:" with it. Never required, never changes scoring. **Keys**: `keyAction()` in `lib/gotchas.ts` is the one decision for
+  every quiz key (1-4, A-D, S, G, Enter, Space, right arrow); it returns nothing while focus is in an INPUT, TEXTAREA, SELECT or
+  contenteditable (the usual bug: typing a note answered a card), while My traps is open, or with Ctrl/Cmd/Alt. Escape inside the
+  box closes the box only (stopPropagation); `tests/test_gotchas_ts.py` also checks the window handler delegates to it.
+- **My traps** (`GotchaTraps.tsx`, an inline view that replaces the feed while open; the feed stays mounted, `hidden`, so an
+  unfinished Add-a-quiz form survives): the header's "My traps" button, Escape or "Back to the quiz" returns (focus goes back to
+  the button). Filter pills: the current language (default) | All languages. Each trap shows the code (compact `<pre>`, scrolls
+  inside), language and card title (`card_title`: `py-score-90` is "Score 90", `mine-3` "Your card 3"), the trap line, the Why,
+  "Missed N times", badges "Sure but wrong" (`sure_wrong > 0`, ever) and "Shaky" (the last answer was a right guess), "Yours", your
+  last note, the last day, and **Try again**, which serves that card in the feed (a card of another language switches to it first).
+  `GET /api/gotchas/traps?language=<id>|all` (default `all`; unknown language, or one with no toolchain, is 400; `all` is the offered
+  languages) returns `{language, traps: [...]}` sorted by `store.sort_traps` (sure-but-wrong first, then most misses, then most
+  recent day, then answer count; `sortTraps` in `lib/gotchas.ts` is the same rule and a test holds the two together). It only
+  ever lists cards that have a record (already answered), never carries the answer key, includes your own cards on the same terms,
+  and skips a record whose card no longer exists.
 
 ### The picker and the look
 

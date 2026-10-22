@@ -220,7 +220,7 @@ class LanguageHistoryTests(unittest.TestCase):
         self.assertEqual(js["checkAges"], [])
         self.assertTrue(js["trainedToday"])
         self.assertEqual(py["language"], "python")
-        self.assertEqual(py["languages"], ["javascript", "python"])
+        self.assertEqual(py["languages"], ["python", "javascript"], "Python is listed first")
 
     def test_python_activities_are_worded_for_python(self) -> None:
         py = {a["id"]: a for a in brain.summary(language="python")["activities"]}
@@ -255,7 +255,7 @@ class RouteTests(unittest.TestCase):
         self.assertTrue(brain_result(BrainResultRequest(activity="eval", seconds=90, errors=1, total=20,
                                                         language="python"))["best"])
         py = next(a for a in brain_summary("python")["activities"] if a["id"] == "eval")
-        js = next(a for a in brain_summary()["activities"] if a["id"] == "eval")
+        js = next(a for a in brain_summary("javascript")["activities"] if a["id"] == "eval")
         self.assertIsNotNone(py["best"])
         self.assertIsNone(js["best"])
         # A result with no language is still JavaScript.

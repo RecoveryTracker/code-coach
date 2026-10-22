@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { checkKata, explainCode, fetchKataAnswer, fetchKatas } from "../api";
 import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
+import { WordsUsed } from "./WordsUsed";
 import type {
   ExplainResult,
   KataCheck,
@@ -676,6 +677,7 @@ print(${asCall(kata.name, pick.args)})
             {walkthrough.error_note ? (
               <p className="wb-walkthrough-error">{walkthrough.error_note}</p>
             ) : null}
+            <WordsUsed words={walkthrough.words} scope="walk" />
           </div>
         ) : null}
         {answer ? (

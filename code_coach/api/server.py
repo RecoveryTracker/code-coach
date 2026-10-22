@@ -25,6 +25,7 @@ from code_coach.api.schemas import (
     DrillEvaluateResponse,
     ExplainRequest,
     ExplainResponse,
+    GlossaryResponse,
     HealthResponse,
     KataCaseResult,
     KataCheckRequest,
@@ -37,6 +38,7 @@ from code_coach.api.schemas import (
     ErrorCheckRequest,
     ErrorCheckResponse,
     TraceCheckRequest,
+    Word,
     CanvasCheckRequest,
     CanvasPageRequest,
     CanvasPassedRequest,
@@ -1234,8 +1236,11 @@ def chat(body: ChatRequest) -> ChatResponse:
 @app.post("/api/explain", response_model=ExplainResponse)
 def explain(body: ExplainRequest) -> ExplainResponse:
     """Plain-English walkthrough of the student's current code + why it
-    outputs what it does. Local AST + traced run — no cloud AI."""
-    from code_coach.explain import explain_code
+    outputs what it does. Local AST + traced run — no cloud AI.
+
+    Every reader's answer gets the glossary's `words` added HERE, once, so a new
+    language's explainer needs no glossary code of its own."""
+    from code_coach import glossary
     from code_coach.languages import LANGUAGES, get_language
 
     # What the request asked for, when it names a language we have; otherwise
@@ -1245,6 +1250,41 @@ def explain(body: ExplainRequest) -> ExplainResponse:
     if asked not in {x.id for x in LANGUAGES}:
         asked = ""
     lang = get_language(asked or getattr(_store.load(), "language", "python"))
+    response = _explain_with(body, lang, asked)
+    if response.ok:
+        response.words = [
+            Word(**glossary.payload(w))
+            for w in glossary.find_words(
+                body.code or "", glossary.language_for(lang.id), context=body.context or None
+            )
+        ]
+    return response
+
+
+@app.get("/api/glossary", response_model=GlossaryResponse)
+def glossary_words(language: str = "", term: str = "", context: str = "") -> GlossaryResponse:
+    """Glossary entries, for "see also" links and the Brain Drills "Words in this question" line.
+
+    `term` (an id, a display term or another spelling) gives that one entry; `context` (a Brain
+    Drills activity id) gives the words that activity teaches; neither gives the whole language.
+    Never an error: an unknown language or word is just an empty list."""
+    from code_coach import glossary
+
+    lang = glossary.language_for(language)
+    if term.strip():
+        found = glossary.lookup(lang, term)
+        items = [found] if found else []
+    elif context.strip():
+        items = glossary.words_for_context(context, lang)
+    else:
+        items = glossary.all_entries(lang)
+    return GlossaryResponse(words=[Word(**glossary.payload(w)) for w in items])
+
+
+def _explain_with(body: ExplainRequest, lang, asked: str) -> ExplainResponse:
+    """The reader for `lang` (Python's, JavaScript's, the farm's), without the glossary."""
+    from code_coach.explain import explain_code
+
     if "explainer" not in lang.ready:
         # Reading the code needs a reader for that language. Without this,
         # SQL came back as "Python can't run this — there's a syntax error",
@@ -2414,7 +2454,7 @@ def ticket_answer(project_id: str = "", ticket_id: str = "") -> dict:
 
 
 @app.get("/api/brain")
-def brain_summary(language: str = "javascript") -> dict:
+def brain_summary(language: str = "python") -> dict:
     """Brain Drills' home: the activities and their bests, the stamps, the code ages (per language)."""
     from code_coach import brain
 
@@ -2424,7 +2464,7 @@ def brain_summary(language: str = "javascript") -> dict:
 
 
 @app.get("/api/brain/round")
-def brain_round(activity: str = "", seed: int | None = None, language: str = "javascript") -> dict:
+def brain_round(activity: str = "", seed: int | None = None, language: str = "python") -> dict:
     """A fresh round of one activity, answers included - it's a speed drill, checked as you go."""
     from code_coach import brain
 
@@ -2486,13 +2526,22 @@ def gotchas_summary(language: str = "python") -> dict:
 
 
 @app.get("/api/gotchas/next")
-def gotchas_next(language: str = "python", exclude: str = "", daily: bool = False) -> dict:
-    """One card, answer withheld. `exclude` is a comma-separated list of ids to skip (the ones just seen)."""
+def gotchas_next(language: str = "python", exclude: str = "", daily: bool = False, card: str = "") -> dict:
+    """One card, answer withheld. `exclude` is a comma-separated list of ids to skip (the ones just seen).
+
+    `card` names one card to serve instead of picking ("Try again" in My traps); an id that is not in the
+    language's deck is a 400. It is served exactly like any other card: answer hidden, a normal answer."""
     from code_coach import gotchas
 
     language = _gotcha_language(language)
     ids = {part for part in exclude.split(",") if part}
-    item, why = gotchas.STORE.pick(language, ids, daily=daily)
+    if card:
+        try:
+            item, why = gotchas.STORE.find(language, card)[0], "trap"
+        except gotchas.UnknownCard as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+    else:
+        item, why = gotchas.STORE.pick(language, ids, daily=daily)
     return {**gotchas.STORE.present(item), "why_picked": why, "title": gotchas.title(language),
             "summary": gotchas.STORE.summary(language), "languages": gotchas.languages_payload()}
 
@@ -2503,9 +2552,21 @@ def gotchas_answer(body: GotchaAnswerRequest) -> dict:
     from code_coach import gotchas
 
     try:
-        return gotchas.STORE.answer(_gotcha_language(body.language), body.id, body.chosen)
+        return gotchas.STORE.answer(_gotcha_language(body.language), body.id, body.chosen,
+                                    confidence=body.confidence, note=body.note)
     except (gotchas.UnknownCard, gotchas.BadChoice) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@app.get("/api/gotchas/traps")
+def gotchas_traps(language: str = "all") -> dict:
+    """My traps: the cards answered wrong at least once and not yet mastered (the last two answers right and
+    marked Sure), for one language or `all` of the offered ones. Only cards already answered are ever listed, so
+    the code, trap and why come with them; unknown language is a 400 like the other routes."""
+    from code_coach import gotchas
+
+    languages = gotchas.available_languages() if language == "all" else [_gotcha_language(language)]
+    return {"language": language, "traps": gotchas.STORE.traps(languages)}
 
 
 def _tidy_run(text: str) -> str:

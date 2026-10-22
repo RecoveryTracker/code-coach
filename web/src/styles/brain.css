@@ -118,9 +118,33 @@
   fill: var(--accent, #6ea8fe);
 }
 
+.brain-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.brain-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8b98a8);
+}
+
+.brain-group-count {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 .brain-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 10px;
 }
 
@@ -150,6 +174,10 @@
 
 .brain-card .brain-card-best {
   color: var(--text, #cdd9e5);
+}
+
+.brain-card .brain-card-last {
+  font-size: 12px;
 }
 
 .brain-play-top {

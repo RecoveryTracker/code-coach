@@ -224,7 +224,7 @@ export interface GotchaCard {
   code: string;
   options: string[];
   mine: boolean;
-  why_picked: "new" | "again" | "review" | "yours" | "daily";
+  why_picked: "new" | "again" | "review" | "yours" | "daily" | "trap";
   title: string;
   summary: GotchaSummary;
   languages?: LangInfo[];
@@ -241,6 +241,11 @@ export interface GotchaAnswer {
   streak: number;
   streak_best: number;
   again_soon: boolean;
+  /** How sure you said you were ("" when you did not say) and the note you wrote (trimmed), as the server kept them. */
+  confidence?: Confidence | "";
+  note?: string;
+  /** The card is due again (a miss, or a right answer you only guessed). */
+  comes_back?: boolean;
   daily: GotchaDaily & { just_completed: boolean };
   summary: GotchaSummary;
 }
@@ -386,3 +391,154 @@ export function lineCount(code: string): number {
 }
 
 export const MAX_LINES = 60;
+
+// ── How sure you were ──────────────────────────────────────────────────
+
+/** How sure the player says they are, sent with the answer. Never changes the score or the XP. */
+export type Confidence = "sure" | "guess";
+
+export const CONFIDENCE_CHOICES: { id: Confidence; label: string; key: string }[] = [
+  { id: "sure", label: "Sure", key: "S" },
+  { id: "guess", label: "Just guessing", key: "G" },
+];
+
+/** What the control starts at on every visit. */
+export const DEFAULT_CONFIDENCE: Confidence = "sure";
+
+/**
+ * The calm line shown after the reveal for how sure you were and whether it was right, or null when there
+ * is nothing to add (sure and right is the plain success; a wrong guess is the ordinary miss). No loss or
+ * blame wording: a card you were sure about is worth remembering, that is all.
+ */
+export function feedbackLine(confidence: string | null | undefined, correct: boolean): string | null {
+  if (confidence === "sure" && !correct) return "You were sure - this one is worth remembering";
+  if (confidence === "guess" && correct) return "Right - but you guessed, so it will come back";
+  return null;
+}
+
+/** Every line `feedbackLine` can say, for the wording test. */
+export const FEEDBACK_LINES: string[] = [
+  feedbackLine("sure", false),
+  feedbackLine("guess", true),
+].filter((x): x is string => x !== null);
+
+// ── Your reasoning ─────────────────────────────────────────────────────
+
+export const NOTE_MAX = 300;
+
+/** The text kept in the box: at most NOTE_MAX characters (what the server stores, before it trims). */
+export function clampNote(text: string): string {
+  return Array.from(text).slice(0, NOTE_MAX).join("");
+}
+
+/** The counter under the box: "12/300". */
+export function noteCounter(text: string): string {
+  return `${Array.from(text).length}/${NOTE_MAX}`;
+}
+
+// ── What a key press does ──────────────────────────────────────────────
+
+/** What the quiz does for one key press. */
+export type KeyAction =
+  | { kind: "none" }
+  | { kind: "answer"; index: number }
+  | { kind: "confidence"; value: Confidence }
+  | { kind: "next" };
+
+export interface KeyContext {
+  /** The tag of the focused element (event target), upper case: "TEXTAREA", "BUTTON", "BODY"... */
+  tag: string;
+  /** The focused element is contenteditable. */
+  editable: boolean;
+  /** A card is on screen. */
+  hasCard: boolean;
+  /** The card is answered (its result is showing). */
+  answered: boolean;
+  /** How many options the card has. */
+  options: number;
+  /** A modal-ish view (My traps) is open over the quiz: its keys belong to it. */
+  panelOpen: boolean;
+  ctrl: boolean;
+}
+
+/** True when the focused element takes typing: the keys then belong to it, not to the quiz. */
+export function isTypingTarget(tag: string, editable: boolean): boolean {
+  return editable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+/**
+ * The one place that decides what a key does. While focus is in a text box (the reasoning box, the language
+ * search, the add-a-card form) or a panel is open, ALL of the quiz's shortcuts are off. Otherwise: 1-4 and A-D
+ * answer, S and G set how sure you are (before answering), Enter / Space / the right arrow go to the next card
+ * once answered (a focused button keeps its own Enter and Space).
+ */
+export function keyAction(key: string, c: KeyContext): KeyAction {
+  const none: KeyAction = { kind: "none" };
+  if (c.ctrl || c.panelOpen || isTypingTarget(c.tag, c.editable)) return none;
+  if (c.answered) {
+    if (!isNextKey(key)) return none;
+    if ((c.tag === "BUTTON" || c.tag === "A" || c.tag === "SUMMARY") && key !== "ArrowRight") return none;
+    return { kind: "next" };
+  }
+  if (!c.hasCard) return none;
+  const index = keyToIndex(key, c.options);
+  if (index >= 0) return { kind: "answer", index };
+  const k = key.toLowerCase();
+  if (k === "s") return { kind: "confidence", value: "sure" };
+  if (k === "g") return { kind: "confidence", value: "guess" };
+  return none;
+}
+
+// ── My traps ───────────────────────────────────────────────────────────
+
+/** A card you have missed and not yet mastered (mastered = your last two answers right and marked Sure). */
+export interface GotchaTrap {
+  id: string;
+  language: GotchaLang;
+  language_name: string;
+  title: string;
+  code: string;
+  trap: string;
+  why: string;
+  mine: boolean;
+  misses: number;
+  sure_wrong: number;
+  guess_wrong: number;
+  /** Its last answer was right but guessed, so it is still coming back. */
+  shaky: boolean;
+  /** The last note you wrote on it ("" when none). */
+  note: string;
+  last_day: string;
+  last_tick: number;
+}
+
+/** The order of the list: sure-but-wrong first, then most misses, then most recent. Does not change its input. */
+export function sortTraps(traps: readonly GotchaTrap[]): GotchaTrap[] {
+  return [...traps].sort(
+    (a, b) =>
+      Number(b.sure_wrong > 0) - Number(a.sure_wrong > 0) ||
+      b.misses - a.misses ||
+      (a.last_day < b.last_day ? 1 : a.last_day > b.last_day ? -1 : 0) ||
+      b.last_tick - a.last_tick ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+}
+
+/** The badges on a trap: "Sure but wrong" when you were ever sure and wrong, "Shaky" while a guess is pending. */
+export function trapBadges(t: Pick<GotchaTrap, "sure_wrong" | "shaky">): string[] {
+  const out: string[] = [];
+  if (t.sure_wrong > 0) out.push("Sure but wrong");
+  if (t.shaky) out.push("Shaky");
+  return out;
+}
+
+export function missedLine(n: number): string {
+  return n === 1 ? "Missed 1 time" : `Missed ${n} times`;
+}
+
+/** The server's `language` query for the panel: this language, or every one. */
+export function trapsScope(allLanguages: boolean, current: GotchaLang): GotchaLang | "all" {
+  return allLanguages ? "all" : current;
+}
+
+export const TRAPS_EMPTY = "Nothing here yet - miss a card and it will show up so you can study it";

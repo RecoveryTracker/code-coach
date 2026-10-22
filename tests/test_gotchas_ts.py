@@ -145,6 +145,55 @@ out.labelsOfCode = [
   G.codeLabel("a".repeat(100)).length,
 ];
 
+// How sure, your reasoning, the keys, My traps.
+const ctx = (over) => ({ tag: "BODY", editable: false, hasCard: true, answered: false, options: 4, panelOpen: false, ctrl: false, ...over });
+const act = (key, over) => G.keyAction(key, ctx(over));
+const TYPED = ["1", "2", "3", "4", "a", "b", "c", "d", "A", "s", "g", "S", "G", "Enter", " ", "ArrowRight", "ArrowLeft", "Escape", "n"];
+out.sure = {
+  asking: ["1", "4", "a", "D", "s", "S", "g", "G", "x", "Enter", " ", "ArrowRight", "5", "e"].map((k) => act(k)),
+  threeOptions: ["3", "4", "c", "d", "s"].map((k) => act(k, { options: 3 })),
+  noCard: ["1", "s", "Enter"].map((k) => act(k, { hasCard: false })),
+  typing: Object.fromEntries(
+    [["TEXTAREA", false], ["INPUT", false], ["SELECT", false], ["DIV", true]].map(([tag, editable]) => [
+      tag + (editable ? "-editable" : ""),
+      TYPED.map((k) => act(k, { tag, editable })).filter((a) => a.kind !== "none").length,
+    ]),
+  ),
+  typingAnswered: TYPED.map((k) => act(k, { tag: "TEXTAREA", answered: true })).filter((a) => a.kind !== "none").length,
+  panel: TYPED.map((k) => act(k, { panelOpen: true })).filter((a) => a.kind !== "none").length,
+  ctrl: ["1", "s", "g", "a", "Enter"].map((k) => act(k, { ctrl: true }).kind),
+  answered: ["Enter", " ", "ArrowRight", "1", "a", "s", "g", "x"].map((k) => act(k, { answered: true })),
+  answeredOnButton: ["Enter", " ", "ArrowRight"].map((k) => act(k, { answered: true, tag: "BUTTON" }).kind),
+  typingTargets: [G.isTypingTarget("TEXTAREA", false), G.isTypingTarget("INPUT", false), G.isTypingTarget("SELECT", false),
+    G.isTypingTarget("DIV", true), G.isTypingTarget("BUTTON", false), G.isTypingTarget("BODY", false)],
+  // S and G are not answer keys, and no answer key is an S or a G.
+  keyOverlap: ["s", "g", "S", "G"].map((k) => G.keyToIndex(k, 4)),
+  choices: [G.DEFAULT_CONFIDENCE, G.CONFIDENCE_CHOICES.map((c) => [c.id, c.label, c.key])],
+  lines: [["sure", false], ["sure", true], ["guess", true], ["guess", false], ["", true], ["", false], [null, false], [undefined, true],
+    ["bogus", false]].map(([c, ok]) => G.feedbackLine(c, ok)),
+  allLines: G.FEEDBACK_LINES,
+};
+out.note = {
+  clamp: [G.clampNote("x".repeat(500)).length, G.clampNote("short"), Array.from(G.clampNote("\u00e9\ud83d\ude00".repeat(200))).length],
+  counter: [G.noteCounter(""), G.noteCounter("abc"), G.noteCounter("\ud83d\ude00"), G.noteCounter("x".repeat(300))],
+  max: G.NOTE_MAX,
+};
+const T = (id, misses, sure_wrong, last_day, last_tick, shaky = false) =>
+  ({ id, language: "python", language_name: "Python", title: id, code: "", trap: "", why: "", mine: false, misses, sure_wrong,
+     guess_wrong: 0, shaky, note: "", last_day, last_tick });
+const rows = [T("a", 5, 0, "2026-10-01", 1), T("b", 1, 1, "2026-10-01", 1), T("c", 5, 0, "2026-10-02", 1), T("d", 5, 0, "2026-10-02", 9),
+  T("e", 2, 3, "2026-10-01", 1), T("f", 1, 0, "2026-10-09", 1)];
+out.traps = {
+  sorted: G.sortTraps(rows).map((t) => t.id),
+  untouched: rows.map((t) => t.id),
+  empty: G.sortTraps([]),
+  badges: [{ sure_wrong: 2, shaky: false }, { sure_wrong: 0, shaky: true }, { sure_wrong: 1, shaky: true }, { sure_wrong: 0, shaky: false }]
+    .map(G.trapBadges),
+  missed: [1, 2, 7].map(G.missedLine),
+  scope: [G.trapsScope(false, "rust"), G.trapsScope(true, "rust")],
+  emptyText: G.TRAPS_EMPTY,
+};
+
 out.errors = [
   G.errorText(new Error('{"detail":"It prints nothing."}')),
   G.errorText(new Error("plain text")),
@@ -518,3 +567,115 @@ def test_the_card_never_scrolls_the_page_sideways():
     code = css.split(".gq-code {", 1)[1].split("}", 1)[0]
     assert "overflow-x: auto" in code and "white-space: pre" in code and "max-width: 100%" in code
     assert "min-width: 0" in css.split(".gq-card {", 1)[1].split("}", 1)[0]
+
+
+# ── How sure you are, your reasoning, My traps ──────────────────────────
+
+
+def _kinds(actions):
+    return [a["kind"] for a in actions]
+
+
+def test_s_and_g_say_how_sure_you_are_and_do_not_clash_with_the_answer_keys():
+    r = results()["sure"]
+    assert r["asking"][:4] == [{"kind": "answer", "index": 0}, {"kind": "answer", "index": 3},
+                               {"kind": "answer", "index": 0}, {"kind": "answer", "index": 3}]
+    assert r["asking"][4:8] == [{"kind": "confidence", "value": "sure"}, {"kind": "confidence", "value": "sure"},
+                                {"kind": "confidence", "value": "guess"}, {"kind": "confidence", "value": "guess"}]
+    assert _kinds(r["asking"][8:]) == ["none"] * 6, "other keys, and Enter / Space / arrow before answering, do nothing"
+    assert r["keyOverlap"] == [-1] * 4, "S and G are not answer keys (answers are 1-4 and A-D)"
+    assert r["threeOptions"][:4] == [{"kind": "answer", "index": 2}, {"kind": "none"}, {"kind": "answer", "index": 2},
+                                     {"kind": "none"}]
+    assert r["threeOptions"][4] == {"kind": "confidence", "value": "sure"}
+    assert _kinds(r["noCard"]) == ["none"] * 3
+    assert r["choices"] == ["sure", [["sure", "Sure", "S"], ["guess", "Just guessing", "G"]]]
+
+
+def test_every_shortcut_is_off_while_you_are_typing_or_a_panel_is_open():
+    r = results()["sure"]
+    assert r["typing"] == {"TEXTAREA": 0, "INPUT": 0, "SELECT": 0, "DIV-editable": 0}, \
+        "the reasoning box, the search box and any field take 1-4, A-D, S, G, Enter, Space and the arrows as text"
+    assert r["typingAnswered"] == 0, "and Enter in the box must not go to the next card either"
+    assert r["panel"] == 0, "My traps being open turns the quiz's keys off"
+    assert r["ctrl"] == ["none"] * 5, "Ctrl / Cmd / Alt combinations are the browser's"
+    assert r["typingTargets"] == [True, True, True, True, False, False]
+
+
+def test_after_an_answer_only_next_keys_work_and_a_focused_button_keeps_enter_and_space():
+    r = results()["sure"]
+    nxt = {"kind": "next"}
+    assert r["answered"] == [nxt, nxt, nxt] + [{"kind": "none"}] * 5, \
+        "after answering: Enter / Space / right arrow go on; 1, a, s, g do nothing"
+    assert r["answeredOnButton"] == ["none", "none", "next"]
+
+
+def test_the_feedback_line_for_how_sure_you_were():
+    r = results()["sure"]
+    assert r["lines"] == [
+        "You were sure - this one is worth remembering",   # sure and wrong
+        None,                                               # sure and right: the plain success
+        "Right - but you guessed, so it will come back",    # guessed and right
+        None, None, None, None, None, None,                 # a wrong guess is the ordinary miss; no claim: nothing to add
+    ]
+    assert r["allLines"] == [r["lines"][0], r["lines"][2]]
+
+
+def test_the_feedback_lines_never_scold_or_talk_about_loss():
+    banned = ("lose", "lost", "fail", "wrong", "bad", "stupid", "mistake", "careless", "shame", "should have",
+              "never", "didn't", "red", "!", "warning", "danger", "terrible", "oops", "punish", "penalt")
+    for line in results()["sure"]["allLines"] + [results()["traps"]["emptyText"]]:
+        for word in banned:
+            assert word not in line.lower(), f"{word!r} in {line!r}"
+
+
+def test_a_note_is_cut_at_300_characters_and_counted_by_character():
+    n = results()["note"]
+    assert n["max"] == 300
+    assert n["clamp"] == [300, "short", 300]
+    assert n["counter"] == ["0/300", "3/300", "1/300", "300/300"]
+
+
+def test_my_traps_are_sorted_sure_but_wrong_first_then_most_misses_then_most_recent():
+    from code_coach.gotchas.store import sort_traps
+
+    t = results()["traps"]
+    assert t["sorted"] == ["e", "b", "d", "c", "a", "f"]
+    assert t["untouched"] == list("abcdef"), "sorting does not reorder what it was given"
+    assert t["empty"] == []
+    rows = [{"id": i, "misses": m, "sure_wrong": sw, "last_day": d, "last_tick": k} for i, m, sw, d, k in (
+        ("a", 5, 0, "2026-10-01", 1), ("b", 1, 1, "2026-10-01", 1), ("c", 5, 0, "2026-10-02", 1),
+        ("d", 5, 0, "2026-10-02", 9), ("e", 2, 3, "2026-10-01", 1), ("f", 1, 0, "2026-10-09", 1))]
+    assert [x["id"] for x in sort_traps(rows)] == t["sorted"], "the server and the browser order the list the same way"
+
+
+def test_trap_badges_wording_and_scope():
+    t = results()["traps"]
+    assert t["badges"] == [["Sure but wrong"], ["Shaky"], ["Sure but wrong", "Shaky"], []]
+    assert t["missed"] == ["Missed 1 time", "Missed 2 times", "Missed 7 times"]
+    assert t["scope"] == ["rust", "all"]
+    assert t["emptyText"] == "Nothing here yet - miss a card and it will show up so you can study it"
+
+
+def test_the_screen_hands_every_key_to_the_one_decision_and_sends_the_new_fields():
+    comp = (WEB / "src" / "components" / "Gotchas.tsx").read_text(encoding="utf-8")
+    assert "keyAction(e.key" in comp and "isNextKey" not in comp and "keyToIndex" not in comp, \
+        "the window handler must not decide keys on its own (that is how typing in a box answered a card)"
+    assert re.search(r"answerGotcha\(\{[^}]*confidence,", comp, re.S) and "note: note.trim()" in comp
+    assert 'placeholder="Why do I think so? (optional)"' in comp and "maxLength={NOTE_MAX}" in comp
+    assert "Add my reasoning" in comp and "My traps" in comp and "What you thought:" in comp
+    # Escape in the box closes the box only: it stops there and never reaches the window handler.
+    box = comp.split("<textarea", 1)[1].split("</textarea>", 1)[0].split("data-testid=\"gq-reason-count\"", 1)[0]
+    assert 'e.key === "Escape"' in box and "e.stopPropagation()" in box and "setNoteOpen(false)" in box
+    traps = (WEB / "src" / "components" / "GotchaTraps.tsx").read_text(encoding="utf-8")
+    assert 'e.key !== "Escape"' in traps and "isTypingTarget" in traps and "Try again" in traps
+
+
+def test_the_new_badges_and_notes_are_readable_on_the_dark_card():
+    css = (WEB / "src" / "styles" / "gotchas.css").read_text(encoding="utf-8")
+    t = _tokens()
+    for selector in (".gq-badge.sure", ".gq-badge.shaky"):
+        body = css.split(selector + " {", 1)[1].split("}", 1)[0]
+        name = re.search(r"color: var\(--([\w-]+)\)", body).group(1)
+        for surface in ("gq-bg", "gq-panel"):
+            assert _contrast(t[name], t[surface]) >= 4.5, f"{selector} uses {name}"
+    assert "overflow: auto" in css.split(".gq-code.compact {", 1)[1].split("}", 1)[0], "the code scrolls inside its box"

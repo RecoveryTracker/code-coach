@@ -429,7 +429,11 @@ class RunIt(unittest.TestCase):
         wrong = []
         for r, got in zip(runnable, done):
             item = r["item"]
-            if r["runnable"]["parseIsTheAnswer"]:
+            if r["runnable"].get("raisesIsTheAnswer"):
+                # Error or Fine: the snippet as shown either raises or it does not.
+                if (got["error"] != "") != (item["answer"] == "error"):
+                    wrong.append((r["activity"], item["prompt"], item["answer"], got))
+            elif r["runnable"]["parseIsTheAnswer"]:
                 parses = got["error"] != "SyntaxError" and not got["error"].endswith("IndentationError")
                 if parses != (item["answer"] in ("valid", "yes")):
                     wrong.append((r["activity"], item["prompt"], item["answer"], got))

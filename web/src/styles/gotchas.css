@@ -970,6 +970,334 @@
   color: var(--text-muted, #8b98a8);
 }
 
+/* ── How sure are you / my reasoning / my traps ── */
+
+.gq-feed {
+  display: contents;
+}
+
+.gq-feed[hidden] {
+  display: none;
+}
+
+.gq-head-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.gq-traps-btn,
+.gq-pill {
+  appearance: none;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text, #cdd9e5);
+  padding: 7px 16px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.gq-traps-btn.on,
+.gq-pill.on {
+  background: var(--accent, #6ea8fe);
+  color: var(--on-accent, #0b1020);
+  border-color: var(--accent, #6ea8fe);
+  font-weight: 600;
+}
+
+.gq-traps-btn:focus-visible,
+.gq-pill:focus-visible,
+.gq-sure-btn:focus-visible,
+.gq-reason-toggle:focus-visible,
+.gq-reason-text:focus-visible,
+.gq-traps:focus-visible {
+  outline: 2px solid var(--accent, #6ea8fe);
+  outline-offset: 2px;
+}
+
+.gq-sure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0 0 10px;
+}
+
+.gq-sure-label {
+  font-size: 13px;
+  color: var(--gq-dim);
+}
+
+.gq-sure-pills {
+  display: inline-flex;
+  border: 1px solid var(--gq-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gq-sure-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--gq-text);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gq-sure-btn + .gq-sure-btn {
+  border-left: 1px solid var(--gq-line);
+}
+
+.gq-sure-btn.on {
+  background: var(--gq-panel);
+  box-shadow: inset 0 0 0 2px var(--gq-accent, var(--gq-py));
+  font-weight: 700;
+}
+
+.gq-sure-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.gq-sure-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--gq-line);
+  color: var(--gq-dim);
+  font: 700 12px ui-monospace, Consolas, monospace;
+}
+
+.gq-sure-note {
+  margin: 6px 0 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--gq-js);
+  background: var(--gq-panel);
+  border-radius: 0 8px 8px 0;
+  color: var(--gq-text);
+}
+
+.gq-sure-note.guess {
+  border-left-color: var(--gq-c);
+}
+
+.gq-reason {
+  margin-top: 12px;
+}
+
+.gq-reason-toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--gq-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.gq-reason-box {
+  position: relative;
+  margin-top: 6px;
+}
+
+.gq-reason-text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px 26px;
+  resize: vertical;
+  min-height: 72px;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--gq-text);
+  background: var(--gq-panel);
+  border: 1px solid var(--gq-line);
+  border-radius: 12px;
+}
+
+.gq-reason-text::placeholder {
+  color: var(--gq-dim);
+}
+
+.gq-reason-count {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 12px;
+  color: var(--gq-dim);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.gq-thought {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--gq-line);
+  line-height: 1.5;
+  color: var(--gq-text);
+  overflow-wrap: anywhere;
+}
+
+.gq-thought-label {
+  font-weight: 700;
+  color: var(--gq-dim);
+}
+
+/* My traps */
+
+.gq-traps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gq-traps-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px 12px;
+}
+
+.gq-traps-head h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.gq-traps-head .gq-sub {
+  max-width: 560px;
+  font-size: 13px;
+}
+
+.gq-traps-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gq-traps-empty {
+  margin: 0;
+  padding: 18px 16px;
+  border: 1px dashed var(--border, #232c38);
+  border-radius: 14px;
+  color: var(--text-muted, #8b98a8);
+}
+
+.gq-traps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gq-trap-item {
+  background: var(--gq-bg);
+  color: var(--gq-text);
+  border: 1px solid var(--gq-line);
+  border-radius: 18px;
+  padding: 14px 16px 16px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.gq-trap-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.gq-trap-where {
+  margin: 0;
+  font-size: 17px;
+  color: var(--gq-accent, var(--gq-py));
+  overflow-wrap: anywhere;
+}
+
+.gq-badge.sure {
+  color: var(--gq-js);
+  border-color: var(--gq-js);
+}
+
+.gq-badge.shaky {
+  color: var(--gq-c);
+  border-color: var(--gq-c);
+}
+
+.gq-code.compact {
+  font-size: 14px;
+  padding: 10px 12px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.gq-why-label {
+  color: var(--gq-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.gq-trap-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.gq-trap-meta {
+  font-size: 13px;
+  color: var(--gq-dim);
+}
+
+@media (max-width: 640px) {
+  .gq-head-tools {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .gq-head-tools .gq-lang-wrap {
+    flex: 1 1 100%;
+  }
+
+  .gq-traps-btn {
+    flex: 1 1 100%;
+  }
+
+  .gq-trap-item {
+    padding: 12px 12px 14px;
+    border-radius: 16px;
+  }
+
+  .gq-trap-foot .ws-btn {
+    width: 100%;
+  }
+}
+
 /* ── Phones ── */
 
 @media (max-width: 640px) {

@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { explainCode, visualizeCode } from "../api";
 import { cleanError, isSyntaxError, runnableFor, type BrainItem, type BrainLang } from "../lib/brainRound";
 import type { ExplainResult, VisualizeResult } from "../types";
+import { WordsUsed } from "./WordsUsed";
 
 type Props = {
   activityId: string;
@@ -43,6 +44,11 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
 
   const run = () => {
     if (!what.ok || !unlocked || ran === "busy") return;
+    // Like every other toggle in the app: pressing it again turns it off.
+    if (ran) {
+      setRan(null);
+      return;
+    }
     setRan("busy");
     setRunOpen(true);
     visualizeCode({ code: what.run || what.code, language })
@@ -52,9 +58,14 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
 
   const explain = () => {
     if (!what.ok || !unlocked || explained === "busy") return;
+    if (explained) {
+      setExplained(null);
+      return;
+    }
     setExplained("busy");
     setExplainOpen(true);
-    explainCode(what.code, language)
+    // The activity id is the glossary's context: it always teaches that drill's words first.
+    explainCode(what.code, language, activityId)
       .then((r) => alive.current && setExplained(r))
       .catch(() => alive.current && setExplained("down"));
   };
@@ -64,21 +75,29 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
       <div className="brain-tools-bar">
         <button
           type="button"
-          className="ws-btn"
+          className={ran && ran !== "busy" ? "ws-btn on" : "ws-btn"}
+          aria-pressed={!!ran && ran !== "busy"}
           onClick={run}
           disabled={!!disabledWhy || ran === "busy"}
-          title={disabledWhy || "Run this code for real and show what it prints"}
+          title={
+            disabledWhy ||
+            (ran && ran !== "busy" ? "Hide the output" : "Run this code for real and show what it prints")
+          }
         >
-          {ran === "busy" ? "Running…" : "Run it"}
+          {ran === "busy" ? "Running…" : ran ? "Hide output" : "Run it"}
         </button>
         <button
           type="button"
-          className="ws-btn"
+          className={explained && explained !== "busy" ? "ws-btn on" : "ws-btn"}
+          aria-pressed={!!explained && explained !== "busy"}
           onClick={explain}
           disabled={!!disabledWhy || explained === "busy"}
-          title={disabledWhy || "A plain-English walkthrough of this code"}
+          title={
+            disabledWhy ||
+            (explained && explained !== "busy" ? "Hide the explanation" : "A plain-English walkthrough of this code")
+          }
         >
-          {explained === "busy" ? "Reading…" : "Explain my code"}
+          {explained === "busy" ? "Reading…" : explained ? "Hide explain" : "Explain my code"}
         </button>
         {disabledWhy ? <span className="brain-tools-why">{disabledWhy}</span> : null}
       </div>
@@ -173,6 +192,7 @@ function ExplainView({ result }: { result: ExplainResult | "down" }) {
           ))}
         </div>
       ) : null}
+      <WordsUsed words={result.words} scope="brain" />
     </div>
   );
 }

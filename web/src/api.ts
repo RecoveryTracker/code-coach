@@ -1,11 +1,13 @@
 import type { BrainItem, BrainSummary } from "./components/BrainDrills";
 import type { AwardResult } from "./lib/momentumView";
 import type {
+  Confidence,
   GotchaAnswer,
   GotchaCard,
   GotchaLang,
   GotchaRun,
   GotchaSummary,
+  GotchaTrap,
   GotchaUserCard,
   GotchaUserResult,
 } from "./lib/gotchas";
@@ -40,6 +42,7 @@ import type {
   ErrorCheck,
   ErrorList,
   ExplainResult,
+  Word,
   KataCheck,
   KataList,
   LanguageInfo,
@@ -860,11 +863,19 @@ export function chatWithCoach(message: string): Promise<{ reply: string }> {
 
 /** Plain-English walkthrough of the current editor code. Blank `language` reads the code as the app's saved language; a snippet in a
  *  language of its own (a Brain Drills question) says which. */
-export function explainCode(code: string, language = ""): Promise<ExplainResult> {
+export function explainCode(code: string, language = "", context = ""): Promise<ExplainResult> {
   return request("/api/explain", {
     method: "POST",
-    body: JSON.stringify(language ? { code, language } : { code }),
+    body: JSON.stringify({ code, ...(language ? { language } : {}), ...(context ? { context } : {}) }),
   });
+}
+
+/** Glossary words: one by id or term (a "see also" chip), a Brain Drills activity's words (`context`), or a whole language. */
+export async function fetchGlossary(query: { language?: string; term?: string; context?: string }): Promise<Word[]> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value);
+  const result = await request<{ words: Word[] }>(`/api/glossary?${params.toString()}`);
+  return result.words;
 }
 
 // ── Gotchas: an endless feed of trap questions ──────────────────────────
@@ -874,14 +885,30 @@ export function fetchGotchas(language: GotchaLang): Promise<GotchaSummary> {
 }
 
 /** One card, answer withheld. `exclude` is the ids just seen; `daily` serves today's unfinished Daily 5 card. */
-export function fetchGotchaNext(language: GotchaLang, exclude: string, daily: boolean): Promise<GotchaCard> {
+export function fetchGotchaNext(
+  language: GotchaLang,
+  exclude: string,
+  daily: boolean,
+  card = "",
+): Promise<GotchaCard> {
   return request(
     `/api/gotchas/next?language=${encodeURIComponent(language)}&exclude=${encodeURIComponent(exclude)}`
-      + `&daily=${daily ? "true" : "false"}`,
+      + `&daily=${daily ? "true" : "false"}${card ? `&card=${encodeURIComponent(card)}` : ""}`,
   );
 }
 
-export function answerGotcha(body: { id: string; language: GotchaLang; chosen: number }): Promise<GotchaAnswer> {
+/** My traps: cards missed and not yet mastered, for one language or "all". */
+export function fetchGotchaTraps(language: GotchaLang | "all"): Promise<{ language: string; traps: GotchaTrap[] }> {
+  return request(`/api/gotchas/traps?language=${encodeURIComponent(language)}`);
+}
+
+export function answerGotcha(body: {
+  id: string;
+  language: GotchaLang;
+  chosen: number;
+  confidence?: Confidence;
+  note?: string;
+}): Promise<GotchaAnswer> {
   return request("/api/gotchas/answer", { method: "POST", body: JSON.stringify(body) });
 }
 

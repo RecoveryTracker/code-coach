@@ -38,15 +38,17 @@ import {
 import "../styles/brain.css";
 import BrainPicker from "./BrainPicker";
 import BrainTools from "./BrainTools";
+import { QuestionWords } from "./WordsUsed";
 
 export type BrainLanguage = "javascript" | "python";
 const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python" };
 
+/** Python is the default: JavaScript only when it was explicitly chosen. */
 function savedLanguage(): BrainLanguage {
   try {
-    return window.localStorage.getItem("brain-language") === "python" ? "python" : "javascript";
+    return window.localStorage.getItem("brain-language") === "javascript" ? "javascript" : "python";
   } catch {
-    return "javascript";
+    return "python";
   }
 }
 
@@ -60,6 +62,9 @@ type ActivityInfo = {
   kind: "type" | "pick";
   choices: string[];
   showSeconds: number;
+  /** The heading the home screen files it under, and the glossary concepts it drills (from the server). */
+  group?: string;
+  concepts?: string[];
   best: Result | null;
   last: Result | null;
 };
@@ -68,6 +73,8 @@ export type BrainSummary = {
   language: BrainLanguage;
   languages: BrainLanguage[];
   activities: ActivityInfo[];
+  /** The home screen's headings, in order. */
+  groups?: string[];
   check: string[];
   stamps: { day: string; trained: boolean }[];
   streak: number;
@@ -92,6 +99,20 @@ type Screen =
       checkLeft: string[];
       checkAges: number[];
     };
+
+/** The home screen's sections: the server's heading order, then any other group, "More" last. */
+export function groupActivities(
+  activities: ActivityInfo[],
+  order: string[] = [],
+): { name: string; items: ActivityInfo[] }[] {
+  const nameOf = (a: ActivityInfo) => a.group || "More";
+  const names = [...order];
+  for (const a of activities) if (!names.includes(nameOf(a))) names.push(nameOf(a));
+  names.sort((x, y) => Number(x === "More") - Number(y === "More"));
+  return names
+    .map((name) => ({ name, items: activities.filter((a) => nameOf(a) === name) }))
+    .filter((g) => g.items.length > 0);
+}
 
 /** Forgive what a person types: spaces, case, and quotes round a string. */
 function same(given: string, answer: string): boolean {
@@ -214,7 +235,7 @@ export default function BrainDrills() {
             Quick {LANGUAGE_NAMES[language]} reflexes, timed. Your code age: 20 is as sharp as it gets.
           </p>
           <div className="brain-lang" role="group" aria-label="Language">
-            {(summary.languages ?? ["javascript", "python"]).map((l) => (
+            {(summary.languages ?? ["python", "javascript"]).map((l) => (
               <button
                 key={l}
                 type="button"
@@ -254,17 +275,33 @@ export default function BrainDrills() {
 
       {summary.checkAges.length > 1 ? <AgeChart points={summary.checkAges} /> : null}
 
-      <section className="brain-grid">
-        {summary.activities.map((a) => (
-          <button key={a.id} type="button" className="brain-card" onClick={() => start(a)}>
-            <strong>{a.title}</strong>
-            <span>{a.blurb}</span>
-            <span className="brain-card-best">
-              {a.best ? `best: age ${a.best.age} · ${a.best.seconds.toFixed(1)}s` : "not tried yet"}
-            </span>
-          </button>
-        ))}
-      </section>
+      <div className="brain-groups">
+        {groupActivities(summary.activities, summary.groups).map((g) => {
+          const slug = `brain-group-${g.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+          return (
+            <section key={g.name} className="brain-group" aria-labelledby={slug}>
+              <h3 className="brain-group-title" id={slug}>
+                {g.name}
+                <span className="brain-group-count">{g.items.length}</span>
+              </h3>
+              <div className="brain-grid">
+                {g.items.map((a) => (
+                  <button key={a.id} type="button" className="brain-card" data-activity={a.id} onClick={() => start(a)}>
+                    <strong>{a.title}</strong>
+                    <span>{a.blurb}</span>
+                    <span className="brain-card-best">
+                      {a.best ? `best: age ${a.best.age} · ${a.best.seconds.toFixed(1)}s` : "not tried yet"}
+                    </span>
+                    {a.last ? (
+                      <span className="brain-card-last">{`last: age ${a.last.age} · ${a.last.seconds.toFixed(1)}s`}</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -548,6 +585,9 @@ function Round({
                   <p className="brain-given">You said {record.given || "nothing"}</p>
                 )}
                 {item.explain ? <p className="brain-why">{item.explain}</p> : null}
+                {record.right ? null : (
+                  <QuestionWords key={`${rs.index}-${activity.id}`} activityId={activity.id} language={language} scope="miss" />
+                )}
                 <div className="brain-review-actions">
                   <button type="button" className="ws-btn brain-go" onClick={forward} ref={nextBtn} data-primary="true">
                     {lastOne ? "Finish (Enter)" : plain >= 0 ? `Next: ${plain + 1} (Enter)` : "Next (Enter)"}

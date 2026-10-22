@@ -21,9 +21,16 @@ How a card is chosen (`GotchaStore.pick`), in order:
 1. a card you just added and have not answered yet ("Yours"),
 2. the first two cards of a language's deck while you have seen fewer than two (so the score=90
    card is the very first thing you meet),
-3. a missed card that is due: a miss is due again 5-10 answers later (`tick` counts answers),
+3. a card that is due (`tick` counts answers in a language): a miss comes back 5-10 answers later; a miss
+   you were SURE about comes back sooner, 2-4 later, and sorts ahead of the other due cards; a right answer
+   you only GUESSED is "shaky" and comes back once, 10-20 answers later (answer it right and Sure and it is
+   done like any right card),
 4. an unseen card, at random,
 5. otherwise the card seen longest ago.
+
+How sure you were (`confidence`: "sure", "guess" or "") and an optional note of your reasoning (300 characters,
+the last 3 kept per card) are recorded with each answer; neither changes the Momentum XP. `traps()` lists the
+cards you have missed and not yet mastered (mastered = your last two answers were right AND marked Sure).
 
 `exclude` (the cards on screen a moment ago) is honoured unless it would leave nothing.
 The answer is never part of what `pick` returns; it is only known to `answer()`.
@@ -45,6 +52,19 @@ VERSION = 1
 #: A missed card comes back after this many other answers, plus up to RETURN_SPREAD more.
 RETURN_AFTER = 5
 RETURN_SPREAD = 5
+#: How long until a card is due again, by why it is coming back: (fewest answers later, most answers later).
+#: `miss` is a wrong answer (or a wrong guess), `sure_wrong` a wrong answer you were sure about, `shaky` a right
+#: answer you only guessed. Note the browser also withholds the last 3 cards it showed (`exclude`), so a card due
+#: at +2 is, in the feed, served from +3.
+RETURNS = {"miss": (RETURN_AFTER, RETURN_AFTER + RETURN_SPREAD), "sure_wrong": (2, 4), "shaky": (10, 20)}
+#: Among due cards the one that was sure-and-wrong comes first, then ordinary misses, then shaky ones.
+DUE_RANK = {"sure_wrong": 0, "miss": 1, "shaky": 2}
+CONFIDENCE = ("sure", "guess")
+#: A note of your own reasoning: at most this many characters, and the last NOTE_KEEP are kept per card.
+NOTE_MAX = 300
+NOTE_KEEP = 3
+#: Mastered = this many answers in a row that were right and marked Sure.
+MASTERED_RUN = 2
 #: How many cards of a language's deck are served in deck order before it goes random.
 LEAD = 2
 DAILY_SIZE = 5
@@ -79,6 +99,42 @@ def _int(value: Any, default: int = 0) -> int:
         return default
 
 
+def clean_confidence(value: Any) -> str:
+    """"sure" or "guess"; anything else (missing, wrong type, other words) is "" - no claim either way."""
+    return value if isinstance(value, str) and value in CONFIDENCE else ""
+
+
+def clean_note(value: Any) -> str:
+    """The note as stored: a string, trimmed, at most NOTE_MAX characters ("" when there is none)."""
+    if not isinstance(value, str):
+        return ""
+    return value.strip()[:NOTE_MAX].strip()
+
+
+def return_offset(kind: str, key: str, tick: int) -> int:
+    """How many answers later a card is due again: inside RETURNS[kind], spread by a hash of the card and the
+    answer count (so it is the same on every run, and different for different cards)."""
+    low, high = RETURNS[kind]
+    return low + _digest(f"{key}:{tick}") % (high - low + 1)
+
+
+def _blank_stat() -> dict[str, Any]:
+    return {"seen": 0, "right": 0, "last_day": "", "last_tick": 0, "due": None, "due_kind": None,
+            "sure_right": 0, "sure_wrong": 0, "guess_right": 0, "guess_wrong": 0, "sure_run": 0,
+            "note": "", "notes": []}
+
+
+def _clean_notes(raw: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for n in raw:
+        if isinstance(n, dict) and clean_note(n.get("note")):
+            out.append({"day": str(n.get("day") or ""), "note": clean_note(n.get("note")),
+                        "correct": bool(n.get("correct"))})
+    return out[-NOTE_KEEP:]
+
+
 def _beside_progress(name: str) -> Path:
     from code_coach.progress.store import active_store
 
@@ -102,10 +158,19 @@ def _clean(raw: Any) -> dict[str, Any] | None:
             if not isinstance(key, str) or not isinstance(s, dict):
                 continue
             due = s.get("due")
+            due = _int(due) if isinstance(due, (int, float)) and not isinstance(due, bool) else None
+            kind = s.get("due_kind")
+            notes = _clean_notes(s.get("notes"))
+            # An old file has no confidence fields: they start at nothing, and a card that was due is a plain miss.
             state["stats"][key] = {
+                **_blank_stat(),
                 "seen": _int(s.get("seen")), "right": _int(s.get("right")),
                 "last_day": str(s.get("last_day") or ""), "last_tick": _int(s.get("last_tick")),
-                "due": _int(due) if isinstance(due, (int, float)) and not isinstance(due, bool) else None,
+                "due": due, "due_kind": (kind if kind in RETURNS else "miss") if due is not None else None,
+                "sure_right": _int(s.get("sure_right")), "sure_wrong": _int(s.get("sure_wrong")),
+                "guess_right": _int(s.get("guess_right")), "guess_wrong": _int(s.get("guess_wrong")),
+                "sure_run": _int(s.get("sure_run")),
+                "note": clean_note(s.get("note")) or (notes[-1]["note"] if notes else ""), "notes": notes,
             }
     if isinstance(raw.get("ticks"), dict):
         state["ticks"] = {str(k): _int(v) for k, v in raw["ticks"].items()}
@@ -195,6 +260,24 @@ def served_options(item: Item, index: int | None = None) -> tuple[list[str], int
     return shown, spot
 
 
+def card_title(item: Item) -> str:
+    """A short name for a card from its id: py-score-90 is "Score 90", mine-3 is "Your card 3"."""
+    slug = item.id.partition("-")[2]
+    if item.mine:
+        return f"Your card {slug}"
+    return slug.replace("-", " ").capitalize() or item.id
+
+
+def sort_traps(traps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sure-but-wrong first, then most misses, then most recent (day, then answer count), then id."""
+    out = sorted(traps, key=lambda t: t["id"])
+    out.sort(key=lambda t: t["last_tick"], reverse=True)
+    out.sort(key=lambda t: t["last_day"], reverse=True)
+    out.sort(key=lambda t: t["misses"], reverse=True)
+    out.sort(key=lambda t: t["sure_wrong"] < 1)
+    return out
+
+
 class GotchaStore:
     """The deck, the stats, the Daily 5 and the user's own cards."""
 
@@ -281,7 +364,7 @@ class GotchaStore:
             tick = state["ticks"].get(language, 0)
 
             def stat(it: Item) -> dict[str, Any]:
-                return stats.get(f"{language}:{it.id}", {"seen": 0, "right": 0, "last_tick": 0, "due": None})
+                return stats.get(f"{language}:{it.id}", _blank_stat())
 
             if daily:
                 plan = self._daily_saved(state, language)
@@ -303,7 +386,8 @@ class GotchaStore:
                     return lead[0], "new"
             due = [it for it in pool if stat(it)["due"] is not None and stat(it)["due"] <= tick]
             if due:
-                return min(due, key=lambda it: (stat(it)["due"], stat(it)["last_tick"])), "again"
+                return min(due, key=lambda it: (DUE_RANK.get(stat(it)["due_kind"], 1), stat(it)["due"],
+                                                stat(it)["last_tick"])), "again"
             unseen = [it for it in pool if stat(it)["seen"] == 0]
             if unseen:
                 return self.rng.choice(unseen), "new"
@@ -312,7 +396,13 @@ class GotchaStore:
 
     # ── answering ───────────────────────────────────────────────────────
 
-    def answer(self, language: str, item_id: str, chosen: int) -> dict[str, Any]:
+    def answer(self, language: str, item_id: str, chosen: int, confidence: Any = "",
+               note: Any = "") -> dict[str, Any]:
+        """Mark an answer. `confidence` ("sure", "guess"; anything else counts as "") and `note` (your own
+        reasoning, trimmed and cut to 300 characters) are optional and never change the score or the XP; they
+        change when the card comes back (see the module notes) and what `traps()` says about it."""
+        confidence = clean_confidence(confidence)
+        note = clean_note(note)
         item, index = self.find(language, item_id)
         options, spot = served_options(item, index)
         if not isinstance(chosen, int) or isinstance(chosen, bool) or not 0 <= chosen < len(options):
@@ -325,12 +415,22 @@ class GotchaStore:
             tick = state["ticks"].get(language, 0) + 1
             state["ticks"][language] = tick
             key = f"{language}:{item.id}"
-            st = state["stats"].setdefault(
-                key, {"seen": 0, "right": 0, "last_day": "", "last_tick": 0, "due": None})
+            st = state["stats"].setdefault(key, _blank_stat())
             st["seen"] += 1
             st["right"] += 1 if correct else 0
             st["last_day"], st["last_tick"] = today, tick
-            st["due"] = None if correct else tick + RETURN_AFTER + _digest(f"{key}:{tick}") % (RETURN_SPREAD + 1)
+            if confidence:
+                st[f"{confidence}_{'right' if correct else 'wrong'}"] += 1
+            st["sure_run"] = st["sure_run"] + 1 if correct and confidence == "sure" else 0
+            if correct:
+                kind = "shaky" if confidence == "guess" else None
+            else:
+                kind = "sure_wrong" if confidence == "sure" else "miss"
+            st["due_kind"] = kind
+            st["due"] = tick + return_offset(kind, key, tick) if kind else None
+            if note:
+                st["note"] = note
+                st["notes"] = [*st["notes"], {"day": today, "note": note, "correct": correct}][-NOTE_KEEP:]
             run = state["streak"].setdefault(language, {"now": 0, "best": 0})
             run["now"] = run["now"] + 1 if correct else 0
             run["best"] = max(run["best"], run["now"])
@@ -344,6 +444,7 @@ class GotchaStore:
                 "trap": item.trap, "why": item.why, "mine": item.mine,
                 "streak": run["now"], "streak_best": run["best"], "seen_before": st["seen"] - 1,
                 "again_soon": not correct,
+                "confidence": confidence, "comes_back": st["due"] is not None, "note": note,
                 "daily": {**self._daily_view(plan), "just_completed": just_done},
                 "summary": {**self._summary(state, language), "daily": self._daily_view(plan)},
             }
@@ -402,6 +503,41 @@ class GotchaStore:
         with self._lock:
             state = self._load()
             return self._daily_view(self._daily_saved(state, language))
+
+    # ── My traps ────────────────────────────────────────────────────────
+
+    def traps(self, languages: list[str] | tuple[str, ...]) -> list[dict[str, Any]]:
+        """The cards you have missed and not yet mastered, in the languages given.
+
+        The rule, in full: a card is a trap when you have answered it WRONG at least once and your last two
+        answers have not both been right-and-Sure (`sure_run < MASTERED_RUN`). Only cards you have answered are
+        ever listed (a card with no record is never here), so showing the code, the trap and the why spoils
+        nothing; cards of your own are included on the same terms; a record whose card no longer exists in its
+        deck is skipped. Order: a card you were sure about and got wrong first, then the most misses, then the
+        most recent (the same rule is `sortTraps` in lib/gotchas.ts)."""
+        from .langs import get
+
+        with self._lock:
+            state = self._load()
+            out: list[dict[str, Any]] = []
+            for language in languages:
+                if language not in LANGUAGES:
+                    continue
+                deck = {it.id: it for it in self.deck(language)}
+                for key, s in state["stats"].items():
+                    lang, _, card_id = key.partition(":")
+                    item = deck.get(card_id) if lang == language else None
+                    misses = s["seen"] - s["right"]
+                    if item is None or misses < 1 or s["sure_run"] >= MASTERED_RUN:
+                        continue
+                    out.append({
+                        "id": item.id, "language": language, "language_name": get(language).name,
+                        "title": card_title(item), "code": item.code, "trap": item.trap, "why": item.why,
+                        "mine": item.mine, "misses": misses, "sure_wrong": s["sure_wrong"],
+                        "guess_wrong": s["guess_wrong"], "shaky": s["due_kind"] == "shaky",
+                        "note": s["note"], "last_day": s["last_day"], "last_tick": s["last_tick"],
+                    })
+            return sort_traps(out)
 
     # ── summaries ───────────────────────────────────────────────────────
 
