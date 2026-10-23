@@ -16,7 +16,7 @@ import unittest
 from datetime import date
 
 from code_coach import brain
-from code_coach.brain import ACTIVITIES, ACTIVITIES_BY_ID, CHECK, balanced, code_age, make_round
+from code_coach.brain import ACTIVITIES_BY_ID, CHECK, balanced, code_age, make_round
 
 HAS_NODE = shutil.which("node") is not None
 SEEDS = range(40)
@@ -85,7 +85,7 @@ class OracleTests(unittest.TestCase):
 
 class ActivityTests(unittest.TestCase):
     def test_every_activity_makes_a_full_round_of_its_kind(self) -> None:
-        for activity in ACTIVITIES:
+        for activity in brain.activities_in("javascript"):
             with self.subTest(activity=activity.id):
                 items = make_round(activity.id, 1)
                 self.assertEqual(len(items), activity.count)
@@ -96,7 +96,7 @@ class ActivityTests(unittest.TestCase):
                     self.assertEqual(answers, set(activity.choices))
 
     def test_a_seed_gives_the_same_round(self) -> None:
-        for activity in ACTIVITIES:
+        for activity in brain.activities_in("javascript"):
             self.assertEqual(make_round(activity.id, 9), make_round(activity.id, 9))
 
     def test_bracket_answers_agree_with_another_way_of_checking(self) -> None:
@@ -166,7 +166,7 @@ class RouteTests(unittest.TestCase):
         from code_coach.api.server import brain_summary
 
         s = brain_summary()
-        self.assertEqual([a["id"] for a in s["activities"]], [a.id for a in ACTIVITIES])
+        self.assertEqual([a["id"] for a in s["activities"]], [a.id for a in brain.activities_in("javascript")])
         self.assertEqual(len(s["stamps"]), 28)
         self.assertEqual(s["check"], list(CHECK))
 

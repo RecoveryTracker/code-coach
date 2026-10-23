@@ -15,7 +15,13 @@ Two sources, one answer:
   pack author chose, and `glossary.resolve()` turns each into an entry per language
   (id, term or aka; hyphen, space, case and plural differences are ignored). A concept a
   language has no word for is skipped for that language. Nothing here needs an edit when
-  a pack is added; to teach a missing word, write the entry (terms_brain_*.py).
+  a pack is added; to teach a missing word, write the entry (terms_brain_*.py, or terms_dart_*.py /
+  terms_flutter.py for the Dart and Flutter packs).
+
+The same `concepts` serve every language an activity is played in: a Dart activity's concepts are resolved in
+Dart (`resolve("dart", word)`), so "switch", "tuple", "destructuring", "string-representation", "generator" or
+"optional-chaining" land on the Dart card for that idea (Dart words carry the Python and JavaScript spellings as
+`aka`). The original seven are not played in Dart; their hand-kept ids a language lacks are skipped.
 
 The brain package is imported lazily, inside `concepts_for`, so the glossary never
 needs it at import time.

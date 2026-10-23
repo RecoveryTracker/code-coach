@@ -1,9 +1,10 @@
-"""One glossary entry, and the two helpers a terms module writes entries with.
+"""One glossary entry, and the helpers a terms module writes entries with.
 
-An entry teaches ONE word in ONE language. A word that means the same in Python
-and JavaScript (a loop, a variable) is written once with `both(...)`, which makes
-the two entries from a shared definition plus a per-language example, so the
-rules and the example can never leak from one language into the other.
+An entry teaches ONE word in ONE language. A word that means the same in Python,
+JavaScript and Dart (a loop, a variable) is written once with `both(...)` (alias
+`all3`), which makes one entry per language dict it is given, from a shared
+definition plus a per-language example, so the rules and the example can never
+leak from one language into the other. `py`, `js` and `dart` write one language.
 """
 
 from __future__ import annotations
@@ -12,7 +13,8 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
-LANGUAGES = ("python", "javascript")
+#: The glossary languages, in display order. Dart (and with it Flutter, which is Dart) was added 2026-10-22.
+LANGUAGES = ("python", "javascript", "dart")
 
 
 @dataclass(frozen=True)
@@ -97,6 +99,10 @@ def js(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
     return [entry("javascript", id, term, definition, **kw)]
 
 
+def dart(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
+    return [entry("dart", id, term, definition, **kw)]
+
+
 def both(
     id: str,
     term: str,
@@ -104,13 +110,14 @@ def both(
     *,
     python: dict[str, Any] | None = None,
     javascript: dict[str, Any] | None = None,
+    dart: dict[str, Any] | None = None,
     **common: Any,
 ) -> list[Entry]:
-    """The same word in both languages. `common` is shared; each language dict overrides it
+    """The same word in two or three languages. `common` is shared; each language dict overrides it
     (and must hold at least its own `example` and `out`). Leave a language's dict as None
-    to write the word for only the other one."""
+    to write the word for only the others."""
     out: list[Entry] = []
-    for language, own in (("python", python), ("javascript", javascript)):
+    for language, own in (("python", python), ("javascript", javascript), ("dart", dart)):
         if own is None:
             continue
         merged = {**common, **own}
@@ -118,3 +125,7 @@ def both(
             entry(language, id, merged.pop("term", term), merged.pop("definition", definition), **merged)
         )
     return out
+
+
+#: `both` writes up to three languages; the name says so where a file writes all of them.
+all3 = both

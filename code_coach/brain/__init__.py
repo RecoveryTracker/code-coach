@@ -14,6 +14,11 @@ out here, in Python, by modelling what the language does; tests/test_brain.py
 the real interpreter) then run every template to hold the model to the real
 thing (the oracle rule: the expected answer comes from somewhere other than
 the code under test). Code age is kept per language.
+
+A third language, Dart, was added after the first two: an activity is played in
+a language exactly when it has that language's generator (`make` JavaScript,
+`make_py` Python, `make_dart` Dart), so a pack may hold Dart-only activities.
+The Dart answers are held to the real `dart` by tests/dart_oracle.py, in batches.
 """
 
 from __future__ import annotations
@@ -34,8 +39,8 @@ from .items import Activity, Item
 # ── Items and activities ────────────────────────────────────────────────
 
 
-#: Python first: it is the language to practise.
-LANGUAGES = ("python", "javascript")
+#: Python first: it is the language to practise; Dart came third.
+LANGUAGES = ("python", "javascript", "dart")
 
 #: The headings of the home screen, in order (an Activity's `group` names one; others come after).
 GROUPS = ("Quick reads", "Predict the result", "Spot the problem", "Remember")
@@ -388,8 +393,8 @@ def _check_pack(name: str, acts: Any, taken: set[str]) -> tuple[Activity, ...]:
             raise TypeError(f"{a!r} is not an Activity")
         if a.id in taken:
             raise ValueError(f"duplicate activity id {a.id!r}")
-        if a.make_py is None:
-            raise ValueError(f"{a.id}: a pack activity needs both generators (make and make_py)")
+        if not a.languages:
+            raise ValueError(f"{a.id}: a pack activity needs at least one generator (make, make_py or make_dart)")
         taken.add(a.id)
     return acts
 
@@ -418,20 +423,42 @@ def _discover() -> tuple[Activity, ...]:
 ACTIVITIES: tuple[Activity, ...] = _ORIGINALS + _discover()
 
 ACTIVITIES_BY_ID = {a.id: a for a in ACTIVITIES}
-#: The Code age check: three activities, as the DS check was three tests.
+#: The Code age check: three activities, as the DS check was three tests. This is Python's and JavaScript's;
+#: Dart has its own (CHECKS), since its activities are not the same ones.
 CHECK = ("eval", "truthy", "brackets")
+#: The check of each language: three activities that language can play.
+CHECKS: dict[str, tuple[str, ...]] = {
+    "python": CHECK,
+    "javascript": CHECK,
+    "dart": ("dart_eval", "dart_null", "dart_final"),
+}
+
+
+def check_for(language: str) -> tuple[str, ...]:
+    """The three activities of a language's Code age check (KeyError for an unknown language)."""
+    if language not in LANGUAGES:
+        raise KeyError(language)
+    return CHECKS[language]
 
 
 def activity_for(activity_id: str, language: str = "javascript") -> Activity:
-    """The activity as played in a language (KeyError for an unknown one)."""
+    """The activity as played in a language (KeyError for an unknown id or language, or an activity that
+    is not played in that language)."""
     activity = ACTIVITIES_BY_ID[activity_id]
+    if language not in LANGUAGES or language not in activity.languages:
+        raise KeyError(language)
     if language == "javascript":
         return activity
     if language == "python":
-        assert activity.make_py is not None
         return replace(activity, make=activity.make_py, question=activity.question_py or activity.question,
                        blurb=activity.blurb_py or activity.blurb)
-    raise KeyError(language)
+    return replace(activity, make=activity.make_dart, question=activity.question_dart or activity.question,
+                   blurb=activity.blurb_dart or activity.blurb)
+
+
+def activities_in(language: str) -> tuple[Activity, ...]:
+    """The activities that can be played in a language, in home-screen order."""
+    return tuple(a for a in ACTIVITIES if language in a.languages)
 
 
 def make_round(activity_id: str, seed: int | None = None, language: str = "javascript") -> list[Item]:
@@ -509,8 +536,8 @@ class Result:
     age: int
     #: Part of a Code age check (check_id groups the three).
     check_id: str = ""
-    #: Which language was played. Rounds saved before Python existed have no
-    #: such field in the file and count as JavaScript.
+    #: Which language was played ("javascript", "python" or "dart"). Rounds saved before Python existed have no
+    #: such field in the file and count as JavaScript; a "dart" round appears the first time one is played.
     language: str = "javascript"
 
 
@@ -518,7 +545,7 @@ def record(activity_id: str, seconds: float, errors: int, total: int, check_id: 
            today: date | None = None, language: str = "javascript") -> Result:
     if activity_id not in ACTIVITIES_BY_ID:
         raise KeyError(activity_id)
-    if language not in LANGUAGES:
+    if language not in LANGUAGES or language not in ACTIVITIES_BY_ID[activity_id].languages:
         raise KeyError(language)
     seconds = max(0.0, float(seconds))
     errors = max(0, int(errors))
@@ -532,13 +559,15 @@ def record(activity_id: str, seconds: float, errors: int, total: int, check_id: 
     return result
 
 
-def _groups() -> list[str]:
-    """The home screen's headings: GROUPS in order, then any other group an activity names, then "" as "More"."""
+def _groups(language: str) -> list[str]:
+    """The home screen's headings for a language: GROUPS in order, then any other group an activity names,
+    leaving out the ones nothing in that language sits under."""
     names = list(GROUPS)
-    for a in ACTIVITIES:
+    here = activities_in(language)
+    for a in here:
         if a.group and a.group not in names:
             names.append(a.group)
-    return [g for g in names if any(a.group == g for a in ACTIVITIES)]
+    return [g for g in names if any(a.group == g for a in here)]
 
 
 def summary(today: date | None = None, language: str = "javascript") -> dict[str, Any]:
@@ -564,7 +593,7 @@ def summary(today: date | None = None, language: str = "javascript") -> dict[str
     # A check's age is the average of its three; a day keeps its best check.
     check_by_day: dict[str, int] = {}
     for check_id, ages in checks.items():
-        if len(ages) < len(CHECK):
+        if len(ages) < len(check_for(language)):
             continue
         day = check_id.split("/")[0]
         age = int(round(sum(ages) / len(ages)))
@@ -584,10 +613,10 @@ def summary(today: date | None = None, language: str = "javascript") -> dict[str
              "kind": a.kind, "choices": list(a.choices), "showSeconds": a.show_seconds,
              "group": a.group, "concepts": list(a.concepts),
              "best": best.get(a.id), "last": last.get(a.id)}
-            for a in (activity_for(x.id, language) for x in ACTIVITIES)
+            for a in (activity_for(x.id, language) for x in activities_in(language))
         ],
-        "check": list(CHECK),
-        "groups": _groups(),
+        "check": list(check_for(language)),
+        "groups": _groups(language),
         "stamps": [{"day": d, "trained": d in days} for d in recent],
         "streak": streak,
         "checkAges": [{"day": d, "age": check_by_day[d]} for d in sorted(check_by_day)][-60:],
@@ -609,7 +638,7 @@ def round_payload(activity_id: str, seed: int | None = None, language: str = "ja
 def all_items_for_tests(seeds: range, language: str = "javascript") -> list[tuple[str, Item]]:
     """Every activity's items over many seeds - what the oracle tests run."""
     out = []
-    for activity in ACTIVITIES:
+    for activity in activities_in(language):
         for seed in seeds:
             out.extend((activity.id, item) for item in make_round(activity.id, seed, language))
     return out

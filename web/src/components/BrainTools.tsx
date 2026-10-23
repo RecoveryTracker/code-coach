@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { explainCode, visualizeCode } from "../api";
+import { explainCode, runBrainCode, visualizeCode } from "../api";
 import { cleanError, isSyntaxError, runnableFor, type BrainItem, type BrainLang } from "../lib/brainRound";
 import type { ExplainResult, VisualizeResult } from "../types";
 import { WordsUsed } from "./WordsUsed";
@@ -25,6 +25,8 @@ type Props = {
 };
 
 const LOCKED = "Answer the question first - running or explaining it would give the answer away.";
+/** Explain reads Python and JavaScript only: Dart has no reader yet (the same words the app uses elsewhere). */
+const NO_DART_EXPLAIN = "Explain my code works in Python and JavaScript so far";
 
 export default function BrainTools({ activityId, item, language, unlocked }: Props) {
   const what = runnableFor(activityId, item, language);
@@ -51,13 +53,15 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
     }
     setRan("busy");
     setRunOpen(true);
-    visualizeCode({ code: what.run || what.code, language })
+    // Dart has no tracer, so it is run by the Brain Drills runner instead (a real `dart`, in a throwaway folder).
+    (language === "dart" ? runBrainCode(what.run || what.code) : visualizeCode({ code: what.run || what.code, language }))
       .then((r) => alive.current && setRan(r))
       .catch(() => alive.current && setRan("down"));
   };
 
+  const explainOff = language === "dart";
   const explain = () => {
-    if (!what.ok || !unlocked || explained === "busy") return;
+    if (explainOff || !what.ok || !unlocked || explained === "busy") return;
     if (explained) {
       setExplained(null);
       return;
@@ -91,8 +95,9 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
           className={explained && explained !== "busy" ? "ws-btn on" : "ws-btn"}
           aria-pressed={!!explained && explained !== "busy"}
           onClick={explain}
-          disabled={!!disabledWhy || explained === "busy"}
+          disabled={explainOff || !!disabledWhy || explained === "busy"}
           title={
+            (explainOff ? NO_DART_EXPLAIN : "") ||
             disabledWhy ||
             (explained && explained !== "busy" ? "Hide the explanation" : "A plain-English walkthrough of this code")
           }

@@ -25,15 +25,16 @@ import re
 from typing import Any, Iterable
 
 from .contexts import CONTEXTS, concepts_for
-from .entry import LANGUAGES, Entry, both, code, entry, js, py
+from .entry import LANGUAGES, Entry, all3, both, code, dart, entry, js, py
 
 __all__ = [
-    "CONTEXTS", "Entry", "LANGUAGES", "LOAD_ERRORS", "all_entries", "both", "code", "entry", "find_words",
-    "js", "language_for", "lookup", "payload", "py", "resolve", "words_for_context",
+    "CONTEXTS", "Entry", "LANGUAGES", "LOAD_ERRORS", "all3", "all_entries", "both", "code", "dart", "entry",
+    "find_words", "js", "language_for", "lookup", "payload", "py", "resolve", "words_for_context",
 ]
 
 #: Languages the app can read that borrow another one's glossary. The farm's own language
-#: is Python's syntax; TypeScript is JavaScript with types.
+#: is Python's syntax; TypeScript is JavaScript with types. Dart is a glossary language of its own
+#: (and Flutter is Dart, so its words live in the Dart glossary).
 ALIASES = {"tfwr": "python", "typescript": "javascript"}
 
 #: A module that fails to import is skipped and recorded here (the tests fail on it).
@@ -203,6 +204,27 @@ _JS_BLANK = re.compile(
 )
 
 
+# Dart: // and /* */ comments, raw strings r'..' / r".." (no escapes), triple-quoted strings, and ordinary
+# strings. `${...}` inside a string is blanked with the rest of it.
+_DART_BLANK = re.compile(
+    r"""
+    (?P<comment>//[^\n]*|/\*[\s\S]*?(?:\*/|\Z))
+  | (?P<triple>r?(?:'''[\s\S]*?(?:'''|\Z)|\"\"\"[\s\S]*?(?:\"\"\"|\Z)))
+  | (?P<raw>r(?:"[^"\n]*"?|'[^'\n]*'?))
+  | (?P<str>"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?)
+    """,
+    re.X,
+)
+
+
+def _blank_dart(m: re.Match[str]) -> str:
+    if m.group("comment") is not None:
+        return "\n" * m.group("comment").count("\n")
+    if m.group("triple") is not None:
+        return '""' + "\n" * m.group("triple").count("\n")
+    return '""'
+
+
 def _blank_py(m: re.Match[str]) -> str:
     if m.group("comment") is not None:
         return ""
@@ -224,6 +246,8 @@ def blank_code(source: str, language: str) -> str:
     word in a string or a comment is never mistaken for code."""
     if language == "python":
         return _PY_BLANK.sub(_blank_py, source)
+    if language == "dart":
+        return _DART_BLANK.sub(_blank_dart, source)
     return _JS_BLANK.sub(_blank_js, source)
 
 

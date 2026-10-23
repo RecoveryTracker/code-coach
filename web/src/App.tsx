@@ -1348,7 +1348,20 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <BrainDrills />
+        {/* Brain Drills follows the language picker at the top, like every other mode. */}
+        <BrainDrills
+          appLanguage={viewingLanguage}
+          onChangeLanguage={(id) => {
+            void (async () => {
+              try {
+                await updateProgress({ language: id });
+                onLanguageChanged();
+              } catch {
+                /* stay on the current language */
+              }
+            })();
+          }}
+        />
       </div>
     );
   }

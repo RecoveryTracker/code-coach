@@ -815,8 +815,15 @@ class BrainResultRequest(BaseModel):
     total: int = 1
     #: Set when the round is part of a Code age check: the three share it.
     checkId: str = ""
-    #: "javascript" or "python": code age is kept per language.
+    #: "javascript", "python" or "dart": code age is kept per language.
     language: str = "javascript"
+
+
+class BrainRunRequest(BaseModel):
+    """Run a Brain Drills snippet for real - "Run it" for Dart, which has no tracer to go through /api/visualize."""
+
+    code: str = ""
+    language: str = "dart"
 
 
 class FarmCodeRequest(BaseModel):

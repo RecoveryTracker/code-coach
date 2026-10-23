@@ -263,13 +263,32 @@ code_coach/farm/
   check asks for in the goal) and a MISTAKES / OTHER_WAYS entry in
   `tests/test_canvas_pywebapp.py`; library and session behaviour is in
   `tests/test_pyweb_lib.py`.
-- **Brain Drills** (`code_coach/brain/`): timed reflex activities in Python
-  (the default, listed first: the screen's `brain-language` falls back to
-  Python, and `/api/brain` and `/api/brain/round` default to it) or
-  JavaScript (scores kept per language), filed under headings on the home
-  screen (`Activity.group`, `GROUPS`: Quick reads, Predict the result, Spot
-  the problem, Remember), and a "code age" from 20 to 80 (the Code age check
-  is `CHECK`: eval, truthy, brackets). The original seven live in
+- **Brain Drills** (`code_coach/brain/`): timed reflex activities in Python,
+  JavaScript or Dart. **The screen has no language switch of its own: it follows
+  the app's language picker at the top** (`BrainDrills` takes `appLanguage` from
+  `App.tsx`; `brainLanguageFor()` maps python/tfwr -> Python, javascript/typescript ->
+  JavaScript, dart -> Dart, anything else -> none, and the screen then says there
+  are no drills for that language yet and offers "Switch to Python / JavaScript /
+  Dart", which changes the app's language like the picker does). The server routes
+  `/api/brain` and `/api/brain/round` still default to Python when no language is
+  sent. (`LANGUAGES` = python, javascript, dart, in that order;
+  scores kept per language, `Result.language`; the saved
+  `brain_drills.json` of older versions has no `"dart"` and still loads, a
+  Dart round writes `"language": "dart"` the first time), filed under
+  headings on the home screen (`Activity.group`, `GROUPS`: Quick reads,
+  Predict the result, Spot the problem, Remember; a language's home lists
+  only its own activities and only the headings they sit under), and a "code
+  age" from 20 to 80. **An activity is played in a language exactly when it
+  has that language's generator** (`make` JavaScript, `make_py` Python,
+  `make_dart` Dart: `Activity.languages`, `brain.activities_in(language)`;
+  `activity_for(id, language)` raises KeyError for one it is not played in,
+  and `/api/brain/round|result` answer 404): the 71 older activities have
+  Python and JavaScript, the Dart Core Pack is Dart-only. The Code age check
+  is per language: `brain.CHECK` (eval, truthy, brackets) for Python and
+  JavaScript, `brain.CHECKS["dart"]` (`dart_eval`, `dart_null`,
+  `dart_final`) for Dart, read through `brain.check_for(language)` (the
+  home payload's `check`); a check's age needs its three results in THAT
+  language. The original seven live in
   `__init__.py` (JavaScript) and `pythonic.py`; every other activity is a
   PACK (below). Every item is modelled by hand in Python and held to the
   real runtime in `tests/test_brain.py` / `test_brain_python.py` (the seven)
@@ -283,17 +302,27 @@ code_coach/farm/
   to a finished cell). "Run it" is `/api/visualize` and "Explain" is
   `/api/explain`, both told the drill's language (`language` in the request;
   blank = the app's saved one). `round_payload` carries each item's `check`
-  code, which the loop and final-value programs are built from.
+  code, which the loop and final-value programs are built from. DART has no
+  tracer and no explainer: "Run it" is `POST /api/brain/run {code}`
+  (`runBrainCode` in `api.ts`; the Gotchas runner's `run_program("dart")`:
+  the SDK's real dart.exe, a bare environment, 5 s after the build, 64 KB;
+  snippets up to 4000 characters) and "Explain my code" is disabled with the
+  tooltip "Explain my code works in Python and JavaScript so far"; the
+  "Words in this question" chips ask the glossary for language `dart` (a full
+  third glossary language since 2026-10-22: see "Glossary"), so Dart and Flutter
+  drills show their chips with no web change.
 - **Brain Drills packs** (how a new activity gets in; the Reading Pack in
   `pack_reading.py` is the model). Add `code_coach/brain/pack_<name>.py`
   exposing `ACTIVITIES: tuple[Activity, ...]` and touch nothing else:
   `brain._discover()` imports `pack_*.py` by name, sorted, after the
-  originals; a pack that fails to import (or has a duplicate id, or no
-  `make_py`) is skipped, recorded in `brain.LOAD_ERRORS` and fails
-  `test_every_pack_imports_cleanly`. An `Activity` (`items.py`) carries both
-  languages (`make` JavaScript, `make_py` Python, `question_py`/`blurb_py`
-  where they differ), `kind` "type" or "pick" (two `choices`, left key
-  first), `par`/`slow` seconds per item (look at the existing ones),
+  originals; a pack that fails to import (or has a duplicate id, or an
+  activity with no generator at all) is skipped, recorded in
+  `brain.LOAD_ERRORS` and fails `test_every_pack_imports_cleanly`. An
+  `Activity` (`items.py`) carries its languages (`make` JavaScript, `make_py`
+  Python, `make_dart` Dart - at least one, a Dart-only activity passes
+  `make_dart=` and no `make`; `question_py`/`blurb_py`/`question_dart`/
+  `blurb_dart` where the wording differs), `kind` "type" or "pick" (two
+  `choices`, left key first), `par`/`slow` seconds per item (look at the existing ones),
   `group`, `concepts` (plain lowercase words: the glossary resolves each one,
   per language, to an entry by id, term or aka - so this is the one place the
   mapping lives, and no glossary edit is needed. A word nobody has written an
@@ -322,6 +351,75 @@ code_coach/farm/
   a bare `vm` context, so no `structuredClone`/`setTimeout`; avoid `is` on
   ints and strings in Python; `-0` is a real JavaScript answer. Helper
   modules start with `_` so they are not mistaken for packs.
+  **Dart packs** (`pack_dartcore.py` is the model; its templates are
+  `_dartcore_*.py`, its models `_dart_model.py`, which sits beside
+  `_model.py` and is never mixed into it): build the generator with
+  `Pool([...])` of `_dart_model.D(fmt, answer, why)` templates (holes
+  `$a $b $c $d` ints 2-9, `$n` 10-40, `$w $v` words, `$k` 1-3, `$x $y $z $f
+  $e` letters, `$h` 2/4/5/8, `$s1..$s5` capital letters; **Dart's own `$`
+  interpolation is written `$$` in a template**, and an explanation never
+  contains a `$`), answers worked out with `show`/`ddiv`/`dmod`/`tdiv_`/
+  `fixed`/`DSet`/`DIter`... (Dart prints a list `[1, 2]`, a map `{a: 1}`, a
+  set `{1, 2}`, an Iterable such as `xs.map(f)` in ROUND brackets, strings
+  bare, `2.0`, `true`, `null`). **The item convention**, one rule shared by
+  the oracle (`tests/dart_oracle.full_program`), "Run it" (`dartProgram` in
+  `brainRound.ts`, held equal by `tests/test_brain_round.py`) and the
+  `check` field: the program is `check` or the prompt; if it mentions
+  `main(` it is a complete program (classes, `Future<void> main() async`...),
+  else it is the body of `main` and its last line is printed when it is a
+  bare expression (not `print(...)`, not ending in `;` or `}`); local
+  functions are fine in a body, classes and `await` need a complete program.
+  `oracle` names how the real dart's printed lines become the value: `value`
+  (one line), `lines` (glued together: Async Order's letters) or `error` (a
+  fine/error pick: it does not compile or it throws). **The Dart oracle** is
+  batched (`tests/dart_oracle.py`): every body-style item is a function of
+  one library, every complete program its own library (so two items may both
+  declare `class Dog`), `main.dart` runs them one by one in a Zone that
+  captures `print` and drains the event loop with zero-duration timers, one
+  `dart run` per activity (~2 s per 1500 items; never `Future.delayed` with a
+  real duration, a Windows timer tick is 15 ms); an item that does not
+  compile is named by file and line and removed, the rest still run.
+  `tests/test_brain_packs.py` picks a new Dart pack up with no edit; run just
+  it with `-k "Dart"`. Dart on this machine is 3.7 (Flutter 3.29): no dot
+  shorthands; type inference traps are real (`fold(0, (s, x) => s + x)` inside
+  `print(...)` fails to compile, `Future(() => throw 'x').catchError(...)`
+  throws an ArgumentError: the oracle catches both).
+- **Flutter pack convention** (Dart-language activities about WIDGETS; `pack_flutterlayout.py`, group "Flutter layout",
+  ids `fl_*`, is the model). An activity passes `make_dart=` and `oracle="flutter"`, and **its id must start with
+  `fl_`** (the browser's `runnableFor` refuses "Run it" for `fl_*` with "Flutter widgets cannot run here: this answer was
+  measured with Flutter itself"; `tests/test_brain_packs.py` holds id prefix == oracle). The oracle is `tests/flutter_oracle.py`
+  (`flutter_values([(prompt, check)...])`, `run_batch`): ONE generated `testWidgets` per item, ONE test file per batch
+  (up to 800 items; Flutter starts a process per file), `flutter test --no-pub --reporter json`, results read from the
+  `@@iN@@value` lines the tests print; a compile failure is mapped by file and line to its item, removed, and the batch
+  re-run (`COMPILE ERROR: ... (line 2 of the snippet)`), a Flutter error or throwing check is `ERROR: <first line>`,
+  never an exception. The throwaway project is `%TEMP%/code_coach_flutter_brain/fq` (hand-written pubspec + `flutter
+  pub get --offline`, made once, shared; each run uses its own folder inside it, so two test processes can run at once;
+  separate from test_flutter_questions' project). **The item convention**: `Item.prompt` = a `// width of b` comment
+  line (what to measure) + the widget EXPRESSION (no `;`); the host is NOT in the prompt: the view is exactly **400 x 300**
+  logical pixels at devicePixelRatio 1.0, the expression is the root widget under `Directionality(ltr)` and gets TIGHT
+  400 x 300 constraints (a root `SizedBox(width: 200)` is still 400 wide: a lesson, not a bug), all of
+  `package:flutter/material.dart` is in scope; `Box('a', w: 100, h: 40)` is a `SizedBox(key: ValueKey('a'), ...)`, 50 x 50
+  unless said; any widget may carry `key: Key('id')`. Every activity's blurb says "400 x 300" and "Box(" (a test holds it).
+  `Item.check` = the measurement, a Dart expression evaluated after `pumpWidget`: `w(id) h(id) x(id) y(id)` (size and
+  top-left in screen coordinates), `r(id) b(id)` (right and bottom edge), `count(finder)`, `overflowed` (did a RenderFlex
+  report an overflow?), anything in flutter_test; `{y('a'), y('b')}.length` counts rows. A check containing `await` or
+  `return` is the body of `(tester) async {...}` (tap, `pump`, `return find.text('x').evaluate().length;`), and a prompt
+  with top-level classes (a column-0 `}` line) is its own library (classes first, the widget expression after the last
+  `}`; two items may both declare `class Counter`). Numbers print as an integer when whole (`120`) else Dart's way
+  (`96.5`); a bool prints `true`; an unexpected Flutter error (overflow stripes nobody asked about) is the result
+  `ERROR: ...`, so a position question must not overflow. **The model**: `_flutter_model.py` has the node classes (BoxN,
+  SizedN, PadN, AlignN, ConstrainedN, UnconstrainedN, AspectN, FractionalN, ContainerN, FlexN + Expanded/Flexible/Spacer,
+  StackN + PositionedN, WrapN) that both PRINT Dart (`render`, width 78, lists hugged) and LAY OUT by the render objects'
+  rules (`host(root)` -> rectangles, `ctx.overflow`), plus `item(root, id, prop, topics)` (builds the comment, answer,
+  check and an explanation from the nodes' own notes), `fit(template)` (re-rolls until the prompt is <= 220 characters
+  and 10 lines and the answer whole; a template may `raise Retry`) and `named`. A new Flutter pack needs only NEW files
+  (`pack_<x>.py`, `_<x>_*.py`); a pack of state/lifecycle questions writes its own `Item`s with a class in the prompt and
+  an `await tester.tap(...)` check, with no model needed. **Running it**: `pytest tests/test_brain_packs.py -k Flutter`
+  (~30 s: 2200 items from every flutter activity in ONE `flutter test`, about 7 s to compile + ~10 ms an item; each
+  further flutter pack adds its items to that same run), `-k "FlutterShape"` for the instant checks. Flutter here is 3.29.1
+  (Dart 3.7). Traps found: a child-less `Container` and a Wrap in a Row (unbounded width) behave very differently from
+  what they look like - the model implements both; the oracle caught an unintended `RenderFlex overflowed` in a
+  padded-Column position question.
 
 ## Glossary ("Words used": the vocabulary under Explain my code)
 
@@ -335,7 +433,8 @@ Free mode), `BrainTools`, and the Workbook and Forms (`Katas.tsx`) walkthroughs.
 
 ```text
 code_coach/glossary/
-  entry.py            Entry (frozen dataclass) + the writers: py(...), js(...), both(...)
+  entry.py            Entry (frozen dataclass) + the writers: py(...), js(...), dart(...), both(...) (= all3: up to
+                      three languages, one dict each)
   terms_values.py     truthy/falsy/boolean, types, numbers, strings, mutable/immutable, reference
   terms_basics.py     expression, operator, precedence, variable, scope, syntax, brackets, import...
   terms_flow.py       condition, comparison, short-circuit, branch, loops, index/slice, exceptions, recursion
@@ -352,6 +451,28 @@ code_coach/glossary/
                       representation), logic (logical operators, De Morgan, truth table, bitwise, shifts, masks,
                       chained comparison, leap year, FizzBuzz, primes, division), errors (runtime error, error
                       message, TypeError / NameError / ReferenceError / IndexError..., traceback, line number, bug)
+  terms_dart_*.py     DART, the third language (added 2026-10-22; Dart ids are letters only, kebab-case):
+                      core (null safety: null, ?, !, ??, ?., ??=, late, final/const/var, type promotion, dynamic;
+                      numbers, bool, String, List/Set/Map, record, enum, typedef; ~/ % (never negative), cascade,
+                      spread, collection if/for, is/as; functions: named/optional/required/default parameters,
+                      =>, closures, callbacks), types (class, constructors incl. named/factory/const/initializing
+                      formals, getters, inheritance/override/super, abstract, implements, mixin, extension, generics,
+                      toString, ==/hashCode, identical, private _names, patterns, switch statement/expression,
+                      when, if-case, sealed), async (Future, async/await, then/catchError, Stream, async*/sync*,
+                      event loop, microtask, isolate; try/on/catch/finally/rethrow, Exception vs Error,
+                      FormatException, RangeError, StateError, TypeError, stack trace; interpolation, raw strings,
+                      StringBuffer, RegExp, split/join/replace/padding/format; Iterable laziness, map/where/fold,
+                      sort/compareTo, reversed, toList; import), basics (the everyday words in Dart form so the packs'
+                      concepts resolve: expression, variable, scope, closure, recursion, loops, conditions,
+                      short-circuit, index, slice, length...)
+  terms_flutter.py    FLUTTER (it is Dart, so these are Dart-glossary entries): widget, StatelessWidget,
+                      StatefulWidget, State, build, BuildContext, setState, lifecycle/initState/dispose, widget keys,
+                      widget vs element tree, InheritedWidget/Theme/MediaQuery, ValueNotifier/ChangeNotifier/
+                      ListenableBuilder, FutureBuilder, runApp, const widgets, hot reload; layout: constraints,
+                      tight/loose, Row/Column, main/cross axis, flex, Expanded/Flexible/Spacer, Container, SizedBox,
+                      Center/Align, Stack/Positioned, Wrap, AspectRatio, ConstrainedBox, overflow, ListView(.builder),
+                      GestureDetector, InkWell, TextField/TextEditingController, Form/validator, Navigator, Route,
+                      MaterialApp, Scaffold, Text. Most have NO example (a widget cannot run in plain `dart`).
   contexts.py         CONTEXTS: the seven ORIGINAL Brain Drills activities -> the words they always teach, plus
                       concepts_for(): every other activity's `concepts`, read lazily from code_coach.brain
   __init__.py         the loader (terms_* found BY NAME), find_words, lookup, resolve, context_words, words_for_context, payload
@@ -361,14 +482,35 @@ code_coach/glossary/
   (1-2 plain sentences, 300 characters at most, no word that is not itself defined), `rules` (short bullets), `example` +
   `out` (a small program in THAT language and exactly what it prints), `see` (ids in the same language), `aka`
   (other spellings for lookup), `detect` (regexes), `priority`. A word that means the same in both languages is written
-  once with `both("id", "Term", "definition", python=dict(rules=..., example=..., out=...), javascript=dict(...))`, which
-  makes two separate entries, so a rule can never leak across languages. Use `py(...)` / `js(...)` for one language.
+  once with `both("id", "Term", "definition", python=dict(rules=..., example=..., out=...), javascript=dict(...),
+  dart=dict(...))` (alias `all3`), which makes one separate entry per dict, so a rule can never leak across languages.
+  Use `py(...)` / `js(...)` / `dart(...)` for one language. The Dart files use `dart(...)` with the same ids as Python's and
+  JavaScript's for the everyday words (`loop`, `closure`, `scope`...), so a drill's `concepts` resolve in all three; the
+  Python and JavaScript spellings of a Dart idea are `aka` (`optional chaining` -> `null-aware-access`, `tuple` ->
+  `record`, `lambda` -> `anonymous-function`, `f-string` -> `string-interpolation`, `isinstance` -> `type-check`,
+  `keyword argument` -> `named-parameter`, `floor division` -> `truncating-division`, `truthy`/`falsy` -> `boolean`
+  (Dart has none), `self` -> `this`). Keep an aka on ONE entry (a test lists no two entries answering to a spelling the
+  packs use). A Dart example is a BODY of `main` unless it mentions `main(` (the Brain Drills convention), so
+  `print(...)` every line you show; `padding` is one card with a string sense and a Flutter sense on purpose (both
+  packs use the word).
 - **Adding a term** is one more `*both(...)` / `*py(...)` / `*js(...)` in a `TERMS` list (or a new `terms_<theme>.py`
   with `TERMS = [...]`: nothing to register). Then run `pytest tests/test_glossary.py`.
 - **The oracle rule applies to examples AND rules.** Every example is run for real (python, node) and must print
   exactly `out`; the Truthy/Falsy `counts_false` / `counts_true` lists are run through `bool()` / `Boolean()`, the prose
   rule that lists the falsy values is parsed and run too, and the hand-written claims in the test (not read from the
-  entries) are checked against the language. The rules of the `terms_brain_*` files are backed by `RULE_CHECKS` in the
+  entries) are checked against the language. **Dart examples all run in ONE `dart run`** (`tests/dart_oracle.run_batch`),
+  and every Dart RULE that can run is a program in `DART_RULE_CHECKS` (name = `"<entry id>: the claim"`, a program, the
+  expected output or `CE` = "does not compile"; ~190 of them, e.g. `-7 % 3` is 2, `~/` truncates, `[1] == [1]` is false,
+  a `const` list throws on `add`, `identical`, null-aware operators, record equality, microtask-before-event order,
+  `rethrow` keeping the stack trace, a sealed switch missing a case not compiling); a test requires >= 80% of the Dart
+  language words to have one. **Flutter rules** are held to real Flutter by `FLUTTER_CHECKS` (one `flutter test`,
+  `tests/flutter_oracle.py`: flex split, Padding, Center loosening, Stack/Positioned, Row/Column overflow, ListView
+  laziness, setState vs a plain field, lifecycle order, const widgets not rebuilt, keys, controller, Form.validate,
+  Navigator push/pop, ValueNotifier vs ChangeNotifier); the Flutter words with NO check are named in
+  `NOT_ORACLE_CHECKED` (widget, StatelessWidget, StatefulWidget, State, build method, BuildContext, widget/element tree,
+  InheritedWidget, Theme, ChangeNotifier (only its notify count is checked, under ValueNotifier), ListenableBuilder,
+  FutureBuilder, runApp, hot reload, layout, Route, InkWell, Text, ListView): their rules are well-known documented
+  Flutter behaviour, and a test makes the list and the checks partition the Flutter ids. The rules of the `terms_brain_*` files are backed by `RULE_CHECKS` in the
   test (one small program per claim, e.g. `sorted` stability, `str.index` raising, JS `replace` changing only the first
   match, `Math.max()` being `-Infinity`, the leap-year rule against `calendar.isleap` / `Date`, De Morgan over all
   four inputs, primes against a sieve): add a line there when you add a runnable rule. Write a rule only if you can say how a test would catch it being false.
@@ -384,7 +526,8 @@ code_coach/glossary/
   string contents blanked, so a word inside a string is not code (a pattern starting `raw:` sees the code as written) -
   sorted by `priority` (high first) then first appearance; never more than `limit`, no word twice. An unknown language,
   junk or empty code: `[]` or just the context's words, never an error. `language_for` maps `tfwr` to Python and
-  `typescript` to JavaScript; any other app language has no glossary yet, so `words` is empty.
+  `typescript` to JavaScript, and `dart` is its own language; any other app language has no glossary yet, so `words` is
+  empty. Dart strings are blanked by their own rules (`//` and `/* */`, raw `r'..'`, triple quotes, `'` and `"`).
 - **Contexts** (what a Brain Drills activity always teaches, shown first by `find_words` and as the "Words in this
   question" chips). The ORIGINAL seven keep their hand-written ids in `contexts.CONTEXTS` (eval: expression, evaluate,
   operator, precedence; truthy: truthy, falsy; loops: loop, iteration, off-by-one, range (Python only); trace: variable,
@@ -395,21 +538,30 @@ code_coach/glossary/
   `type-coercion`, `tostring` == `toString`, `closures` == `closure`; an id beats a term, which beats an aka). A concept a
   language has no word for is skipped for that language (JavaScript has no `range`, Python no `tostring`); order is
   kept, no word twice. The brain package is imported lazily inside `contexts.concepts_for`, so the glossary never
-  imports it at import time (a test holds that). `tests/test_glossary.py` checks, for every activity and both
-  languages, that the context is non-empty (>= 2 words when the activity lists >= 2 concepts), and
-  `test_concepts_that_resolve_in_neither_language_are_few_and_visible` fails (naming the words) when an activity has more
-  than `MAX_UNRESOLVED_PER_ACTIVITY` concepts that no entry answers to. **Teaching a pack author's new word** = writing
+  imports it at import time (a test holds that). `tests/test_glossary.py` checks, for every activity and each
+  language it is PLAYED in (`Activity.languages`: a Dart-only activity is skipped for Python and JavaScript, and
+  `/api/glossary?language=dart&context=fl_flex` answers the Dart/Flutter words: Dart concepts are resolved in Dart only), that
+  the context is non-empty (>= 2 words when the activity lists >= 2 concepts), and
+  `test_concepts_that_resolve_in_no_language_the_activity_is_played_in_are_few_and_visible` fails (naming the words) when
+  an activity has more than `MAX_UNRESOLVED_PER_ACTIVITY` concepts that no entry answers to IN A LANGUAGE IT IS PLAYED IN (a
+  Dart activity is judged by the Dart glossary alone, so a Dart pack author's new word needs a Dart entry or an `aka` on one;
+  today every Dart/Flutter concept of every pack resolves in Dart). The original seven are not played in Dart: their
+  hand-kept ids are only required in Python and JavaScript. **Teaching a pack author's new word** = writing
   the entry in a `terms_brain_<theme>.py` (or any `terms_*.py`) with the word as its id, term or an `aka`; a word that
   genuinely exists in only one language is fine - prefer a counterpart under the same word when there is one
   (`nonlocal` -> JS closure, `keyword argument` -> JS options object, `method resolution order` -> JS prototype chain,
   `isinstance` <-> `instanceof`, `self` -> `this`). `BrainTools` passes `activityId` as `context`; every other caller
   passes nothing.
 - **API**: `POST /api/explain` takes an optional `context` and answers `words: [{id, term, language, definition, rules,
-  example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged);
+  example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged; for
+  Dart the answer stays `ok: false` with "no reader yet", and `words` still ride along, because the handler adds them
+  whenever the language has a glossary but no explainer);
   `GET /api/glossary?language=&term=&context=` gives one word (id, term or alias), a context's words, or the whole
   language, and never an error (unknown means `[]`). "See also" chips jump to a card already on screen or fetch the word.
-- **Not yet**: other app languages (C, Go...), the Workbook/Predict modes passing a `context` of their own, and a
-  syntax-error-aware match (Free mode with a typo shows the words of the code, not "syntax error").
+- **Not yet**: other app languages (C, Go...), the Workbook/Predict modes passing a `context` of their own, a
+  syntax-error-aware match (Free mode with a typo shows the words of the code, not "syntax error"), and a Dart/Flutter
+  reader for Explain (the chips and cards need none). The Brain Drills Explain button for Dart stays disabled, so its
+  "Words used" are seen in Free mode (the coach strip) only.
 
 ## Gotchas (the "<Language> Quiz" feed: 19 languages)
 

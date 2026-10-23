@@ -600,3 +600,9 @@
 .brain-prog pre {
   margin-top: 6px;
 }
+
+.brain-lang-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.65;
+}

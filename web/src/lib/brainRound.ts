@@ -27,7 +27,7 @@ export type BrainItem = {
   check?: string;
 };
 
-export type BrainLang = "javascript" | "python";
+export type BrainLang = "javascript" | "python" | "dart";
 
 /** What you said to one question, and whether it was right. */
 export type Answer = { given: string; right: boolean };
@@ -173,6 +173,7 @@ const IDENT = /^[A-Za-z_$][\w$]*$/;
 
 function printer(lang: BrainLang, expr: string): string {
   const e = expr.trim().replace(/;+$/, "");
+  if (lang === "dart") return `print(${e});`;
   return lang === "python" ? `print(${e})` : `console.log(${e});`;
 }
 
@@ -183,8 +184,44 @@ function printLast(code: string, lang: BrainLang): string {
   return [...lines, printer(lang, last)].join("\n");
 }
 
+/**
+ * The Dart program behind an item's code (the same rule as `full_program` in tests/dart_oracle.py, which a test holds
+ * this to): code that mentions `main(` is already a whole program; anything else is the body of `main`, whose last
+ * line is printed when it is a bare expression (it does not start with `print(` and does not end in `;` or `}`).
+ */
+export function dartProgram(code: string): string {
+  if (/\bmain\s*\(/.test(code)) return code;
+  const lines = code.replace(/\s+$/, "").split("\n");
+  const last = (lines[lines.length - 1] ?? "").trim();
+  if (!(last.startsWith("print(") || last.endsWith(";") || last.endsWith("}"))) lines[lines.length - 1] = `print(${last});`;
+  return "void main() {\n" + lines.map((ln) => (ln.trim() ? "  " + ln : ln)).join("\n") + "\n}";
+}
+
+/** Why Flutter-widget questions have no "Run it": the browser has no Flutter. */
+export const FLUTTER_CANNOT_RUN =
+  "Flutter widgets cannot run here: this answer was measured with Flutter itself (the explanation says how it is worked out).";
+
+/**
+ * A Flutter-widget activity (oracle "flutter" in code_coach/brain). Its id starts with one of the Flutter
+ * families (fl_ layout, fs_ state, fw_ widgets), which tests/test_brain_packs.py holds equal to the oracle.
+ */
+export function isFlutterActivity(activityId: string): boolean {
+  return /^f[lsw]_/.test(activityId);
+}
+
 /** The program behind one question, ready to run and show something. */
 export function runnableFor(activityId: string, item: BrainItem, lang: BrainLang): Runnable {
+  if (lang === "dart" && isFlutterActivity(activityId)) return { ok: false, reason: FLUTTER_CANNOT_RUN };
+  if (lang === "dart") {
+    // Every Dart activity is a pack (see code_coach/brain/__init__.py): the program is `check` when the item has one,
+    // else the prompt, and `code` is the whole program that runs. Fine-or-error items are judged by whether it throws.
+    const source = item.check || item.prompt;
+    if (!source.trim()) return { ok: false, reason: "There is no code to run here." };
+    return {
+      ok: true, code: dartProgram(source), run: "", parseIsTheAnswer: false,
+      ...(item.answer === "fine" || item.answer === "error" ? { raisesIsTheAnswer: true } : {}),
+    };
+  }
   const js = lang === "javascript";
   // (raisesIsTheAnswer is only present when it is true, so the other activities' shapes stay as they were.)
   const fine = (code: string, run = "", parseIsTheAnswer = false, raisesIsTheAnswer = false): Runnable => ({

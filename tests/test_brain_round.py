@@ -253,8 +253,8 @@ sys.stdout.write(json.dumps(result))
 
 def _items() -> list[dict]:
     seen: dict[tuple, dict] = {}
-    for language in ("javascript", "python"):
-        for activity in brain.ACTIVITIES:
+    for language in ("javascript", "python", "dart"):
+        for activity in brain.activities_in(language):
             for seed in SEEDS:
                 for it in brain.make_round(activity.id, seed, language):
                     key = (language, activity.id, it.prompt, it.show)
@@ -442,7 +442,7 @@ class RunIt(unittest.TestCase):
         self.assertEqual(wrong[:5], [], f"{len(wrong)} of {len(runnable)} programs disagree with the drill")
         # Every activity (but JavaScript's bracket strings) is covered.
         covered = {r["activity"] for r in runnable}
-        want = {a.id for a in brain.ACTIVITIES} - ({"brackets"} if language == "javascript" else set())
+        want = {a.id for a in brain.activities_in(language)} - ({"brackets"} if language == "javascript" else set())
         self.assertEqual(covered, want)
 
     def test_javascript_programs_print_the_drills_answers(self):
@@ -452,8 +452,77 @@ class RunIt(unittest.TestCase):
         self._check("python")
 
     def test_only_javascript_brackets_are_refused(self):
-        refused = {(r["language"], r["activity"]) for r in results()["runnables"] if not r["runnable"]["ok"]}
+        refused = {(r["language"], r["activity"]) for r in results()["runnables"] if not r["runnable"]["ok"]
+                   and brain.ACTIVITIES_BY_ID[r["activity"]].oracle != "flutter"}
         self.assertEqual(refused, {("javascript", "brackets")})
+
+
+class RunItDart(unittest.TestCase):
+    """Dart's "Run it": `dartProgram` in brainRound.ts is the same rule as `full_program` in tests/dart_oracle.py (the one
+    the Dart oracle runs), and the programs it builds print each drill's answer under the real `dart`."""
+
+    def _rows(self) -> list[dict]:
+        # Flutter-widget activities have no "Run it" (RunItFlutter below), so they are not Dart programs here.
+        return [r for r in results()["runnables"] if r["language"] == "dart"
+                and brain.ACTIVITIES_BY_ID[r["activity"]].oracle != "flutter"]
+
+    def test_the_browser_builds_the_program_the_oracle_runs(self):
+        from tests import dart_oracle
+
+        rows = self._rows()
+        self.assertGreater(len(rows), 100)
+        for r in rows:
+            item = r["item"]
+            self.assertTrue(r["runnable"]["ok"], item["prompt"])
+            self.assertEqual(r["runnable"]["code"], dart_oracle.full_program(item["check"] or item["prompt"]), item["prompt"])
+            self.assertEqual(r["runnable"]["run"], "")
+            self.assertFalse(r["runnable"]["parseIsTheAnswer"])
+        self.assertEqual({r["activity"] for r in rows},
+                         {a.id for a in brain.activities_in("dart") if a.oracle != "flutter"})
+
+    def test_dart_programs_print_the_drills_answers(self):
+        from tests import dart_oracle
+
+        if dart_oracle.DART is None:
+            self.skipTest("needs dart")
+        rows = self._rows()
+        by_mode: dict[str, list[dict]] = {}
+        for r in rows:
+            by_mode.setdefault(brain.ACTIVITIES_BY_ID[r["activity"]].oracle, []).append(r)
+        for mode, group in by_mode.items():
+            got = dart_oracle.dart_values([r["runnable"]["code"] for r in group], mode)
+            wrong = [(r["item"]["prompt"], r["item"]["answer"], g) for r, g in zip(group, got) if g != r["item"]["answer"]]
+            self.assertEqual(wrong[:5], [], f"{len(wrong)} of {len(group)} Dart programs disagree with the drill ({mode})")
+
+    def test_a_fine_or_error_item_is_judged_by_whether_it_throws(self):
+        rows = [r for r in self._rows() if brain.ACTIVITIES_BY_ID[r["activity"]].oracle == "error"]
+        self.assertTrue(rows)
+        self.assertTrue(all(r["runnable"].get("raisesIsTheAnswer") for r in rows))
+        others = [r for r in self._rows() if brain.ACTIVITIES_BY_ID[r["activity"]].oracle != "error"]
+        self.assertFalse(any(r["runnable"].get("raisesIsTheAnswer") for r in others))
+
+
+class RunItFlutter(unittest.TestCase):
+    """A Flutter-widget question cannot be run in the browser: "Run it" says so instead of running anything."""
+
+    def _rows(self) -> list[dict]:
+        return [r for r in results()["runnables"] if r["language"] == "dart"
+                and brain.ACTIVITIES_BY_ID[r["activity"]].oracle == "flutter"]
+
+    def test_every_flutter_question_is_refused_with_the_reason(self):
+        rows = self._rows()
+        self.assertGreater(len(rows), 50)
+        self.assertEqual({r["activity"] for r in rows}, {a.id for a in brain.activities_in("dart") if a.oracle == "flutter"})
+        for r in rows:
+            self.assertFalse(r["runnable"]["ok"], r["item"]["prompt"])
+            self.assertIn("Flutter widgets cannot run here", r["runnable"]["reason"])
+            self.assertIn("measured with Flutter itself", r["runnable"]["reason"])
+
+    def test_the_rule_is_the_flutter_prefixes_and_only_for_dart(self):
+        # The browser knows a Flutter activity by its id (tests/test_brain_packs.py holds id prefix == oracle).
+        flutter_id = re.compile(r"f[lsw]_")
+        self.assertTrue(all(flutter_id.match(a.id) for a in brain.activities_in("dart") if a.oracle == "flutter"))
+        self.assertTrue(all(a.oracle == "flutter" for a in brain.ACTIVITIES if flutter_id.match(a.id)))
 
 
 if __name__ == "__main__":

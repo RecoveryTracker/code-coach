@@ -40,17 +40,47 @@ import BrainPicker from "./BrainPicker";
 import BrainTools from "./BrainTools";
 import { QuestionWords } from "./WordsUsed";
 
-export type BrainLanguage = "javascript" | "python";
-const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python" };
+export type BrainLanguage = "javascript" | "python" | "dart";
+const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python", dart: "Dart" };
 
-/** Python is the default: JavaScript only when it was explicitly chosen. */
-function savedLanguage(): BrainLanguage {
-  try {
-    return window.localStorage.getItem("brain-language") === "javascript" ? "javascript" : "python";
-  } catch {
-    return "python";
+/**
+ * Brain Drills has no language switch of its own: it follows the language
+ * picked at the top of the app (the same one every other mode uses). Each app
+ * language maps to the drills that fit it; TypeScript plays the JavaScript
+ * drills and the farm's language plays Python's (it is Python syntax). A
+ * language with no drills yet gives null and the screen says so.
+ */
+export function brainLanguageFor(appLanguage: string): BrainLanguage | null {
+  switch (appLanguage) {
+    case "python":
+    case "tfwr":
+      return "python";
+    case "javascript":
+    case "typescript":
+      return "javascript";
+    case "dart":
+      return "dart";
+    default:
+      return null;
   }
 }
+
+/** How the app's language ids read in a sentence (the picker's own names are not passed down). */
+const APP_LANGUAGE_NAMES: Record<string, string> = {
+  cpp: "C++", csharp: "C#", typescript: "TypeScript", javascript: "JavaScript", php: "PHP", sql: "SQL",
+  postgresql: "PostgreSQL", lisp: "Common Lisp", tfwr: "The Farmer Was Replaced",
+};
+
+function languageLabel(id: string): string {
+  return APP_LANGUAGE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+/** The languages that have drills, in the order they are offered. */
+const DRILL_APP_LANGUAGES: { id: string; name: string }[] = [
+  { id: "python", name: "Python" },
+  { id: "javascript", name: "JavaScript" },
+  { id: "dart", name: "Dart" },
+];
 
 type Result = { day: string; activity: string; seconds: number; errors: number; total: number; age: number };
 type ActivityInfo = {
@@ -124,27 +154,37 @@ function same(given: string, answer: string): boolean {
   return clean(given) === clean(answer);
 }
 
-export default function BrainDrills() {
+export default function BrainDrills({
+  appLanguage = "python",
+  appLanguageName = "",
+  onChangeLanguage,
+}: {
+  /** The app's language (the picker at the top): the drills follow it. */
+  appLanguage?: string;
+  appLanguageName?: string;
+  /** Switch the app's language (the same switch the top picker makes). */
+  onChangeLanguage?: (languageId: string) => void;
+}) {
   const [summary, setSummary] = useState<BrainSummary | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "home" });
   const [error, setError] = useState("");
-  const [language, setLanguage] = useState<BrainLanguage>(savedLanguage);
+  const drillLanguage = brainLanguageFor(appLanguage);
+  // Past the check below this is never null, so the rest reads as before.
+  const language: BrainLanguage = drillLanguage ?? "python";
 
   const load = useCallback(() => {
+    if (!drillLanguage) return;
     fetchBrain(language)
       .then(setSummary)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [language]);
+  }, [language, drillLanguage]);
   useEffect(load, [load]);
 
-  const pickLanguage = useCallback((next: BrainLanguage) => {
-    setLanguage(next);
-    try {
-      window.localStorage.setItem("brain-language", next);
-    } catch {
-      /* a remembered choice is only a convenience */
-    }
-  }, []);
+  // A different app language is a different set of drills: back to its home.
+  useEffect(() => {
+    setSummary(null);
+    setScreen({ name: "home" });
+  }, [language]);
 
   const byId = useMemo(() => new Map((summary?.activities ?? []).map((a) => [a.id, a])), [summary]);
 
@@ -183,6 +223,37 @@ export default function BrainDrills() {
     },
     [load, language],
   );
+
+  // The app's language has no drills yet: say so, and offer the languages that do
+  // (it switches the app's language, the same switch as the picker at the top).
+  if (!drillLanguage) {
+    return (
+      <div className="brain-wrap">
+        <header className="brain-head">
+          <div>
+            <h2>Brain Drills</h2>
+            <p className="brain-sub">
+              There are no Brain Drills for {appLanguageName || languageLabel(appLanguage)} yet. They follow the language
+              picked at the top of the app, and cover these so far:
+            </p>
+            <div className="brain-lang" role="group" aria-label="Languages with drills">
+              {DRILL_APP_LANGUAGES.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  className="brain-lang-btn"
+                  onClick={() => onChangeLanguage?.(l.id)}
+                  disabled={!onChangeLanguage}
+                >
+                  Switch to {l.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
+      </div>
+    );
+  }
 
   if (error && !summary) return <div className="lessons-empty">Could not load Brain Drills: {error}</div>;
   if (!summary) return <div className="lessons-empty">Loading…</div>;
@@ -234,19 +305,7 @@ export default function BrainDrills() {
           <p className="brain-sub">
             Quick {LANGUAGE_NAMES[language]} reflexes, timed. Your code age: 20 is as sharp as it gets.
           </p>
-          <div className="brain-lang" role="group" aria-label="Language">
-            {(summary.languages ?? ["python", "javascript"]).map((l) => (
-              <button
-                key={l}
-                type="button"
-                className={`brain-lang-btn${l === language ? " on" : ""}`}
-                aria-pressed={l === language}
-                onClick={() => pickLanguage(l)}
-              >
-                {LANGUAGE_NAMES[l]}
-              </button>
-            ))}
-          </div>
+          <p className="brain-lang-note">The language follows the picker at the top of the app.</p>
         </div>
         <div className="brain-age-box">
           <span className="brain-age-label">Code age</span>

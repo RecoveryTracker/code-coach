@@ -49,6 +49,7 @@ from code_coach.api.schemas import (
     PyWebStartRequest,
     PyWebStopRequest,
     BrainResultRequest,
+    BrainRunRequest,
     GotchaAnswerRequest,
     GotchaRunRequest,
     GotchaUserRequest,
@@ -1251,12 +1252,13 @@ def explain(body: ExplainRequest) -> ExplainResponse:
         asked = ""
     lang = get_language(asked or getattr(_store.load(), "language", "python"))
     response = _explain_with(body, lang, asked)
-    if response.ok:
+    glossary_language = glossary.language_for(lang.id)
+    # A language with a glossary but no reader yet (Dart) still gets its words: they are about the code, not
+    # about the missing walkthrough, and the "no reader" summary says so honestly.
+    if response.ok or (glossary_language and "explainer" not in lang.ready):
         response.words = [
             Word(**glossary.payload(w))
-            for w in glossary.find_words(
-                body.code or "", glossary.language_for(lang.id), context=body.context or None
-            )
+            for w in glossary.find_words(body.code or "", glossary_language, context=body.context or None)
         ]
     return response
 
@@ -2472,6 +2474,8 @@ def brain_round(activity: str = "", seed: int | None = None, language: str = "py
         raise HTTPException(status_code=404, detail=f"Unknown activity {activity}")
     if language not in brain.LANGUAGES:
         raise HTTPException(status_code=404, detail=f"Unknown language {language}")
+    if language not in brain.ACTIVITIES_BY_ID[activity].languages:
+        raise HTTPException(status_code=404, detail=f"{activity} is not played in {language}")
     return brain.round_payload(activity, seed, language)
 
 
@@ -2484,11 +2488,39 @@ def brain_result(body: BrainResultRequest) -> dict:
         raise HTTPException(status_code=404, detail=f"Unknown activity {body.activity}")
     if body.language not in brain.LANGUAGES:
         raise HTTPException(status_code=404, detail=f"Unknown language {body.language}")
+    if body.language not in brain.ACTIVITIES_BY_ID[body.activity].languages:
+        raise HTTPException(status_code=404, detail=f"{body.activity} is not played in {body.language}")
     before = next(a["best"] for a in brain.summary(language=body.language)["activities"] if a["id"] == body.activity)
     result = brain.record(body.activity, body.seconds, body.errors, body.total, body.checkId,
                           language=body.language)
     best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
     return {"age": result.age, "best": best}
+
+
+#: The longest snippet "Run it" will start (the drills' own programs are a few hundred characters).
+BRAIN_RUN_MAX_CODE = 4000
+
+
+@app.post("/api/brain/run")
+def brain_run(body: BrainRunRequest) -> dict:
+    """"Run it" for a Dart drill: the snippet, run for real by the Gotchas runner (a bare environment, an empty
+    working folder, no input, 5 seconds after the build, 64 KB of output). Only Dart: Python and JavaScript drills
+    go through /api/visualize. The answer has the shape of /api/visualize's (`ok`, `stdout`, `stderr`, `error`)
+    plus the runner's `compile_error`, `timed_out` and `seconds`."""
+    from code_coach.gotchas.runner import RunnerUnavailable, run_program
+
+    if body.language != "dart":
+        raise HTTPException(status_code=400, detail="Run it goes through /api/visualize for Python and JavaScript")
+    if not body.code.strip() or len(body.code) > BRAIN_RUN_MAX_CODE:
+        raise HTTPException(status_code=400, detail="Send a snippet of up to %d characters" % BRAIN_RUN_MAX_CODE)
+    try:
+        result = run_program("dart", body.code)
+    except RunnerUnavailable as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    payload = _run_payload(result)
+    problem = payload["error"] or ("It ran for too long and was stopped." if result.timed_out else "")
+    return {"ok": result.ok, "steps": [], "truncated": False, "call": "", "stderr": payload["error"],
+            **payload, "error": problem or None}
 
 
 # ── Gotchas: an endless feed of trap questions ───────────────────────────

@@ -32,7 +32,7 @@ export const MODES = [
   {
     id: "brain",
     label: "Brain Drills",
-    title: "A minute of quick-fire Python and JavaScript reflexes a day, scored as your code age",
+    title: "A minute of quick-fire Python, JavaScript and Dart reflexes a day, scored as your code age",
   },
   {
     id: "gotchas",

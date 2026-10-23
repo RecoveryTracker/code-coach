@@ -18,7 +18,7 @@ import unittest
 from datetime import date
 
 from code_coach import brain
-from code_coach.brain import ACTIVITIES, ACTIVITIES_BY_ID, CHECK, make_round, pythonic
+from code_coach.brain import ACTIVITIES_BY_ID, CHECK, make_round, pythonic
 
 SEEDS = range(40)
 
@@ -131,7 +131,7 @@ class OracleTests(unittest.TestCase):
 
 class ActivityTests(unittest.TestCase):
     def test_every_activity_makes_a_full_round_of_its_kind(self) -> None:
-        for activity in ACTIVITIES:
+        for activity in brain.activities_in("python"):
             with self.subTest(activity=activity.id):
                 items = make_round(activity.id, 1, "python")
                 self.assertEqual(len(items), activity.count)
@@ -141,7 +141,7 @@ class ActivityTests(unittest.TestCase):
                     self.assertEqual(answers, set(activity.choices))
 
     def test_a_seed_gives_the_same_round(self) -> None:
-        for activity in ACTIVITIES:
+        for activity in brain.activities_in("python"):
             self.assertEqual(make_round(activity.id, 9, "python"), make_round(activity.id, 9, "python"))
 
     def test_python_semantics_differ_where_the_languages_differ(self) -> None:
@@ -153,7 +153,7 @@ class ActivityTests(unittest.TestCase):
 
     def test_nothing_in_a_python_round_is_javascript(self) -> None:
         banned = ("console.log", "let ", "const ", "===", "typeof", "Math.", "=>", "undefined", "null", ";")
-        for activity in ACTIVITIES:
+        for activity in brain.activities_in("python"):
             if activity.id == "syntax":  # its invalid lines are deliberately other languages
                 continue
             for item in _rounds(activity.id):
@@ -220,16 +220,18 @@ class LanguageHistoryTests(unittest.TestCase):
         self.assertEqual(js["checkAges"], [])
         self.assertTrue(js["trainedToday"])
         self.assertEqual(py["language"], "python")
-        self.assertEqual(py["languages"], ["python", "javascript"], "Python is listed first")
+        self.assertEqual(py["languages"], ["python", "javascript", "dart"], "Python is listed first, then JavaScript, then Dart")
 
     def test_python_activities_are_worded_for_python(self) -> None:
         py = {a["id"]: a for a in brain.summary(language="python")["activities"]}
         self.assertEqual(py["syntax"]["question"], "Valid Python?")
         self.assertIn("print", py["eval"]["question"])
-        self.assertEqual([a for a in py], [a.id for a in ACTIVITIES])
+        self.assertEqual([a for a in py], [a.id for a in brain.activities_in("python")])
 
     def test_both_languages_score_alike(self) -> None:
-        for a in ACTIVITIES:
+        for a in brain.activities_in("python"):
+            if "javascript" not in a.languages:
+                continue
             self.assertEqual(brain.code_age(a.id, 70, 1, a.count), brain.code_age(a.id, 70, 1, a.count, "python"))
 
     def test_an_unknown_language_is_refused(self) -> None:

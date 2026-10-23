@@ -3,11 +3,13 @@
 Four kinds of test:
 
 * Shape: every entry is well formed (ids, definitions, rules, links, a short definition).
-* THE ORACLE: every entry's example is RUN for real (python, node) and must print exactly its
-  `example_output`; every list of falsy and truthy values is run through bool() / Boolean(), and the
-  prose rule that lists them is parsed and run too. The glossary must never teach something false.
-  The expected values written in this file (the "claims") are worked out by hand, not read from
-  the entries.
+* THE ORACLE: every entry's example is RUN for real (python, node, and dart for the Dart/Flutter words, all of
+  them in ONE `dart run` through tests/dart_oracle.py) and must print exactly its `example_output`; every list
+  of falsy and truthy values is run through bool() / Boolean(), and the prose rule that lists them is parsed and
+  run too. The glossary must never teach something false. The expected values written in this file (the
+  "claims") are worked out by hand, not read from the entries. Dart rules are backed by DART_RULE_CHECKS (real
+  dart) and the layout/state rules of the Flutter words by FLUTTER_CHECKS (real Flutter, tests/flutter_oracle.py);
+  the Flutter rules no test can measure are named in NOT_ORACLE_CHECKED.
 * Matching: `find_words` (context words first, detection by code, limit, dedupe, no crash), and
   every Brain Drills activity has its words.
 * The wiring: /api/explain gets `words` in one place and old fields are unchanged, /api/glossary,
@@ -35,6 +37,7 @@ from code_coach.api.schemas import ExplainRequest, ExplainResponse
 from code_coach.brain import ACTIVITIES
 from code_coach.explain import explain_code
 from code_coach.glossary import CONTEXTS, find_words, lookup, words_for_context
+from tests import dart_oracle, flutter_oracle
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -43,6 +46,9 @@ ESBUILD = WEB / "node_modules" / "esbuild" / "bin" / "esbuild"
 NODE = shutil.which("node")
 
 LANGS = glossary.LANGUAGES
+#: The two languages the old tests were written for. Truthy/falsy lists, the original seven activities and the
+#: terms_brain_* vocabulary exist only there; Dart (and Flutter, which is Dart) has its own tests further down.
+CLASSIC = ("python", "javascript")
 ENTRIES = [(e.language, e.id) for lang in LANGS for e in glossary.all_entries(lang)]
 
 needs_node = pytest.mark.skipif(NODE is None, reason="needs node")
@@ -103,11 +109,13 @@ def test_entry_is_well_formed(lang, id_):
     # Words a learner never sees defined must not hide in a definition: no jargon from the other language.
     if lang == "python":
         assert "console.log" not in e.definition and "undefined" not in e.definition
-    else:
+    elif lang == "javascript":
         assert "print(" not in e.definition and "elif" not in e.definition
+    else:
+        assert "console.log" not in e.definition and "elif" not in e.definition and "print(" not in e.definition
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_most_entries_have_an_example_and_rules(lang):
     entries = glossary.all_entries(lang)
     assert sum(1 for e in entries if e.example) >= 0.95 * len(entries)
@@ -123,7 +131,7 @@ def test_the_brief_s_words_are_all_there():
         "floor-division modulo exponent integer float rounding float-precision concatenation closure recursion "
         "exception finally import class method unpacking generator callback async-await"
     ).split()
-    for lang in LANGS:
+    for lang in CLASSIC:
         have = {e.id for e in glossary.all_entries(lang)}
         assert not set(wanted) - have, (lang, sorted(set(wanted) - have))
     assert {"none", "list", "tuple", "dict", "set", "range", "equality", "identity", "f-string", "lambda",
@@ -152,12 +160,23 @@ def _run_example(item) -> tuple[int, str, str]:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _dart_result(run) -> tuple[int, str, str]:
+    """A DartRun as the (exit code, stdout, stderr) the other languages' runners give."""
+    problem = run.compile_error or run.error
+    return (1 if problem else 0), "\n".join(run.lines) + "\n", problem
+
+
 @functools.cache
 def example_results() -> dict[tuple[str, str], tuple[int, str, str]]:
-    items = [e for lang in LANGS for e in glossary.all_entries(lang) if e.example and (lang == "python" or NODE)]
+    items = [e for lang in CLASSIC for e in glossary.all_entries(lang) if e.example and (lang == "python" or NODE)]
     with ThreadPoolExecutor(max_workers=4) as pool:
         outs = list(pool.map(_run_example, items))
-    return {(e.language, e.id): out for e, out in zip(items, outs)}
+    found = {(e.language, e.id): out for e, out in zip(items, outs)}
+    if dart_oracle.DART:  # every Dart/Flutter example, in ONE dart run
+        dart_items = [e for e in glossary.all_entries("dart") if e.example]
+        runs = dart_oracle.run_batch([e.example for e in dart_items])
+        found.update({(e.language, e.id): _dart_result(run) for e, run in zip(dart_items, runs)})
+    return found
 
 
 @pytest.mark.parametrize(("lang", "id_"), ENTRIES)
@@ -167,6 +186,8 @@ def test_example_prints_exactly_what_the_entry_says(lang, id_):
         pytest.skip("no example")
     if lang == "javascript" and NODE is None:
         pytest.skip("needs node")
+    if lang == "dart" and not dart_oracle.DART:
+        pytest.skip("needs dart")
     code, out, err = example_results()[(lang, id_)]
     assert code == 0, f"{lang}:{id_} crashed:\n{err[-600:]}"
     assert out.rstrip("\n") == e.example_output, f"{lang}:{id_} printed\n{out!r}\nnot\n{e.example_output!r}"
@@ -216,7 +237,7 @@ CLAIMS = {
 }
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_the_hand_written_claims_hold_in_the_real_language(lang):
     """Guards the oracle itself: if this fails, the claims above are wrong, not the glossary."""
     falsy, truthy = CLAIMS[lang]
@@ -224,7 +245,7 @@ def test_the_hand_written_claims_hold_in_the_real_language(lang):
     assert truth_of(lang, list(truthy)) == [True] * len(truthy)
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 @pytest.mark.parametrize("word", ["truthy", "falsy"])
 def test_the_false_and_true_lists_are_what_the_language_does(lang, word):
     e = entry(lang, word)
@@ -233,7 +254,7 @@ def test_the_false_and_true_lists_are_what_the_language_does(lang, word):
     assert truth_of(lang, list(e.counts_true)) == [True] * len(e.counts_true), e.counts_true
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_the_lists_cover_every_value_the_language_calls_false(lang):
     """Not just 'what is listed is right' but 'nothing falsy is missing' from the lists' core."""
     falsy_core = {"python": {"False", "None", "0", "0.0", "0j", '""', "[]", "()", "{}", "set()", "range(0)"},
@@ -253,7 +274,7 @@ def _rule_values(rule: str) -> list[str]:
     return [t.strip() for t in re.split(r",\s*|\s+and\s+", body) if t.strip()]
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_the_prose_rule_names_exactly_the_falsy_values(lang):
     """The first rule of Falsy is prose; its values are parsed out and run, and must match the list."""
     e = entry(lang, "falsy")
@@ -264,7 +285,7 @@ def test_the_prose_rule_names_exactly_the_falsy_values(lang):
     assert same(named) == same(e.counts_false), (named, e.counts_false)
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_the_prose_about_the_traps_is_true(lang):
     """Rules that name a surprising value are checked by running that value."""
     e = entry(lang, "truthy")
@@ -304,7 +325,10 @@ def test_the_original_seven_keep_their_hand_written_contexts():
 @pytest.mark.parametrize("lang", LANGS)
 @pytest.mark.parametrize("activity", ACTIVITIES, ids=lambda a: a.id)
 def test_every_brain_activity_has_a_context(activity, lang):
-    """A new pack is covered with ZERO glossary edits: its concepts become the context's words."""
+    """A new pack is covered with ZERO glossary edits: its concepts become the context's words. (For each
+    language the activity can be played in: a Dart-only activity has no Python or JavaScript words to show.)"""
+    if lang not in activity.languages:
+        pytest.skip(f"{activity.id} is not played in {lang}")
     got = words_for_context(activity.id, lang)
     assert got, f"Brain Drills activity {activity.id!r} teaches no word at all in {lang}"
     if len(activity.concepts) >= 2:
@@ -312,33 +336,49 @@ def test_every_brain_activity_has_a_context(activity, lang):
     assert len(set(ids(got))) == len(got)
 
 
-def test_concepts_that_resolve_in_neither_language_are_few_and_visible():
-    """Lists, per activity, the concepts no glossary entry answers to, so a missing word is a failing line."""
+def test_concepts_that_resolve_in_no_language_the_activity_is_played_in_are_few_and_visible():
+    """Lists, per activity, the concepts no glossary entry answers to IN A LANGUAGE THE ACTIVITY IS PLAYED IN (a
+    Dart-only activity is judged by the Dart glossary alone), so a missing word is a failing line."""
     missing = {}
     for activity in ACTIVITIES:
-        gone = [c for c in activity.concepts if all(glossary.resolve(lang, c) is None for lang in LANGS)]
+        gone = [c for c in activity.concepts if all(glossary.resolve(lang, c) is None for lang in activity.languages)]
         if gone:
             missing[activity.id] = gone
     too_many = {k: v for k, v in missing.items() if len(v) > MAX_UNRESOLVED_PER_ACTIVITY}
-    assert not too_many, f"write entries (terms_brain_*.py) for: {too_many}"
+    assert not too_many, f"write entries (terms_brain_*.py / terms_dart_*.py) for: {too_many}"
 
 
-def test_every_pack_concept_is_a_plain_word_and_most_resolve_in_both_languages():
-    """Not a gate on single-language words (range, nonlocal...), but the tally is shown when it fails."""
-    total = both = 0
+def test_every_pack_concept_is_a_plain_word_and_most_resolve_in_every_language_played():
+    """Not a gate on single-language words (range, nonlocal...), but the tally is shown when it fails. A concept
+    counts as resolved when EVERY language its activity is played in has a word for it."""
+    total = resolved = 0
     for activity in ACTIVITIES:
         for c in activity.concepts:
             assert c == c.strip().lower() and c, f"{activity.id}: concept {c!r} is not a plain lowercase word"
             total += 1
-            both += all(glossary.resolve(lang, c) is not None for lang in LANGS)
-    assert both >= 0.9 * total, f"only {both} of {total} concepts resolve in both languages"
+            resolved += all(glossary.resolve(lang, c) is not None for lang in activity.languages)
+    assert resolved >= 0.9 * total, f"only {resolved} of {total} concepts resolve in every language played"
+
+
+def test_the_dart_activities_resolve_nearly_every_concept_in_dart():
+    """The Dart packs' words are not skipped: each Dart activity has at most one concept the Dart glossary lacks,
+    and the tally over all of them is complete (Dart is a full glossary language, not an afterthought)."""
+    dart_acts = [a for a in ACTIVITIES if "dart" in a.languages]
+    assert len(dart_acts) >= 30, "the Dart and Flutter packs are discovered"
+    lacking = {}
+    for a in dart_acts:
+        gone = [c for c in a.concepts if glossary.resolve("dart", c) is None]
+        if gone:
+            lacking[a.id] = gone
+    assert all(len(v) <= 1 for v in lacking.values()), lacking
+    assert len(lacking) <= max(2, len(dart_acts) // 10), lacking
 
 
 def test_every_hand_written_context_term_exists_somewhere_and_enough_exist_everywhere():
     known = {e.id for lang in LANGS for e in glossary.all_entries(lang)}
     for cid, terms in CONTEXTS.items():
         assert not set(terms) - known, (cid, set(terms) - known)
-        for lang in LANGS:
+        for lang in CLASSIC:  # the original seven are not played in Dart
             assert len(words_for_context(cid, lang)) >= 2, (cid, lang)
 
 
@@ -425,7 +465,7 @@ def test_context_words_are_always_present_and_first(lang, activity):
 
 
 def test_the_truthy_drill_always_lists_truthy_and_falsy_with_their_full_rules():
-    for lang in LANGS:
+    for lang in CLASSIC:
         got = find_words("print('truthy' if (0) else 'falsy')", lang, context="truthy")
         assert ids(got)[:2] == ["truthy", "falsy"]
         falsy = got[1]
@@ -488,6 +528,37 @@ def test_javascript_double_equals_is_loose_not_strict():
         ("javascript", "const [a, b] = pair;", {"unpacking"}),
         ("javascript", "console.log(typeof x)", {"type", "console-log"}),
         ("javascript", "x == NaN", {"nan", "loose-equality"}),
+        ("dart", "var n = name ?? 'guest';", {"null-coalescing"}),
+        ("dart", "name ??= 'x';", {"null-aware-assignment"}),
+        ("dart", "final len = s?.length;", {"null-aware-access", "final"}),
+        ("dart", "int? age;\nlate String label;", {"nullable-type", "late"}),
+        ("dart", "print(n ~/ 2);", {"truncating-division"}),
+        ("dart", "var l = [1, ...more, ...?maybe];", {"spread"}),
+        ("dart", "var sb = StringBuffer()..write('a')..write('b');", {"cascade", "string-buffer"}),
+        ("dart", "var p = const Point(1, 2);", {"const", "const-constructor"}),
+        ("dart", "Future<int> f() async { return await g(); }", {"future", "async-await"}),
+        ("dart", "Stream<int> count() async* { yield 1; }", {"stream", "async-generator"}),
+        ("dart", "class Dog extends Animal with Walker implements Pet {}", {"class", "inheritance", "mixin", "interface"}),
+        ("dart", "sealed class Shape {}\nenum Color { red }", {"sealed-class", "enum"}),
+        ("dart", "var s = switch (n) { 1 => 'a', _ => 'b' };", {"switch-expression", "arrow-function"}),
+        ("dart", "switch (n) {\n  case 1:\n    print(1);\n}", {"switch"}),
+        ("dart", "try { f(); } on FormatException catch (e) { rethrow; } finally { done(); }",
+         {"try-catch", "rethrow", "finally"}),
+        ("dart", "String greet({required String name, int age = 0}) => name;", {"named-parameter", "required"}),
+        ("dart", "void main() { print('hi'); }", {"main-function"}),
+        ("dart", "xs.where((n) => n.isEven).map((n) => n * 2).toList();", {"filter", "map", "to-list"}),
+        ("dart", "final (a, b) = pair;", {"destructuring"}),
+        ("dart", "factory Logger(String n) => _cache[n]!;", {"factory-constructor", "null-assertion"}),
+        ("dart", "class S extends State<W> { void initState() { super.initState(); } }", {"init-state", "super"}),
+        ("dart", "setState(() { count++; });", {"set-state"}),
+        ("dart", "Row(children: [Expanded(child: Text('a')), Spacer(), Column()])",
+         {"row", "expanded", "spacer", "column", "text-widget"}),
+        ("dart", "Stack(children: [Positioned(left: 1, child: x)])", {"stack-widget", "positioned"}),
+        ("dart", "ListView.builder(itemCount: 3, itemBuilder: (c, i) => x)", {"list-view-builder", "list-view"}),
+        ("dart", "MaterialApp(home: Scaffold(body: Center(child: Text('x'))))",
+         {"material-app", "scaffold", "center"}),
+        ("dart", "final c = TextEditingController();", {"text-editing-controller"}),
+        ("dart", "Navigator.push(context, MaterialPageRoute(builder: (_) => P()));", {"navigator", "route"}),
     ],
 )
 def test_detection_on_sample_snippets(lang, code, expect):
@@ -500,6 +571,13 @@ def test_a_word_inside_a_string_or_comment_is_not_code():
     assert "loop" not in ids(find_words("# for the while\nx = 1", "python", limit=30))
     assert "loop" not in ids(find_words("console.log('for while'); // for", "javascript", limit=30))
     assert "null" not in ids(find_words("const s = 'null';", "javascript", limit=30))
+    # Dart: strings, raw strings, triple-quoted strings and both kinds of comment
+    assert "null" not in ids(find_words("var s = 'null';", "dart", limit=60))
+    assert "null-coalescing" not in ids(find_words("var s = '$a ?? b'; // c ?? d", "dart", limit=60))
+    assert "null-coalescing" not in ids(find_words("var s = r'a ?? b';", "dart", limit=60))
+    assert "null-coalescing" not in ids(find_words("var s = \"\"\"a\n?? b\n\"\"\";", "dart", limit=60))
+    assert "null-coalescing" not in ids(find_words("/* x ?? y\n */ var a = 1;", "dart", limit=60))
+    assert "null-coalescing" in ids(find_words("var a = b ?? 'it\\'s';", "dart", limit=60))
 
 
 def test_limit_dedupe_and_order():
@@ -535,6 +613,8 @@ def test_unknown_language_and_junk_input_never_raise():
 def test_aliases_borrow_a_glossary():
     assert glossary.language_for("tfwr") == "python"
     assert glossary.language_for("TypeScript") == "javascript"
+    assert glossary.language_for("dart") == "dart" and glossary.language_for(" Dart ") == "dart"
+    assert glossary.LANGUAGES == ("python", "javascript", "dart")
     assert glossary.language_for("sql") == ""
     assert glossary.language_for(None) == ""
 
@@ -1134,7 +1214,7 @@ def _brain_ids() -> dict[str, set[str]]:
 
 def test_the_brain_pack_files_added_a_lot_of_words_to_both_languages():
     new = _brain_ids()
-    for lang in LANGS:
+    for lang in CLASSIC:
         assert len(new[lang]) >= 80, (lang, len(new[lang]))
         assert len(glossary.all_entries(lang)) >= 170
 
@@ -1202,7 +1282,7 @@ QUIET = {
 }
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_plain_code_does_not_wake_the_brain_pack_vocabulary(lang):
     """Plain snippets show the everyday words; the specialised cards need their own tell-tale syntax."""
     new = _brain_ids()[lang]
@@ -1212,7 +1292,7 @@ def test_plain_code_does_not_wake_the_brain_pack_vocabulary(lang):
         assert not noisy, (code, noisy)
 
 
-@pytest.mark.parametrize("lang", LANGS)
+@pytest.mark.parametrize("lang", CLASSIC)
 def test_generic_brain_words_are_never_loud(lang):
     """Words that are everywhere ('sum', 'state', 'counter', 'character'...) have no detection or a low priority."""
     loud = [e.id for e in glossary.all_entries(lang) if e.id in _brain_ids()[lang] and e.priority > 70]
@@ -1220,6 +1300,26 @@ def test_generic_brain_words_are_never_loud(lang):
     for word in ("sum", "state", "counter", "flag", "character", "bug", "binary", "division", "whitespace", "default-value"):
         item = lookup(lang, word)
         assert item is not None and item.priority <= 50, (lang, word)
+
+
+DART_SINK = (
+    "import 'dart:math' as math;\n"
+    "sealed class Shape { const Shape(); }\n"
+    "class Dog extends Animal with Walker implements Pet {\n  static int count = 0;\n  late final String name;\n"
+    "  Dog._(this.name);\n  factory Dog(String n) => Dog._(n);\n  @override\n"
+    "  String toString() => 'Dog($name)';\n  String? get nick => name?.substring(0, 1) ?? 'x';\n}\n"
+    "extension on String { bool get big => length > 3; }\n"
+    "Future<void> main() async {\n  try {\n    final xs = [for (var i = 0; i < 9; i++) if (i.isOdd) i, ...?more];\n"
+    "    var t = xs.map((n) => n * 2).where((n) => n % 3 ~/ 1 > 0).fold<int>(0, (a, b) => a + b);\n"
+    "    var (a, b) = (1, 2);\n    var s = switch (a) { 1 when b > 1 => 'x', _ => 'y' };\n"
+    "    await for (final v in Stream.fromIterable(xs)) { print(v!); }\n"
+    "  } on FormatException catch (e, st) {\n    rethrow;\n  } finally {\n    cascade()..a()..b();\n  }\n}\n"
+    "class W extends State<X> {\n  @override\n  void initState() { super.initState(); }\n"
+    "  @override\n  Widget build(BuildContext context) => Scaffold(body: Center(child: Column(children: [\n"
+    "    Expanded(child: ListView.builder(itemBuilder: (c, i) => Text('$i'))), Stack(children: [Positioned(left: 1, child: Spacer())]),\n"
+    "    TextField(controller: TextEditingController()), Padding(padding: EdgeInsets.all(8)),\n"
+    "  ])));\n}\n"
+)
 
 
 def test_find_words_never_exceeds_the_limit_with_the_whole_vocabulary_in_play():
@@ -1240,6 +1340,7 @@ def test_find_words_never_exceeds_the_limit_with_the_whole_vocabulary_in_play():
             "for (let a = 0; a < 10; a += 2) {\n  for (const [i, b] of items.entries()) {\n    break;\n  }\n}\n"
             "const total = nums.reduce((t, n) => t + n, 0) + Math.max(...nums) + items.at(-1);\n"
         ),
+        "dart": DART_SINK,
     }
     for lang in LANGS:
         for limit in (1, 2, 3, 5, 8, 13, 40):
@@ -1279,7 +1380,18 @@ def test_a_class_with_several_methods_is_read_quickly():
     started = time.perf_counter()
     find_words("for a in b:\n" + "    x = 1\n" * 300, "python", limit=60)
     find_words("for (const a of b) {\n" + "  x = 1;\n" * 300 + "}", "javascript", limit=60)
+    find_words("for (var a in b) {\n" + "  x = 1;\n" * 300 + "}", "dart", limit=60)
     assert time.perf_counter() - started < 3.0
+    # Dart: a class of 40 one-line methods, a long list literal, deeply nested widgets and a long chain
+    started = time.perf_counter()
+    dart_class = "class Big {\n" + "".join(f"  int m{i}(int x) => x + {i};\n" for i in range(40)) + "}\n"
+    got = ids(find_words(dart_class, "dart", limit=60))
+    assert "class" in got and "arrow-function" in got
+    find_words("var xs = [" + ", ".join(str(i) for i in range(3000)) + "];", "dart", limit=60)
+    find_words("Widget w = " + "Padding(child: " * 150 + "Text('x')" + ")" * 150 + ";", "dart", limit=60)
+    find_words("var r = xs" + ".map((n) => n + 1)" * 300 + ";", "dart", limit=60)
+    find_words("x" + "?" * 400 + "." * 400 + "!" * 400 + "<" * 400 + "," * 400, "dart", limit=60)
+    assert time.perf_counter() - started < 4.0
 
 
 # ── The API ─────────────────────────────────────────────────────────────
@@ -1320,6 +1432,18 @@ def test_explain_for_a_language_without_a_reader_has_no_words():
     assert r.ok is False and r.words == []
 
 
+def test_explain_for_dart_has_no_reader_but_still_gets_its_dart_words():
+    """Dart has a glossary but no explainer: the answer is still the honest 'no reader yet', and the words (which
+    are about the code, not about the missing walkthrough) ride along, from the one place in the handler."""
+    r = explain("String? name;\nprint(name ?? 'guest');\n", "dart")
+    assert r.ok is False and "no reader" in r.summary
+    got = [w.id for w in r.words]
+    assert "null-coalescing" in got and "nullable-type" in got, got
+    assert r.words and all(w.language == "dart" for w in r.words)
+    assert [w.id for w in explain("x", "dart", context="dart_null").words][:3] == [
+        "short-circuit", "default-value", "null-aware-access"]
+
+
 def test_words_are_added_in_the_handler_only():
     src = Path(server.__file__).read_text(encoding="utf-8")
     assert src.count("glossary.find_words(") == 1
@@ -1345,6 +1469,13 @@ def test_glossary_route_one_word_a_context_or_a_whole_language():
     assert server.glossary_words(language="cobol", term="falsy").words == []
     assert server.glossary_words(language="python", term="nonsense").words == []
     assert server.glossary_words().words == []
+    # Dart is a third glossary language
+    assert [w.id for w in server.glossary_words(language="dart", term="??").words] == ["null-coalescing"]
+    assert [w.id for w in server.glossary_words(language="dart", term="~/").words] == ["truncating-division"]
+    assert [w.id for w in server.glossary_words(language="dart", context="dart_null").words][:3] == [
+        "short-circuit", "default-value", "null-aware-access"]
+    assert len(server.glossary_words(language="dart").words) == len(glossary.all_entries("dart")) >= 200
+    assert all(w.language == "dart" for w in server.glossary_words(language="dart", context="fl_flex").words)
 
 
 # ── The front end ───────────────────────────────────────────────────────
@@ -1471,3 +1602,1699 @@ def test_the_words_stylesheet_never_lets_the_page_scroll_sideways():
     assert "overflow-x: auto" in css, "code scrolls inside its own card"
     assert "min-width: 0" in css and "overflow-wrap: anywhere" in css
     assert not re.search(r"(?<![-\w])(?:min-)?width:\s*\d{3,}px", css), "no fixed wide widths"
+
+
+# ── Dart (and Flutter): the third glossary language ─────────────────────
+# Dart words live in terms_dart_*.py (the language) and terms_flutter.py (Flutter, which is Dart). Every EXAMPLE is
+# run by test_example_prints_exactly_what_the_entry_says (one dart run). Every runnable RULE is backed by a program
+# below, run for real in ONE more dart run; the Flutter layout/state rules by programs run in ONE flutter test. The
+# expected output is written here by hand, never read from the entries.
+
+CE = "COMPILE ERROR"
+
+#: (name = "<entry id>[+<entry id>]: the claim", program, expected). A program without `main(` is the body of main
+#: (the Brain Drills convention); CE means "does not compile" (the message is not compared).
+DART_RULE_CHECKS: list[tuple[str, str, str]] = [
+    # ── null safety ──
+    ("null-safety: a plain int cannot be null", r"""
+        int x = null;
+        print(x);
+    """, CE),
+    ("null-safety: using a nullable as if it had a value does not compile", r"""
+        bool f(int? n) => n.isEven;
+        print(f(2));
+    """, CE),
+    ("null: print(null) shows null", r"""
+        print(null);
+    """, "null"),
+    ("null: if (null) does not compile, there is no falsy", r"""
+        if (null) {
+          print('x');
+        }
+    """, CE),
+    ("nullable-type: List<int?> versus List<int>?", r"""
+        List<int?> a = [1, null];
+        List<int>? b;
+        print(a);
+        print(b);
+    """, "[1, null]\nnull"),
+    ("nullable-type: n + 1 does not compile when n is int?", r"""
+        int f(int? n) => n + 1;
+        print(f(1));
+    """, CE),
+    ("null-assertion: the failing ! is a TypeError", r"""
+        String? t = [null][0];
+        try {
+          t!;
+        } on TypeError {
+          print('TypeError');
+        }
+    """, "TypeError"),
+    ("null-coalescing: the right side is worked out only when needed", r"""
+        int calls = 0;
+        int f() {
+          calls++;
+          return 1;
+        }
+        int? a = 5;
+        print(a ?? f());
+        print(calls);
+    """, "5\n0"),
+    ("null-coalescing: it chains", r"""
+        int? a;
+        int? b;
+        print(a ?? b ?? 3);
+    """, "3"),
+    ("null-coalescing: only null triggers it", r"""
+        String? e = '';
+        bool? f = false;
+        print('[${e ?? 'x'}] ${f ?? true}');
+    """, "[] false"),
+    ("null-aware-access: the rest of the chain is skipped", r"""
+        String? s;
+        print(s?.toUpperCase().length);
+    """, "null"),
+    ("null-aware-access: the result is nullable", r"""
+        String? s;
+        int n = s?.length;
+        print(n);
+    """, CE),
+    ("null-aware-access: ?[ ] indexing", r"""
+        List<int>? xs;
+        print(xs?[0]);
+    """, "null"),
+    ("null-aware-assignment: the right side is skipped when a has a value", r"""
+        int? a = 1;
+        int calls = 0;
+        int f() {
+          calls++;
+          return 9;
+        }
+        a ??= f();
+        print('$a $calls');
+    """, "1 0"),
+    ("late: reading before assignment throws a LateError", r"""
+        class A {
+          late int x;
+        }
+        void main() {
+          try {
+            print(A().x);
+          } catch (e) {
+            print(e.runtimeType);
+          }
+        }
+    """, "LateError"),
+    ("late: a late final can be set once", r"""
+        class A {
+          late final int x;
+        }
+        void main() {
+          var a = A();
+          a.x = 1;
+          try {
+            a.x = 2;
+          } catch (e) {
+            print(e.runtimeType);
+          }
+          print(a.x);
+        }
+    """, "LateError\n1"),
+    ("final: assigning twice does not compile", r"""
+        final x = 1;
+        x = 2;
+        print(x);
+    """, CE),
+    ("final: the value can be worked out at run time", r"""
+        final now = DateTime.now();
+        print(now is DateTime);
+    """, "true"),
+    ("const: needs a compile-time value", r"""
+        const t = DateTime.now();
+        print(t);
+    """, CE),
+    ("const: changing a const list throws UnsupportedError", r"""
+        const xs = [1, 2];
+        try {
+          xs.add(3);
+        } catch (e) {
+          print(e.runtimeType);
+        }
+    """, "UnsupportedError"),
+    ("var: the type is fixed by the first value", r"""
+        var n = 3;
+        n = 'three';
+        print(n);
+    """, CE),
+    ("var: var x with no value is dynamic", r"""
+        var x;
+        x = 1;
+        x = 'a';
+        print(x);
+    """, "a"),
+    ("type-promotion: a field is not promoted", r"""
+        class A {
+          int? n;
+          void f() {
+            if (n != null) print(n + 1);
+          }
+        }
+        void main() {
+          A().f();
+        }
+    """, CE),
+    ("type-promotion: an early exit promotes the rest", r"""
+        int f(String? s) {
+          if (s == null) return 0;
+          return s.length;
+        }
+        print(f(null));
+        print(f('ab'));
+    """, "0\n2"),
+    ("dynamic: Object? lets you use only what every object has", r"""
+        Object? o = 'hi';
+        print(o.length);
+    """, CE),
+    ("dynamic: a missing member on dynamic fails when it runs", r"""
+        dynamic d = 5;
+        try {
+          d.nope();
+        } on NoSuchMethodError {
+          print('nsm');
+        }
+    """, "nsm"),
+    # ── types ──
+    ("integer: an int wraps around at 64 bits", r"""
+        int big = 9223372036854775807;
+        print(big + 1);
+    """, "-9223372036854775808"),
+    ("integer: a double never fits an int variable", r"""
+        int x = 2.5;
+        print(x);
+    """, CE),
+    ("float: 0 / 0 is NaN", r"""
+        print(0 / 0);
+    """, "NaN"),
+    ("num: the shared num methods", r"""
+        num a = -3;
+        print(a.abs());
+        print(a.compareTo(2) < 0);
+        print(a.toDouble());
+    """, "3\ntrue\n-3.0"),
+    ("boolean: if (1) does not compile", r"""
+        if (1) {
+          print('x');
+        }
+    """, CE),
+    ("boolean: if of a string does not compile", r"""
+        if ('') {
+          print('x');
+        }
+    """, CE),
+    ("string: a string cannot be assigned into", r"""
+        var s = 'abc';
+        s[0] = 'x';
+        print(s);
+    """, CE),
+    ("string: single and double quotes are the same", r"""
+        print('a' == "a");
+        print('it\'s');
+        print("it's");
+    """, "true\nit's\nit's"),
+    ("character: a character is a String of length 1", r"""
+        print('abc'[1].runtimeType);
+    """, "String"),
+    ("list: a fixed-length list cannot grow", r"""
+        var xs = List.filled(3, 0);
+        xs[0] = 5;
+        try {
+          xs.add(1);
+        } catch (e) {
+          print(e.runtimeType);
+        }
+        print(xs);
+    """, "UnsupportedError\n[5, 0, 0]"),
+    ("set: union and difference", r"""
+        print({1, 2}.union({2, 3}));
+        print({1, 2, 3}.difference({2}));
+    """, "{1, 2, 3}\n{1, 3}"),
+    ("dictionary: assigning to an existing key replaces its value", r"""
+        var m = {'a': 1};
+        m['a'] = 2;
+        m['a'] = 3;
+        print(m);
+        print(m.length);
+    """, "{a: 3}\n1"),
+    ("dictionary: a missing key makes the result nullable", r"""
+        var m = {'a': 1};
+        int v = m['a'];
+        print(v);
+    """, CE),
+    ("dictionary: entries, keys and values", r"""
+        var m = {'a': 1, 'b': 2};
+        for (final e in m.entries) {
+          print('${e.key}=${e.value}');
+        }
+    """, "a=1\nb=2"),
+    ("record: a record cannot be changed", r"""
+        var p = (1, 2);
+        p.$1 = 5;
+        print(p);
+    """, CE),
+    ("record: named fields are equal by value", r"""
+        print((x: 1, y: 2) == (x: 1, y: 2));
+        (int, String) f() => (1, 'a');
+        var (n, s) = f();
+        print('$n$s');
+    """, "true\n1a"),
+    ("enum: a switch statement over an enum must cover every value", r"""
+        enum C { a, b }
+        void main() {
+          var c = C.a;
+          switch (c) {
+            case C.a:
+              print('a');
+          }
+        }
+    """, CE),
+    ("enum: enums can have fields and constructors", r"""
+        enum P {
+          small(1),
+          big(10);
+          final int n;
+          const P(this.n);
+        }
+        void main() {
+          print(P.big.n + P.small.n);
+        }
+    """, "11"),
+    ("typedef: it is another name for the same type", r"""
+        typedef IntList = List<int>;
+        void main() {
+          IntList a = [1];
+          List<int> b = a;
+          print(b);
+        }
+    """, "[1]"),
+    ("type-conversion: toInt cuts the decimals, '5' + 1 does not compile", r"""
+        print(3.7.toInt());
+    """, "3"),
+    ("type-conversion: a string plus an int does not compile", r"""
+        print('5' + 1);
+    """, CE),
+    ("rounding: roundToDouble gives a double", r"""
+        print(2.5.roundToDouble());
+    """, "3.0"),
+    ("division: a double divided by zero is Infinity", r"""
+        print(1.0 / 0.0);
+        print(-1 / 0);
+    """, "Infinity\n-Infinity"),
+    ("division: whole-number division by zero throws", r"""
+        try {
+          print(1 ~/ 0);
+        } catch (e) {
+          print(e is Error || e is Exception);
+        }
+    """, "true"),
+    ("truncating-division: the quotient and remainder add back up", r"""
+        print((17 ~/ 5) * 5 + 17 % 5);
+        print(-7 ~/ 2 == (-7 / 2).truncate());
+    """, "17\ntrue"),
+    ("modulo: an even test", r"""
+        print(6 % 2 == 0 && 6.isEven);
+    """, "true"),
+    ("bitwise: & and | on bools do not skip the right side", r"""
+        bool f() {
+          print('f ran');
+          return true;
+        }
+        print(false & f());
+        print(true || f());
+    """, "f ran\nfalse\ntrue"),
+    ("cascade: ?.. does nothing for null", r"""
+        StringBuffer? sb;
+        sb?..write('a');
+        print(sb);
+    """, "null"),
+    ("cascade: the value of a cascade is the object", r"""
+        var xs = [3, 1]..sort();
+        print(xs);
+    """, "[1, 3]"),
+    ("spread: a shallow copy shares the inner items", r"""
+        var a = [[1]];
+        var b = [...a];
+        b[0].add(2);
+        print(a);
+    """, "[[1, 2]]"),
+    ("spread: ...? with null gives nothing", r"""
+        List<int>? m;
+        print([...?m]);
+    """, "[]"),
+    ("collection-if-for: sets and maps too", r"""
+        print({1, if (true) 2, if (false) 3});
+        print({for (var i = 0; i < 2; i++) i: i * i});
+    """, "{1, 2}\n{0: 0, 1: 1}"),
+    ("ternary: the condition must be a bool", r"""
+        print(1 ? 'a' : 'b');
+    """, CE),
+    ("type-check: only null is not an Object", r"""
+        Object? o = null;
+        print(o is Object);
+        print(3 is Object);
+        print(null is Object?);
+    """, "false\ntrue\ntrue"),
+    # ── functions ──
+    ("function: a function is a value", r"""
+        int twice(int n) => n * 2;
+        var f = twice;
+        print(f(3));
+    """, "6"),
+    ("parameter: too few positional arguments does not compile", r"""
+        int add(int a, int b) => a + b;
+        print(add(1));
+    """, CE),
+    ("named-parameter: a non-required named parameter needs a default or nullable type", r"""
+        void f({int n}) {}
+        f();
+    """, CE),
+    ("required: leaving a required parameter out does not compile", r"""
+        String f({required String a}) => a;
+        print(f());
+    """, CE),
+    ("optional-positional-parameter: [ ] and { } cannot be mixed", r"""
+        void f([int a = 1], {int b = 2}) {}
+        f();
+    """, CE),
+    ("default-parameter: a non-constant default does not compile", r"""
+        int f([List<int> a = []]) => a.length;
+        print(f());
+    """, CE),
+    ("default-parameter: a const default is the same constant every call", r"""
+        List<int> f([List<int> a = const []]) => a;
+        var d = f();
+        try {
+          d.add(1);
+        } catch (e) {
+          print('const list');
+        }
+        print(identical(f(), f()));
+    """, "const list\ntrue"),
+    ("default-value: putIfAbsent stores and returns", r"""
+        var m = <String, int>{};
+        print(m.putIfAbsent('a', () => 5));
+        print(m);
+    """, "5\n{a: 5}"),
+    ("arrow-function: only one expression fits", r"""
+        int f(int n) => if (n > 0) 1;
+        print(f(1));
+    """, CE),
+    ("callback: a callback given to something asynchronous runs later", r"""
+        Future(() => print('callback'));
+        print('after');
+    """, "after\ncallback"),
+    ("return: a non-void function must return on every path", r"""
+        int f(int n) {
+          if (n > 0) return 1;
+        }
+        print(f(1));
+    """, CE),
+    ("return: several values through a record", r"""
+        (int, String) f() => (1, 'a');
+        var (n, s) = f();
+        print('$n$s');
+    """, "1a"),
+    ("main-function: Future<void> main() async", r"""
+        Future<void> main() async {
+          await Future<void>.value();
+          print('ran');
+        }
+    """, "ran"),
+    # ── classes ──
+    ("instance: two instances with equal fields are different objects", r"""
+        class P {
+          final int x;
+          P(this.x);
+        }
+        void main() {
+          print(P(1) == P(1));
+          print(P(1).runtimeType);
+        }
+    """, "false\nP"),
+    ("static-method: a static method cannot see the fields", r"""
+        class A {
+          int n = 1;
+          static int f() => n;
+        }
+        void main() {
+          print(A.f());
+        }
+    """, CE),
+    ("this: a static method has no this", r"""
+        class A {
+          static int f() => this.hashCode;
+        }
+        void main() {
+          print(A.f());
+        }
+    """, CE),
+    ("constructor: a class without a constructor gets a free one", r"""
+        class A {
+          int x = 1;
+        }
+        void main() {
+          print(A().x);
+        }
+    """, "1"),
+    ("initializing-formal: named with a default", r"""
+        class P {
+          final int x;
+          P({this.x = 4});
+        }
+        void main() {
+          print(P().x);
+          print(P(x: 9).x);
+        }
+    """, "4\n9"),
+    ("initializing-formal: a final field must be set", r"""
+        class P {
+          final int x;
+          P();
+        }
+        void main() {
+          print(P().x);
+        }
+    """, CE),
+    ("named-constructor: constructors are not inherited", r"""
+        class A {
+          A.named();
+        }
+        class B extends A {}
+        void main() {
+          B.named();
+        }
+    """, CE),
+    ("initializer-list: runs before the body", r"""
+        class R {
+          final int a, b;
+          R(int x) : a = x, b = x * 2 {
+            print('body');
+          }
+        }
+        void main() {
+          var r = R(3);
+          print('${r.a} ${r.b}');
+        }
+    """, "body\n3 6"),
+    ("initializer-list: it cannot use this", r"""
+        class R {
+          int a, b;
+          R() : a = 1, b = this.a;
+        }
+        void main() {
+          R();
+        }
+    """, CE),
+    ("factory-constructor: a factory has no this", r"""
+        class A {
+          int x = 1;
+          factory A() => this;
+        }
+        void main() {
+          A();
+        }
+    """, CE),
+    ("factory-constructor: it can pick a subclass", r"""
+        abstract class S {
+          factory S(bool b) => b ? C1() : C2();
+        }
+        class C1 implements S {}
+        class C2 implements S {}
+        void main() {
+          print(S(true).runtimeType);
+          print(S(false).runtimeType);
+        }
+    """, "C1\nC2"),
+    ("const-constructor: every field must be final", r"""
+        class P {
+          int x;
+          const P(this.x);
+        }
+        void main() {
+          print(const P(1).x);
+        }
+    """, CE),
+    ("getter-setter: a getter with no setter is read-only", r"""
+        class A {
+          int get x => 1;
+        }
+        void main() {
+          A().x = 2;
+        }
+    """, CE),
+    ("inheritance: a class extends only one class", r"""
+        class A {}
+        class B {}
+        class C extends A, B {}
+        void main() {}
+    """, CE),
+    ("abstract-class: it cannot be built", r"""
+        abstract class S {}
+        void main() {
+          S();
+        }
+    """, CE),
+    ("abstract-class: a concrete subclass must supply the bodiless method", r"""
+        abstract class S {
+          double area();
+        }
+        class T extends S {}
+        void main() {
+          T();
+        }
+    """, CE),
+    ("interface: implements copies no code", r"""
+        class A {
+          void f() {}
+        }
+        class B implements A {}
+        void main() {
+          B();
+        }
+    """, CE),
+    ("mixin: a mixin has no constructor", r"""
+        mixin M {
+          M();
+        }
+        void main() {}
+    """, CE),
+    ("mixin: on limits who can use it", r"""
+        class A {}
+        mixin M on A {}
+        class B with M {}
+        void main() {
+          B();
+        }
+    """, CE),
+    ("extension-method: not on a dynamic variable", r"""
+        extension on String {
+          int get two => 2;
+        }
+        void main() {
+          String s = 'a';
+          print(s.two);
+          dynamic d = 'a';
+          try {
+            print(d.two);
+          } on NoSuchMethodError {
+            print('not on dynamic');
+          }
+        }
+    """, "2\nnot on dynamic"),
+    ("generics: a bound limits the type", r"""
+        T big<T extends num>(T a, T b) => a > b ? a : b;
+        print(big('a', 'b'));
+    """, CE),
+    ("equality: there is no ===", r"""
+        print(1 === 1);
+    """, CE),
+    ("equality: lists compare by identity, const lists are one object", r"""
+        print([1] == [1]);
+        print(const [1] == const [1]);
+    """, "false\ntrue"),
+    ("hash-code: strings, numbers and records have correct ones", r"""
+        print('a'.hashCode == 'a'.hashCode && (1, 2).hashCode == (1, 2).hashCode && 1.hashCode == 1.hashCode);
+    """, "true"),
+    ("identity: List.of copies", r"""
+        var a = [1];
+        var b = List.of(a);
+        b.add(2);
+        print(a);
+        print(b);
+    """, "[1]\n[1, 2]"),
+    # ── patterns ──
+    ("pattern: a list pattern of the wrong length throws", r"""
+        try {
+          var [a, b] = [1, 2, 3];
+          print(a + b);
+        } catch (e) {
+          print('no match');
+        }
+    """, "no match"),
+    ("pattern: named record fields can be picked", r"""
+        var (x: px, y: _) = (x: 1, y: 2);
+        print(px);
+    """, "1"),
+    ("pattern: relational and logical patterns", r"""
+        String f(int n) => switch (n) {
+          < 0 => 'neg',
+          0 || 1 => 'tiny',
+          > 100 && < 200 => 'hundreds',
+          _ => 'other',
+        };
+        print(f(-5));
+        print(f(1));
+        print(f(150));
+        print(f(500));
+    """, "neg\ntiny\nhundreds\nother"),
+    ("switch: break is optional", r"""
+        switch (1) {
+          case 1:
+            print('a');
+            break;
+          case 2:
+            print('b');
+        }
+    """, "a"),
+    ("switch-expression: it must be exhaustive", r"""
+        var s = switch (3) { 1 => 'a' };
+        print(s);
+    """, CE),
+    ("if-case: with a when test", r"""
+        Object v = 5;
+        if (v case int n when n > 3) {
+          print('big $n');
+        }
+    """, "big 5"),
+    ("sealed-class: it cannot be built", r"""
+        sealed class S {}
+        void main() {
+          S();
+        }
+    """, CE),
+    ("sealed-class: missing a subclass in the switch does not compile", r"""
+        sealed class S {}
+        class A extends S {}
+        class B extends S {}
+        int f(S s) => switch (s) {
+          A() => 1,
+        };
+        void main() {
+          print(f(A()));
+        }
+    """, CE),
+    # ── async ──
+    ("future: an async function must return a Future", r"""
+        int f() async => 1;
+        void main() {
+          print(f());
+        }
+    """, CE),
+    ("async-await: await only works inside an async function", r"""
+        void f() {
+          await Future.value(1);
+        }
+        void main() {
+          f();
+        }
+    """, CE),
+    ("async-await: an awaited error is thrown at the await", r"""
+        Future<void> main() async {
+          try {
+            await Future.error('x');
+          } catch (e) {
+            print('caught $e');
+          }
+        }
+    """, "caught x"),
+    ("then: the callback runs after the code that follows", r"""
+        Future.value(1).then((_) => print('then'));
+        print('sync');
+    """, "sync\nthen"),
+    ("catch-error: an unhandled Future error is reported as uncaught", r"""
+        Future.error('x');
+    """, "ERROR String"),
+    ("stream: a plain stream can be listened to only once", r"""
+        import 'dart:async';
+        void main() {
+          var c = StreamController<int>();
+          c.stream.listen((_) {});
+          try {
+            c.stream.listen((_) {});
+          } on StateError {
+            print('once');
+          }
+          var b = StreamController<int>.broadcast();
+          b.stream.listen((_) {});
+          b.stream.listen((_) {});
+          print('many');
+        }
+    """, "once\nmany"),
+    ("async-generator: the body runs only while someone listens", r"""
+        Stream<int> f() async* {
+          print('run');
+          yield 1;
+        }
+        void main() {
+          var s = f();
+          print('made');
+        }
+    """, "made"),
+    ("generator: yield* produces every value of another iterable", r"""
+        Iterable<int> f() sync* {
+          yield* [1, 2];
+          yield 3;
+        }
+        print(f().toList());
+    """, "[1, 2, 3]"),
+    # ── errors ──
+    ("try-catch: an unmatched error goes up to the caller", r"""
+        try {
+          try {
+            int.parse('x');
+          } on RangeError {
+            print('inner');
+          }
+        } on FormatException {
+          print('outer');
+        }
+    """, "outer"),
+    ("finally: it runs while an uncaught error travels up", r"""
+        try {
+          try {
+            throw 1;
+          } finally {
+            print('f');
+          }
+        } catch (e) {
+          print('c $e');
+        }
+    """, "f\nc 1"),
+    ("throw: any object can be thrown", r"""
+        try {
+          throw 'text';
+        } catch (e) {
+          print(e);
+        }
+    """, "text"),
+    ("rethrow: only inside a catch", r"""
+        void f() {
+          rethrow;
+        }
+        void main() {
+          f();
+        }
+    """, CE),
+    ("rethrow: it keeps the original stack trace, throw e does not", r"""
+        void origin() {
+          throw StateError('x');
+        }
+        void viaRethrow() {
+          try {
+            origin();
+          } catch (e) {
+            rethrow;
+          }
+        }
+        void viaThrow() {
+          try {
+            origin();
+          } catch (e) {
+            throw e;
+          }
+        }
+        void main() {
+          try {
+            viaRethrow();
+          } catch (e, st) {
+            print(st.toString().contains('origin'));
+          }
+          try {
+            viaThrow();
+          } catch (e, st) {
+            print(st.toString().contains('origin'));
+          }
+        }
+    """, "true\nfalse"),
+    ("exception: on Exception catches only Exceptions", r"""
+        try {
+          [1][5];
+        } on Exception {
+          print('exc');
+        } catch (e) {
+          print('other');
+        }
+    """, "other"),
+    ("exception: a class can implement Exception", r"""
+        class MyErr implements Exception {
+          final String m;
+          MyErr(this.m);
+        }
+        void main() {
+          try {
+            throw MyErr('a');
+          } on Exception catch (e) {
+            print(e is MyErr);
+          }
+        }
+    """, "true"),
+    ("index-error: negative positions throw too", r"""
+        try {
+          [1][-1];
+        } on RangeError {
+          print('neg');
+        }
+    """, "neg"),
+    ("state-error: reduce on an empty list", r"""
+        try {
+          <int>[].reduce((a, b) => a + b);
+        } on StateError {
+          print('empty');
+        }
+        try {
+          <int>[].last;
+        } on StateError {
+          print('no last');
+        }
+    """, "empty\nno last"),
+    ("type-error: the compiler rejects int x = 'a'", r"""
+        int x = 'a';
+        print(x);
+    """, CE),
+    ("stack-trace: StackTrace.current", r"""
+        print(StackTrace.current.toString().isNotEmpty);
+    """, "true"),
+    ("syntax-error: a calling a method that does not exist does not compile", r"""
+        var s = 'a';
+        s.nope();
+    """, CE),
+    ("syntax-error: nothing prints if one line does not compile", r"""
+        print('hello');
+        int x = 'a';
+    """, CE),
+    # ── strings ──
+    ("raw-string: a triple-quoted string spans lines", r"""
+        var s = '''one
+        two''';
+        print(s.split('\n').length);
+    """, "2"),
+    ("string-buffer: writeln and writeAll", r"""
+        var sb = StringBuffer();
+        sb.writeln('a');
+        print(sb.length);
+        print((StringBuffer()..writeAll([1, 2, 3], ', ')).toString());
+    """, "2\n1, 2, 3"),
+    ("regexp: the first group", r"""
+        print(RegExp(r'(\d+)-(\d+)').firstMatch('10-20')!.group(2));
+    """, "20"),
+    ("padding: the default filler is a space", r"""
+        print('a'.padLeft(3) + '|');
+    """, "  a|"),
+    ("replace: a RegExp as the target", r"""
+        print('a1b2'.replaceAll(RegExp(r'\d'), '#'));
+    """, "a#b#"),
+    ("format: a whole number with one decimal", r"""
+        print(5.toStringAsFixed(1));
+    """, "5.0"),
+    ("string-comparison: < does not work on strings", r"""
+        print('apple' < 'banana');
+    """, CE),
+    ("iterable: any and every", r"""
+        print([1, 2].any((x) => x > 1) && [1, 2].every((x) => x > 0));
+    """, "true"),
+    ("lazy: every read runs the callback again", r"""
+        var c = 0;
+        var m = [1, 2].map((x) {
+          c++;
+          return x;
+        });
+        m.toList();
+        m.toList();
+        print(c);
+    """, "4"),
+    ("filter: removeWhere changes the list in place", r"""
+        var xs = [1, 2, 3];
+        xs.removeWhere((n) => n.isEven);
+        print(xs);
+    """, "[1, 3]"),
+    ("reduce: reduce on an empty list throws, fold does not", r"""
+        try {
+          <int>[].reduce((a, b) => a + b);
+        } on StateError {
+          print('empty');
+        }
+        print(<int>[].fold<int>(7, (a, b) => a + b));
+    """, "empty\n7"),
+    ("sum: a sum of doubles starts from 0.0", r"""
+        print([1.5, 2.5].fold<double>(0.0, (a, b) => a + b));
+    """, "4.0"),
+    ("sorting: sort returns nothing", r"""
+        var xs = [2, 1];
+        print(xs.sort());
+    """, CE),
+    ("to-list: growable false", r"""
+        var f = [1].toList(growable: false);
+        try {
+          f.add(2);
+        } catch (e) {
+          print('fixed');
+        }
+    """, "fixed"),
+    ("import: an import after other code does not compile", r"""
+        void main() {}
+        import 'dart:math';
+    """, CE),
+    # ── the everyday words ──
+    ("statement: an if is not an expression", r"""
+        var x = true;
+        var y = (if (x) 1);
+        print(y);
+    """, CE),
+    ("variable: an undeclared name does not compile", r"""
+        print(zzz);
+    """, CE),
+    ("variable: a non-nullable local must be given a value before it is read", r"""
+        int x;
+        print(x);
+    """, CE),
+    ("variable: names are case-sensitive", r"""
+        var total = 1;
+        var Total = 2;
+        print(total + Total);
+    """, "3"),
+    ("scope: a local name used before its declaration does not compile", r"""
+        void main() {
+          print(x);
+          var x = 1;
+        }
+    """, CE),
+    ("scope: a top-level variable is visible in the whole file", r"""
+        int g = 5;
+        void main() {
+          print(g);
+        }
+    """, "5"),
+    ("recursion: no base case ends in StackOverflowError", r"""
+        int f(int n) => f(n + 1) + 1;
+        try {
+          f(0);
+        } catch (e) {
+          print(e.runtimeType);
+          print(e is Error);
+        }
+    """, "StackOverflowError\ntrue"),
+    ("short-circuit: a null guard", r"""
+        int? x;
+        print(x != null && x.isEven);
+    """, "false"),
+    ("comparison: chained comparisons do not compile", r"""
+        print(1 < 2 < 3);
+    """, CE),
+    ("loop: break does not work inside forEach", r"""
+        [1].forEach((x) {
+          break;
+        });
+    """, CE),
+    ("for-loop: changing a list while looping over it throws", r"""
+        var xs = [1, 2, 3];
+        try {
+          for (final x in xs) {
+            xs.add(x);
+          }
+        } catch (e) {
+          print(e.runtimeType);
+        }
+    """, "ConcurrentModificationError"),
+    ("while-loop: do-while runs at least once", r"""
+        var n = 0;
+        do {
+          n++;
+        } while (false);
+        print(n);
+    """, "1"),
+    ("slice: ends past the length throw, take and skip are forgiving", r"""
+        try {
+          [1, 2].sublist(0, 5);
+        } on RangeError {
+          print('range');
+        }
+        print([1, 2].take(5).toList());
+        print([1, 2].skip(5).toList());
+    """, "range\n[1, 2]\n[]"),
+    # ── more claims, one program each ──
+    ("accumulator: the start value is the answer for an empty input", r"""
+        var t = 0;
+        for (final n in <int>[]) {
+          t += n;
+        }
+        print(t);
+    """, "0"),
+    ("argument+evaluate: arguments are worked out before the function runs", r"""
+        int f(int a) {
+          print('f');
+          return a;
+        }
+        int g(int x) {
+          print('g');
+          return x;
+        }
+        print(g(f(1)));
+    """, "f\ng\n1"),
+    ("assignment: an assignment is an expression whose value is the stored value", r"""
+        var x = 1;
+        print(x = 5);
+        print(x += 2);
+    """, "5\n7"),
+    ("break-continue: they only affect the innermost loop", r"""
+        var c = 0;
+        for (var i = 0; i < 3; i++) {
+          for (var j = 0; j < 3; j++) {
+            if (j == 1) break;
+            c++;
+          }
+        }
+        print(c);
+    """, "3"),
+    ("call-stack: a StackOverflowError is not an Exception", r"""
+        int f(int n) => f(n + 1) + 1;
+        try {
+          f(0);
+        } catch (e) {
+          print(e is Exception);
+        }
+    """, "false"),
+    ("callable-class: an object with call can be used as a function", r"""
+        class A {
+          int call(int x) => x + 1;
+        }
+        void main() {
+          Function f = A();
+          print(f(3));
+        }
+    """, "4"),
+    ("class: everything is an object, even numbers and null", r"""
+        print(3.runtimeType);
+        print(null.runtimeType);
+    """, "int\nNull"),
+    ("closure: it captures the variable, not a copy", r"""
+        var n = 1;
+        var f = () => n;
+        n = 2;
+        print(f());
+    """, "2"),
+    ("comparator: a flipped compareTo sorts downward", r"""
+        print([1, 3, 2]..sort((a, b) => b.compareTo(a)));
+    """, "[3, 2, 1]"),
+    ("condition: only the first true branch of an else-if chain runs", r"""
+        var n = 15;
+        if (n % 3 == 0) {
+          print('a');
+        } else if (n % 5 == 0) {
+          print('b');
+        }
+    """, "a"),
+    ("control-flow: return leaves the function from inside a loop", r"""
+        int f() {
+          for (var i = 0; i < 5; i++) {
+            if (i == 2) return i;
+          }
+          return -1;
+        }
+        print(f());
+    """, "2"),
+    ("counter: where(test).length counts the matches", r"""
+        print([1, 2, 3, 4].where((n) => n.isEven).length);
+    """, "2"),
+    ("destructuring: a declaration names both parts at once", r"""
+        var (name, age) = ('Ann', 30);
+        print('$name $age');
+    """, "Ann 30"),
+    ("error-message: a FormatException has a message", r"""
+        try {
+          int.parse('q');
+        } on FormatException catch (e) {
+          print(e.message.isNotEmpty);
+        }
+    """, "true"),
+    ("expression: a switch expression is an expression", r"""
+        var v = switch (2) { 2 => 'two', _ => 'x' };
+        print(v);
+    """, "two"),
+    ("float-precision: toStringAsFixed rounds to the decimals asked", r"""
+        print(3.14159.toStringAsFixed(2));
+        print(0.1 + 0.2 == 0.3);
+    """, "3.14\nfalse"),
+    ("format-exception: double.parse throws it too", r"""
+        try {
+          double.parse('x');
+        } on FormatException {
+          print('fe');
+        }
+    """, "fe"),
+    ("guard-clause: a false guard moves on to the next case", r"""
+        String f(int n) => switch (n) {
+          int v when v > 5 => 'big',
+          int v => 'small',
+        };
+        print(f(3));
+        print(f(9));
+    """, "small\nbig"),
+    ("higher-order-function: a function can return a function", r"""
+        Function adder(int n) => (int x) => x + n;
+        print(adder(2)(3));
+    """, "5"),
+    ("immutable: a final field cannot be reassigned", r"""
+        class P {
+          final int x;
+          P(this.x);
+        }
+        void main() {
+          P(1).x = 2;
+        }
+    """, CE),
+    ("index: strings are indexed too", r"""
+        print('abc'[1]);
+    """, "b"),
+    ("isolate: isolates share no memory", r"""
+        import 'dart:isolate';
+        int counter = 0;
+        Future<void> main() async {
+          await Isolate.run(() {
+            counter = 5;
+            return 0;
+          });
+          print(counter);
+        }
+    """, "0"),
+    ("iteration: a three-pass loop has i = 0, 1, 2", r"""
+        var seen = <int>[];
+        for (var i = 0; i < 3; i++) {
+          seen.add(i);
+        }
+        print(seen);
+    """, "[0, 1, 2]"),
+    ("join: items that are not strings are turned into text", r"""
+        print([1, 2].join('+'));
+    """, "1+2"),
+    ("key: remove deletes the key and its value", r"""
+        var m = {'a': 1};
+        m.remove('a');
+        print(m.containsKey('a'));
+    """, "false"),
+    ("letter-case: toUpperCase leaves the original alone", r"""
+        var s = 'a';
+        s.toUpperCase();
+        print(s);
+    """, "a"),
+    ("map: the result has the transformed items", r"""
+        print(['ann', 'bo'].map((s) => s.length).toList());
+    """, "[3, 2]"),
+    ("method: a method uses the object's fields", r"""
+        class C {
+          int n = 2;
+          int twice() => n * 2;
+        }
+        void main() {
+          print(C().twice());
+        }
+    """, "4"),
+    ("microtask: microtasks added by microtasks still run before the next event", r"""
+        import 'dart:async';
+        void main() {
+          Future(() => print('event'));
+          scheduleMicrotask(() {
+            print('m1');
+            scheduleMicrotask(() => print('m2'));
+          });
+        }
+    """, "m1\nm2\nevent"),
+    ("mutable: a map is changed in place", r"""
+        var m = {'a': 1};
+        m['b'] = 2;
+        print(m);
+    """, "{a: 1, b: 2}"),
+    ("off-by-one: the end of a sublist is left out", r"""
+        print([10, 20, 30].sublist(0, 2));
+    """, "[10, 20]"),
+    ("length: the last position is length - 1, and isEmpty reads better", r"""
+        var xs = [4, 5, 6];
+        print(xs[xs.length - 1]);
+        print(xs.isEmpty || xs.isNotEmpty);
+        print({'a': 1, 'b': 2}.length);
+    """, "6\ntrue\n2"),
+    ("string-interpolation: braces take an expression, $name only the name", r"""
+        var a = 1, b = 2;
+        print('${a + b}');
+        print('$a+$b');
+    """, "3\n1+2"),
+]
+
+FLUTTER_CHECKS: list[tuple[str, str, str, str]] = [
+    # (name = "<entry id>: the claim", widget prompt as the Brain Drills oracle takes it, measurement, expected)
+    ("flex: two flex children share 400 as 1:3", "Row(children: [Expanded(flex: 1, child: Box('a')), Expanded(flex: 3, child: Box('b'))])",
+     "'${w('a')} ${w('b')}'", "100.0 300.0"),
+    ("expanded: the default flex is 1", "Row(children: [Expanded(child: Box('a')), Expanded(child: Box('b'))])",
+     "'${w('a')} ${w('b')}'", "200.0 200.0"),
+    ("expanded: it fills what is left", "Row(children: [Box('a', w: 100), Expanded(child: Box('b'))])", "w('b')", "300"),
+    ("expanded: only valid inside a Row, Column or Flex", "Center(child: Expanded(child: Box('a')))", "w('a')",
+     "ERROR: Incorrect use of ParentDataWidget."),
+    ("expanded: a long child that is expanded no longer overflows", "Row(children: [Expanded(child: Box('a', w: 300)), Box('b', w: 300)])",
+     "overflowed", "false"),
+    ("flexible: loose, the child keeps its size", "Row(children: [Flexible(child: Box('a'))])", "w('a')", "50"),
+    ("spacer: pushes the neighbours apart", "Row(children: [Box('a'), Spacer(), Box('b')])", "x('b')", "350"),
+    ("main-axis: spaceBetween puts the last child at the end", "Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Box('a'), Box('b')])",
+     "x('b')", "350"),
+    ("main-axis: spaceEvenly makes equal gaps", "Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [Box('a'), Box('b')])",
+     "'${x('a')} ${x('b')}'", "100.0 250.0"),
+    ("main-axis: with no spare room there is nothing to align", "Row(mainAxisAlignment: MainAxisAlignment.center, children: [Box('a', w: 400)])",
+     "x('a')", "0"),
+    ("main-axis: crossAxisAlignment stretch", "Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Box('a', w: 50)])",
+     "w('a')", "400"),
+    ("column: the cross axis is centered by default", "Column(children: [Box('a', w: 100)])", "x('a')", "150"),
+    ("column: too much height overflows", "Column(children: [Box('a', h: 200), Box('b', h: 200)])", "overflowed", "true"),
+    ("column: a ListView directly inside has no height limit", "Column(children: [ListView()])", "1",
+     "ERROR: Vertical viewport was given unbounded height."),
+    ("column: Expanded gives the ListView a height", "Column(children: [Expanded(child: ListView(children: [Box('a')]))])", "w('a')", "400"),
+    ("row: too much width overflows", "Row(children: [Box('a', w: 300), Box('b', w: 300)])", "overflowed", "true"),
+    ("row: it takes all the width unless mainAxisSize min", "Center(child: Row(key: Key('r'), children: [Box('a')]))", "w('r')", "400"),
+    ("row: mainAxisSize min", "Center(child: Row(key: Key('r'), mainAxisSize: MainAxisSize.min, children: [Box('a')]))", "w('r')", "50"),
+    ("overflow: a long Text in a Row overflows", "Row(children: [Text('long ' * 40)])", "overflowed", "true"),
+    ("overflow: Expanded lets the Text wrap", "Row(children: [Expanded(child: Text('long ' * 40))])", "overflowed", "false"),
+    ("center: it loosens the constraints", "Center(child: Box('a', w: 100, h: 40))", "'${x('a')} ${y('a')}'", "150.0 130.0"),
+    ("center: it takes all the space it is given", "Center(key: Key('c'), child: Box('a'))", "'${w('c')} ${h('c')}'", "400.0 300.0"),
+    ("align+alignment: a corner", "Align(alignment: Alignment.bottomRight, child: Box('a'))", "'${x('a')} ${y('a')}'", "350.0 250.0"),
+    ("align: it expands to fill the space", "Center(child: Align(key: Key('al'), alignment: Alignment.topLeft, child: Box('a')))",
+     "'${w('al')} ${h('al')}'", "400.0 300.0"),
+    ("padding: 8 on every side adds 16", "Center(child: Padding(key: Key('p'), padding: EdgeInsets.all(8), child: Box('a', w: 100, h: 40)))",
+     "'${w('p')} ${h('p')}'", "116.0 56.0"),
+    ("container: with a child it is as big as the child", "Center(child: Container(key: Key('c'), child: Box('a')))", "'${w('c')} ${h('c')}'", "50.0 50.0"),
+    ("container: with no child it fills the space", "Center(child: Container(key: Key('c')))", "'${w('c')} ${h('c')}'", "400.0 300.0"),
+    ("container: in a Row its width is 0", "Row(children: [Container(key: Key('c'))])", "'${w('c')} ${h('c')}'", "0.0 300.0"),
+    ("sized-box: a parent that forces a size wins", "SizedBox(key: Key('s'), width: 200, child: Box('a'))", "'${w('s')} ${w('a')}'", "400.0 400.0"),
+    ("sized-box: inside a Center it is obeyed", "Center(child: SizedBox(key: Key('s'), width: 200, height: 100))", "'${w('s')} ${h('s')}'", "200.0 100.0"),
+    ("sized-box: expand and shrink", "Center(child: SizedBox.shrink(key: Key('s')))", "'${w('s')} ${h('s')}'", "0.0 0.0"),
+    ("tight-loose: the root gets tight constraints", "Container(key: Key('c'))", "'${w('c')} ${h('c')}'", "400.0 300.0"),
+    ("constrained-box+constraints: a minimum beats the child's size", "Center(child: ConstrainedBox(constraints: BoxConstraints(minWidth: 200), child: Box('a')))",
+     "w('a')", "200"),
+    ("constrained-box+constraints: a maximum stops growth", "Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: 30), child: Box('a')))",
+     "w('a')", "30"),
+    ("aspect-ratio: the biggest width, then the height from the ratio", "Center(child: AspectRatio(aspectRatio: 2, child: Box('a')))",
+     "'${w('a')} ${h('a')}'", "400.0 200.0"),
+    ("aspect-ratio: under tight constraints it can do nothing", "AspectRatio(aspectRatio: 2, child: Box('a'))",
+     "'${w('a')} ${h('a')}'", "400.0 300.0"),
+    ("stack-widget: Positioned children do not count towards the size",
+     "Center(child: Stack(key: Key('s'), children: [Box('a', w: 100, h: 50), Positioned(left: 300, top: 300, child: Box('b'))]))",
+     "'${w('s')} ${h('s')}'", "100.0 50.0"),
+    ("positioned: measured from the Stack's top-left", "Stack(children: [Positioned(left: 10, top: 20, child: Box('a'))])",
+     "'${x('a')} ${y('a')}'", "10.0 20.0"),
+    ("positioned: two opposite sides stretch the child",
+     "Stack(children: [Positioned(left: 10, right: 10, top: 0, child: Container(key: Key('c'), height: 20))])", "w('c')", "380"),
+    ("wrap-widget: a new line when the children no longer fit", "Wrap(children: [Box('a', w: 150), Box('b', w: 150), Box('c', w: 150)])",
+     "'${y('a')} ${y('b')} ${y('c')}'", "0.0 0.0 50.0"),
+    ("wrap-widget: in a Row a Wrap never wraps",
+     "Row(children: [Wrap(children: [Box('a', w: 150), Box('b', w: 150), Box('c', w: 150)])])",
+     "'${{y('a'), y('b'), y('c')}.length} $overflowed'", "1 true"),
+    ("list-view-builder: only the items near the screen are built",
+     "ListView.builder(itemCount: 100, itemBuilder: (c, i) => SizedBox(height: 50, child: Text('item $i')))",
+     "count(find.byType(Text)) < 20 && count(find.byType(Text)) > 3", "true"),
+    ("media-query: the size of the app window", "MaterialApp(home: Builder(builder: (c) => Text('${MediaQuery.of(c).size.width}')))",
+     "count(find.text('400.0'))", "1"),
+    ("text-field: it needs a Material ancestor", "TextField()", "1", "ERROR: No Material widget found."),
+    ("scaffold: the body gets the space below the app bar",
+     "MaterialApp(home: Scaffold(appBar: AppBar(title: Text('t')), body: Container(key: Key('b'))))", "h('b')", "244"),
+    ("material-app: it creates the Navigator, so none exists above it", "Builder(builder: (c) { Navigator.of(c); return SizedBox(); })", "1",
+     "ERROR: Navigator operation requested with a context that does not include a Navigator."),
+    ("value-notifier: it notifies only on a real change; a ChangeNotifier on every call", "Box('a')", r"""final n = ValueNotifier<int>(0);
+var c = 0;
+n.addListener(() => c++);
+n.value = 1;
+n.value = 1;
+n.value = 2;
+final m = ChangeNotifier();
+var d = 0;
+m.addListener(() => d++);
+// ignore: invalid_use_of_protected_member
+m.notifyListeners();
+// ignore: invalid_use_of_protected_member
+m.notifyListeners();
+return '$c $d';""", "2 2"),
+    ("set-state: without it the screen keeps the old value", r"""class Counter extends StatefulWidget {
+  const Counter({super.key});
+  @override
+  State<Counter> createState() => _CounterState();
+}
+class _CounterState extends State<Counter> {
+  int plain = 0;
+  int shown = 0;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        Text('plain $plain'),
+        Text('shown $shown'),
+        GestureDetector(onTap: () { plain++; }, child: Container(key: Key('p'), width: 50, height: 20, color: Colors.red)),
+        GestureDetector(onTap: () { setState(() { shown++; }); }, child: Container(key: Key('s'), width: 50, height: 20, color: Colors.blue)),
+      ]);
+}
+Counter()""", r"""await tester.tap(find.byKey(Key('p')));
+await tester.pump();
+final afterPlain = '${count(find.text('plain 1'))} ${count(find.text('plain 0'))}';
+await tester.tap(find.byKey(Key('s')));
+await tester.pump();
+return '$afterPlain | ${count(find.text('shown 1'))} ${count(find.text('plain 1'))}';""", "0 1 | 1 1"),
+    ("widget-lifecycle+init-state+dispose: initState, didChangeDependencies, build, didUpdateWidget, build, dispose", r"""class H {
+  static final log = <String>[];
+}
+class P extends StatefulWidget {
+  final int v;
+  const P(this.v, {super.key});
+  @override
+  State<P> createState() => _P();
+}
+class _P extends State<P> {
+  @override
+  void initState() {
+    super.initState();
+    H.log.add('init');
+  }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    H.log.add('deps');
+  }
+  @override
+  void didUpdateWidget(P old) {
+    super.didUpdateWidget(old);
+    H.log.add('update');
+  }
+  @override
+  void dispose() {
+    H.log.add('dispose');
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext c) {
+    H.log.add('build');
+    return const SizedBox();
+  }
+}
+P(1)""", r"""await tester.pumpWidget(Directionality(textDirection: TextDirection.ltr, child: P(2)));
+await tester.pumpWidget(const SizedBox());
+return H.log.join(',');""", "init,deps,build,update,build,dispose"),
+    ("const-widget: a const child is not rebuilt, a fresh one is", r"""class H {
+  static int constBuilds = 0;
+  static int plainBuilds = 0;
+}
+class Leaf extends StatelessWidget {
+  final bool isConst;
+  const Leaf(this.isConst, {super.key});
+  @override
+  Widget build(BuildContext c) {
+    if (isConst) {
+      H.constBuilds++;
+    } else {
+      H.plainBuilds++;
+    }
+    return const SizedBox();
+  }
+}
+class Parent extends StatefulWidget {
+  const Parent({super.key});
+  @override
+  State<Parent> createState() => _PS();
+}
+class _PS extends State<Parent> {
+  @override
+  Widget build(BuildContext c) => Column(children: [
+        const Leaf(true),
+        Leaf(false),
+        GestureDetector(onTap: () => setState(() {}), child: Container(key: Key('go'), width: 50, height: 20, color: Colors.red)),
+      ]);
+}
+Parent()""", r"""await tester.tap(find.byKey(Key('go')));
+await tester.pump();
+return '${H.constBuilds} ${H.plainBuilds}';""", "1 2"),
+    ("widget-key: without keys the State stays with the position, with keys with the widget", r"""class H {
+  static int next = 0;
+}
+class Tile extends StatefulWidget {
+  final String label;
+  const Tile(this.label, {super.key});
+  @override
+  State<Tile> createState() => _Tile();
+}
+class _Tile extends State<Tile> {
+  final int id = H.next++;
+  @override
+  Widget build(BuildContext c) => Text('${widget.label}${id}');
+}
+class Parent extends StatefulWidget {
+  final bool keys;
+  const Parent(this.keys, {super.key});
+  @override
+  State<Parent> createState() => _Parent();
+}
+class _Parent extends State<Parent> {
+  bool swapped = false;
+  @override
+  Widget build(BuildContext c) {
+    final a = widget.keys ? Tile('A', key: ValueKey('A')) : Tile('A');
+    final b = widget.keys ? Tile('B', key: ValueKey('B')) : Tile('B');
+    return Column(children: [
+      ...(swapped ? [b, a] : [a, b]),
+      GestureDetector(onTap: () => setState(() => swapped = true), child: Container(key: Key('go'), width: 50, height: 20, color: Colors.red)),
+    ]);
+  }
+}
+Parent(false)""", r"""await tester.tap(find.byKey(Key('go')));
+await tester.pump();
+final plain = find.byType(Text).evaluate().map((e) => (e.widget as Text).data).join(',');
+await tester.pumpWidget(const SizedBox());
+H.next = 0;
+await tester.pumpWidget(Directionality(textDirection: TextDirection.ltr, child: Parent(true)));
+await tester.tap(find.byKey(Key('go')));
+await tester.pump();
+final keyed = find.byType(Text).evaluate().map((e) => (e.widget as Text).data).join(',');
+return '$plain | $keyed';""", "B0,A1 | B1,A0"),
+    ("text-editing-controller: the controller holds the text", r"""class H {
+  static final c = TextEditingController();
+}
+MaterialApp(home: Scaffold(body: TextField(controller: H.c)))""", r"""await tester.enterText(find.byType(TextField), 'hi');
+final typed = H.c.text;
+H.c.clear();
+return '$typed|${H.c.text}';""", "hi|"),
+    ("form-validator: validate returns true only when every validator gave null", r"""class H {
+  static final k = GlobalKey<FormState>();
+}
+MaterialApp(home: Scaffold(body: Form(key: H.k, child: TextFormField(validator: (v) => (v == null || v.isEmpty) ? 'required' : null))))""", r"""final a = H.k.currentState!.validate();
+await tester.pump();
+final shown = find.text('required').evaluate().length;
+await tester.enterText(find.byType(TextFormField), 'x');
+final b = H.k.currentState!.validate();
+return '$a $shown $b';""", "false 1 true"),
+    ("navigator: push opens a screen, pop returns", r"""MaterialApp(home: Builder(builder: (c) => GestureDetector(onTap: () => Navigator.push(c, MaterialPageRoute(builder: (_) => Scaffold(body: GestureDetector(onTap: () => Navigator.pop(c), child: Text('second'))))), child: Container(key: Key('go'), width: 50, height: 50, color: Colors.red, child: Text('first')))))""", r"""await tester.tap(find.byKey(Key('go')));
+await tester.pumpAndSettle();
+final onSecond = '${count(find.text('second'))}';
+await tester.tap(find.text('second'));
+await tester.pumpAndSettle();
+return '$onSecond ${count(find.text('second'))} ${count(find.text('first'))}';""", "1 0 1"),
+    ("gesture-detector: by default a child with nothing painted is not hit; opaque is", r"""class H {
+  static int n = 0;
+}
+Center(child: Column(children: [
+  GestureDetector(onTap: () => H.n += 1, child: SizedBox(key: Key('empty'), width: 100, height: 40)),
+  GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => H.n += 10, child: SizedBox(key: Key('opaque'), width: 100, height: 40)),
+]))""", r"""await tester.tap(find.byKey(Key('empty')), warnIfMissed: false);
+final first = H.n;
+await tester.tap(find.byKey(Key('opaque')), warnIfMissed: false);
+return '$first ${H.n}';""", "0 10"),
+]
+
+#: Flutter entries whose rules are NOT backed by any measurement above or in pure Dart: they are well-known documented
+#: Flutter behaviour (and the checks above cover the neighbouring layout/state rules). The test keeps this list honest:
+#: an entry is either here or has at least one check named after it, never both.
+NOT_ORACLE_CHECKED = {
+    "widget", "stateless-widget", "stateful-widget", "state", "build-method", "build-context",
+    "widget-tree", "inherited-widget", "theme", "change-notifier", "listenable-builder", "future-builder", "run-app",
+    "hot-reload", "layout", "route", "ink-well", "text-widget", "list-view",
+}
+
+
+def _dart_module_ids() -> dict[str, set[str]]:
+    import importlib
+    import pkgutil
+
+    found: dict[str, set[str]] = {}
+    for info in pkgutil.iter_modules(glossary.__path__):
+        if info.name.startswith(("terms_dart_", "terms_flutter")):
+            module = importlib.import_module(f"code_coach.glossary.{info.name}")
+            found[info.name] = {item.id for item in module.TERMS if item.language == "dart"}
+    return found
+
+
+def _check_ids(name: str) -> list[str]:
+    return name.split(":", 1)[0].split("+")
+
+
+def test_dart_is_a_full_glossary_language():
+    modules = _dart_module_ids()
+    assert {"terms_dart_core", "terms_dart_types", "terms_dart_async", "terms_dart_basics", "terms_flutter"} <= set(modules)
+    flutter = modules["terms_flutter"]
+    language = set().union(*(v for k, v in modules.items() if k != "terms_flutter"))
+    assert len(flutter) >= 50 and len(language) >= 140, (len(flutter), len(language))
+    assert not flutter & language, "a word is in one file only"
+    assert len(glossary.all_entries("dart")) == len(flutter) + len(language) >= 200
+    assert not glossary.LOAD_ERRORS
+
+
+def test_only_flutter_words_and_the_compile_error_card_go_without_an_example():
+    flutter = _dart_module_ids()["terms_flutter"]
+    bare = {e.id for e in glossary.all_entries("dart") if not e.example}
+    assert bare <= flutter | {"syntax-error"}, sorted(bare - flutter)
+    language = [e for e in glossary.all_entries("dart") if e.id not in flutter]
+    assert sum(1 for e in language if e.example) >= 0.97 * len(language)
+    assert all(e.rules for e in glossary.all_entries("dart")), "every Dart card has its rules"
+    assert all(e.see_also for e in glossary.all_entries("dart")), "every Dart card links onward"
+
+
+def test_every_rule_check_is_named_after_a_real_dart_word():
+    ids_ = {e.id for e in glossary.all_entries("dart")}
+    flutter = _dart_module_ids()["terms_flutter"]
+    for name, _program, _expected in DART_RULE_CHECKS:
+        assert set(_check_ids(name)) <= ids_ - flutter, name
+    for name, _prompt, _check, _expected in FLUTTER_CHECKS:
+        assert set(_check_ids(name)) <= ids_, name  # a Flutter check may back a plain word (padding)
+    names = [c[0] for c in DART_RULE_CHECKS] + [c[0] for c in FLUTTER_CHECKS]
+    assert len(names) == len(set(names))
+
+
+def test_most_dart_words_have_a_rule_checked_by_real_dart():
+    """The oracle rule for rules: each word with something runnable to say has a program behind it."""
+    flutter = _dart_module_ids()["terms_flutter"]
+    checked = {i for c in DART_RULE_CHECKS for i in _check_ids(c[0])}
+    language = [e for e in glossary.all_entries("dart") if e.id not in flutter]
+    unchecked = sorted(e.id for e in language if e.id not in checked)
+    assert len(checked) >= 0.8 * len(language), f"{len(checked)} of {len(language)} words; no check: {unchecked}"
+
+
+@functools.cache
+def dart_rule_results() -> list[str]:
+    import textwrap
+
+    return dart_oracle.dart_values([textwrap.dedent(p).strip("\n") for _n, p, _e in DART_RULE_CHECKS])
+
+
+@pytest.mark.skipif(not dart_oracle.DART, reason="needs dart")
+@pytest.mark.parametrize("index", range(len(DART_RULE_CHECKS)), ids=[c[0] for c in DART_RULE_CHECKS])
+def test_the_dart_rules_hold_in_real_dart(index):
+    name, _program, expected = DART_RULE_CHECKS[index]
+    got = dart_rule_results()[index]
+    if expected == CE:
+        assert got.startswith(CE), f"{name}: should not compile, but printed {got!r}"
+    else:
+        assert got == expected, f"{name}: printed {got!r}, not {expected!r}"
+
+
+def test_not_oracle_checked_flutter_words_are_listed_honestly():
+    flutter = _dart_module_ids()["terms_flutter"]
+    checked = {i for c in FLUTTER_CHECKS for i in _check_ids(c[0])} & flutter
+    assert not NOT_ORACLE_CHECKED & checked, "listed as unchecked but has a check"
+    assert flutter == checked | NOT_ORACLE_CHECKED, sorted(flutter ^ (checked | NOT_ORACLE_CHECKED))
+
+
+@functools.cache
+def flutter_results() -> list[str]:
+    return flutter_oracle.flutter_values([(p, c) for _n, p, c, _e in FLUTTER_CHECKS])
+
+
+@pytest.mark.skipif(flutter_oracle._flutter() is None, reason="needs flutter")
+@pytest.mark.parametrize("index", range(len(FLUTTER_CHECKS)), ids=[c[0] for c in FLUTTER_CHECKS])
+def test_the_flutter_rules_hold_in_real_flutter(index):
+    name, _prompt, _check, expected = FLUTTER_CHECKS[index]
+    got = flutter_results()[index]
+    assert got == expected, f"{name}: Flutter measured {got!r}, not {expected!r}"
+
+
+#: Words that plain Dart may legitimately wake: the everyday ones, with low priority.
+EVERYDAY_DART = {
+    "variable", "main-function", "function", "integer", "float", "string", "list", "boolean", "condition", "loop",
+    "for-loop", "while-loop", "expression", "operator", "argument", "parameter", "return", "class", "constructor", "var",
+    "final", "division", "comparison", "modulo", "instance", "method", "precedence", "num", "type", "null", "set",
+    "dictionary", "arrow-function", "initializing-formal", "this", "const", "truncating-division", "length",
+}
+QUIET_DART = [
+    "int x = 5;\nprint(x);", "void main() {\n  print('hi');\n}", "var total = 0;\nfor (final n in nums) {\n  total += n;\n}",
+    "if (x > 3) {\n  print('big');\n}", "int add(int a, int b) {\n  return a + b;\n}\nvoid main() {\n  print(add(1, 2));\n}",
+    "var xs = [3, 1, 2];\nprint(xs.length);", "class Dog {\n  final String name;\n  Dog(this.name);\n}",
+    "String s = 'hello';\nprint(s.length);", "while (n > 1) {\n  n = n ~/ 2;\n}",
+]
+
+
+@pytest.mark.parametrize("code", QUIET_DART)
+def test_plain_dart_does_not_wake_the_specialised_cards(code):
+    woken = ids(find_words(code, "dart", limit=80))
+    assert set(woken) <= EVERYDAY_DART, (code, sorted(set(woken) - EVERYDAY_DART))
+    assert len(woken) <= 8
+
+
+def test_generic_dart_words_are_never_loud():
+    for word in ("sum", "state", "counter", "character", "division", "default-value", "value", "key", "index", "variable",
+                 "expression", "statement", "side-effect", "accumulator"):
+        item = lookup("dart", word)
+        assert item is not None and item.priority <= 50, word
+
+
+@pytest.mark.parametrize(
+    ("spoken", "wanted"),
+    [
+        ("switch", "switch"), ("tuple", "record"), ("string-representation", "string-representation"),
+        ("tostring", "string-representation"), ("default-value", "default-value"), ("short-circuit", "short-circuit"),
+        ("optional-chaining", "null-aware-access"), ("destructuring", "destructuring"), ("unpacking", "destructuring"),
+        ("generator", "generator"), ("yield", "async-generator"), ("async-await", "async-await"), ("await", "async-await"),
+        ("keyword argument", "named-parameter"), ("isinstance", "type-check"), ("instanceof", "type-check"),
+        ("lambda", "anonymous-function"), ("f-string", "string-interpolation"), ("template literal", "string-interpolation"),
+        ("floor division", "truncating-division"), ("null", "null"), ("none", "null"), ("dict", "dictionary"),
+        ("array", "list"), ("try", "try-catch"), ("catch", "try-catch"), ("raise", "throw"), ("range error", "index-error"),
+        ("index error", "index-error"), ("type error", "type-error"), ("remainder", "modulo"), ("filter", "filter"),
+        ("where", "filter"), ("fold", "reduce"), ("copy", "identity"), ("mixin", "mixin"), ("stack", "stack-widget"),
+        ("position", "positioned"), ("padding", "padding"), ("truthy", "boolean"), ("this", "this"), ("self", "this"),
+        ("optional parameter", "optional-positional-parameter"), ("operator ==", "operator"),
+        ("inherited", "inherited-widget"), ("order", "control-flow"), ("listener", "change-notifier"),
+        ("text", "text-widget"), ("length", "length"), ("setstate", "set-state"), ("lifecycle", "widget-lifecycle"),
+        ("element", "widget-tree"), ("context", "build-context"), ("notifier", "value-notifier"),
+    ],
+)
+def test_a_python_or_javascript_word_leads_to_the_dart_card(spoken, wanted):
+    found = glossary.resolve("dart", spoken)
+    assert found is not None and found.id == wanted, (spoken, found and found.id)
+
+
+def test_the_dart_cards_say_dart_s_own_rules():
+    """The same word, a different rule: the Dart card must not teach the Python or JavaScript one."""
+    modulo = " ".join(entry("dart", "modulo").rules)
+    assert "-7 % 3 is 2" in modulo and "never negative" in entry("dart", "modulo").definition
+    assert "not compile" in " ".join(entry("dart", "boolean").rules), "no truthy and falsy in Dart"
+    assert "no 'shared mutable default' trap" in " ".join(entry("dart", "default-parameter").rules)
+    assert "break" in " ".join(entry("dart", "switch").rules) and "fall" in entry("dart", "switch").definition
+    assert "1 == 1.0 is true" in " ".join(entry("dart", "comparison").rules)
+    assert "[1] == [1] is false" in " ".join(entry("dart", "equality").rules)
+    assert "4.0" in " ".join(entry("dart", "division").rules)
+    assert "fresh" in " ".join(entry("dart", "closure").rules) or "its own" in " ".join(entry("dart", "closure").rules)
+
+
+@pytest.mark.parametrize("word", [e.id for e in glossary.all_entries("dart")])
+def test_a_dart_card_does_not_teach_python_or_javascript_syntax(word):
+    e = entry("dart", word)
+    text = " ".join([e.definition, *e.rules, e.example])
+    for bad in (r"\bNone\b", r"\bundefined\b", r"console\.log", r"\belif\b", r"\bdef \w+\(", r"===", r"\bself\.", r"\bnull_ok\b"):
+        if word == "equality" and bad == r"===":
+            continue  # the card says Dart has no ===
+        assert not re.search(bad, text), (word, bad)
+
+
+def test_every_dart_activity_gets_dart_words_derived_from_its_concepts():
+    played = [a for a in ACTIVITIES if "dart" in a.languages]
+    assert len(played) >= 40
+    for a in played:
+        got = words_for_context(a.id, "dart")
+        assert got and all(w.language == "dart" for w in got), a.id
+        resolved = [glossary.resolve("dart", c) for c in a.concepts]
+        assert ids(got) == list(dict.fromkeys(r.id for r in resolved if r)), a.id
+    assert ids(words_for_context("dd_num", "dart"))[:4] == ["type-conversion", "integer", "float", "modulo"]
+    assert ids(words_for_context("fl_flex", "dart"))[:3] == ["layout", "flex", "division"]
+    assert "stack-widget" in ids(words_for_context("fl_stack", "dart"))
+    assert ids(words_for_context("dd_pattern", "dart"))[:3] == ["destructuring", "pattern", "condition"]
+
+
+def test_chips_and_find_words_for_a_dart_drill_come_from_the_dart_glossary():
+    got = find_words("String? s;\nprint(s?.length ?? 0);", "dart", context="dart_null")
+    assert ids(got)[:5] == ["short-circuit", "default-value", "null-aware-access", "ternary", "string"]
+    assert "null-coalescing" in ids(got) or len(got) == 8
+    assert all(w.language == "dart" for w in got)
