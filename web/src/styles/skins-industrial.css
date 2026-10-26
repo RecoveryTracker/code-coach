@@ -1,0 +1,484 @@
+/* Foundry and Blueprint: the two "industrial game" skins.
+
+   The palettes (colours, and the extra --r-* roles the rest of this file
+   reads) are in skins.css. This file is only the shape of things: bevels,
+   sunken wells, belt-striped fills, hazard edges. Everything is scoped to
+   [data-skin="foundry"] / [data-skin="blueprint"], so no other skin - and
+   Original, which has no data-skin at all - can change.
+
+   Rules this file keeps, on purpose:
+   - no gradient wash on the mode bar or the page. Texture lives in specific
+     components only: progress fills, hazard marks, bevel edges;
+   - bevels are box-shadow insets and border colours, never extra border
+     width, so no layout size changes;
+   - nothing here sets text colours that the palette does not already pick;
+     contrast is a property of the palette and is tested in tests/test_skins.py;
+   - every animation is inside prefers-reduced-motion: no-preference.
+
+   Foundry = chunky: outset plates, inset wells, orange confirm plates.
+   Blueprint = flat: the same places get crisp one-pixel cyan outlines. */
+
+/* ── Shared variables: what a bevel is in each skin ──────────── */
+
+:root[data-skin="foundry"] {
+  /* raised: light top-left edge, dark bottom-right edge */
+  --bv-out: inset 1px 1px 0 var(--r-bevel-hi), inset -1px -1px 0 var(--r-bevel-lo);
+  /* sunk: the reverse, with a little depth under the top edge */
+  --bv-in: inset 1px 1px 0 var(--r-bevel-lo), inset 2px 2px 5px rgb(0 0 0 / 0.5),
+    inset -1px -1px 0 var(--r-bevel-hi);
+  --pop-shadow: 0 10px 28px rgb(0 0 0 / 0.55);
+  --plate-radius: 3px;
+  scrollbar-color: var(--r-border-strong) var(--r-bg-sunken);
+}
+
+:root[data-skin="blueprint"] {
+  --bv-out: 0 0 0 0 transparent;
+  --bv-in: 0 0 0 0 transparent;
+  --pop-shadow: 0 10px 28px rgb(2 10 20 / 0.55);
+  --plate-radius: 3px;
+  scrollbar-color: var(--r-border-strong) var(--r-bg-sunken);
+}
+
+/* Numbers line up in both; Foundry also sets its headings a little heavier. */
+:root[data-skin="foundry"] body,
+:root[data-skin="blueprint"] body {
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-skin="foundry"] :is(h1, h2, h3, h4) {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ── Focus: clearly visible, in both ─────────────────────────── */
+
+:root[data-skin="foundry"] :focus-visible,
+:root[data-skin="blueprint"] :focus-visible {
+  outline: 2px solid var(--r-focus);
+  outline-offset: 2px;
+}
+
+/* Inside a pill or a clipped strip an outward ring would be cut off. */
+:root[data-skin="foundry"] :is(.gq-lang-btn, .gq-option, .mhud-q-go):focus-visible,
+:root[data-skin="blueprint"] :is(.gq-lang-btn, .gq-option, .mhud-q-go):focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── The bars along the top: solid panel, steel edge ─────────── */
+
+:root[data-skin="foundry"] :is(.mode-bar, .ws-top, .iae-topbar) {
+  background: var(--r-bg-panel);
+  border-bottom-color: var(--r-bevel-lo);
+  box-shadow: inset 0 1px 0 var(--r-bevel-hi), 0 1px 0 var(--r-border);
+}
+
+:root[data-skin="blueprint"] :is(.mode-bar, .ws-top, .iae-topbar) {
+  background: var(--r-bg-panel);
+  border-bottom-color: var(--r-border-strong);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+
+/* Foundry: a physical plate. Raised, brightens on hover, sinks 1px when
+   pressed, and stays sunk while it is "on". */
+:root[data-skin="foundry"] :is(.ws-btn, .iae-btn, .study-btn, .lesson-nav-btn, .coach-banner-btn, .typing-restart, .mhud-main, .simple-btn, .gq-lang-btn.on) {
+  border-radius: var(--plate-radius);
+  box-shadow: var(--bv-out);
+}
+
+:root[data-skin="foundry"] :is(.ws-btn, .iae-btn, .study-btn, .lesson-nav-btn, .coach-banner-btn, .typing-restart, .mhud-main, .simple-btn):hover:not(:disabled):not(.on):not(.primary):not(.danger) {
+  border-color: var(--r-border-strong);
+  background-color: color-mix(in srgb, var(--r-bg-elevated) 85%, var(--r-text));
+}
+
+:root[data-skin="foundry"] :is(.ws-btn, .iae-btn, .study-btn, .lesson-nav-btn, .coach-banner-btn, .typing-restart, .mhud-main, .simple-btn):active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--bv-in);
+}
+
+:root[data-skin="foundry"] :is(.ws-btn, .mhud-main).on,
+:root[data-skin="foundry"] .row-btn.on {
+  box-shadow: var(--bv-in);
+  transform: translateY(1px);
+  background: color-mix(in srgb, var(--r-accent) 14%, var(--r-bg-sunken));
+  border-color: var(--r-accent);
+  color: var(--r-accent);
+}
+
+/* Primary and danger: the confirm plates. Orange with dark text. */
+:root[data-skin="foundry"] .ws-btn.primary,
+:root[data-skin="foundry"] .row-btn.primary {
+  background: var(--r-accent);
+  border-color: var(--r-accent-strong);
+  color: var(--r-on-accent);
+  font-weight: 700;
+  box-shadow: inset 1px 1px 0 rgb(255 255 255 / 0.4), inset -1px -1px 0 rgb(0 0 0 / 0.35);
+}
+:root[data-skin="foundry"] .ws-btn.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--r-accent) 88%, #ffffff);
+  border-color: var(--r-text);
+}
+:root[data-skin="foundry"] .ws-btn.primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 1px 1px 0 rgb(0 0 0 / 0.35), inset -1px -1px 0 rgb(255 255 255 / 0.3);
+}
+:root[data-skin="foundry"] .ws-btn.danger {
+  border-color: var(--r-danger);
+  box-shadow: inset 1px 1px 0 rgb(255 255 255 / 0.3), inset -1px -1px 0 rgb(0 0 0 / 0.35);
+}
+
+/* The module you are in: an orange plate, pressed in. The module row is
+   the thing you navigate by, so it is the one place orange is a fill. */
+:root[data-skin="foundry"] .mode-btn.on {
+  background: var(--r-accent);
+  border-color: var(--r-accent-strong);
+  color: var(--r-on-accent);
+  font-weight: 700;
+  box-shadow: inset 1px 1px 0 rgb(0 0 0 / 0.35), inset -1px -1px 0 rgb(255 255 255 / 0.3);
+  transform: translateY(1px);
+}
+
+/* The Momentum strip is a button too, but it was a pill. */
+:root[data-skin="foundry"] .mhud-main {
+  background: var(--r-bg-elevated);
+}
+:root[data-skin="foundry"] .mhud-main.on {
+  background: color-mix(in srgb, var(--r-accent) 14%, var(--r-bg-sunken));
+}
+:root[data-skin="foundry"] .mhud-flame.lit {
+  color: var(--r-accent);
+}
+
+/* Blueprint: flat. A crisp outline that turns cyan on hover and when on;
+   the module you are in is underlined inside its own border. */
+:root[data-skin="blueprint"] :is(.ws-btn, .iae-btn, .study-btn, .lesson-nav-btn, .coach-banner-btn, .typing-restart, .mhud-main, .simple-btn) {
+  border-radius: var(--plate-radius);
+  border-color: var(--r-border-strong);
+}
+:root[data-skin="blueprint"] :is(.ws-btn, .iae-btn, .study-btn, .lesson-nav-btn, .coach-banner-btn, .typing-restart, .mhud-main, .simple-btn):hover:not(:disabled):not(.on):not(.primary):not(.danger) {
+  border-color: var(--r-accent);
+  background-color: color-mix(in srgb, var(--r-bg-elevated) 80%, var(--r-accent));
+}
+:root[data-skin="blueprint"] .ws-btn.primary,
+:root[data-skin="blueprint"] .row-btn.primary {
+  background: var(--r-accent);
+  border-color: var(--r-accent);
+  color: var(--r-on-accent);
+  font-weight: 700;
+}
+:root[data-skin="blueprint"] .ws-btn.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--r-accent) 85%, #ffffff);
+}
+:root[data-skin="blueprint"] :is(.ws-btn, .mhud-main).on,
+:root[data-skin="blueprint"] .row-btn.on {
+  background: var(--r-accent-soft);
+  border-color: var(--r-accent);
+  color: var(--r-text-strong);
+  box-shadow: inset 0 -2px 0 var(--r-accent);
+}
+:root[data-skin="blueprint"] .mode-btn.on {
+  background: var(--r-accent-soft);
+  border-color: var(--r-accent);
+  color: var(--r-text-strong);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--r-accent);
+}
+:root[data-skin="blueprint"] .mhud-main {
+  border-radius: var(--plate-radius);
+}
+
+/* ── Panels: raised in Foundry, outlined in Blueprint ────────── */
+
+:root[data-skin="foundry"] :is(.brain-card, .brain-age-box, .brain-picker, .gq-daily, .progress-panel, .words-used, .word-card, .ref-card, .ref-card-face, .coach-banner, .coach-chat, .tt-panel, .lessons-worked, .wb-walkthrough, .script-lib-panel, .ticket-report, .hunt-report, .magnet, .case-result, .coach-focus-card, .study-worked, .simple-coach, .tc-continue, .brain-tools, .coach-viz, .coach-explain) {
+  border-radius: 4px;
+  box-shadow: var(--bv-out);
+}
+
+/* The on-screen keys: raised caps. The finger colour on each is a code and
+   stays; the bevel is only the inside edge. */
+:root[data-skin="foundry"] .tk-key {
+  box-shadow: var(--bv-out);
+}
+
+/* Things that float get the bevel and a drop shadow. */
+:root[data-skin="foundry"] :is(.mhud-pop, .lang-menu, .skin-pick-menu, .text-pick-menu, .shape-pick-menu, .gq-menu, .hint-popover, .mt-toast, .mt-card) {
+  border-radius: 4px;
+  border-color: var(--r-border-strong);
+  box-shadow: var(--bv-out), var(--pop-shadow);
+}
+
+:root[data-skin="blueprint"] :is(.brain-card, .brain-age-box, .brain-picker, .gq-daily, .progress-panel, .words-used, .word-card, .ref-card, .ref-card-face, .coach-banner, .coach-chat, .tt-panel, .lessons-worked, .wb-walkthrough, .script-lib-panel, .ticket-report, .hunt-report, .magnet, .case-result, .coach-focus-card, .study-worked, .simple-coach, .tc-continue, .brain-tools, .coach-viz, .coach-explain) {
+  border-color: var(--r-border-strong);
+  border-radius: 4px;
+}
+:root[data-skin="blueprint"] :is(.mhud-pop, .lang-menu, .skin-pick-menu, .text-pick-menu, .shape-pick-menu, .gq-menu, .hint-popover, .mt-toast, .mt-card) {
+  border-color: var(--r-accent);
+  border-radius: 4px;
+  box-shadow: var(--pop-shadow);
+}
+
+/* The list rows inside the menus: square, like the plates. */
+:root[data-skin="foundry"] :is(.skin-pick-row, .lang-item, .gq-menu li, .history-row) {
+  border-radius: 2px;
+}
+
+/* ── Wells: inputs, code, the editor frame, the question screen ─ */
+
+:root[data-skin="foundry"] :is(textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]), .brain-input, .gq-textarea, .gq-input, .gq-menu-search, .iae-select),
+:root[data-skin="foundry"] :is(.gq-code, .wb-code, .predict-code, .lessons-stages pre, .wb-diff pre, .wb-stderr, .wb-answer pre, .canvas-console, .brain-run-out, .term, .viz-body, .word-code, .coach-banner-code, .hint-popover-code, .study-solution, .study-template, .lessons-template) {
+  background-color: var(--r-bg-sunken);
+  border-color: var(--r-border);
+  border-radius: 3px;
+  box-shadow: var(--bv-in);
+}
+
+/* The question screen is a sunken monitor; its right/wrong flash is left
+   alone, so only the edge is drawn. */
+:root[data-skin="foundry"] .brain-stage {
+  border-radius: 4px;
+  box-shadow: var(--bv-in);
+}
+:root[data-skin="foundry"] .brain-stage:not(.ok):not(.bad) {
+  background-color: var(--r-bg-sunken);
+}
+
+/* The editor: an inset frame around Monaco. */
+:root[data-skin="foundry"] .iae-pane-body.flush {
+  background: var(--r-editor-bg);
+  box-shadow: var(--bv-in);
+  border-radius: 3px;
+}
+
+:root[data-skin="blueprint"] :is(textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]), .brain-input, .gq-textarea, .gq-input, .gq-menu-search, .iae-select),
+:root[data-skin="blueprint"] :is(.gq-code, .wb-code, .predict-code, .lessons-stages pre, .wb-diff pre, .wb-stderr, .wb-answer pre, .canvas-console, .brain-run-out, .term, .viz-body, .word-code, .coach-banner-code, .hint-popover-code, .study-solution, .study-template, .lessons-template) {
+  background-color: var(--r-bg-sunken);
+  border-color: var(--r-border-strong);
+  border-radius: 3px;
+}
+:root[data-skin="blueprint"] :is(.brain-stage, .iae-pane-body.flush) {
+  border-color: var(--r-border-strong);
+}
+:root[data-skin="blueprint"] .iae-pane-body.flush {
+  background: var(--r-editor-bg);
+  box-shadow: inset 0 0 0 1px var(--r-border-strong);
+}
+
+/* The question screen is the largest empty area in Brain Drills, and the
+   one place Blueprint draws its grid: two hairlines, 24px apart, at a
+   whisper. Not on the bars and not on the page. */
+:root[data-skin="blueprint"] .brain-stage {
+  background-image:
+    linear-gradient(to right, rgb(95 184 232 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(95 184 232 / 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+:root[data-skin="blueprint"] .brain-stage:not(.ok):not(.bad) {
+  background-color: var(--r-bg-sunken);
+}
+
+/* The pane switcher floating over the editor is faint at idle (opacity .45)
+   in every skin, which puts its labels well under 4.5:1. Here it is only
+   slightly faint, so it still reads as a control you reach for rather than
+   something you read. */
+:root[data-skin="foundry"] .ws-panes,
+:root[data-skin="blueprint"] .ws-panes {
+  opacity: 0.88;
+}
+:root[data-skin="foundry"] .ws-panes:is(:hover, :focus-within),
+:root[data-skin="blueprint"] .ws-panes:is(:hover, :focus-within) {
+  opacity: 1;
+}
+
+/* Small decorative numerals and "empty" level dots that other skins fade
+   with opacity (.4) or a border colour: here they are the dim text colour,
+   which is 4.5:1 on every surface. */
+:root[data-skin="foundry"] :is(.err-num, .session-num),
+:root[data-skin="blueprint"] :is(.err-num, .session-num) {
+  opacity: 1;
+  color: var(--r-text-dim);
+}
+:root[data-skin="foundry"] :is(.tt-ln, .concept-hint),
+:root[data-skin="blueprint"] :is(.tt-ln, .concept-hint) {
+  opacity: 1;
+}
+:root[data-skin="foundry"] .concept-hint,
+:root[data-skin="blueprint"] .concept-hint {
+  color: var(--r-text-muted);
+}
+:root[data-skin="foundry"] .kata-level-rest,
+:root[data-skin="blueprint"] .kata-level-rest {
+  color: var(--r-text-dim);
+}
+
+/* ── Section labels ──────────────────────────────────────────── */
+
+:root[data-skin="foundry"] :is(.mhud-pop-h, .brain-group-title, .progress-section-title, .do-now-label, .lang-menu-title, .gq-why-label) {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* Blueprint sets its small labels in the code face, like a drawing's notes. */
+:root[data-skin="blueprint"] :is(.mhud-pop-h, .brain-group-title, .progress-section-title, .do-now-label, .lang-menu-title, .gq-why-label) {
+  text-transform: uppercase;
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.1em;
+}
+
+/* ── Progress: tracks and fills ──────────────────────────────── */
+
+/* Foundry: a conveyor belt. A sunken track and a green fill with faint
+   diagonal stripes. */
+:root[data-skin="foundry"] :is(.mhud-bar, .progress-bar, .tc-bar, .typing-progress, .history-bar) {
+  background: var(--r-bg-sunken);
+  border: 1px solid var(--r-bevel-lo);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.7), 0 1px 0 var(--r-border);
+}
+:root[data-skin="foundry"] :is(.mhud-bar, .progress-bar, .tc-bar, .typing-progress, .history-bar) :is(.mhud-bar-fill, .progress-bar-fill, .tc-bar-fill, .typing-progress-fill, .history-fill),
+:root[data-skin="foundry"] .mhud-quests li.done .mhud-bar .mhud-bar-fill {
+  border-radius: 0;
+  background-color: var(--r-success);
+  background-image: linear-gradient(
+    45deg,
+    rgb(0 0 0 / 0.17) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgb(0 0 0 / 0.17) 50%,
+    rgb(0 0 0 / 0.17) 75%,
+    transparent 75%
+  );
+  background-size: 16px 16px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
+}
+
+/* The belt only moves for people who have not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-skin="foundry"] :is(.mhud-bar, .progress-bar, .tc-bar, .typing-progress, .history-bar) :is(.mhud-bar-fill, .progress-bar-fill, .tc-bar-fill, .typing-progress-fill, .history-fill) {
+    animation: foundry-belt 2.4s linear infinite;
+  }
+  @keyframes foundry-belt {
+    to {
+      background-position: 16px 0;
+    }
+  }
+}
+
+/* Blueprint: a thin outlined track and a flat cyan fill. */
+:root[data-skin="blueprint"] :is(.mhud-bar, .progress-bar, .tc-bar, .typing-progress, .history-bar) {
+  background: var(--r-bg-sunken);
+  border: 1px solid var(--r-border-strong);
+  border-radius: 2px;
+}
+:root[data-skin="blueprint"] :is(.mhud-bar, .progress-bar, .tc-bar, .typing-progress, .history-bar) :is(.mhud-bar-fill, .progress-bar-fill, .tc-bar-fill, .typing-progress-fill, .history-fill) {
+  border-radius: 0;
+  background: var(--r-accent);
+}
+:root[data-skin="blueprint"] .mhud-quests li.done .mhud-bar .mhud-bar-fill {
+  background: var(--r-success);
+}
+
+/* ── Hazard marks ────────────────────────────────────────────── */
+
+/* A thin yellow-and-dark diagonal edge on the left of a warning, an error
+   note, and the "Sure but wrong" badge. Layered on as a background image,
+   so whatever colour the note already has stays under it. Never a large
+   area. */
+:root[data-skin="foundry"] :is(.progress-danger-warn, .brain-run-err, .wb-stderr, .gq-error, .gq-badge.sure, .ticket-report.bad),
+:root[data-skin="blueprint"] :is(.progress-danger-warn, .brain-run-err, .wb-stderr, .gq-error, .gq-badge.sure, .ticket-report.bad) {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--r-hazard) 0 4px,
+    var(--r-hazard-dark) 4px 8px
+  );
+  background-repeat: no-repeat;
+  background-size: 6px 100%;
+  background-position: 0 0;
+  padding-left: max(14px, 1.2em);
+}
+:root[data-skin="foundry"] .gq-badge.sure,
+:root[data-skin="blueprint"] .gq-badge.sure {
+  background-size: 7px 100%;
+  padding-left: 15px;
+  border-radius: 3px;
+}
+
+/* ── The Gotchas card ────────────────────────────────────────── */
+
+/* The card has its own dark tokens in every skin (gotchas.css). These two
+   give it the skin's own surfaces; the language accent and the Run/Next
+   controls are left alone. Held to 4.5:1 by tests/test_skins.py. */
+:root[data-skin="foundry"] .gq-wrap {
+  --gq-bg: #171513;
+  --gq-panel: #211e1a;
+  --gq-line: #4a443d;
+  --gq-text: #ece5d8;
+  --gq-dim: #b0a79a;
+  --gq-ok: #7bc24a;
+  --gq-ok-bg: rgb(123 194 74 / 0.14);
+  --gq-bad: #f4826b;
+  --gq-bad-bg: rgb(244 130 107 / 0.14);
+  --tk-keyword: #ff9a1f;
+  --tk-string: #7bc24a;
+  --tk-number: #f2c335;
+  --tk-comment: #a39b8f;
+  --tk-fn: #6fb5e8;
+  --tk-const: #f07a62;
+  --tk-punct: #c9c0b2;
+  --tk-type: #dcc592;
+  --tk-preproc: #e8a76b;
+}
+:root[data-skin="blueprint"] .gq-wrap {
+  --gq-bg: #0b1a2b;
+  --gq-panel: #102a42;
+  --gq-line: #2e6081;
+  --gq-text: #e6f2fb;
+  --gq-dim: #9cc0dc;
+  --gq-ok: #5fe0a5;
+  --gq-ok-bg: rgb(95 224 165 / 0.14);
+  --gq-bad: #ff8e80;
+  --gq-bad-bg: rgb(255 142 128 / 0.14);
+  --tk-keyword: #4fd1ff;
+  --tk-string: #5fe0a5;
+  --tk-number: #ffc65c;
+  --tk-comment: #86acc9;
+  --tk-fn: #a9dcff;
+  --tk-const: #ff9a8c;
+  --tk-punct: #b9d3e6;
+  --tk-type: #ffb38a;
+  --tk-preproc: #c9b6ff;
+}
+
+:root[data-skin="foundry"] .gq-card {
+  border-radius: 6px;
+  box-shadow: var(--bv-out), 0 8px 24px rgb(0 0 0 / 0.5);
+}
+:root[data-skin="foundry"] .gq-code {
+  border-radius: 4px;
+}
+/* The four answers are plates: raised, and sunk once picked. */
+:root[data-skin="foundry"] .gq-option {
+  border-radius: 4px;
+  box-shadow: var(--bv-out);
+}
+:root[data-skin="foundry"] .gq-option:active:not(:disabled),
+:root[data-skin="foundry"] .gq-option.picked {
+  box-shadow: var(--bv-in);
+}
+:root[data-skin="foundry"] :is(.gq-why, .gq-run-text, .gq-key) {
+  border-radius: 3px;
+}
+:root[data-skin="foundry"] .gq-why {
+  box-shadow: var(--bv-out);
+}
+:root[data-skin="blueprint"] :is(.gq-option, .gq-why, .gq-run-text, .gq-key) {
+  border-radius: 3px;
+}
+:root[data-skin="blueprint"] .gq-card {
+  border-radius: 6px;
+  border-color: var(--r-border-strong);
+  box-shadow: 0 8px 24px rgb(2 10 20 / 0.5);
+}
+:root[data-skin="blueprint"] .gq-code {
+  border-radius: 4px;
+}

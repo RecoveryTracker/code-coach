@@ -238,5 +238,209 @@ class ContrastTests(unittest.TestCase):
                     )
 
 
+INDUSTRIAL = ("foundry", "blueprint")
+
+#: Roles only the industrial pair reads (skins-industrial.css and the editor
+#: theme in skins.ts). Without one, a bevel, the focus ring or a syntax colour
+#: silently falls back to nothing.
+EXTRA_ROLES = (
+    "info", "bevel-hi", "bevel-lo", "focus", "hazard", "hazard-dark",
+    "editor-bg",
+    "syn-keyword", "syn-string", "syn-number", "syn-comment",
+    "syn-function", "syn-type", "syn-punct", "syn-const",
+)
+
+
+def _industrial(skin: str) -> dict[str, str]:
+    css = _strip_comments(_read("skins.css"))
+    return _vars(_rule_bodies(css, f'[data-skin="{skin}"]'))
+
+
+def _gq_tokens(skin: str) -> dict[str, str]:
+    """The Gotchas card tokens this skin gives the card (skins-industrial.css)."""
+    css = _strip_comments(_read("skins-industrial.css"))
+    m = re.search(
+        r':root\[data-skin="%s"\]\s+\.gq-wrap\s*\{([^{}]*)\}' % skin, css)
+    assert m, f"{skin} has no .gq-wrap tokens"
+    return {k[2:]: v for k, v in _vars(m.group(1)).items()}
+
+
+def _split_selectors(selector: str) -> list[str]:
+    """Split a selector list on the commas that are not inside brackets."""
+    parts, depth, cur = [], 0, ""
+    for ch in selector:
+        depth += {"(": 1, ")": -1, "[": 1, "]": -1}.get(ch, 0)
+        if ch == "," and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    return [p for p in parts if p.strip()]
+
+
+def _media_blocks(css: str, header: str) -> list[str]:
+    """The bodies of every `@media <header> { ... }` block (braces matched)."""
+    out = []
+    for m in re.finditer(r"@media\s*\(%s\)\s*\{" % re.escape(header), css):
+        depth, i = 1, m.end()
+        while depth and i < len(css):
+            depth += {"{": 1, "}": -1}.get(css[i], 0)
+            i += 1
+        out.append(css[m.end(): i - 1])
+    return out
+
+
+class IndustrialSkinTests(unittest.TestCase):
+    """Foundry and Blueprint: held to a stricter bar than the older skins.
+
+    The brief was "all text/background pairs at 4.5:1" - so these skins are
+    tested on the dimmest label as well, on every surface a label can sit on
+    (panel, raised, sunken), on the text of every filled button, on the
+    focus ring and on the editor's syntax colours. Each of those is read
+    from the stylesheet, so tuning a colour below the line fails here.
+    """
+
+    PAIRS = (
+        # body text and labels, on every surface
+        ("text", "bg", 7), ("text", "bg-panel", 7),
+        ("text", "bg-elevated", 7), ("text", "bg-sunken", 7),
+        ("text-strong", "accent-soft", 7),
+        ("text-muted", "bg", 4.5), ("text-muted", "bg-panel", 4.5),
+        ("text-muted", "bg-elevated", 4.5), ("text-muted", "bg-sunken", 4.5),
+        ("text-dim", "bg", 4.5), ("text-dim", "bg-panel", 4.5),
+        ("text-dim", "bg-elevated", 4.5), ("text-dim", "bg-sunken", 4.5),
+        # the colours that carry meaning, as text
+        ("accent", "bg-panel", 4.5), ("accent", "bg-elevated", 4.5),
+        ("accent", "bg-sunken", 4.5),
+        ("success", "bg-panel", 4.5), ("success", "bg-elevated", 4.5),
+        ("success", "bg-sunken", 4.5),
+        ("danger", "bg-panel", 4.5), ("danger", "bg-elevated", 4.5),
+        ("danger", "bg-sunken", 4.5),
+        ("warning", "bg-panel", 4.5), ("warning", "bg-elevated", 4.5),
+        ("warning", "bg-sunken", 4.5),
+        ("info", "bg-panel", 4.5), ("info", "bg-elevated", 4.5),
+        # text on the filled buttons (primary / confirm, danger, strong)
+        ("on-accent", "accent", 4.5), ("on-accent", "danger", 4.5),
+        ("on-accent", "success", 4.5), ("on-accent", "warning", 4.5),
+        ("on-strong", "accent-strong", 4.5),
+        # the focus ring is a non-text mark: 3:1 on every surface
+        ("focus", "bg", 3), ("focus", "bg-panel", 3),
+        ("focus", "bg-elevated", 3), ("focus", "bg-sunken", 3),
+        # the editor's syntax colours on its own background
+        ("syn-keyword", "editor-bg", 4.5), ("syn-string", "editor-bg", 4.5),
+        ("syn-number", "editor-bg", 4.5), ("syn-comment", "editor-bg", 4.5),
+        ("syn-function", "editor-bg", 4.5), ("syn-type", "editor-bg", 4.5),
+        ("syn-punct", "editor-bg", 4.5), ("syn-const", "editor-bg", 4.5),
+        ("text", "editor-bg", 7),
+    )
+
+    def test_both_skins_are_registered_in_the_app(self) -> None:
+        for skin in INDUSTRIAL:
+            self.assertIn(skin, SKINS)
+
+    def test_every_extra_role_is_defined_as_a_hex_colour(self) -> None:
+        for skin in INDUSTRIAL:
+            values = _industrial(skin)
+            for role in EXTRA_ROLES:
+                with self.subTest(skin=skin, role=role):
+                    self.assertRegex(values.get(f"--r-{role}", ""),
+                                     r"^#[0-9a-fA-F]{6}$")
+
+    def test_every_pair_meets_its_contrast(self) -> None:
+        for skin in INDUSTRIAL:
+            values = _industrial(skin)
+            for fg, bg, minimum in self.PAIRS:
+                a, b = values[f"--r-{fg}"], values[f"--r-{bg}"]
+                with self.subTest(skin=skin, pair=f"{fg} on {bg}"):
+                    self.assertGreaterEqual(
+                        round(_contrast(a, b), 2), minimum,
+                        f"{skin}: {fg} {a} on {bg} {b}",
+                    )
+
+    def test_the_gotchas_card_tokens_stay_readable(self) -> None:
+        """The card has its own colours (gotchas.css) and these two skins
+        replace them; the same 4.5:1 rule the card is held to everywhere."""
+        names = ("gq-text", "gq-dim", "gq-ok", "gq-bad", "tk-keyword",
+                 "tk-string", "tk-number", "tk-comment", "tk-fn", "tk-const",
+                 "tk-punct", "tk-type", "tk-preproc")
+        for skin in INDUSTRIAL:
+            t = _gq_tokens(skin)
+            for surface in ("gq-bg", "gq-panel"):
+                for name in names:
+                    with self.subTest(skin=skin, token=name, on=surface):
+                        self.assertGreaterEqual(
+                            round(_contrast(t[name], t[surface]), 2), 4.5,
+                            f"{skin}: {name} {t[name]} on {surface} {t[surface]}",
+                        )
+
+    def test_every_rule_is_scoped_to_its_own_skin(self) -> None:
+        """No other skin, and not Original (which has no data-skin at all),
+        can move: every selector in the file starts with one of the two."""
+        css = _strip_comments(_read("skins-industrial.css"))
+        # at-rules are checked separately; look only at plain rules
+        flat = re.sub(r"@media[^{]*\{", "", css)
+        flat = re.sub(r"@keyframes[^{]*\{[^{}]*(\{[^{}]*\}[^{}]*)*\}", "", flat)
+        count = 0
+        for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", flat):
+            selector = m.group(1).strip()
+            if not selector:
+                continue
+            for part in _split_selectors(selector):
+                count += 1
+                with self.subTest(selector=part.strip()[:70]):
+                    self.assertRegex(
+                        part.strip(),
+                        r'^:root\[data-skin="(foundry|blueprint)"\]',
+                    )
+        self.assertGreater(count, 40)
+
+    def test_no_gradient_wash_on_the_bars_or_the_page(self) -> None:
+        """The brief: no faded colour washes along the top bar or page.
+        A gradient may only sit on a progress fill, a hazard mark or
+        Blueprint's grid on the question screen."""
+        css = _strip_comments(_read("skins-industrial.css"))
+        allowed = ("-fill", "danger-warn", "gq-badge", "gq-error", "wb-stderr",
+                   "brain-run-err", "ticket-report", "brain-stage")
+        for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+            selector, body = m.group(1), m.group(2)
+            if "gradient" not in body:
+                continue
+            with self.subTest(selector=" ".join(selector.split())[:80]):
+                self.assertTrue(
+                    any(a in selector for a in allowed),
+                    f"a gradient on '{selector.strip()[:60]}'",
+                )
+        for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+            selector, body = m.group(1), m.group(2)
+            if re.search(r"mode-bar|ws-top|iae-topbar|\bbody\b|:root\[[^\]]*\]\s*\{", selector + "{"):
+                with self.subTest(bar=" ".join(selector.split())[:60]):
+                    self.assertNotIn("gradient", body)
+
+    def test_animation_only_for_people_who_have_not_asked_for_less(self) -> None:
+        css = _strip_comments(_read("skins-industrial.css"))
+        allowed = "\n".join(_media_blocks(css, "prefers-reduced-motion: no-preference"))
+        self.assertIn("animation", allowed)
+        outside = css
+        for block in _media_blocks(css, "prefers-reduced-motion: no-preference"):
+            outside = outside.replace(block, "")
+        self.assertNotRegex(outside, r"animation\s*:")
+        self.assertNotRegex(outside, r"transition\s*:")
+
+    def test_bevels_do_not_change_layout_size(self) -> None:
+        """Bevels are shadows and colours. A border width (or a margin, or an
+        explicit size) on a Foundry plate would shift the page by a pixel
+        and so move everything under it."""
+        css = _strip_comments(_read("skins-industrial.css"))
+        for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+            selector, body = m.group(1), m.group(2)
+            if "hazard" in body or "danger-warn" in selector:
+                continue        # the hazard edge widens a note's left padding
+            for prop in ("border-width", "margin", "width", "height",
+                         "min-width", "min-height", "font-size"):
+                with self.subTest(selector=" ".join(selector.split())[:60], prop=prop):
+                    self.assertNotRegex(body, r"(^|[;\s])%s\s*:" % prop)
+
+
 if __name__ == "__main__":
     unittest.main()

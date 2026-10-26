@@ -322,6 +322,25 @@ code_coach/farm/
   "Words in this question" chips ask the glossary for the drill's language: `dart` (2026-10-22), `c` and `sql`
   (2026-10-23) are full glossary languages of their own (see "Glossary"), so their drills show their chips
   with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
+- **Brain Drills resume** (`web/src/lib/brainResume.ts`, tested by `tests/test_brain_resume.py`): a round in progress
+  survives leaving the tab (App mounts a mode only while it is open, so leaving unmounts `BrainDrills`) and a page
+  reload. One snapshot per LANGUAGE (a Python round and a Dart round are separate), kept in a module-level Map
+  (tab switches) and `sessionStorage` key `code-coach:brain-round:<language>` (reloads; every access in try/catch).
+  It holds the activity, the SAME generated questions (never refetched), the Momentum round id, the Code age check
+  chain (`checkId/checkLeft/checkAges`), every answer and mark, the question you are on, the typed text, and the
+  clock as a number of seconds (rebuilt with `clockFromElapsed`: time away is not counted, paused again on an answered
+  question). `Round` saves on every state change, the typed text after 300 ms, `pagehide` and unmount; nothing is saved
+  during the 3-2-1 or before the questions load. Coming back to the tab resumes straight away (a layout effect in
+  `BrainDrills`, first language only) with no countdown and a 3 s "Picked up where you left off"; any other time the
+  home screen shows a "Resume <Activity> - question 7 of 16" button (e.g. after the language picker). Leaving during
+  Variable Recall's "Remember these" shows it again from the start; leaving while answering does not show it again.
+  Not kept: a Done screen (finishing a round clears the snapshot, so a check left between rounds starts over; the
+  rounds already posted stay posted), an open Questions grid, Run it / Explain output. Finishing, Quit and Escape clear
+  the language's snapshot; starting another activity replaces it; a failed result post re-saves the finished round so
+  Finish can be tried again. A snapshot is dropped silently when older than 12 hours, corrupt, another version, or its
+  activity is gone / not played in that language / no longer fits (more questions than the activity asks, a pick answer
+  that is not one of its choices, a later check activity gone). Momentum is not paid twice: `brain_item` keys are
+  `<activity>:<roundId>:<index>` and the round id is saved; `brain_round` and `check_age` fire only at the end.
 - **Brain Drills packs** (how a new activity gets in; the Reading Pack in
   `pack_reading.py` is the model). Add `code_coach/brain/pack_<name>.py`
   exposing `ACTIVITIES: tuple[Activity, ...]` and touch nothing else:

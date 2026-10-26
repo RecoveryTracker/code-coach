@@ -251,6 +251,106 @@
   color: #141e36;
 }
 
+/* ── Foundry: an industrial factory floor ───────────────────────
+   Warm charcoal-brown surfaces, steel edges and signal orange. Original
+   work in the spirit of the factory-builder look: nothing here is taken
+   from any game. The chunkiness (bevelled plates, a sunken editor, belt-
+   striped progress fills) lives in skins-industrial.css, in specific
+   components only - never as a wash across the top bar or the page.
+
+   The roles after --r-warning-soft are extras only this pair of skins
+   reads (bevel edges, the focus ring, hazard yellow, the editor's own
+   colours). They are not in the shared routing, so the other skins do
+   not need them. */
+
+[data-skin="foundry"] {
+  color-scheme: dark;
+  --r-bg-sunken: #171513;
+  --r-bg: #1d1a17;
+  --r-bg-panel: #28241f;
+  --r-bg-elevated: #332e28;
+  --r-border: #4a443d;
+  --r-border-strong: #6a6259;
+  --r-text-dim: #a39b8f;
+  --r-text-muted: #b8afa2;
+  --r-text: #ece5d8;
+  --r-text-strong: #fff6e6;
+  --r-accent: #ff9a1f;
+  --r-accent-strong: #f0850f;
+  --r-accent-soft: #42301a;
+  --r-on-accent: #1d1a17;
+  --r-on-strong: #1a1612;
+  --r-success: #7bc24a;
+  --r-success-soft: #243319;
+  --r-danger: #f07a62;
+  --r-danger-soft: #3d1f19;
+  --r-warning: #f2c335;
+  --r-warning-soft: #3a2f0e;
+  /* extras */
+  --r-info: #5fa8dd;
+  --r-bevel-hi: #6a6259;
+  --r-bevel-lo: #0f0d0b;
+  --r-focus: #f2c335;
+  --r-hazard: #f2c335;
+  --r-hazard-dark: #1d1a17;
+  --r-editor-bg: #171513;
+  --r-syn-keyword: #ff9a1f;
+  --r-syn-string: #7bc24a;
+  --r-syn-number: #f2c335;
+  --r-syn-comment: #a39b8f;
+  --r-syn-function: #5fa8dd;
+  --r-syn-type: #dcc592;
+  --r-syn-punct: #c9c0b2;
+  --r-syn-const: #f07a62;
+}
+
+/* ── Blueprint: the planning view ───────────────────────────────
+   Deep navy, light cyan lines, flat crisp one-pixel outlines - the
+   quiet counterpart to Foundry's plates. Lines are the cyan at reduced
+   strength, written as solid colours so the editor theme and the colour
+   mixes can read them. */
+
+[data-skin="blueprint"] {
+  color-scheme: dark;
+  --r-bg-sunken: #0b1a2b;
+  --r-bg: #0f2236;
+  --r-bg-panel: #14304a;
+  --r-bg-elevated: #1a3a59;
+  --r-border: #2e6081;
+  --r-border-strong: #4182a9;
+  --r-text-dim: #86acc9;
+  --r-text-muted: #9cc0dc;
+  --r-text: #e6f2fb;
+  --r-text-strong: #ffffff;
+  --r-accent: #4fd1ff;
+  --r-accent-strong: #3bc0f0;
+  --r-accent-soft: #1f4b73;
+  --r-on-accent: #07182a;
+  --r-on-strong: #07182a;
+  --r-success: #5fe0a5;
+  --r-success-soft: #11392f;
+  --r-danger: #ff7a6b;
+  --r-danger-soft: #4a2330;
+  --r-warning: #ffc65c;
+  --r-warning-soft: #473714;
+  /* extras */
+  --r-info: #8fd0ff;
+  --r-bevel-hi: #4182a9;
+  --r-bevel-lo: #4182a9;
+  --r-focus: #ffc65c;
+  --r-hazard: #ffc65c;
+  --r-hazard-dark: #0f2236;
+  --r-editor-bg: #0b1a2b;
+  --r-syn-keyword: #4fd1ff;
+  --r-syn-string: #5fe0a5;
+  --r-syn-number: #ffc65c;
+  --r-syn-comment: #86acc9;
+  --r-syn-function: #a9dcff;
+  --r-syn-type: #ffb38a;
+  --r-syn-punct: #b9d3e6;
+  --r-syn-const: #ff7a6b;
+}
+
 /* ── The picker ──────────────────────────────────────────────
    Written in the palette variables rather than fixed colours, so the
    picker itself changes with the skin it is choosing - which is also

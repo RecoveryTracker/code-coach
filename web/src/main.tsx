@@ -11,6 +11,7 @@ import "./styles/reference.css";
 import "./styles/markup.css";
 import "./styles/skin-tokens.css";
 import "./styles/skins.css";
+import "./styles/skins-industrial.css";
 import "./styles/momentum.css";
 import { MomentumToasts } from "./components/MomentumToasts";
 import { applySkin, savedSkin } from "./skins";

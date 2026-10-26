@@ -22,7 +22,9 @@ export type SkinId =
   | "purple"
   | "light"
   | "aurora"
-  | "arcade";
+  | "arcade"
+  | "foundry"
+  | "blueprint";
 
 export type Skin = {
   id: SkinId;
@@ -68,6 +70,18 @@ export const SKINS: Skin[] = [
     name: "Arcade",
     hint: "Bright primaries — red, yellow, blue and green on a sky-blue day.",
     light: true,
+  },
+  {
+    id: "foundry",
+    name: "Foundry",
+    hint: "An industrial factory floor — steel plates and signal orange.",
+    light: false,
+  },
+  {
+    id: "blueprint",
+    name: "Blueprint",
+    hint: "The planning view — navy, with cyan lines.",
+    light: false,
   },
 ];
 
@@ -139,6 +153,37 @@ function hex(value: string): string | undefined {
 }
 
 /**
+ * Syntax colours for a skin that defines them (--r-syn-*, Foundry and
+ * Blueprint). The others keep the base theme's own token colours, as
+ * they always have, so nothing about them moves.
+ */
+function syntaxRules(id: SkinId) {
+  const roles: [string[], string, string?][] = [
+    [["keyword", "keyword.json"], "syn-keyword", "bold"],
+    [["string", "string.escape", "string.sql"], "syn-string"],
+    [["number", "number.float", "number.hex"], "syn-number"],
+    [["comment"], "syn-comment", "italic"],
+    [["predefined", "predefined.sql", "support.function"], "syn-function"],
+    [["type", "type.identifier", "entity.name.type"], "syn-type"],
+    [["delimiter", "operators", "delimiter.bracket"], "syn-punct"],
+    [["constant", "variable.predefined", "regexp"], "syn-const"],
+  ];
+  const rules: { token: string; foreground: string; fontStyle?: string }[] = [];
+  for (const [tokens, role, fontStyle] of roles) {
+    const value = hex(skinColor(id, role));
+    if (!value) continue;
+    for (const token of tokens) {
+      rules.push({
+        token,
+        foreground: value.slice(1),
+        ...(fontStyle ? { fontStyle } : {}),
+      });
+    }
+  }
+  return rules;
+}
+
+/**
  * Register an editor theme for every skin, and say which to use.
  *
  * Original keeps vs-dark untouched, for the same reason it keeps
@@ -155,8 +200,10 @@ export function defineEditorThemes(monaco: Monaco): void {
       const value = hex(skinColor(skin.id, role));
       if (value) colors[key] = value;
     };
-    set("editor.background", "bg-panel");
-    set("editorGutter.background", "bg-panel");
+    // A skin may give the editor a surface of its own (Foundry's is a
+    // sunken, darker well than its panels); the rest use the panel.
+    set("editor.background", hex(skinColor(skin.id, "editor-bg")) ? "editor-bg" : "bg-panel");
+    set("editorGutter.background", hex(skinColor(skin.id, "editor-bg")) ? "editor-bg" : "bg-panel");
     set("editor.lineHighlightBackground", "bg-elevated");
     set("editorLineNumber.foreground", "text-dim");
     set("editorLineNumber.activeForeground", "text-muted");
@@ -167,7 +214,7 @@ export function defineEditorThemes(monaco: Monaco): void {
     monaco.editor.defineTheme(`cc-${skin.id}`, {
       base: skin.light ? "vs" : "vs-dark",
       inherit: true,
-      rules: [],
+      rules: syntaxRules(skin.id),
       colors,
     });
   }

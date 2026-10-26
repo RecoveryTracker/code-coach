@@ -11,9 +11,12 @@
  * arrows (or F/J) for the two-way ones, Esc to leave a round. Alt+Left goes
  * back a question; "Questions" opens a grid to jump to any of them. An
  * answered question can be run and explained in place.
+ *
+ * A round in progress survives leaving the tab (and a page reload): lib/brainResume.ts keeps a snapshot per
+ * language, and coming back picks the round up exactly where it was - see `Round`'s `resume`.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
 import { award } from "../lib/momentum";
@@ -39,6 +42,15 @@ import {
   type Clock,
   type RoundState,
 } from "../lib/brainRound";
+import {
+  clearSnapshot,
+  clockFromElapsed,
+  loadResumable,
+  makeSnapshot,
+  resumeLabel,
+  saveSnapshot,
+  type RoundSnapshot,
+} from "../lib/brainResume";
 import "../styles/brain.css";
 import BrainPicker from "./BrainPicker";
 import BrainTools from "./BrainTools";
@@ -97,7 +109,17 @@ type Miss = { item: BrainItem; given: string };
 
 type Screen =
   | { name: "home" }
-  | { name: "play"; activity: ActivityInfo; checkId: string; checkLeft: string[]; checkAges: number[] }
+  | {
+      name: "play";
+      activity: ActivityInfo;
+      /** The language this round is in: a round never renders under another language's screen. */
+      language: BrainLanguage;
+      checkId: string;
+      checkLeft: string[];
+      checkAges: number[];
+      /** Set when the round is picked up from a snapshot rather than started. */
+      resume?: RoundSnapshot;
+    }
   | {
       name: "done";
       activity: ActivityInfo;
@@ -159,9 +181,46 @@ export default function BrainDrills({
 
   const byId = useMemo(() => new Map((summary?.activities ?? []).map((a) => [a.id, a])), [summary]);
 
-  const start = useCallback((activity: ActivityInfo) => {
-    setScreen({ name: "play", activity, checkId: "", checkLeft: [], checkAges: [] });
-  }, []);
+  // A round saved for this language, offered on the home screen. Coming back to the Brain Drills tab resumes it
+  // straight away (below); this is for arriving at the home screen some other way (the language picker).
+  const homeResume = useMemo(() => {
+    if (screen.name !== "home" || !summary || !drillLanguage || summary.language !== language) return null;
+    const snap = loadResumable({ language, activities: summary.activities, now: Date.now() });
+    const act = snap ? byId.get(snap.activityId) : undefined;
+    return snap && act ? { snap, act } : null;
+  }, [screen.name, summary, drillLanguage, language, byId]);
+
+  const resumeRound = useCallback(
+    (snap: RoundSnapshot, activity: ActivityInfo) => {
+      setScreen({
+        name: "play", activity, language, checkId: snap.checkId, checkLeft: snap.checkLeft, checkAges: snap.checkAges,
+        resume: snap,
+      });
+    },
+    [language],
+  );
+
+  // Back on the Brain Drills tab with a round saved: straight into it, before the home screen paints. Only the first
+  // load of the first language: a language picked later shows its home with a "Resume" button instead.
+  const firstLanguage = useRef(language);
+  const autoResumed = useRef(false);
+  useLayoutEffect(() => {
+    if (!summary || !drillLanguage || summary.language !== language) return;
+    if (autoResumed.current || language !== firstLanguage.current) return;
+    autoResumed.current = true;
+    const snap = loadResumable({ language, activities: summary.activities, now: Date.now() });
+    const act = snap ? byId.get(snap.activityId) : undefined;
+    if (snap && act) resumeRound(snap, act);
+  }, [summary, drillLanguage, language, byId, resumeRound]);
+
+  const start = useCallback(
+    (activity: ActivityInfo) => {
+      // Starting something else replaces a saved round (it asks nothing).
+      clearSnapshot(language);
+      setScreen({ name: "play", activity, language, checkId: "", checkLeft: [], checkAges: [] });
+    },
+    [language],
+  );
 
   const startCheck = useCallback(() => {
     if (!summary) return;
@@ -169,11 +228,19 @@ export default function BrainDrills({
     const activity = byId.get(first);
     if (!activity) return;
     const checkId = `${summary.today}/${Date.now()}`;
-    setScreen({ name: "play", activity, checkId, checkLeft: rest, checkAges: [] });
-  }, [summary, byId]);
+    clearSnapshot(language);
+    setScreen({ name: "play", activity, language, checkId, checkLeft: rest, checkAges: [] });
+  }, [summary, byId, language]);
 
   const finished = useCallback(
-    async (activity: ActivityInfo, seconds: number, misses: Miss[], total: number, s: Screen) => {
+    async (
+      activity: ActivityInfo,
+      seconds: number,
+      misses: Miss[],
+      total: number,
+      s: Screen,
+      final: RoundSnapshot | null,
+    ) => {
       if (s.name !== "play") return;
       try {
         const got = await postBrainResult({
@@ -189,6 +256,8 @@ export default function BrainDrills({
         load();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
+        // The result did not go through: keep the finished round, so "Resume" offers its Finish again.
+        if (final) saveSnapshot(final);
         setScreen({ name: "home" });
       }
     },
@@ -229,16 +298,24 @@ export default function BrainDrills({
   if (error && !summary) return <div className="lessons-empty">Could not load Brain Drills: {error}</div>;
   if (!summary) return <div className="lessons-empty">Loading…</div>;
 
-  if (screen.name === "play") {
+  // (A round of another language is not drawn: the effect above is about to send the screen home, and the Round that
+  // was on screen has already saved itself under its own language when it unmounted.)
+  if (screen.name === "play" && screen.language === language) {
     return (
       <Round
-        key={`${screen.activity.id}-${screen.checkId}`}
+        key={`${screen.language}-${screen.activity.id}-${screen.checkId}`}
         activity={screen.activity}
         language={language}
+        checkId={screen.checkId}
+        checkLeft={screen.checkLeft}
+        checkAges={screen.checkAges}
         checkStep={screen.checkId ? summary.check.length - screen.checkLeft.length : 0}
         checkSize={summary.check.length}
+        resume={screen.resume}
         onQuit={() => setScreen({ name: "home" })}
-        onDone={(seconds, misses, total) => void finished(screen.activity, seconds, misses, total, screen)}
+        onDone={(seconds, misses, total, final) =>
+          void finished(screen.activity, seconds, misses, total, screen, final)
+        }
       />
     );
   }
@@ -257,7 +334,7 @@ export default function BrainDrills({
         onNext={() =>
           next &&
           setScreen({
-            name: "play", activity: next, checkId: screen.checkId,
+            name: "play", activity: next, language, checkId: screen.checkId,
             checkLeft: screen.checkLeft.slice(1), checkAges: screen.checkAges,
           })
         }
@@ -270,6 +347,19 @@ export default function BrainDrills({
   const latest = summary.checkAges[summary.checkAges.length - 1];
   return (
     <div className="brain-wrap">
+      {homeResume ? (
+        <section className="brain-resume" aria-label="A round in progress">
+          <button
+            type="button"
+            className="ws-btn primary brain-resume-btn"
+            data-testid="brain-resume"
+            onClick={() => resumeRound(homeResume.snap, homeResume.act)}
+          >
+            {resumeLabel(homeResume.snap, homeResume.act.title)}
+          </button>
+          <span className="brain-resume-note">Saved just as you left it; the clock was not running while you were away.</span>
+        </section>
+      ) : null}
       <header className="brain-head">
         <div>
           <h2>Brain Drills</h2>
@@ -346,40 +436,111 @@ export default function BrainDrills({
 function Round({
   activity,
   language,
+  checkId,
+  checkLeft,
+  checkAges,
   checkStep,
   checkSize,
+  resume,
   onQuit,
   onDone,
 }: {
   activity: ActivityInfo;
   language: BrainLanguage;
+  /** The Code age check this round belongs to (blank for a single activity); kept in the snapshot. */
+  checkId: string;
+  checkLeft: string[];
+  checkAges: number[];
   checkStep: number;
   checkSize: number;
+  /** A saved round to pick up: its questions, answers, typed text and clock; no fetch, no countdown. */
+  resume?: RoundSnapshot;
   onQuit: () => void;
-  onDone: (seconds: number, misses: Miss[], total: number) => void;
+  /** `final` is the finished round's snapshot, handed back so a failed post can keep it for another try. */
+  onDone: (seconds: number, misses: Miss[], total: number, final: RoundSnapshot | null) => void;
 }) {
-  const [items, setItems] = useState<BrainItem[] | null>(null);
-  const [count, setCount] = useState(3);
-  const [rs, setRs] = useState<RoundState>(() => newRound(0));
-  const [typed, setTyped] = useState("");
+  const [items, setItems] = useState<BrainItem[] | null>(resume?.items ?? null);
+  const [count, setCount] = useState(resume ? 0 : 3);
+  const [rs, setRs] = useState<RoundState>(() => resume?.rs ?? newRound(0));
+  const [typed, setTyped] = useState(resume?.typed ?? "");
   const [flash, setFlash] = useState(false);
   const [showing, setShowing] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(resume?.elapsed ?? 0);
   const [picker, setPicker] = useState(false);
-  const clock = useRef<Clock | null>(null);
+  // "Picked up where you left off": a quiet note for a few seconds after a resume.
+  const [resumedNote, setResumedNote] = useState(!!resume);
+  // The resumed clock reads exactly what it read when you left, and runs on from now (the time away is not in it).
+  const [seedClock] = useState<Clock | null>(() =>
+    resume ? clockFromElapsed(resume.elapsed, performance.now(), resume.rs) : null,
+  );
+  const clock = useRef<Clock | null>(seedClock);
   // Set while a right answer's flash is on screen, so nothing else moves you.
   const busy = useRef(false);
   const finishing = useRef(false);
   // This round's own name, for Momentum: every round's questions are new, so each
   // answer is its own thing to be paid for once.
-  const roundId = useRef(Date.now().toString(36));
+  // A resumed round keeps its id, so an answer given before leaving is never paid for a second time.
+  const roundId = useRef(resume?.roundId ?? Date.now().toString(36));
   // A fast typist's keystrokes must not skip a miss before it has been read.
   const guard = useRef(0);
   const input = useRef<HTMLInputElement | null>(null);
   const nextBtn = useRef<HTMLButtonElement | null>(null);
   const questionsBtn = useRef<HTMLButtonElement | null>(null);
+  // Variable Recall: leaving mid-answer (the variables already hidden) comes back mid-answer, not shown again;
+  // leaving during "Remember these" shows them again from the start. This is the question that skips its show phase.
+  const noShowFor = useRef<number | null>(resume && !resume.showing ? resume.rs.index : null);
+  // Saving: `live` is what the latest render held; `pending` is a right answer's state during its 120 ms flash
+  // (the answer is already given, the screen has not moved yet); `ended` is set when the round is over (finished or
+  // quit), after which nothing may save it again.
+  const live = useRef({ items, rs, typed, showing, count });
+  live.current = { items, rs, typed, showing, count };
+  const pending = useRef<RoundState | null>(null);
+  const ended = useRef(false);
+
+  const snapshotNow = useCallback(
+    (state?: RoundState): RoundSnapshot | null => {
+      const L = live.current;
+      if (!L.items || L.count > 0) return null;
+      const rsNow = state ?? pending.current ?? L.rs;
+      return makeSnapshot({
+        language, activityId: activity.id, checkId, checkLeft, checkAges, roundId: roundId.current,
+        items: L.items, rs: rsNow, typed: rsNow === L.rs ? L.typed : "", clock: clock.current, showing: L.showing,
+        now: Date.now(), perfNow: performance.now(),
+      });
+    },
+    [language, activity.id, checkId, checkLeft, checkAges],
+  );
+  const persist = useCallback(() => {
+    if (ended.current) return;
+    const snap = snapshotNow();
+    if (snap) saveSnapshot(snap);
+  }, [snapshotNow]);
+
+  // Save on every meaningful change (an answer, a move, the countdown ending), the typed text a beat after you stop,
+  // when the page is hidden or reloaded, and when this screen unmounts (leaving the tab).
+  useEffect(() => {
+    persist();
+  }, [rs, count, items, persist]);
+  useEffect(() => {
+    const id = window.setTimeout(persist, 300);
+    return () => window.clearTimeout(id);
+  }, [typed, persist]);
+  useEffect(() => {
+    window.addEventListener("pagehide", persist);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      persist();
+    };
+  }, [persist]);
 
   useEffect(() => {
+    if (!resumedNote) return;
+    const id = window.setTimeout(() => setResumedNote(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [resumedNote]);
+
+  useEffect(() => {
+    if (resume) return; // the questions are the saved ones: never fetched again
     let alive = true;
     fetchBrainRound(activity.id, language).then((r) => {
       if (!alive) return;
@@ -419,7 +580,9 @@ function Round({
   // unanswered one - by answering, Back or the picker - shows it again; an
   // answered one is only reviewed, with the variables in view.
   useEffect(() => {
-    if (count > 0 || !item?.show || reviewing) {
+    const skip = noShowFor.current === rs.index;
+    if (!skip) noShowFor.current = null;
+    if (count > 0 || !item?.show || reviewing || skip) {
       setShowing(false);
       return;
     }
@@ -438,6 +601,7 @@ function Round({
   // while you look at an answered question, running on an open one.
   const commit = useCallback((next: RoundState) => {
     const now = performance.now();
+    pending.current = null;
     setRs(next);
     setTyped("");
     setFlash(false);
@@ -452,10 +616,22 @@ function Round({
       if (!items || finishing.current || !isComplete(state)) return;
       finishing.current = true;
       const seconds = clock.current ? clockElapsed(clock.current, performance.now()) : 0;
-      onDone(seconds, missesOf(state, items), items.length);
+      // The round is over: nothing saves it again. The caller gets the finished round's snapshot, to keep only if
+      // the result cannot be posted (so there is something to Finish again); a posted round leaves nothing behind.
+      const final = snapshotNow(state);
+      ended.current = true;
+      clearSnapshot(language);
+      onDone(seconds, missesOf(state, items), items.length, final);
     },
-    [items, onDone],
+    [items, onDone, snapshotNow, language],
   );
+
+  // Quit (the button or Escape) ends the round for good: the saved copy goes too.
+  const quit = useCallback(() => {
+    ended.current = true;
+    clearSnapshot(language);
+    onQuit();
+  }, [language, onQuit]);
 
   const go = useCallback(
     (i: number) => {
@@ -489,6 +665,8 @@ function Round({
         award("brain_item", `${activity.id}:${roundId.current}:${rs.index}`);
         busy.current = true;
         setFlash(true);
+        // Leaving inside this 120 ms must still keep the answer just given.
+        pending.current = isComplete(next) ? next : jumpTo(next, nextOpen(next, rs.index));
         window.setTimeout(() => {
           busy.current = false;
           if (isComplete(next)) finish(next);
@@ -513,7 +691,7 @@ function Round({
         setPicker(false);
         questionsBtn.current?.focus();
       } else {
-        onQuit();
+        quit();
       }
       return;
     }
@@ -588,11 +766,16 @@ function Round({
           >
             Questions
           </button>
-          <button type="button" className="ws-btn" onClick={onQuit} title="Esc">
+          <button type="button" className="ws-btn" onClick={quit} title="Esc">
             Quit
           </button>
         </div>
       </div>
+      {resumedNote ? (
+        <p className="brain-resumed" role="status">
+          Picked up where you left off
+        </p>
+      ) : null}
       {!items ? (
         <div className="brain-stage">Getting ready…</div>
       ) : count > 0 ? (
