@@ -25,6 +25,10 @@ An activity is played in a language exactly when it has that language's
 generator (`Activity.languages`), so every loop below goes over
 `brain.activities_in(language)`: a Dart-only pack is never asked for Python.
 
+C is held to the real compilers in ONE batch for all the C activities (tests/c_oracle.py: clang -O0 and
+-O2 with signed and unsigned `char`, MSVC /Od where installed, all printing the same thing, plus the undefined-behaviour
+sanitizer); SQL to the real SQLite, a fresh in-memory database per item (tests/sql_oracle.py).
+
 The original seven keep their own oracles in test_brain.py and
 test_brain_python.py (`oracle=""`); only they may skip the generic one.
 """
@@ -38,20 +42,22 @@ import shutil
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 from code_coach import brain
 from code_coach.brain import ACTIVITIES, ACTIVITIES_BY_ID, CHECK, activities_in, activity_for, make_round
 from code_coach.brain.items import Activity
-from tests import dart_oracle, flutter_oracle
+from tests import c_oracle, dart_oracle, flutter_oracle, sql_oracle
 
 NODE = shutil.which("node")
 ORIGINAL_IDS = ("eval", "truthy", "loops", "trace", "brackets", "recall", "syntax")
-LANGS = ("python", "javascript", "dart")
+LANGS = ("python", "javascript", "dart", "c", "sql")
 #: How a Dart activity's printed lines become its value (Activity.oracle); python and javascript only have "value".
 DART_MODES = ("value", "lines", "error")
 #: A Dart-language activity about Flutter WIDGETS: held to a real `flutter test` (tests/flutter_oracle.py), not to `dart`.
 FLUTTER_MODE = "flutter"
 SEEDS = range(40)
+WEB = Path(__file__).resolve().parent.parent / "web"
 TEMPLATE_SEEDS = range(8)
 CONCEPT = re.compile(r"^[a-z]+([ -][a-z]+)*$")
 
@@ -159,7 +165,8 @@ class DiscoveryTests(unittest.TestCase):
     def test_an_activity_is_played_in_exactly_the_languages_it_has_a_generator_for(self) -> None:
         for a in ACTIVITIES:
             self.assertEqual(a.languages, tuple(
-                lang for lang, make in (("python", a.make_py), ("javascript", a.make), ("dart", a.make_dart)) if make))
+                lang for lang, make in (("python", a.make_py), ("javascript", a.make), ("dart", a.make_dart),
+                                        ("c", a.make_c), ("sql", a.make_sql)) if make))
             for language in LANGS:
                 if language in a.languages:
                     self.assertEqual(activity_for(a.id, language).id, a.id)
@@ -206,7 +213,8 @@ class DiscoveryTests(unittest.TestCase):
             for a in s["activities"]:
                 self.assertTrue(a["group"], a["id"])
                 self.assertTrue(a["concepts"], a["id"])
-            self.assertEqual(s["languages"], ["python", "javascript", "dart"], "Python first, then JavaScript, then Dart")
+            self.assertEqual(s["languages"], ["python", "javascript", "dart", "c", "sql"],
+                             "Python first, then JavaScript, Dart, C and SQL")
             self.assertEqual(set(s["groups"]), {a["group"] for a in s["activities"]}, "no empty heading")
             self.assertEqual(s["check"], list(brain.check_for(language)))
 
@@ -272,7 +280,10 @@ class ShapeTests(unittest.TestCase):
         py_banned = re.compile(r"\b(true|false|null|undefined)\b")
         js_banned = re.compile(r"\b(True|False|None)\b")
         dart_banned = re.compile(r"\b(True|False|None|undefined)\b")
-        banned = {"python": py_banned, "javascript": js_banned, "dart": dart_banned}
+        # C prints numbers and text (1 and 0 for a truth value); SQL prints 1/0 and NULL (typeof() says the word null).
+        c_banned = re.compile(r"\b(True|False|None|undefined|null)\b")
+        sql_banned = re.compile(r"\b(True|False|None|undefined)\b")
+        banned = {"python": py_banned, "javascript": js_banned, "dart": dart_banned, "c": c_banned, "sql": sql_banned}
         for language, pattern in banned.items():
             for a in activities_in(language):
                 for seed in range(10):
@@ -696,6 +707,301 @@ class FlutterOracleTests(unittest.TestCase):
         self.assertEqual(len([g for g in got if g.startswith("COMPILE ERROR")]), 2, "only the two broken items fail")
 
 
+# ── C: held to the real compilers, in ONE batch for every C activity ────
+
+#: C compiles are the dear ones (a complete program is its own translation unit), so fewer samples than the others:
+#: every template on 6 seeds plus 12 whole rounds, ALL C activities together in one batch (tests/c_oracle.py).
+C_TEMPLATE_SEEDS = range(6)
+C_ROUND_SEEDS = range(12)
+
+
+def _c_samples(activity) -> list:
+    seen: dict[str, object] = {}
+    for seed in C_ROUND_SEEDS:
+        for item in make_round(activity.id, seed, "c"):
+            seen.setdefault(item.prompt + "\x00" + item.check, item)
+    for template in getattr(activity_for(activity.id, "c").make, "templates", ()):
+        for seed in C_TEMPLATE_SEEDS:
+            item = template(random.Random(seed))
+            seen.setdefault(item.prompt + "\x00" + item.check, item)
+    return list(seen.values())
+
+
+_C_RESULTS: dict | None = None
+
+
+def c_results() -> dict:
+    """{activity id: [(item, Checked)]} for EVERY C activity: one batch through every build (value and warnings), made once
+    per test process and shared by the tests below."""
+    global _C_RESULTS
+    if _C_RESULTS is None:
+        samples = {a.id: _c_samples(a) for a in activities_in("c")}
+        flat = [(a_id, i) for a_id, items in samples.items() for i in items]
+        got = c_oracle.check_items([i.check or i.prompt for _, i in flat])
+        out: dict[str, list] = {a_id: [] for a_id in samples}
+        for (a_id, i), g in zip(flat, got):
+            out[a_id].append((i, g))
+        _C_RESULTS = out
+    return _C_RESULTS
+
+
+_C_UB: dict | None = None
+
+
+def c_undefined() -> dict:
+    """{(activity id, prompt): the undefined behaviour the sanitizer found} - one sanitized batch, made once."""
+    global _C_UB
+    if _C_UB is None:
+        flat = [(a_id, i) for a_id, pairs in c_results().items() for i, _ in pairs]
+        found = c_oracle.ub_findings([i.check or i.prompt for _, i in flat])
+        _C_UB = {(flat[k][0], flat[k][1].prompt): why for k, why in found.items()}
+    return _C_UB
+
+
+class CShapeTests(unittest.TestCase):
+    """What needs no compiler: how the C Core Pack is wired and what its items look like."""
+
+    def test_the_c_core_pack_is_eight_c_only_activities_with_many_templates(self) -> None:
+        if "pack_ccore" not in brain.PACKS:
+            self.skipTest("no C core pack")
+        from code_coach.brain import pack_ccore
+
+        self.assertEqual([a.id for a in pack_ccore.ACTIVITIES], [
+            "c_int", "c_printf", "c_string", "c_bits", "c_loop", "c_array", "c_order", "c_scope"])
+        for a in pack_ccore.ACTIVITIES:
+            self.assertEqual(a.languages, ("c",), a.id)
+            self.assertEqual(a.group, "C core")
+            self.assertEqual(a.oracle, "value")
+            self.assertGreaterEqual(len(a.make_c.templates), 40, a.id)
+        self.assertEqual(brain.check_for("c"), ("c_int", "c_printf", "c_loop"))
+
+    def test_a_c_activity_is_listed_under_c_alone(self) -> None:
+        c_only = [a.id for a in ACTIVITIES if a.languages == ("c",)]
+        self.assertTrue(c_only)
+        for language in ("python", "javascript", "dart", "sql"):
+            listed = {x["id"] for x in brain.summary(language=language)["activities"]}
+            self.assertFalse(listed & set(c_only), language)
+        in_c = brain.summary(language="c")
+        self.assertEqual({x["id"] for x in in_c["activities"]}, {a.id for a in activities_in("c")})
+        self.assertTrue(set(brain.check_for("c")) <= {x["id"] for x in in_c["activities"]})
+
+    def test_a_c_item_follows_the_item_convention(self) -> None:
+        # headers are never the item's own; the program prints its answer; the answer starts and ends with something visible
+        for a in activities_in("c"):
+            for i in _c_samples(a):
+                with self.subTest(activity=a.id, prompt=i.prompt):
+                    program = i.check or i.prompt
+                    self.assertIn("printf", program, "a C item prints its own answer")
+                    self.assertEqual(c_oracle.lint(program), "", "something that can differ between machines")
+                    full = c_oracle.full_program(program)
+                    self.assertTrue(full.startswith(c_oracle.HEADERS))
+                    self.assertRegex(full, r"\bmain\s*\(")
+                    self.assertEqual(i.answer, i.answer.strip())
+
+    def test_the_four_headers_are_the_ones_run_it_adds(self) -> None:
+        ts = (WEB / "src" / "lib" / "brainRound.ts").read_text(encoding="utf-8")
+        shown = re.search(r'C_HEADERS = "(.*?)";', ts).group(1)
+        self.assertEqual(shown.encode().decode("unicode_escape"), c_oracle.HEADERS)
+
+    def test_isolate_makes_file_level_names_static_so_two_programs_can_share_them(self) -> None:
+        code = "int total = 0;\nconst int k[2] = {1, 2};\nint next(void) {\n    static int n;\n    return ++n;\n}\nint main(void) {\n    return 0;\n}"
+        out = c_oracle.isolate(code)
+        self.assertIn("static int total = 0;", out)
+        self.assertIn("static const int k[2]", out)
+        self.assertIn("static int next(void) {", out)
+        self.assertIn("    static int n;", out, "a local is untouched")
+        self.assertIn("int main(void) {\n    return 0;\n}", out)
+        self.assertNotIn("static int main", out)
+        self.assertEqual(c_oracle.isolate("struct P {\n    int x;\n};\nint main(void) {\n    struct P p = {1};\n    return p.x;\n}").count("static"), 0)
+        # main gets the `return 0;` that its renamed twin needs
+        self.assertIn("return 0;", c_oracle.isolate("int main(void) {\n    puts(\"x\");\n}"))
+
+
+@unittest.skipUnless(c_oracle.HAVE_COMPILER, "needs a C compiler (clang, gcc or Visual Studio)")
+class COracleTests(unittest.TestCase):
+    """THE ORACLE for every C activity: each template on several seeds plus whole rounds, ALL C activities in one batch
+    through every build (tests/c_oracle.py). A new C pack is picked up here with no edit: this goes over
+    `activities_in("c")`."""
+
+    def test_c_answers_are_what_the_real_compilers_print_on_every_build(self) -> None:
+        for a_id, pairs in c_results().items():
+            self.assertGreater(len(pairs), 20, a_id)
+            wrong = [(i.prompt, i.answer, g.value) for i, g in pairs if g.value != i.answer]
+            self.assertEqual(wrong[:5], [], f"{a_id} (c): {len(wrong)} of {len(pairs)} disagree with the compilers")
+
+    def test_every_c_build_really_took_part(self) -> None:
+        names = {b.name for b in c_oracle.DEFAULT_BUILDS}
+        self.assertGreaterEqual(len(names), 2, "at least -O0 and -O2/unsigned char")
+        if c_oracle.VCVARS:
+            self.assertIn("msvc /Od", names)
+        any_pair = next(iter(c_results().values()))[0][1]
+        self.assertEqual(set(any_pair.builds), names)
+
+    def test_c_items_trigger_only_harmless_warnings(self) -> None:
+        for a_id, pairs in c_results().items():
+            bad = [(i.prompt, c_oracle.bad_warnings(g.warnings)) for i, g in pairs if c_oracle.bad_warnings(g.warnings)]
+            self.assertEqual(bad[:5], [], f"{a_id}: {len(bad)} items trigger a warning that smells of undefined behaviour")
+
+    @unittest.skipUnless(c_oracle.sanitizer_available(), "needs clang for the sanitizer")
+    def test_the_undefined_behaviour_sanitizer_finds_nothing(self) -> None:
+        self.assertEqual(sorted(c_undefined().items())[:5], [])
+
+
+@unittest.skipUnless(c_oracle.HAVE_COMPILER, "needs a C compiler (clang, gcc or Visual Studio)")
+class COracleSelfTests(unittest.TestCase):
+    """The C oracle is held to account: a wrong model fails it, a broken item is named, one item cannot hide the rest."""
+
+    def test_a_wrong_c_model_fails_the_oracle(self) -> None:
+        from dataclasses import replace
+
+        pairs = c_results()["c_int"][:30] + c_results()["c_printf"][:30]
+        self.assertEqual([i.prompt for i, g in pairs if g.value != i.answer], [])
+        # sabotage: the model says / rounds down for negatives, that a uint8_t does not wrap, ... (every answer one off)
+        sabotaged = [replace(i, answer=str(int(i.answer) + 1) if i.answer.lstrip("-").isdigit() else i.answer + "?") for i, _ in pairs]
+        wrong = [i for i, (_, g) in zip(sabotaged, pairs) if g.value != i.answer]
+        self.assertGreater(len(wrong), 40, "the oracle must notice wrong answers")
+
+    def test_an_item_that_does_not_compile_is_named_by_file_and_line_and_hides_nothing(self) -> None:
+        programs = ['printf("%d\\n", 1 + 1);', 'int x = ;\nprintf("%d\\n", x);', 'printf("fine\\n");',
+                    'int a = 3;\nprintf("%d\\n", a +* 2);', 'printf("%d\\n", 7 / 2);']
+        got = c_oracle.run_batch(programs)
+        self.assertEqual([r.value() for r in got][::2], ["2", "fine", "3"])
+        self.assertIn("line 1 of the item", got[1].compile_error, "the message names the line inside the item")
+        self.assertIn("line 2 of the item", got[3].compile_error)
+        self.assertTrue(got[1].value().startswith("COMPILE ERROR"))
+        checked = c_oracle.check_items(programs)
+        self.assertTrue(checked[1].value.startswith("COMPILE ERROR") or checked[1].value.startswith("BUILDS DIFFER"))
+
+    def test_a_crash_or_a_hang_names_the_item_and_the_rest_still_run(self) -> None:
+        programs = ['printf("a\\n");', 'int *p = NULL;\nprintf("%d\\n", *p);', 'printf("b\\n");', 'for (;;) {\n}', 'printf("c\\n");']
+        old = c_oracle.RUN_SECONDS
+        c_oracle.RUN_SECONDS = 3.0
+        try:
+            got = c_oracle.run_batch(programs, c_oracle.DEFAULT_BUILDS[0])
+        finally:
+            c_oracle.RUN_SECONDS = old
+        self.assertEqual([r.output.strip() if r.output is not None else None for r in got], ["a", None, "b", None, "c"])
+        self.assertIn("crashed", got[1].stopped)
+        self.assertIn("ran for too long", got[3].stopped)
+
+    def test_builds_that_disagree_are_reported_by_name(self) -> None:
+        # plain char holding 200 is -56 on one build and 200 on the other: not portable, so not an answer
+        got = c_oracle.check_items(['char c = 200;\nprintf("%d\\n", c);'])
+        self.assertTrue(got[0].value.startswith("BUILDS DIFFER"), got[0].value)
+        self.assertIn("-56", got[0].value)
+
+    def test_two_complete_programs_may_declare_the_same_names(self) -> None:
+        programs = ['int counter(void) {\n    static int n = 0;\n    return ++n;\n}\nint main(void) {\n    counter();\n    printf("%d\\n", counter());\n}',
+                    'int counter(void) {\n    static int n = 10;\n    return ++n;\n}\nint main(void) {\n    printf("%d\\n", counter());\n}',
+                    'int total = 5;\nint main(void) {\n    printf("%d\\n", total);\n}',
+                    'int total = 7;\nint main(void) {\n    printf("%d\\n", total);\n}',
+                    'printf("body\\n");']
+        self.assertEqual(c_oracle.c_values(programs), ["2", "11", "5", "7", "body"])
+
+    @unittest.skipUnless(c_oracle.sanitizer_available(), "needs clang for the sanitizer")
+    def test_the_sanitizer_names_the_item_that_does_something_undefined(self) -> None:
+        programs = ['printf("%d\\n", 1);', 'int a = 2147483647;\nprintf("%d\\n", a + 1);', 'int x = 3;\nprintf("%d\\n", x << 40);']
+        found = c_oracle.ub_findings(programs)
+        self.assertEqual(sorted(found), [1, 2])
+        self.assertIn("signed integer overflow", found[1])
+        self.assertIn("line 2 of the item", found[1])
+
+    def test_the_lint_refuses_what_differs_between_machines(self) -> None:
+        for bad in ('printf("%p\\n", (void *)0);', "int r = rand();", "char c = 200;", '#include <stdlib.h>\nint x = 1;'):
+            self.assertTrue(c_oracle.lint(bad), bad)
+        self.assertEqual(c_oracle.lint('printf("%d\\n", 1);'), "")
+
+
+# ── SQL: held to the real SQLite, one fresh in-memory database per item ─
+
+class SqlShapeTests(unittest.TestCase):
+    def test_the_sql_core_pack_is_eight_sql_only_activities_with_many_templates(self) -> None:
+        if "pack_sqlcore" not in brain.PACKS:
+            self.skipTest("no SQL core pack")
+        from code_coach.brain import pack_sqlcore
+
+        self.assertEqual([a.id for a in pack_sqlcore.ACTIVITIES], [
+            "sql_count", "sql_null", "sql_group", "sql_join", "sql_order", "sql_scalar", "sql_case", "sql_window"])
+        for a in pack_sqlcore.ACTIVITIES:
+            self.assertEqual(a.languages, ("sql",), a.id)
+            self.assertEqual(a.group, "SQL core")
+            self.assertEqual(a.oracle, "value")
+            self.assertGreaterEqual(len(a.make_sql.templates), 40, a.id)
+        self.assertEqual(brain.check_for("sql"), ("sql_count", "sql_null", "sql_scalar"))
+
+    def test_a_sql_activity_is_listed_under_sql_alone(self) -> None:
+        sql_only = [a.id for a in ACTIVITIES if a.languages == ("sql",)]
+        self.assertTrue(sql_only)
+        for language in ("python", "javascript", "dart", "c"):
+            listed = {x["id"] for x in brain.summary(language=language)["activities"]}
+            self.assertFalse(listed & set(sql_only), language)
+        in_sql = brain.summary(language="sql")
+        self.assertEqual({x["id"] for x in in_sql["activities"]}, {a.id for a in activities_in("sql")})
+        self.assertTrue(set(brain.check_for("sql")) <= {x["id"] for x in in_sql["activities"]})
+
+    def test_a_sql_item_is_a_whole_script_that_ends_in_a_query(self) -> None:
+        for a in activities_in("sql"):
+            for i in _samples(a, "sql"):
+                with self.subTest(activity=a.id, prompt=i.prompt):
+                    program = i.check or i.prompt
+                    last = program.rstrip().split("\n")[-1]
+                    self.assertTrue(last.startswith("SELECT"), "the last line is the query")
+                    self.assertTrue(program.rstrip().endswith(";"))
+                    self.assertFalse(i.answer.startswith(("ERROR", "COMPILE")))
+
+
+class SqlOracleTests(unittest.TestCase):
+    """THE ORACLE for every SQL activity: each template on several seeds plus 40 whole rounds, every script in a fresh
+    in-memory SQLite (tests/sql_oracle.py). A new SQL pack is picked up here with no edit: this goes over
+    `activities_in("sql")`."""
+
+    def test_sql_answers_are_what_sqlite_returns(self) -> None:
+        for a in activities_in("sql"):
+            items = _samples(a, "sql")
+            self.assertGreater(len(items), 20, a.id)
+            got = sql_oracle.sql_values([i.check or i.prompt for i in items])
+            wrong = [(i.prompt, i.answer, g) for i, g in zip(items, got) if g != i.answer]
+            self.assertEqual(wrong[:5], [], f"{a.id} (sql): {len(wrong)} of {len(items)} disagree with SQLite")
+
+    def test_the_in_process_oracle_prints_what_the_real_driver_prints(self) -> None:
+        # the driver is what "Run it" uses: a handful of items from every activity through it, one process each
+        picks = []
+        for a in activities_in("sql"):
+            picks.extend(_samples(a, "sql")[:3])
+        self.assertGreater(len(picks), 20)
+        for i in picks:
+            program = i.check or i.prompt
+            self.assertEqual(sql_oracle.driver_value(program), sql_oracle.run_sql(program), program)
+            self.assertEqual(sql_oracle.driver_value(program), i.answer, program)
+
+    def test_the_answer_format_is_the_drivers(self) -> None:
+        run = sql_oracle.run_sql
+        self.assertEqual(run("SELECT 7 / 2, 7 / 2.0, NULL, 'x';"), "3|3.5|NULL|x")
+        self.assertEqual(run("SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT NULL;"), "1; 2; NULL")
+        self.assertEqual(run("SELECT 0.1 + 0.2;"), "0.30000000000000004")
+        self.assertEqual(run("CREATE TABLE t(a); SELECT a FROM t;"), "", "no rows prints nothing")
+        self.assertEqual(run("CREATE TABLE t(a); INSERT INTO t VALUES (1); SELECT a FROM t; SELECT 5;"), "5", "the LAST SELECT")
+        self.assertTrue(run("SELECT nope FROM nowhere;").startswith("ERROR: "))
+
+
+class SqlOracleSelfTests(unittest.TestCase):
+    def test_a_wrong_sql_model_fails_the_oracle(self) -> None:
+        from dataclasses import replace
+
+        a = ACTIVITIES_BY_ID["sql_scalar"]
+        items = _samples(a, "sql")[:60]
+        self.assertEqual([i.prompt for i, g in zip(items, sql_oracle.sql_values([i.prompt for i in items])) if g != i.answer], [])
+        # sabotage: the model says SQL divides integers like Python's / (a real), and that NULL sorts last
+        sabotaged = [replace(i, answer=str(float(i.answer)) if i.answer.lstrip("-").isdigit() else i.answer + "!") for i in items]
+        wrong = [1 for i, g in zip(sabotaged, sql_oracle.sql_values([i.prompt for i in sabotaged])) if g != i.answer]
+        self.assertGreater(len(wrong), 30, "the oracle must notice wrong answers")
+
+    def test_every_item_runs_in_its_own_database(self) -> None:
+        got = sql_oracle.sql_values(["CREATE TABLE t(a); INSERT INTO t VALUES (1); SELECT COUNT(*) FROM t;",
+                                     "CREATE TABLE t(a); SELECT COUNT(*) FROM t;"])
+        self.assertEqual(got, ["1", "0"], "the second script sees an empty t: nothing leaks from the first")
+
+
 # ── Per-language code age, history and the routes ───────────────────────
 
 class DartHistoryTests(unittest.TestCase):
@@ -830,6 +1136,162 @@ class DartHistoryTests(unittest.TestCase):
             self.assertEqual(caught.exception.status_code, 400)
         with self.assertRaises(HTTPException):
             brain_run(BrainRunRequest(code="print(1)", language="python"))
+
+
+class CAndSqlHistoryTests(unittest.TestCase):
+    """C and SQL are languages like the others: their rounds are kept per language, lazily, and an old history file loads."""
+
+    def test_an_old_history_file_without_c_or_sql_keys_still_loads_and_the_first_round_adds_the_key(self) -> None:
+        import json as _json
+        from datetime import date
+
+        path = brain.save_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        old = [{"day": "2026-10-01", "activity": "eval", "seconds": 50.0, "errors": 1, "total": 20, "age": 40, "check_id": ""},
+               {"day": "2026-10-02", "activity": "dart_eval", "seconds": 40.0, "errors": 0, "total": 20, "age": 30, "check_id": "",
+                "language": "dart"}]
+        path.write_text(_json.dumps({"results": old}), encoding="utf-8")
+        for language in ("c", "sql"):
+            s = brain.summary(today=date(2026, 10, 2), language=language)
+            self.assertTrue(all(a["best"] is None and a["last"] is None for a in s["activities"]), language)
+            self.assertEqual(s["streak"], 2, "training in any language counts toward the streak")
+            self.assertEqual(s["checkAges"], [])
+        brain.record("c_int", 40, 0, 16, today=date(2026, 10, 3), language="c")
+        brain.record("sql_count", 40, 0, 10, today=date(2026, 10, 3), language="sql")
+        stored = _json.loads(path.read_text(encoding="utf-8"))["results"]
+        self.assertEqual([r.get("language", "javascript") for r in stored], ["javascript", "dart", "c", "sql"])
+        self.assertEqual(brain.summary(today=date(2026, 10, 3), language="dart")["activities"][0]["best"]["age"], 30)
+
+    def test_c_and_sql_results_are_kept_per_language_like_the_others(self) -> None:
+        from datetime import date
+
+        day = date(2026, 10, 5)
+        for language, activity, count in (("c", "c_int", 16), ("sql", "sql_count", 10)):
+            brain.record(activity, 100, 2, count, today=day, language=language)
+            brain.record(activity, 40, 0, count, today=day, language=language)
+            entry = next(a for a in brain.summary(today=day, language=language)["activities"] if a["id"] == activity)
+            self.assertEqual(entry["best"]["seconds"], 40)
+            self.assertEqual(entry["last"]["seconds"], 40)
+            self.assertEqual(entry["best"]["language"], language)
+            for other in set(LANGS) - {language}:
+                self.assertNotIn(activity, {a["id"] for a in brain.summary(today=day, language=other)["activities"]})
+            self.assertLess(brain.code_age(activity, 40, 0, count, language), brain.code_age(activity, 100, 2, count, language))
+            with self.assertRaises(KeyError):
+                brain.code_age(activity, 40, 0, count, "python")
+
+    def test_each_language_has_its_own_check_trio(self) -> None:
+        from datetime import date
+
+        day = date(2026, 10, 6)
+        for language in ("c", "sql"):
+            trio = brain.check_for(language)
+            self.assertEqual(len(trio), 3)
+            self.assertTrue(all(ACTIVITIES_BY_ID[x].languages == (language,) for x in trio))
+            for activity_id in trio[:2]:  # an unfinished check has no age
+                brain.record(activity_id, 30, 1, ACTIVITIES_BY_ID[activity_id].count, check_id=f"2026-10-06/{language}",
+                             today=day, language=language)
+            self.assertEqual(brain.summary(today=day, language=language)["checkAges"], [])
+            brain.record(trio[2], 30, 1, ACTIVITIES_BY_ID[trio[2]].count, check_id=f"2026-10-06/{language}", today=day, language=language)
+            self.assertEqual([c["day"] for c in brain.summary(today=day, language=language)["checkAges"]], ["2026-10-06"])
+            self.assertEqual(brain.summary(today=day, language=language)["check"], list(trio))
+        self.assertEqual(brain.summary(today=day, language="dart")["checkAges"], [], "a C or SQL check is not a Dart one")
+        self.assertEqual(brain.summary(today=day, language="python")["checkAges"], [])
+        self.assertEqual(len({brain.check_for(x) for x in LANGS}), 4, "Python and JavaScript share one trio, the rest have their own")
+
+    def test_the_routes_know_c_and_sql(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api.schemas import BrainResultRequest
+        from code_coach.api.server import brain_result, brain_round, brain_summary
+
+        for language, activity, group in (("c", "c_int", "C core"), ("sql", "sql_count", "SQL core")):
+            s = brain_summary(language)
+            self.assertEqual(s["language"], language)
+            self.assertEqual({a["id"] for a in s["activities"]}, {a.id for a in activities_in(language)})
+            self.assertIn(group, s["groups"])
+            self.assertEqual(set(s["groups"]), {a.group for a in activities_in(language)})
+            self.assertEqual(s["check"], list(brain.check_for(language)))
+            r = brain_round(activity, 3, language)
+            self.assertEqual((r["language"], len(r["items"])), (language, ACTIVITIES_BY_ID[activity].count))
+            for bad_language in set(LANGS) - {language}:
+                with self.assertRaises(HTTPException) as caught:
+                    brain_round(activity, 3, bad_language)
+                self.assertEqual(caught.exception.status_code, 404)
+            with self.assertRaises(HTTPException):
+                brain_round("eval", 3, language)  # a Python/JavaScript activity with no version in this language
+            got = brain_result(BrainResultRequest(activity=activity, seconds=40, errors=0, total=10, language=language))
+            self.assertTrue(got["best"])
+            with self.assertRaises(HTTPException):
+                brain_result(BrainResultRequest(activity=activity, seconds=40, errors=0, total=10, language="python"))
+            with self.assertRaises(HTTPException):
+                brain_result(BrainResultRequest(activity="eval", seconds=40, errors=0, total=20, language=language))
+        with self.assertRaises(HTTPException):
+            brain_summary("cobol")
+
+    def test_run_it_runs_a_sql_script_for_real(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api.schemas import BrainRunRequest
+        from code_coach.api.server import brain_run
+
+        ok = brain_run(BrainRunRequest(code="CREATE TABLE t(a INT);\nINSERT INTO t VALUES (1),(NULL),(3);\nSELECT COUNT(a), AVG(a) FROM t;",
+                                       language="sql"))
+        self.assertTrue(ok["ok"])
+        self.assertEqual(ok["stdout"], "2|2.0")
+        self.assertIsNone(ok["error"])
+        bad = brain_run(BrainRunRequest(code="SELECT nope FROM nowhere;", language="sql"))
+        self.assertFalse(bad["ok"])
+        self.assertIn("no such table", bad["error"])
+        for code in ("", "x" * 5000):
+            with self.assertRaises(HTTPException) as caught:
+                brain_run(BrainRunRequest(code=code, language="sql"))
+            self.assertEqual(caught.exception.status_code, 400)
+
+    @unittest.skipUnless(c_oracle.HAVE_COMPILER, "needs a C compiler")
+    def test_run_it_runs_a_c_program_for_real(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api.schemas import BrainRunRequest
+        from code_coach.api.server import brain_run
+
+        ok = brain_run(BrainRunRequest(code=c_oracle.full_program('printf("%d\\n", -7 / 2);'), language="c"))
+        self.assertTrue(ok["ok"], ok)
+        self.assertEqual(ok["stdout"], "-3")
+        self.assertIsNone(ok["error"])
+        broken = brain_run(BrainRunRequest(code=c_oracle.full_program('int x = ;\nprintf("%d\\n", x);'), language="c"))
+        self.assertFalse(broken["ok"])
+        self.assertTrue(broken["compile_error"])
+        self.assertIn("error", broken["error"])
+        self.assertNotIn("gotcha_run_", broken["error"], "no throwaway folder in the message")
+        self.assertIn("snippet.c", broken["error"])
+        crash = brain_run(BrainRunRequest(code=c_oracle.full_program("int *p = NULL;\nprintf(\"%d\\n\", *p);"), language="c"))
+        self.assertFalse(crash["ok"])
+        for code in ("", "x" * 5000):
+            with self.assertRaises(HTTPException) as caught:
+                brain_run(BrainRunRequest(code=code, language="c"))
+            self.assertEqual(caught.exception.status_code, 400)
+
+    def test_run_it_refuses_the_languages_that_have_the_tracer(self) -> None:
+        from fastapi import HTTPException
+
+        from code_coach.api.schemas import BrainRunRequest
+        from code_coach.api.server import brain_run
+
+        for language in ("python", "javascript", "rust", ""):
+            with self.assertRaises(HTTPException) as caught:
+                brain_run(BrainRunRequest(code="print(1)", language=language))
+            self.assertEqual(caught.exception.status_code, 400, language)
+
+    def test_the_explain_words_of_a_c_or_sql_drill_are_its_glossary_words_and_nothing_breaks(self) -> None:
+        # C and SQL have glossaries (code_coach/glossary/terms_c_*.py, terms_sql_*.py): the chips show the activity's words
+        from code_coach.api import server
+
+        for language, context, first in (("c", "c_int", "integer"), ("sql", "sql_count", "where-clause")):
+            words = server.glossary_words(language=language, context=context).words
+            self.assertTrue(words, (language, context))
+            self.assertEqual(words[0].id, first)
+            self.assertTrue(all(w.language == language for w in words))
+        self.assertEqual(server.glossary_words(language="postgresql", context="sql_count").words, [])
 
 
 if __name__ == "__main__":

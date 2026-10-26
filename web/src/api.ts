@@ -273,10 +273,11 @@ export function postBrainResult(body: {
   return request("/api/brain/result", { method: "POST", body: JSON.stringify(body) });
 }
 
-/** "Run it" for a Dart drill: the snippet is run by a real `dart` (Dart has no tracer, so it cannot use /api/visualize).
+/** "Run it" for a Dart, C or SQL drill: the snippet is run for real by the server (Dart and C have no tracer, so they
+ *  cannot use /api/visualize; SQL goes through the Gotchas SQLite driver, which prints the last SELECT's rows).
  *  The answer has the shape of a VisualizeResult, with the compiler's or the program's own words in `error`. */
-export function runBrainCode(code: string): Promise<VisualizeResult> {
-  return request("/api/brain/run", { method: "POST", body: JSON.stringify({ code, language: "dart" }) });
+export function runBrainCode(code: string, language: "dart" | "c" | "sql" = "dart"): Promise<VisualizeResult> {
+  return request("/api/brain/run", { method: "POST", body: JSON.stringify({ code, language }) });
 }
 
 /** The farm when its screen opens. */

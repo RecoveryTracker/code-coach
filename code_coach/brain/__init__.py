@@ -19,6 +19,10 @@ A third language, Dart, was added after the first two: an activity is played in
 a language exactly when it has that language's generator (`make` JavaScript,
 `make_py` Python, `make_dart` Dart), so a pack may hold Dart-only activities.
 The Dart answers are held to the real `dart` by tests/dart_oracle.py, in batches.
+
+C and SQL came fourth and fifth (`make_c`, `make_sql`; `items.FIELDS` is the table). The C answers are held to the
+real compilers by tests/c_oracle.py (ONE source per batch, built two or three ways that must print the same), the SQL
+answers to the real SQLite by tests/sql_oracle.py. `_c_model.py` and `_sql_model.py` hold the hand models.
 """
 
 from __future__ import annotations
@@ -34,13 +38,13 @@ from pathlib import Path
 from typing import Any
 
 from . import pythonic
-from .items import Activity, Item
+from .items import FIELDS, LANGUAGES, Activity, Item
 
 # ── Items and activities ────────────────────────────────────────────────
 
 
-#: Python first: it is the language to practise; Dart came third.
-LANGUAGES = ("python", "javascript", "dart")
+# LANGUAGES (imported above, from items.py): Python first, it is the language to practise; Dart came third, then C and
+# SQL. The home screen follows the app's language picker, so this order is not shown anywhere.
 
 #: The headings of the home screen, in order (an Activity's `group` names one; others come after).
 GROUPS = ("Quick reads", "Predict the result", "Spot the problem", "Remember")
@@ -394,7 +398,7 @@ def _check_pack(name: str, acts: Any, taken: set[str]) -> tuple[Activity, ...]:
         if a.id in taken:
             raise ValueError(f"duplicate activity id {a.id!r}")
         if not a.languages:
-            raise ValueError(f"{a.id}: a pack activity needs at least one generator (make, make_py or make_dart)")
+            raise ValueError(f"{a.id}: a pack activity needs at least one generator (make, make_py, make_dart, make_c or make_sql)")
         taken.add(a.id)
     return acts
 
@@ -431,6 +435,8 @@ CHECKS: dict[str, tuple[str, ...]] = {
     "python": CHECK,
     "javascript": CHECK,
     "dart": ("dart_eval", "dart_null", "dart_final"),
+    "c": ("c_int", "c_printf", "c_loop"),
+    "sql": ("sql_count", "sql_null", "sql_scalar"),
 }
 
 
@@ -449,11 +455,9 @@ def activity_for(activity_id: str, language: str = "javascript") -> Activity:
         raise KeyError(language)
     if language == "javascript":
         return activity
-    if language == "python":
-        return replace(activity, make=activity.make_py, question=activity.question_py or activity.question,
-                       blurb=activity.blurb_py or activity.blurb)
-    return replace(activity, make=activity.make_dart, question=activity.question_dart or activity.question,
-                   blurb=activity.blurb_dart or activity.blurb)
+    make, question, blurb = FIELDS[language]
+    return replace(activity, make=getattr(activity, make), question=getattr(activity, question) or activity.question,
+                   blurb=getattr(activity, blurb) or activity.blurb)
 
 
 def activities_in(language: str) -> tuple[Activity, ...]:
@@ -536,8 +540,9 @@ class Result:
     age: int
     #: Part of a Code age check (check_id groups the three).
     check_id: str = ""
-    #: Which language was played ("javascript", "python" or "dart"). Rounds saved before Python existed have no
-    #: such field in the file and count as JavaScript; a "dart" round appears the first time one is played.
+    #: Which language was played ("javascript", "python", "dart", "c" or "sql"). Rounds saved before Python existed
+    #: have no such field in the file and count as JavaScript; a "dart", "c" or "sql" round appears the first time one
+    #: is played.
     language: str = "javascript"
 
 

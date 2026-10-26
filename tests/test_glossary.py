@@ -4,7 +4,8 @@ Four kinds of test:
 
 * Shape: every entry is well formed (ids, definitions, rules, links, a short definition).
 * THE ORACLE: every entry's example is RUN for real (python, node, and dart for the Dart/Flutter words, all of
-  them in ONE `dart run` through tests/dart_oracle.py) and must print exactly its `example_output`; every list
+  them in ONE `dart run` through tests/dart_oracle.py; C in ONE batch through tests/c_oracle.py on every build it has;
+  SQL through SQLite in tests/sql_oracle.py) and must print exactly its `example_output`; every list
   of falsy and truthy values is run through bool() / Boolean(), and the prose rule that lists them is parsed and
   run too. The glossary must never teach something false. The expected values written in this file (the
   "claims") are worked out by hand, not read from the entries. Dart rules are backed by DART_RULE_CHECKS (real
@@ -37,7 +38,7 @@ from code_coach.api.schemas import ExplainRequest, ExplainResponse
 from code_coach.brain import ACTIVITIES
 from code_coach.explain import explain_code
 from code_coach.glossary import CONTEXTS, find_words, lookup, words_for_context
-from tests import dart_oracle, flutter_oracle
+from tests import c_oracle, dart_oracle, flutter_oracle, sql_oracle
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -47,7 +48,8 @@ NODE = shutil.which("node")
 
 LANGS = glossary.LANGUAGES
 #: The two languages the old tests were written for. Truthy/falsy lists, the original seven activities and the
-#: terms_brain_* vocabulary exist only there; Dart (and Flutter, which is Dart) has its own tests further down.
+#: terms_brain_* vocabulary exist only there; Dart (and Flutter, which is Dart) has its own tests further down, and
+#: so do C and SQL (the last section of this file).
 CLASSIC = ("python", "javascript")
 ENTRIES = [(e.language, e.id) for lang in LANGS for e in glossary.all_entries(lang)]
 
@@ -166,6 +168,14 @@ def _dart_result(run) -> tuple[int, str, str]:
     return (1 if problem else 0), "\n".join(run.lines) + "\n", problem
 
 
+def _value_result(value: str) -> tuple[int, str, str]:
+    """A C or SQL oracle value (`COMPILE ERROR: ...`, `BUILDS DIFFER: ...`, `STOPPED: ...`, `ERROR: ...` or the
+    printed text) as the (exit code, stdout, stderr) the other languages' runners give."""
+    if value.startswith(("COMPILE ERROR", "BUILDS DIFFER", "STOPPED", "ERROR:")):
+        return 1, "", value
+    return 0, value + "\n", ""
+
+
 @functools.cache
 def example_results() -> dict[tuple[str, str], tuple[int, str, str]]:
     items = [e for lang in CLASSIC for e in glossary.all_entries(lang) if e.example and (lang == "python" or NODE)]
@@ -176,6 +186,13 @@ def example_results() -> dict[tuple[str, str], tuple[int, str, str]]:
         dart_items = [e for e in glossary.all_entries("dart") if e.example]
         runs = dart_oracle.run_batch([e.example for e in dart_items])
         found.update({(e.language, e.id): _dart_result(run) for e, run in zip(dart_items, runs)})
+    if c_oracle.HAVE_COMPILER:  # every C example, in ONE batch, built every way the oracle has
+        c_items = [e for e in glossary.all_entries("c") if e.example]
+        values = c_oracle.c_values([e.example for e in c_items])
+        found.update({(e.language, e.id): _value_result(v) for e, v in zip(c_items, values)})
+    for e in glossary.all_entries("sql"):  # every SQL example, in a fresh in-memory SQLite each
+        if e.example:
+            found[(e.language, e.id)] = _value_result(sql_oracle.run_sql(e.example))
     return found
 
 
@@ -188,6 +205,8 @@ def test_example_prints_exactly_what_the_entry_says(lang, id_):
         pytest.skip("needs node")
     if lang == "dart" and not dart_oracle.DART:
         pytest.skip("needs dart")
+    if lang == "c" and not c_oracle.HAVE_COMPILER:
+        pytest.skip("needs a C compiler")
     code, out, err = example_results()[(lang, id_)]
     assert code == 0, f"{lang}:{id_} crashed:\n{err[-600:]}"
     assert out.rstrip("\n") == e.example_output, f"{lang}:{id_} printed\n{out!r}\nnot\n{e.example_output!r}"
@@ -341,7 +360,10 @@ def test_concepts_that_resolve_in_no_language_the_activity_is_played_in_are_few_
     Dart-only activity is judged by the Dart glossary alone), so a missing word is a failing line."""
     missing = {}
     for activity in ACTIVITIES:
-        gone = [c for c in activity.concepts if all(glossary.resolve(lang, c) is None for lang in activity.languages)]
+        langs = [lang for lang in activity.languages if lang in LANGS]  # every language the app plays has a glossary now
+        if not langs:
+            continue
+        gone = [c for c in activity.concepts if all(glossary.resolve(lang, c) is None for lang in langs)]
         if gone:
             missing[activity.id] = gone
     too_many = {k: v for k, v in missing.items() if len(v) > MAX_UNRESOLVED_PER_ACTIVITY}
@@ -353,10 +375,13 @@ def test_every_pack_concept_is_a_plain_word_and_most_resolve_in_every_language_p
     counts as resolved when EVERY language its activity is played in has a word for it."""
     total = resolved = 0
     for activity in ACTIVITIES:
+        langs = [lang for lang in activity.languages if lang in LANGS]
         for c in activity.concepts:
             assert c == c.strip().lower() and c, f"{activity.id}: concept {c!r} is not a plain lowercase word"
+            if not langs:
+                continue
             total += 1
-            resolved += all(glossary.resolve(lang, c) is not None for lang in activity.languages)
+            resolved += all(glossary.resolve(lang, c) is not None for lang in langs)
     assert resolved >= 0.9 * total, f"only {resolved} of {total} concepts resolve in every language played"
 
 
@@ -459,7 +484,7 @@ def test_the_glossary_never_needs_the_brain_package_to_import():
 def test_context_words_are_always_present_and_first(lang, activity):
     for code in ("", "x", "print(1)", "if x:\n    pass", "\x00\x01 garbage ((("):
         got = find_words(code, lang, context=activity)
-        want = ids(words_for_context(activity, lang))
+        want = ids(words_for_context(activity, lang))[:8]  # find_words never returns more than its default limit
         assert ids(got)[: len(want)] == want
         assert len(set(ids(got))) == len(got)
 
@@ -614,8 +639,11 @@ def test_aliases_borrow_a_glossary():
     assert glossary.language_for("tfwr") == "python"
     assert glossary.language_for("TypeScript") == "javascript"
     assert glossary.language_for("dart") == "dart" and glossary.language_for(" Dart ") == "dart"
-    assert glossary.LANGUAGES == ("python", "javascript", "dart")
-    assert glossary.language_for("sql") == ""
+    assert glossary.LANGUAGES == ("python", "javascript", "dart", "c", "sql")
+    assert glossary.language_for("c") == "c" and glossary.language_for(" C ") == "c"
+    assert glossary.language_for("sql") == "sql" and glossary.language_for("SQL") == "sql"
+    assert glossary.language_for("postgresql") == "", "PostgreSQL is not SQLite: it has no glossary"
+    assert glossary.language_for("cpp") == "" and glossary.language_for("rust") == ""
     assert glossary.language_for(None) == ""
 
 
@@ -1322,6 +1350,40 @@ DART_SINK = (
 )
 
 
+C_SINK = r'''
+#include <stdio.h>
+#define SQ(x) ((x) * (x))
+#define SHOW(x) printf(#x " = %d\n", x)
+typedef struct Node { int value; struct Node *next; } Node;
+enum Color { RED, GREEN = 5 };
+static int count = 0;
+static int cmp(const void *a, const void *b) { return *(const int *)a - *(const int *)b; }
+int main(void) {
+  uint8_t b = 200; unsigned flags = (b & 0x0F) | (1u << 3);
+  int a[3] = {1, 2}, m[2][2];
+  int *p = &a[1], **pp = &p; char s[] = "hi"; const char *t = "a" "b";
+  for (int i = 0, j = 9; i < j; i++, j--) { if (a[i] > 1 && !p) continue; else break; }
+  switch (flags) { case 1: count += *p++; default: break; }
+  printf("%5.2f %-4d %s\n", 1.5, (int)sizeof a, s);
+  qsort(a, 3, sizeof a[0], cmp); strcpy(s, t); snprintf(s, sizeof s, "%d", -7 / 2 % 3);
+  int (*fp)(int, int) = NULL; Node *n = malloc(sizeof *n); free(n); return n->next ? 1 : 0;
+}
+'''
+SQL_SINK = '''
+WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 5)
+SELECT g, COUNT(*), SUM(v), AVG(v), MIN(v), MAX(v), COALESCE(x, 0), NULLIF(y, ''),
+  CASE WHEN v BETWEEN 1 AND 5 THEN 'a' ELSE 'b' END, ROW_NUMBER() OVER (PARTITION BY g ORDER BY v),
+  LAG(v) OVER (ORDER BY v), SUM(v) OVER (ORDER BY v), v / 2, v % 2, CAST(v AS TEXT) || 'x', substr(name, 1, 2)
+FROM t a LEFT JOIN u b ON a.id = b.id CROSS JOIN w
+WHERE name LIKE 'a%' AND id IN (SELECT id FROM z) AND NOT EXISTS (SELECT 1 FROM q) OR x IS NULL
+GROUP BY g HAVING COUNT(*) > 1 ORDER BY g DESC LIMIT 5 OFFSET 2;
+INSERT INTO t VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET v = excluded.v;
+UPDATE t SET v = v + 1 WHERE id = 2; DELETE FROM t WHERE id = 3;
+CREATE TABLE k (id INTEGER PRIMARY KEY, n TEXT NOT NULL UNIQUE DEFAULT 'x' CHECK (length(n) > 0));
+BEGIN; SAVEPOINT s; ROLLBACK TO s; COMMIT; SELECT date('2024-03-15', '+1 month');
+'''
+
+
 def test_find_words_never_exceeds_the_limit_with_the_whole_vocabulary_in_play():
     sink = {
         "python": (
@@ -1341,6 +1403,8 @@ def test_find_words_never_exceeds_the_limit_with_the_whole_vocabulary_in_play():
             "const total = nums.reduce((t, n) => t + n, 0) + Math.max(...nums) + items.at(-1);\n"
         ),
         "dart": DART_SINK,
+        "c": C_SINK,
+        "sql": SQL_SINK,
     }
     for lang in LANGS:
         for limit in (1, 2, 3, 5, 8, 13, 40):
@@ -1427,9 +1491,10 @@ def test_explain_with_no_context_still_works_and_old_fields_are_unchanged():
     assert ExplainRequest(code="x").context == ""
 
 
-def test_explain_for_a_language_without_a_reader_has_no_words():
-    r = explain("SELECT 1;", "sql")
+def test_explain_for_a_language_without_a_glossary_has_no_words():
+    r = explain("SELECT 1;", "postgresql")
     assert r.ok is False and r.words == []
+    assert explain("fn main() {}", "rust").words == []
 
 
 def test_explain_for_dart_has_no_reader_but_still_gets_its_dart_words():
@@ -3298,3 +3363,2157 @@ def test_chips_and_find_words_for_a_dart_drill_come_from_the_dart_glossary():
     assert ids(got)[:5] == ["short-circuit", "default-value", "null-aware-access", "ternary", "string"]
     assert "null-coalescing" in ids(got) or len(got) == 8
     assert all(w.language == "dart" for w in got)
+
+
+# ══ C and SQL: the fourth and fifth glossary languages ══════════════════════════════════════════════════════════════
+
+#: What a C rule check's expected value may be besides the exact text: "CE" = it does not compile (a compiler that
+#: accepts it, MSVC for example, shows up as BUILDS DIFFER, which counts), "STOPPED" = the program crashed, "DIFFER" =
+#: the builds disagree (an implementation-defined result), "ERROR" = (SQL) the script fails with that message.
+C_RULE_CHECKS: list[tuple[str, str, str]] = [
+    # integers and conversions
+    ("integer: / truncates, sizeof(char) is 1, suffixes pick the type", r"""
+        printf("%d %d %d %d\n", 7 / 2, (int)sizeof(char), (int)(sizeof(42LL) >= 8), (int)(sizeof(42u) == sizeof(int)));
+     """, "3 1 1 1"),
+    ("integer: int is at least 16 bits and long long at least 64", r"""
+        printf("%d %d\n", (int)(sizeof(int) >= 2), (int)(sizeof(long long) >= 8));
+     """, "1 1"),
+    ("fixed-width-integer: sizes are exact", r"""
+        printf("%d %d %d %d\n", (int)sizeof(uint8_t), (int)sizeof(uint16_t), (int)sizeof(uint32_t), (int)sizeof(uint64_t));
+     """, "1 2 4 8"),
+    ("fixed-width-integer: uint8_t holds 0 to 255 and wraps", r"""
+        uint8_t a = 255, b = 0;
+        a++;
+        b--;
+        printf("%d %d\n", a, b);
+     """, "0 255"),
+    ("signed-integer: the 8-bit range", r"""
+        printf("%d %d %d\n", INT8_MIN, INT8_MAX, UINT8_MAX);
+     """, "-128 127 255"),
+    ("signed-integer: a signed number mixed with unsigned becomes unsigned", r"""
+        printf("%d %d\n", -1 < 1u, -1 < 1);
+     """, "0 1"),
+    ("unsigned: 0u - 1 is the largest value, 255 + 1 in a uint8_t is 0", r"""
+        unsigned u = 0;
+        u--;
+        printf("%d %d\n", u == UINT32_MAX, (uint8_t)(255 + 1) == 0);
+     """, "1 1"),
+    ("unsigned: a negative number stored in an unsigned wraps", r"""
+        unsigned u = -1;
+        printf("%d\n", u == UINT32_MAX);
+     """, "1"),
+    ("unsigned: a size_t counted below zero becomes huge", r"""
+        size_t i = 0;
+        i--;
+        printf("%d\n", i > 100);
+     """, "1"),
+    ("twos-complement: -x equals ~x + 1", r"""
+        int ok = 1;
+        for (int x = -50; x < 50; x++) if (-x != ~x + 1) ok = 0;
+        printf("%d\n", ok);
+     """, "1"),
+    ("twos-complement: -1 is all ones and (uint8_t)-1 is 255", r"""
+        printf("%d %d\n", (uint8_t)-1, (unsigned)-1 == UINT32_MAX);
+     """, "255 1"),
+    ("integer-promotion: uint8_t operands are added as int", r"""
+        uint8_t a = 200, b = 100;
+        printf("%d %d\n", a + b, (int)(sizeof(a + b) == sizeof(int)));
+     """, "300 1"),
+    ("integer-promotion: ~ on a uint8_t gives a negative int", r"""
+        uint8_t x = 15;
+        printf("%d %d\n", ~x, (uint8_t)~x);
+     """, "-16 240"),
+    ("integer-promotion: a char passes through %d as its code", r"""
+        char c = 'A';
+        printf("%d\n", c);
+     """, "65"),
+    ("usual-arithmetic-conversions: int + double is double, 5 / 2 stays integer", r"""
+        double d = 5 / 2;
+        printf("%.1f %.1f\n", 1 + 0.5, d);
+     """, "1.5 2.0"),
+    ("type-conversion: double to int cuts toward zero", r"""
+        double a = 3.9, b = -3.9;
+        int x = a, y = b;
+        printf("%d %d\n", x, y);
+     """, "3 -3"),
+    ("type-conversion: a wider value narrowed to an unsigned type wraps", r"""
+        unsigned big = 300;
+        uint8_t s = big;
+        printf("%d\n", s);
+     """, "44"),
+    ("cast: the cast applies before the division", r"""
+        printf("%.1f %.1f\n", (double)7 / 2, (double)(7 / 2));
+     """, "3.5 3.0"),
+    ("cast: a cast does not change the variable", r"""
+        int a = 7;
+        double d = (double)a / 2;
+        printf("%d %.1f\n", a, d);
+     """, "7 3.5"),
+    ("overflow: unsigned UINT_MAX + 1 is 0", r"""
+        unsigned u = UINT32_MAX;
+        u += 1;
+        printf("%u\n", u);
+     """, "0"),
+    ("overflow: 260 stored in a uint8_t is 4", r"""
+        int n = 260;
+        uint8_t b = n;
+        printf("%d\n", b);
+     """, "4"),
+    ("overflow: checking before adding avoids the overflow", r"""
+        int a = INT32_MAX, b = 1;
+        if (a > INT32_MAX - b) printf("would overflow\n");
+        else printf("%d\n", a + b);
+     """, "would overflow"),
+    ("division: integer division rounds toward zero", r"""
+        printf("%d %d %d\n", 7 / 2, -7 / 2, 7 / -2);
+     """, "3 -3 -3"),
+    ("division: (a / b) * b + a % b is a", r"""
+        int ok = 1;
+        for (int a = -9; a <= 9; a++)
+            for (int b = -4; b <= 4; b++)
+                if (b != 0 && (a / b) * b + a % b != a) ok = 0;
+        printf("%d\n", ok);
+     """, "1"),
+    ("division: a floating operand keeps the fraction", r"""
+        printf("%.1f %.2f\n", 7 / 2.0, 1.0 / 3);
+     """, "3.5 0.33"),
+    ("modulo: the sign follows the left operand", r"""
+        printf("%d %d %d\n", 7 % 3, -7 % 3, 7 % -3);
+     """, "1 -1 1"),
+    ("modulo: -3 % 2 == 1 is false, != 0 is true", r"""
+        printf("%d %d\n", -3 % 2 == 1, -3 % 2 != 0);
+     """, "0 1"),
+    ("floating-point: 0.1 + 0.2 is not 0.3 but is close", r"""
+        double x = 0.1 + 0.2;
+        printf("%d %d\n", x == 0.3, x - 0.3 < 1e-9 && 0.3 - x < 1e-9);
+     """, "0 1"),
+    ("floating-point: float is 4 bytes, double 8, a literal is a double", r"""
+        printf("%d %d %d %d\n", (int)sizeof(float), (int)sizeof(double), (int)sizeof(3.14), (int)sizeof(3.14f));
+     """, "4 8 8 4"),
+    ("character: 'A' has type int in C", r"""
+        printf("%d %d\n", sizeof('A') == sizeof(int), (int)sizeof(char));
+     """, "1 1"),
+    ("character: c - '0' and 'a' + 1", r"""
+        printf("%d %c\n", '7' - '0', 'a' + 1);
+     """, "7 b"),
+    ("ascii: digits, capitals and lower case are in rows", r"""
+        printf("%d %d %d %d %d\n", 'a' - 'A', '9' - '0', 'Z' - 'A', 'z' - 'a', 'B' < 'a');
+     """, "32 9 25 25 1"),
+    ("sizeof: array bytes, element count and the terminator", r"""
+        int a[5];
+        printf("%d %d %d\n", (int)sizeof a, (int)(sizeof a / sizeof a[0]), (int)sizeof "abc");
+     """, "20 5 4"),
+    ("sizeof: does not evaluate its operand", r"""
+        int i = 1;
+        (void)sizeof(i++);
+        printf("%d\n", i);
+     """, "1"),
+    ("size-t: unsigned, so 0 - 1 is huge, and %zu prints it", r"""
+        size_t z = 0;
+        printf("%d %d %zu\n", z - 1 > 100, (size_t)-1 == SIZE_MAX, sizeof(char));
+     """, "1 1 1"),
+    ("integer-limits: INT_MIN, UINT_MAX and CHAR_BIT", r"""
+        #include <limits.h>
+        int main(void) {
+            printf("%d %d %d\n", INT_MIN == -INT_MAX - 1, UINT_MAX == 2u * INT_MAX + 1u, CHAR_BIT);
+            return 0;
+        }
+     """, "1 1 8"),
+    ("undefined-behavior: unsigned wraparound is not undefined, a guarded index is fine", r"""
+        unsigned u = UINT32_MAX;
+        u++;
+        int arr[3] = {1, 2, 3};
+        int i = 3;
+        printf("%u %d\n", u, i < 3 ? arr[i] : -1);
+     """, "0 -1"),
+    ("implementation-defined: right shift of a negative number keeps the sign here", r"""
+        printf("%d\n", -8 >> 1);
+     """, "-4"),
+    ("implementation-defined: plain char signedness differs between builds", r"""
+        char c = 200;
+        printf("%d\n", c);
+     """, "DIFFER"),
+    ("boolean: comparisons give 1 or 0", r"""
+        printf("%d %d %d %d\n", 5 > 3, 5 < 3, !5, !!5);
+     """, "1 0 0 1"),
+    ("boolean: negative, 0.1 and NULL tests", r"""
+        int t = 0;
+        if (-1) t += 1;
+        if (0.1) t += 2;
+        if (!NULL) t += 4;
+        if (!0.0) t += 8;
+        printf("%d\n", t);
+     """, "15"),
+    ("comparison: a chain like 20 < x < 30 is refused by clang", r"""
+        int x = 50;
+        printf("%d\n", 20 < x < 30);
+     """, "CE"),
+    ("comparison: (20 < x) < 30 is always true", r"""
+        int x = 50;
+        printf("%d %d\n", (20 < x) < 30, x > 20 && x < 30);
+     """, "1 0"),
+    ("comparison: == on two equal strings in different arrays compares addresses", r"""
+        char a[] = "hi", b[] = "hi";
+        printf("%d %d\n", a == b, strcmp(a, b) == 0);
+     """, "0 1"),
+    ("comparison: if (x = 0) assigns", r"""
+        int x = 5;
+        if (x = 0) printf("t");
+        printf("%d\n", x);
+     """, "0"),
+    ("assignment: chains and compound operators", r"""
+        int a, b;
+        a = b = 7;
+        a += 3;
+        a *= 2;
+        a -= 1;
+        a /= 3;
+        a %= 4;
+        printf("%d %d\n", a, b);
+     """, "2 7"),
+    ("assignment: an assignment is an expression", r"""
+        int b;
+        int c = (b = 2) + 1;
+        printf("%d %d\n", b, c);
+     """, "2 3"),
+    ("assignment: an array cannot be assigned", r"""
+        int a[2] = {1, 2}, b[2];
+        b = a;
+     """, "CE"),
+    ("increment: i++ gives the old value, ++i the new", r"""
+        int i = 5;
+        int a = i++;
+        int b = ++i;
+        printf("%d %d %d\n", a, b, i);
+     """, "5 7 7"),
+    ("increment: *p++ reads then moves, (*p)++ changes the value", r"""
+        int a[2] = {10, 20};
+        int *p = a;
+        int v = *p++;
+        int b[1] = {5};
+        int *q = b;
+        (*q)++;
+        printf("%d %d %d\n", v, *p, b[0]);
+     """, "10 20 6"),
+    ("operator: & is bitwise AND or address-of, * multiply or dereference", r"""
+        int x = 6;
+        int *p = &x;
+        printf("%d %d %d\n", x & 3, x * 2, *p);
+     """, "2 12 6"),
+    ("expression: an assignment has a value", r"""
+        int x;
+        int y = (x = 4) + 1;
+        printf("%d %d\n", x, y);
+     """, "4 5"),
+    ("precedence: == binds tighter than &", r"""
+        int a = 6;
+        printf("%d %d\n", a & 2 == 2, (a & 2) == 2);
+     """, "0 1"),
+    ("precedence: + binds tighter than <<", r"""
+        printf("%d\n", 1 + 2 << 3);
+     """, "24"),
+    ("precedence: && before ||, unary * before +", r"""
+        int v = 5;
+        int *p = &v;
+        printf("%d %d\n", 1 || 0 && 0, *p + 1);
+     """, "1 6"),
+    ("associativity: - and / left to right, ?: right to left", r"""
+        printf("%d %d %d\n", 8 - 3 - 2, 100 / 10 / 5, 0 ? 1 : 0 ? 2 : 3);
+     """, "3 2 3"),
+    ("short-circuit: && and || skip the right side, & does not", r"""
+        int n = 0;
+        int r = 0 && n++;
+        int s = 1 || n++;
+        int t = 1 & n++;
+        printf("%d %d %d %d\n", r, s, t, n);
+     """, "0 1 0 1"),
+    ("ternary: only the chosen part is evaluated", r"""
+        int n = 0;
+        int a = 1 ? 10 : n++;
+        int b = 0 ? n++ : 20;
+        printf("%d %d %d\n", a, b, n);
+     """, "10 20 0"),
+    ("comma-operator: the value of (1, 2, 3) is 3, and for with two counters", r"""
+        int x = (1, 2, 3);
+        int i, j;
+        for (i = 0, j = 5; i < j; i++, j--) {}
+        printf("%d %d %d\n", x, i, j);
+     """, "3 3 2"),
+    ("side-effect: sizeof and a skipped && operand do nothing", r"""
+        int i = 1, n = 0;
+        (void)sizeof(i++);
+        if (0 && n++) {}
+        printf("%d %d\n", i, n);
+     """, "1 0"),
+    ("sequence-point: separate statements fix the order", r"""
+        int i = 5;
+        int x = i++;
+        int y = i + 1;
+        printf("%d %d %d\n", x, y, i);
+     """, "5 7 6"),
+    ("evaluation-order: && is strictly left to right", r"""
+        int i = 0;
+        int ok = (i++ == 0) && (i++ == 1);
+        printf("%d %d\n", ok, i);
+     """, "1 2"),
+    ("bitwise-operator: & | ^ ~ and the difference from && and ^ as power", r"""
+        unsigned a = 12, b = 10;
+        printf("%u %u %u %u\n", a & b, a | b, a ^ b, ~a & 15u);
+        printf("%d %d %d %d\n", 1 & 2, 1 && 2, 2 ^ 3, ~0);
+     """, "8 14 6 3\n0 1 1 -1"),
+    ("bit-shift: << multiplies and >> divides", r"""
+        unsigned x = 5;
+        printf("%u %u %u %u\n", x << 1, x << 3, 40u >> 2, 1u << 31);
+     """, "10 40 10 2147483648"),
+    ("bit-mask: set, clear, toggle and test a bit", r"""
+        unsigned flags = 0;
+        flags |= 1u << 3;
+        flags |= 1u << 0;
+        flags &= ~(1u << 0);
+        flags ^= 1u << 5;
+        printf("%u %d %u\n", flags, (flags >> 3) & 1, (1u << 4) - 1);
+     """, "40 1 15"),
+    ("binary: a hex digit is 4 bits, a byte holds 0 to 255", r"""
+        printf("%d %d %d\n", 0xF == 15, 0xFF, 1 << 8);
+     """, "1 255 256"),
+    ("hexadecimal: 0x1F is 31, %#x adds the prefix, %04x pads", r"""
+        printf("%d %#x %04x %X\n", 0x1F, 255, 255, 255);
+     """, "31 0xff 00ff FF"),
+    ("octal: a leading zero means base 8", r"""
+        printf("%d %d %o\n", 010, 017, 8);
+     """, "8 15 10"),
+    ("octal: 08 does not compile", r"""
+        int x = 08;
+     """, "CE"),
+    ("variable: a global or static variable without a value starts at 0", r"""
+        int g;
+        int main(void) {
+            static int s;
+            printf("%d %d\n", g, s);
+            return 0;
+        }
+     """, "0 0"),
+    ("initialization: a partial array initialiser zero-fills", r"""
+        int a[5] = {1, 2};
+        printf("%d %d %d\n", a[1], a[2], a[4]);
+     """, "2 0 0"),
+    ("initialization: the size can come from the list", r"""
+        int a[] = {1, 2, 3};
+        printf("%d\n", (int)(sizeof a / sizeof a[0]));
+     """, "3"),
+    ("constant: assigning to a const variable does not compile", r"""
+        const int a = 1;
+        a = 2;
+     """, "CE"),
+    ("constant: #define is text replacement", r"""
+        #define LIMIT 3
+        int main(void) {
+            printf("%d\n", LIMIT * 2);
+            return 0;
+        }
+     """, "6"),
+    # text
+    ("printf: returns the character count, %% prints a percent sign", r"""
+        int n = printf("abc");
+        printf(" %d 100%%\n", n);
+     """, "abc 3 100%"),
+    ("format-specifier: %c with an int, %d with a char, %x and %o", r"""
+        printf("%c %d %x %o %5.2f|\n", 66, 'B', 255, 8, 3.14159);
+     """, "B 66 ff 10  3.14|"),
+    ("padding: width is a minimum, flags - 0 +", r"""
+        printf("[%5d][%-5d][%05d][%+d][%3d]\n", 42, 42, 42, 7, 12345);
+     """, "[   42][42   ][00042][+7][12345]"),
+    ("precision: %.2f, %.3s, %.5d and the default of six decimals", r"""
+        printf("%.2f|%.3s|%.5d|%f\n", 3.14159, "abcdef", 42, 2.5);
+     """, "3.14|abc|00042|2.500000"),
+    ("escape-sequence: one character each, and hex and octal escapes", r"""
+        printf("%d %d %c%c\n", (int)sizeof("a\n"), '\n', '\x41', '\101');
+     """, "3 10 AA"),
+    ("string: a char array is a changeable copy and has a terminator", r"""
+        char s[] = "hi";
+        s[0] = 'H';
+        printf("%s %d\n", s, (int)sizeof s);
+     """, "Hi 3"),
+    ("string-literal: neighbours join and sizeof counts the terminator", r"""
+        printf("%s %d\n", "ab" "cd", (int)sizeof("ab" "cd"));
+     """, "abcd 5"),
+    ("null-terminator: a zero byte in the middle ends the string", r"""
+        char s[] = "hello";
+        s[2] = '\0';
+        printf("%s %d %d\n", s, (int)strlen(s), (int)sizeof s);
+     """, "he 2 6"),
+    ("string-length: strlen and sizeof differ", r"""
+        char buf[20] = "hi";
+        printf("%d %d %d %d\n", (int)strlen("abc"), (int)sizeof("abc"), (int)strlen(buf), (int)sizeof buf);
+     """, "3 4 2 20"),
+    ("strcpy: copies the terminator and returns dest", r"""
+        char d[8];
+        char *r = strcpy(d, "abc");
+        printf("%s %d %d\n", d, r == d, d[3]);
+     """, "abc 1 0"),
+    ("strncpy: no terminator at n, zero padding when shorter", r"""
+        char a[6], b[6];
+        memset(a, 'x', 6);
+        memset(b, 'x', 6);
+        strncpy(a, "abc", 3);
+        strncpy(b, "ab", 5);
+        printf("%d\n%d %d %d\n", a[3] == 'x', b[2], b[3], b[4]);
+     """, "1\n0 0 0"),
+    ("strcat: appends at the terminator", r"""
+        char s[10] = "ab";
+        strcat(s, "cd");
+        strcat(s, "e");
+        printf("%s %d\n", s, (int)strlen(s));
+     """, "abcde 5"),
+    ("strcmp: only the sign, case-sensitive, prefix first", r"""
+        printf("%d %d %d %d\n", strcmp("a", "a") == 0, strcmp("Zebra", "apple") < 0, strcmp("ab", "abc") < 0, strcmp("b", "a") > 0);
+     """, "1 1 1 1"),
+    ("strchr: pointer difference is the index, NULL when absent", r"""
+        const char *s = "a=b=c";
+        printf("%d %d %d %d\n", (int)(strchr(s, '=') - s), (int)(strrchr(s, '=') - s), strchr(s, 'z') == NULL, strchr(s, '\0') == s + strlen(s));
+     """, "1 3 1 1"),
+    ("strstr: first occurrence, case-sensitive, empty needle at the start", r"""
+        const char *s = "find the needle here";
+        printf("%d %d %d\n", (int)(strstr(s, "needle") - s), strstr(s, "NEEDLE") == NULL, strstr(s, "") == s);
+     """, "9 1 1"),
+    ("memcpy: counts bytes; memmove handles overlap", r"""
+        int a[4] = {1, 2, 3, 4};
+        int b[3];
+        memcpy(b, a, sizeof b);
+        memmove(a + 1, a, 3 * sizeof a[0]);
+        printf("%d %d %d %d | %d\n", a[0], a[1], a[2], a[3], b[2]);
+     """, "1 1 2 3 | 3"),
+    ("memset: sets bytes, so an int becomes 0x01010101", r"""
+        int b[1];
+        memset(b, 1, sizeof b);
+        int z[2] = {5, 5};
+        memset(z, 0, sizeof z);
+        printf("%d %d\n", b[0], z[1]);
+     """, "16843009 0"),
+    ("memcmp: does not stop at a zero byte", r"""
+        printf("%d %d\n", memcmp("a\0b", "a\0c", 3) < 0, strcmp("a\0b", "a\0c"));
+     """, "1 0"),
+    ("snprintf: always terminates and returns the length it wanted", r"""
+        char b[4];
+        int n = snprintf(b, sizeof b, "%s", "abcdef");
+        printf("%s %d %d\n", b, n, b[3]);
+     """, "abc 6 0"),
+    ("puts: adds a newline, fputs does not", r"""
+        puts("a");
+        fputs("b", stdout);
+        puts("");
+     """, "a\nb"),
+    ("character-functions: is... tests and toupper", r"""
+        #include <ctype.h>
+        int main(void) {
+            printf("%d %d %d\n", isalpha('a') != 0, isupper('a') != 0, toupper('1'));
+            return 0;
+        }
+     """, "1 0 49"),
+    ("string-to-number: atoi stops at a non-digit, strtol reports where", r"""
+        #include <stdlib.h>
+        int main(void) {
+            char *e;
+            long v = strtol("ff", &e, 16);
+            printf("%d %d %ld %d\n", atoi("12abc"), atoi("abc"), v, *e == 0);
+            return 0;
+        }
+     """, "12 0 255 1"),
+    ("buffer-overflow: snprintf cuts the text to fit", r"""
+        char b[6];
+        snprintf(b, sizeof b, "%s", "overflowing");
+        printf("%s\n", b);
+     """, "overf"),
+    # memory
+    ("array: indexes from 0 and the element-count idiom", r"""
+        int a[4] = {10, 20, 30, 40};
+        printf("%d %d %d\n", a[0], a[3], (int)(sizeof a / sizeof a[0]));
+     """, "10 40 4"),
+    ("index: a[i] is *(a + i) and i[a]", r"""
+        int a[3] = {5, 6, 7};
+        printf("%d %d %d\n", a[1], *(a + 1), 1[a]);
+     """, "6 6 6"),
+    ("array-decay: sizeof of an array parameter is the pointer's size", r"""
+        static int f(int a[]) { return (int)sizeof a; }
+        int main(void) {
+            int a[10];
+            printf("%d %d\n", f(a) == (int)sizeof(int *), (int)sizeof a);
+            return 0;
+        }
+     """, "1 40"),
+    ("multidimensional-array: rows are contiguous", r"""
+        int m[2][3] = {{1, 2, 3}, {4, 5, 6}};
+        int *flat = &m[0][0];
+        printf("%d %d %d\n", flat[3], (int)(sizeof m / sizeof m[0]), (int)(sizeof m[0] / sizeof m[0][0]));
+     """, "4 2 3"),
+    ("array-of-strings: the strings can differ in length", r"""
+        const char *n[] = {"Ann", "Roberta"};
+        printf("%d %d %c\n", (int)strlen(n[0]), (int)strlen(n[1]), n[1][3]);
+     """, "3 7 e"),
+    ("pointer: two pointers alias and a pointer has its own size", r"""
+        int x = 1;
+        int *p = &x, *q = &x;
+        *p = 7;
+        printf("%d %d %d\n", *q, p == q, (int)(sizeof p == sizeof(void *)));
+     """, "7 1 1"),
+    ("address-of: &a[i] is a + i", r"""
+        int a[3] = {1, 2, 3};
+        printf("%d %d\n", &a[2] - &a[0] == 2, &a[1] == a + 1);
+     """, "1 1"),
+    ("dereference: * binds tighter than +", r"""
+        int x = 3;
+        int *p = &x;
+        printf("%d ", *p + 1);
+        (*p)++;
+        printf("%d\n", x);
+     """, "4 4"),
+    ("null-pointer: NULL is false and free(NULL) is allowed", r"""
+        #include <stdlib.h>
+        int main(void) {
+            int *p = NULL;
+            free(p);
+            printf("%d %d\n", !p, p == NULL);
+            return 0;
+        }
+     """, "1 1"),
+    ("pointer-arithmetic: p + 1 moves one element", r"""
+        int a[3];
+        char c[3];
+        printf("%d %d\n", (char *)(a + 1) - (char *)a == (int)sizeof(int), (int)((c + 1) - c));
+     """, "1 1"),
+    ("pointer-to-pointer: a function can change the caller's pointer", r"""
+        static void set(int **pp, int *to) { *pp = to; }
+        int main(void) {
+            int a = 1, b = 2;
+            int *p = &a;
+            set(&p, &b);
+            printf("%d\n", *p);
+            return 0;
+        }
+     """, "2"),
+    ("void-pointer: converts back without a cast in C", r"""
+        int n = 5;
+        void *v = &n;
+        int *i = v;
+        printf("%d\n", *i);
+     """, "5"),
+    ("const-pointer: nothing can be assigned through a pointer to const", r"""
+        int a = 1;
+        const int *pc = &a;
+        *pc = 5;
+     """, "CE"),
+    ("const-pointer: a const pointer cannot be pointed elsewhere", r"""
+        int a = 1, b = 2;
+        int *const cp = &a;
+        cp = &b;
+     """, "CE"),
+    ("dangling-pointer: setting a freed pointer to NULL makes the test honest", r"""
+        #include <stdlib.h>
+        int main(void) {
+            int *p = malloc(sizeof *p);
+            if (p == NULL) return 1;
+            *p = 8;
+            free(p);
+            p = NULL;
+            printf("%d\n", p == NULL);
+            return 0;
+        }
+     """, "1"),
+    ("dynamic-memory: calloc zeroes and realloc keeps the data", r"""
+        #include <stdlib.h>
+        int main(void) {
+            int *a = calloc(3, sizeof *a);
+            if (a == NULL) return 1;
+            int zeros = a[0] + a[1] + a[2];
+            a[1] = 5;
+            int *b = realloc(a, 6 * sizeof *a);
+            if (b == NULL) { free(a); return 1; }
+            printf("%d %d\n", zeros, b[1]);
+            free(b);
+            return 0;
+        }
+     """, "0 5"),
+    ("struct: assignment copies, the copy is independent", r"""
+        struct P { int x; };
+        struct P a = {1}, b = a;
+        b.x = 2;
+        printf("%d %d\n", a.x, b.x);
+     """, "1 2"),
+    ("struct: structs cannot be compared with ==", r"""
+        struct P { int x; };
+        struct P a = {1}, b = {1};
+        int r = (a == b);
+     """, "CE"),
+    ("arrow-operator: p->x is (*p).x", r"""
+        struct P { int x; };
+        struct P a = {4};
+        struct P *p = &a;
+        printf("%d %d\n", p->x, (*p).x);
+     """, "4 4"),
+    ("arrow-operator: a dot on a pointer does not compile", r"""
+        struct P { int x; };
+        struct P a = {4};
+        struct P *p = &a;
+        int v = p.x;
+     """, "CE"),
+    ("designated-initializer: unnamed members are zero and the array grows to the largest index", r"""
+        struct P { int x; int y; int z; };
+        struct P p = { .z = 3, .x = 1 };
+        int a[] = { [3] = 7, [1] = 2 };
+        printf("%d %d %d %d\n", p.x, p.y, p.z, (int)(sizeof a / sizeof a[0]));
+     """, "1 0 3 4"),
+    ("compound-literal: it is a modifiable value", r"""
+        struct P { int x; int y; };
+        struct P p = (struct P){ 5, 6 };
+        int *arr = (int[]){ 4, 5, 6 };
+        arr[0] = 9;
+        printf("%d %d %d\n", p.y, arr[0], arr[2]);
+     """, "6 9 6"),
+    ("struct-padding: member order changes the size", r"""
+        struct X { char a; int n; char b; };
+        struct Y { int n; char a; char b; };
+        printf("%d %d %d\n", (int)sizeof(struct X), (int)sizeof(struct Y), (int)offsetof(struct X, n));
+     """, "12 8 4"),
+    ("union: members share memory and the size is the largest", r"""
+        union U { char c; int i; double d; };
+        union V { int i; unsigned char b[4]; };
+        union V v;
+        v.i = 0;
+        v.b[0] = 0xFF;
+        printf("%d %d\n", (int)(sizeof(union U) == sizeof(double)), v.i != 0);
+     """, "1 1"),
+    ("enum: values continue and any int fits", r"""
+        enum E { A, B = 5, C };
+        printf("%d %d %d\n", A, B, C);
+        enum E e = 99;
+        printf("%d\n", e);
+     """, "0 5 6\n99"),
+    ("typedef: an alias, not a new type", r"""
+        typedef int myint;
+        myint a = 5;
+        int *p = &a;
+        printf("%d\n", *p);
+     """, "5"),
+    ("function-pointer: the name decays and & is optional", r"""
+        static int add(int a, int b) { return a + b; }
+        static int mul(int a, int b) { return a * b; }
+        int main(void) {
+            int (*op)(int, int) = add;
+            int (*ops[2])(int, int) = { &add, mul };
+            printf("%d %d %d\n", op(3, 4), (*op)(3, 4), ops[1](3, 4));
+            return 0;
+        }
+     """, "7 7 12"),
+    ("callback: the callee calls the function it was given", r"""
+        static int twice(int v) { return v * 2; }
+        static int apply(int x, int (*f)(int)) { return f(x); }
+        int main(void) {
+            printf("%d\n", apply(4, twice));
+            return 0;
+        }
+     """, "8"),
+    ("qsort: (a > b) - (a < b) sorts extreme values correctly", r"""
+        #include <stdlib.h>
+        static int cmp(const void *a, const void *b) {
+            int x = *(const int *)a, y = *(const int *)b;
+            return (x > y) - (x < y);
+        }
+        int main(void) {
+            int a[4] = {INT32_MAX, -5, 0, INT32_MIN};
+            qsort(a, 4, sizeof a[0], cmp);
+            printf("%d %d %d %d\n", a[0] == INT32_MIN, a[1], a[2], a[3] == INT32_MAX);
+            return 0;
+        }
+     """, "1 -5 0 1"),
+    ("swap: a swap by value changes nothing", r"""
+        static void sw(int a, int b) { int t = a; a = b; b = t; }
+        int main(void) {
+            int x = 1, y = 2;
+            sw(x, y);
+            printf("%d %d\n", x, y);
+            return 0;
+        }
+     """, "1 2"),
+    ("segmentation-fault: dereferencing NULL stops the program", r"""
+        int *volatile p = NULL;
+        printf("%d\n", *p);
+     """, "STOPPED"),
+    ("truncation: double to int, narrow unsigned, snprintf and integer division", r"""
+        double d = 7.9;
+        int n = d;
+        int big = 300;
+        uint8_t low = big;
+        char buf[4];
+        snprintf(buf, sizeof buf, "%s", "abcdef");
+        printf("%d %d %s %d\n", n, low, buf, 7 / 2);
+     """, "7 44 abc 3"),
+    ("out-parameter: a function returns two values through pointers", r"""
+        static void divmod(int a, int b, int *q, int *r) { *q = a / b; *r = a % b; }
+        int main(void) {
+            int q, r;
+            divmod(17, 5, &q, &r);
+            printf("%d %d\n", q, r);
+            return 0;
+        }
+     """, "3 2"),
+    ("end-pointer: a + n is one past the last element", r"""
+        int a[4] = {1, 2, 3, 4};
+        int *end = a + 4;
+        int sum = 0;
+        for (int *p = a; p < end; p++) sum += *p;
+        printf("%d %d\n", sum, (int)(end - a));
+     """, "10 4"),
+    ("linked-list: following next pointers visits every node", r"""
+        struct Node { int value; struct Node *next; };
+        struct Node c = {3, NULL}, b = {2, &c}, a = {1, &b};
+        int sum = 0;
+        for (struct Node *p = &a; p != NULL; p = p->next) sum += p->value;
+        printf("%d\n", sum);
+     """, "6"),
+    ("buffer: capacity is sizeof, the used length is separate", r"""
+        char buf[16];
+        int used = snprintf(buf, sizeof buf, "%s-%d", "item", 42);
+        printf("%s %d %d %d\n", buf, used, (int)strlen(buf), (int)sizeof buf);
+     """, "item-42 7 7 16"),
+    ("byte: an unsigned char wraps at 256", r"""
+        unsigned char b = 255;
+        b++;
+        printf("%d %d\n", (int)sizeof(char), b);
+     """, "1 0"),
+    ("strtok: skips empty fields and writes zero bytes into the string", r"""
+        char line[] = "a,b,,c";
+        char *t = strtok(line, ",");
+        printf("%s ", t);
+        t = strtok(NULL, ",");
+        printf("%s ", t);
+        t = strtok(NULL, ",");
+        printf("%s %d\n", t, line[1] == 0);
+     """, "a b c 1"),
+    # flow
+    ("loop: for (;;) leaves with break", r"""
+        int n = 0;
+        for (;;) { if (++n == 4) break; }
+        printf("%d\n", n);
+     """, "4"),
+    ("for-loop: a false first test runs the body zero times and leaves the counter at its start", r"""
+        int i;
+        int body = 0;
+        for (i = 5; i < 3; i++) body++;
+        printf("%d %d\n", body, i);
+     """, "0 5"),
+    ("while-loop: a semicolon after the condition is an empty body", r"""
+        int n = 3;
+        while (n--);
+        printf("%d\n", n);
+     """, "-1"),
+    ("do-while-loop: the body runs once even when the test is false", r"""
+        int n = 10, runs = 0;
+        do { runs++; } while (n < 3);
+        printf("%d\n", runs);
+     """, "1"),
+    ("break: leaves only the innermost loop", r"""
+        int c = 0;
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++) {
+                if (j == 1) break;
+                c++;
+            }
+        printf("%d\n", c);
+     """, "3"),
+    ("continue: in a for loop the step still runs", r"""
+        int s = 0;
+        for (int i = 0; i < 5; i++) {
+            if (i % 2) continue;
+            s += i;
+        }
+        printf("%d\n", s);
+     """, "6"),
+    ("off-by-one: <= runs one extra time", r"""
+        int a = 0, b = 0;
+        for (int i = 0; i < 5; i++) a++;
+        for (int i = 0; i <= 5; i++) b++;
+        printf("%d %d\n", a, b);
+     """, "5 6"),
+    ("iteration: counting the rounds of a stepped loop", r"""
+        int c1 = 0, c2 = 0;
+        for (int i = 2; i < 12; i += 3) c1++;
+        for (int i = 3; i < 3; i++) c2++;
+        printf("%d %d\n", c1, c2);
+     """, "4 0"),
+    ("nested-loop: independent loops multiply, a dependent one gives a triangle", r"""
+        int tri = 0, prod = 0;
+        for (int i = 0; i < 3; i++)
+            for (int j = i; j < 3; j++) tri++;
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 4; j++) prod++;
+        printf("%d %d\n", tri, prod);
+     """, "6 12"),
+    ("switch: without break execution falls into the next case", r"""
+        int n = 3;
+        switch (n) {
+            case 1: printf("a");
+            case 3: printf("c");
+            case 4: printf("d"); break;
+            default: printf("x");
+        }
+        printf("\n");
+     """, "cd"),
+    ("fallthrough: only the matching case and the ones below run", r"""
+        int out[4];
+        for (int g = 0; g < 4; g++) {
+            int p = 0;
+            switch (g) {
+                case 3: p += 3;
+                case 2: p += 2;
+                case 1: p += 1; break;
+                case 0: p = 100;
+            }
+            out[g] = p;
+        }
+        printf("%d %d %d %d\n", out[0], out[1], out[2], out[3]);
+     """, "100 1 3 6"),
+    ("condition: else belongs to the nearest if", r"""
+        int a = 1, b = 0;
+        if (a)
+            if (b) printf("A");
+            else printf("B");
+        printf("\n");
+     """, "B"),
+    ("function: a function must be declared before it is called", r"""
+        int main(void) {
+            printf("%d\n", f(1));
+            return 0;
+        }
+        int f(int x) { return x; }
+     """, "CE"),
+    ("parameter: the function changes only its own copy", r"""
+        static int f(int n) { n = 99; return n; }
+        int main(void) {
+            int x = 1;
+            f(x);
+            printf("%d\n", x);
+            return 0;
+        }
+     """, "1"),
+    ("argument: converted to the parameter's type, and the count must match", r"""
+        static double half(double x) { return x / 2; }
+        int main(void) {
+            printf("%.1f\n", half(5));
+            return 0;
+        }
+     """, "2.5"),
+    ("argument: too few arguments does not compile", r"""
+        static int add(int a, int b) { return a + b; }
+        int main(void) {
+            printf("%d\n", add(1));
+            return 0;
+        }
+     """, "CE"),
+    ("return: the value is converted to the return type, the first return ends the function", r"""
+        static int f(void) { return 3.9; }
+        static int g(int n) { if (n > 0) return 1; return 2; }
+        int main(void) {
+            printf("%d %d %d\n", f(), g(5), g(-5));
+            return 0;
+        }
+     """, "3 1 2"),
+    ("pass-by-value: ints and structs are copied, an array's elements are shared", r"""
+        struct S { int v; };
+        static void bump(struct S s) { s.v++; }
+        static void bump_ptr(int *n) { (*n)++; }
+        static void zero(int *a) { a[0] = 0; }
+        int main(void) {
+            struct S s = {1};
+            int x = 1;
+            int arr[1] = {9};
+            bump(s);
+            bump_ptr(&x);
+            zero(arr);
+            printf("%d %d %d\n", s.v, x, arr[0]);
+            return 0;
+        }
+     """, "1 2 0"),
+    ("function-declaration: a prototype lets main call a later definition", r"""
+        int twice(int);
+        int main(void) {
+            printf("%d\n", twice(4));
+            return 0;
+        }
+        int twice(int n) { return 2 * n; }
+     """, "8"),
+    ("void: (void)expr discards a value and void * has a pointer size", r"""
+        (void)printf("x");
+        printf(" %d\n", sizeof(void *) == sizeof(char *));
+     """, "x 1"),
+    ("main-function: EXIT_SUCCESS is 0 and EXIT_FAILURE is not", r"""
+        #include <stdlib.h>
+        int main(void) {
+            printf("%d %d\n", EXIT_SUCCESS, EXIT_FAILURE != 0);
+            return 0;
+        }
+     """, "0 1"),
+    ("return: main's value is its exit status", r"""
+        #include <stdlib.h>
+        int main(void) {
+            printf("%d\n", EXIT_SUCCESS);
+            return EXIT_SUCCESS;
+        }
+     """, "0"),
+    ("recursion: each call has its own copy", r"""
+        static int fact(int n) { return n <= 1 ? 1 : n * fact(n - 1); }
+        static int fib(int n) { return n < 2 ? n : fib(n - 1) + fib(n - 2); }
+        int main(void) {
+            printf("%d %d\n", fact(5), fib(10));
+            return 0;
+        }
+     """, "120 55"),
+    ("call-stack: the last call finishes first", r"""
+        static void down(int n) {
+            if (n == 0) { printf("bottom "); return; }
+            printf("%d ", n);
+            down(n - 1);
+            printf("%d ", n);
+        }
+        int main(void) {
+            down(2);
+            printf("\n");
+            return 0;
+        }
+     """, "2 1 bottom 1 2"),
+    ("scope: a block's variable is not visible after the block", r"""
+        { int y = 2; }
+        printf("%d\n", y);
+     """, "CE"),
+    ("scope: a for loop's variable is not visible after the loop", r"""
+        for (int i = 0; i < 2; i++) {}
+        printf("%d\n", i);
+     """, "CE"),
+    ("local-variable: every call gets a fresh copy", r"""
+        static int count(void) { int n = 0; n++; return n; }
+        int main(void) {
+            count();
+            count();
+            printf("%d\n", count());
+            return 0;
+        }
+     """, "1"),
+    ("global-variable: starts at zero and is shared by all functions", r"""
+        int g;
+        static void f(void) { g++; }
+        int main(void) {
+            f();
+            f();
+            printf("%d\n", g);
+            return 0;
+        }
+     """, "2"),
+    ("static-variable: keeps its value and is set up once", r"""
+        static int next(void) { static int n = 10; n++; return n; }
+        int main(void) {
+            next();
+            next();
+            printf("%d\n", next());
+            return 0;
+        }
+     """, "13"),
+    ("static-variable: its initialiser must be a constant", r"""
+        static int f(int k) { static int n = k; return n; }
+        int main(void) {
+            printf("%d\n", f(1));
+            return 0;
+        }
+     """, "CE"),
+    ("storage-duration: an automatic variable restarts, a static one does not", r"""
+        static int counter(void) {
+            int a = 0;
+            static int s = 0;
+            a++;
+            s++;
+            return a * 10 + s;
+        }
+        int main(void) {
+            counter();
+            counter();
+            printf("%d\n", counter());
+            return 0;
+        }
+     """, "13"),
+    ("shadowing: the inner variable hides the outer one, which is unchanged", r"""
+        int x = 1;
+        {
+            int x = 2;
+            printf("%d ", x);
+        }
+        printf("%d\n", x);
+     """, "2 1"),
+    ("shadowing: a parameter cannot be redeclared in the function's outer block", r"""
+        static int f(int n) { int n = 2; return n; }
+        int main(void) {
+            printf("%d\n", f(1));
+            return 0;
+        }
+     """, "CE"),
+    ("extern: a block-scope extern names the file-level variable", r"""
+        int shared = 7;
+        static void show(void) {
+            extern int shared;
+            printf("%d\n", shared);
+        }
+        int main(void) {
+            show();
+            return 0;
+        }
+     """, "7"),
+    ("header: the four default headers are enough for printf and strlen", r"""
+        #include <stdio.h>
+        #include <string.h>
+        int main(void) {
+            printf("%d\n", (int)strlen("header"));
+            return 0;
+        }
+     """, "6"),
+    ("preprocessor: __LINE__ is the line, a macro name is replaced as text", r"""
+        #define N 3
+        int main(void) {
+            int a[N];
+            printf("%d %d\n", (int)(sizeof a / sizeof a[0]), __LINE__);
+            return 0;
+        }
+     """, "3 4"),
+    ("preprocessor: a semicolon in a #define becomes part of the text", r"""
+        #define N 3;
+        int main(void) {
+            int a[N];
+            return 0;
+        }
+     """, "CE"),
+    ("macro: BAD(1 + 2) is 5 and GOOD(1 + 2) is 9, and an argument may be evaluated twice", r"""
+        #define BAD(x) x * x
+        #define GOOD(x) ((x) * (x))
+        static int calls;
+        static int f(void) { calls++; return 1; }
+        int main(void) {
+            int r = GOOD(f());
+            printf("%d %d %d %d\n", BAD(1 + 2), GOOD(1 + 2), r, calls);
+            return 0;
+        }
+     """, "5 9 1 2"),
+    ("stringify: #x gives the text and ## glues names", r"""
+        #define S(x) #x
+        #define CAT(a, b) a##b
+        int main(void) {
+            int ab = 7;
+            printf("%s %d\n", S(1 + 2), CAT(a, b));
+            return 0;
+        }
+     """, "1 + 2 7"),
+    ("conditional-compilation: #ifdef asks whether defined, #if whether non-zero, unknown names are 0", r"""
+        #define ZERO 0
+        int main(void) {
+        #ifdef ZERO
+            printf("defined ");
+        #endif
+        #if ZERO
+            printf("nonzero ");
+        #else
+            printf("zero ");
+        #endif
+        #if UNDEFINED_NAME
+            printf("yes\n");
+        #else
+            printf("no\n");
+        #endif
+            return 0;
+        }
+     """, "defined zero no"),
+]
+
+#: Compiler warnings a rule promises (name, program, the -W flag clang reports for it).
+C_WARNING_CHECKS: list[tuple[str, str, str]] = [
+    ("compiler-warning: assignment used as a condition warns", r"""
+        int x = 5, y = 0;
+        if (y = x) printf("%d\n", y);
+     """, "parentheses"),
+    ("compiler-warning: an unused variable warns", r"""
+        int unused = 3;
+        printf("hi\n");
+     """, "unused-variable"),
+    ("compiler-warning: a printf format that does not match the argument warns", r"""
+        printf("%d\n", 1.5);
+     """, "format"),
+]
+
+#: Programs that do something undefined, held to clang's undefined-behaviour sanitizer (name, program, what it says).
+C_UB_CHECKS: list[tuple[str, str, str]] = [
+    ("undefined-behavior: signed overflow", r"""
+        int x = INT32_MAX;
+        volatile int one = 1;
+        x = x + one;
+        printf("%d\n", x > 0);
+     """, "signed integer overflow"),
+    ("undefined-behavior: an index outside the array", r"""
+        int a[3] = {0, 0, 0};
+        volatile int i = 3;
+        a[i] = 1;
+        printf("%d\n", a[0]);
+     """, "out of bounds"),
+    ("undefined-behavior: dividing by zero", r"""
+        volatile int z = 0;
+        printf("%d\n", 5 / z);
+     """, "division by zero"),
+    ("undefined-behavior: shifting by the width of the type", r"""
+        volatile int s = 40;
+        printf("%d\n", 1 << s);
+     """, "shift exponent"),
+    ("overflow: a - b with a huge a and a negative b overflows (the qsort trap)", r"""
+        volatile int a = INT32_MAX, b = -1;
+        printf("%d\n", a - b > 0);
+     """, "signed integer overflow"),
+    ("overflow: unsigned wraparound is not reported", r"""
+        unsigned u = UINT32_MAX;
+        volatile unsigned one = 1;
+        u += one;
+        printf("%u\n", u);
+     """, ""),
+]
+
+#: C words whose rules no program here can measure (they are about style, hardware or the standard's wording); the
+#: test makes this list and the checks partition the C ids, so an entry is either named here or has a check.
+C_NOT_ORACLE_CHECKED = {
+    "volatile",           # what it forbids the optimiser is not visible in a portable program
+}
+
+
+#: SQL rule checks (name, script, expected): each runs in a fresh in-memory SQLite and prints what the Gotchas SQL driver
+#: prints. A statement that starts with `/*E*/` is allowed to fail (the error is swallowed, the script goes on); an
+#: unmarked failure ends the script with `ERROR: <message>`, and an expected value starting `ERROR` is compared by prefix.
+SQL_RULE_CHECKS: list[tuple[str, str, str]] = [
+    ("select: no FROM is needed and * means every column", """
+        CREATE TABLE t (a INTEGER, b TEXT);
+        INSERT INTO t VALUES (1, 'x');
+        SELECT (SELECT 1 + 1), 'a' || 'b', (SELECT COUNT(*) FROM (SELECT * FROM t));
+     """, "2|ab|1"),
+    ("alias: AS is optional and ORDER BY can use the alias", """
+        CREATE TABLE t (a INTEGER);
+        INSERT INTO t VALUES (2), (5);
+        SELECT a * 2 doubled FROM t ORDER BY doubled DESC;
+     """, "10; 4"),
+    ("distinct: all NULLs collapse into one row", """
+        CREATE TABLE t (c TEXT);
+        INSERT INTO t VALUES (NULL), (NULL), (NULL);
+        SELECT COUNT(*) FROM (SELECT DISTINCT c FROM t);
+     """, "1"),
+    ("distinct: it looks at the whole row", """
+        CREATE TABLE t (a INTEGER, b INTEGER);
+        INSERT INTO t VALUES (1, 2), (1, 3), (1, 2);
+        SELECT COUNT(*) FROM (SELECT DISTINCT a, b FROM t);
+     """, "2"),
+    ("where-clause: a NULL row is dropped by n > 3 and by n <= 3 alike", """
+        CREATE TABLE t (n INTEGER);
+        INSERT INTO t VALUES (1), (5), (NULL);
+        SELECT COUNT(*) FROM t WHERE n > 3 OR n <= 3;
+     """, "2"),
+    ("where-clause: an aggregate in WHERE is an error", """
+        CREATE TABLE t (n INTEGER);
+        SELECT COUNT(*) FROM t WHERE COUNT(*) > 1;
+     """, "ERROR: misuse of aggregate"),
+    ("logical-operators: AND goes before OR, NOT after comparison", """
+        SELECT 1 OR 0 AND 0, (1 OR 0) AND 0, NOT 1 = 2;
+     """, "1|0|1"),
+    ("null: aggregates skip NULL except COUNT(*)", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (2), (NULL), (4);
+        SELECT COUNT(*), COUNT(v), SUM(v), AVG(v), MIN(v), MAX(v) FROM t;
+     """, "3|2|6|3.0|2|4"),
+    ("null: ORDER BY puts NULL first ascending and last descending", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (3), (NULL), (1), (2);
+        SELECT (SELECT GROUP_CONCAT(v, ',') FROM (SELECT v FROM t ORDER BY v)),
+               (SELECT GROUP_CONCAT(v, ',') FROM (SELECT v FROM t ORDER BY v DESC));
+     """, "1,2,3|3,2,1"),
+    ("null: NULL is not zero or empty text", """
+        SELECT NULL = 0, NULL = '', 0 = '', typeof(NULL);
+     """, "NULL|NULL|0|null"),
+    ("three-valued-logic: the truth tables", """
+        SELECT NULL AND 0, NULL AND 1, NULL OR 1, NULL OR 0, NOT NULL;
+     """, "0|NULL|1|NULL|NULL"),
+    ("three-valued-logic: NOT (x = 5) does not select the NULL rows", """
+        CREATE TABLE t (x INTEGER);
+        INSERT INTO t VALUES (5), (6), (NULL);
+        SELECT COUNT(*) FROM t WHERE NOT (x = 5);
+     """, "1"),
+    ("is-null: IS is an equality that understands NULL", """
+        SELECT 1 IS 1, NULL IS NULL, 1 IS NULL, NULL IS NOT NULL;
+     """, "1|1|0|0"),
+    ("coalesce: all NULL gives NULL", """
+        SELECT COALESCE(NULL, NULL), COALESCE(NULL, 2, 3), IFNULL(5, 6);
+     """, "NULL|2|5"),
+    ("nullif: NULL when equal", """
+        SELECT NULLIF(5, 5), 10 / NULLIF(0, 0), NULLIF('a', 'b');
+     """, "NULL|NULL|a"),
+    ("like-operator: percent, underscore, case, NULL and non-ASCII letters", """
+        SELECT 'ABC' LIKE 'a%', 'abc' LIKE 'a_', NULL LIKE 'a', 'abc' LIKE 'abc', 'É' LIKE 'é';
+     """, "1|0|NULL|1|0"),
+    ("glob: ranges, negation and one-character wildcards", """
+        SELECT 'a1' GLOB '[a-z][^a-z]', 'a' GLOB '??', 'abc' GLOB 'a*c';
+     """, "1|0|1"),
+    ("in-operator: IN with a subquery and with a missing value", """
+        SELECT 2 IN (SELECT 2 UNION SELECT 3), 9 IN (SELECT 2 UNION SELECT 3), 9 IN (1, NULL);
+     """, "1|0|NULL"),
+    ("not-in: one NULL in the list or subquery empties the result, NOT EXISTS does not", """
+        CREATE TABLE a (x INTEGER);
+        CREATE TABLE b (x INTEGER);
+        INSERT INTO a VALUES (1), (2);
+        INSERT INTO b VALUES (2), (NULL);
+        SELECT (SELECT COUNT(*) FROM a WHERE x NOT IN (SELECT x FROM b)),
+               (SELECT COUNT(*) FROM a WHERE NOT EXISTS (SELECT 1 FROM b WHERE b.x = a.x));
+     """, "0|1"),
+    ("between: inclusive, order matters, text works", """
+        SELECT 5 BETWEEN 1 AND 5, 5 BETWEEN 6 AND 1, 'b' BETWEEN 'a' AND 'c', NULL BETWEEN 1 AND 2;
+     """, "1|0|1|NULL"),
+    ("count: an empty table counts 0 but sums to NULL", """
+        CREATE TABLE t (v INTEGER);
+        SELECT COUNT(*), COUNT(v), SUM(v), MAX(v) FROM t;
+     """, "0|0|NULL|NULL"),
+    ("sum: integers stay integer, reals stay real, TOTAL is real", """
+        CREATE TABLE t (i INTEGER, r REAL);
+        INSERT INTO t VALUES (1, 1.5), (2, 2.5);
+        SELECT typeof(SUM(i)), typeof(SUM(r)), SUM(r), typeof(TOTAL(i)) FROM t;
+     """, "integer|real|4.0|real"),
+    ("average: AVG is real, over nothing it is NULL, NULL rows do not count", """
+        CREATE TABLE t (v INTEGER);
+        CREATE TABLE e (v INTEGER);
+        INSERT INTO t VALUES (1), (2), (NULL);
+        SELECT AVG(v), typeof(AVG(v)), (SELECT AVG(v) FROM e), SUM(v) / COUNT(*) FROM t;
+     """, "1.5|real|NULL|1"),
+    ("min-max: text works and the multi-argument form is a scalar", """
+        SELECT MIN(x), MAX(x), MIN(4, 2, 9), MAX(4, 2, 9) FROM (SELECT 'b' AS x UNION SELECT 'a' UNION SELECT 'c');
+     """, "a|c|2|9"),
+    ("aggregate-function: one value per group", """
+        CREATE TABLE t (g TEXT, v INTEGER);
+        INSERT INTO t VALUES ('a', 1), ('a', 2), ('b', 5);
+        SELECT COUNT(*), SUM(v), MIN(v), MAX(v), COUNT(DISTINCT g) FROM t;
+     """, "3|8|1|5|2"),
+    ("group-by: all NULLs form one group", """
+        CREATE TABLE t (g TEXT);
+        INSERT INTO t VALUES ('a'), (NULL), (NULL);
+        SELECT COUNT(*) FROM (SELECT g FROM t GROUP BY g);
+     """, "2"),
+    ("having: an aggregate belongs in HAVING, not in WHERE", """
+        CREATE TABLE t (g TEXT, v INTEGER);
+        INSERT INTO t VALUES ('a', 1), ('a', 2), ('b', 5);
+        SELECT g FROM t WHERE SUM(v) > 4 GROUP BY g;
+     """, "ERROR: misuse of aggregate"),
+    ("having: WHERE filters rows before the groups are made", """
+        CREATE TABLE t (g TEXT, v INTEGER);
+        INSERT INTO t VALUES ('a', 1), ('a', 2), ('b', 5);
+        SELECT g, SUM(v) FROM t WHERE v > 1 GROUP BY g HAVING SUM(v) > 2 ORDER BY g;
+     """, "b|5"),
+    ("order-by: NULLS LAST, binary order and NOCASE", """
+        CREATE TABLE t (v INTEGER);
+        CREATE TABLE w (x TEXT);
+        INSERT INTO t VALUES (2), (NULL), (1);
+        INSERT INTO w VALUES ('B'), ('a');
+        SELECT (SELECT GROUP_CONCAT(v, ',') FROM (SELECT v FROM t ORDER BY v NULLS LAST)),
+               (SELECT GROUP_CONCAT(x, ',') FROM (SELECT x FROM w ORDER BY x)),
+               (SELECT GROUP_CONCAT(x, ',') FROM (SELECT x FROM w ORDER BY x COLLATE NOCASE));
+     """, "1,2|B,a|a,B"),
+    ("order-by: a second key breaks ties and a column number works", """
+        CREATE TABLE t (a INTEGER, b TEXT);
+        INSERT INTO t VALUES (1, 'y'), (1, 'x'), (0, 'z');
+        SELECT a, b FROM t ORDER BY 1 DESC, b;
+     """, "1|x; 1|y; 0|z"),
+    ("limit: LIMIT 0 is empty, a negative limit is no limit", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (2), (3), (4);
+        SELECT (SELECT COUNT(*) FROM (SELECT v FROM t LIMIT 0)), (SELECT COUNT(*) FROM (SELECT v FROM t LIMIT -1)),
+               (SELECT COUNT(*) FROM (SELECT v FROM t LIMIT 10));
+     """, "0|4|4"),
+    ("offset: LIMIT 1, 2 means OFFSET 1 and LIMIT 2", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (2), (4), (5);
+        SELECT v FROM t ORDER BY v LIMIT 1, 2;
+     """, "2; 4"),
+    ("join: a row with two partners appears twice and NULL keys never match", """
+        CREATE TABLE u (id INTEGER, name TEXT);
+        CREATE TABLE o (uid INTEGER, amt INTEGER);
+        INSERT INTO u VALUES (1, 'ann'), (NULL, 'nil');
+        INSERT INTO o VALUES (1, 10), (1, 20), (NULL, 5);
+        SELECT name, COUNT(*) FROM u JOIN o ON u.id = o.uid GROUP BY name;
+     """, "ann|2"),
+    ("inner-join: the old comma style gives the same rows", """
+        CREATE TABLE u (id INTEGER, name TEXT);
+        CREATE TABLE o (uid INTEGER, amt INTEGER);
+        INSERT INTO u VALUES (1, 'ann'), (2, 'bob');
+        INSERT INTO o VALUES (1, 10), (1, 20), (3, 5);
+        SELECT (SELECT COUNT(*) FROM u, o WHERE u.id = o.uid), (SELECT COUNT(*) FROM u INNER JOIN o ON u.id = o.uid);
+     """, "2|2"),
+    ("left-join: WHERE on the right table drops the unmatched rows, ON keeps them", """
+        CREATE TABLE u (id INTEGER, name TEXT);
+        CREATE TABLE o (uid INTEGER, amt INTEGER);
+        INSERT INTO u VALUES (1, 'ann'), (2, 'bob');
+        INSERT INTO o VALUES (1, 10), (1, 20), (3, 5);
+        SELECT (SELECT COUNT(*) FROM u LEFT JOIN o ON u.id = o.uid WHERE o.amt > 5),
+               (SELECT COUNT(*) FROM u LEFT JOIN o ON u.id = o.uid AND o.amt > 5);
+     """, "2|3"),
+    ("left-join: IS NULL finds the unmatched rows and COUNT(col) counts matches", """
+        CREATE TABLE u (id INTEGER, name TEXT);
+        CREATE TABLE o (uid INTEGER, amt INTEGER);
+        INSERT INTO u VALUES (1, 'ann'), (2, 'bob');
+        INSERT INTO o VALUES (1, 10), (1, 20), (3, 5);
+        SELECT (SELECT name FROM u LEFT JOIN o ON u.id = o.uid WHERE o.uid IS NULL),
+               (SELECT COUNT(*) FROM u LEFT JOIN o ON u.id = o.uid), (SELECT COUNT(o.uid) FROM u LEFT JOIN o ON u.id = o.uid);
+     """, "bob|3|2"),
+    ("cross-join: rows multiply, and a comma without a condition is one", """
+        CREATE TABLE a (x INTEGER);
+        CREATE TABLE b (y INTEGER);
+        INSERT INTO a VALUES (1), (2);
+        INSERT INTO b VALUES (10), (20), (30);
+        SELECT (SELECT COUNT(*) FROM a CROSS JOIN b), (SELECT COUNT(*) FROM a, b);
+     """, "6|6"),
+    ("self-join: two aliases of one table", """
+        CREATE TABLE e (id INTEGER, name TEXT, boss INTEGER);
+        INSERT INTO e VALUES (1, 'ann', NULL), (2, 'bob', 1), (3, 'cy', 1);
+        SELECT b.name, COUNT(*) FROM e w JOIN e b ON w.boss = b.id GROUP BY b.name;
+     """, "ann|2"),
+    ("subquery: a scalar subquery with no row is NULL, a FROM subquery is a table", """
+        CREATE TABLE t (v INTEGER);
+        SELECT (SELECT v FROM t), (SELECT MAX(v) FROM (SELECT 3 AS v UNION SELECT 8));
+     """, "NULL|8"),
+    ("correlated-subquery: it sees the outer row", """
+        CREATE TABLE s (grp TEXT, v INTEGER);
+        INSERT INTO s VALUES ('a', 1), ('a', 5), ('b', 2), ('b', 3);
+        SELECT COUNT(*) FROM s x WHERE v > (SELECT AVG(v) FROM s WHERE grp = x.grp);
+     """, "2"),
+    ("exists: true for any row, never NULL", """
+        SELECT EXISTS (SELECT NULL), EXISTS (SELECT 1 WHERE 0), NOT EXISTS (SELECT 1 WHERE 0);
+     """, "1|0|1"),
+    ("union: columns match by position and the counts must agree", """
+        SELECT 1, 2 UNION SELECT 2, 1 ORDER BY 1;
+     """, "1|2; 2|1"),
+    ("union: different column counts are an error", """
+        SELECT 1 UNION SELECT 1, 2;
+     """, "ERROR: SELECTs to the left and right of UNION do not have the same number of result columns"),
+    ("union-all: keeps duplicates, UNION removes them", """
+        SELECT (SELECT COUNT(*) FROM (SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 2)),
+               (SELECT COUNT(*) FROM (SELECT 1 UNION SELECT 1 UNION SELECT 2));
+     """, "3|2"),
+    ("intersect: NULLs count as equal", """
+        SELECT NULL INTERSECT SELECT NULL;
+     """, "NULL"),
+    ("except: the order matters", """
+        CREATE TABLE a (x INTEGER);
+        CREATE TABLE b (x INTEGER);
+        INSERT INTO a VALUES (1), (2), (3);
+        INSERT INTO b VALUES (2), (3), (4);
+        SELECT (SELECT GROUP_CONCAT(x) FROM (SELECT x FROM a EXCEPT SELECT x FROM b)),
+               (SELECT GROUP_CONCAT(x) FROM (SELECT x FROM b EXCEPT SELECT x FROM a));
+     """, "1|4"),
+    ("case-expression: no ELSE gives NULL, IIF is the short form, the simple form compares", """
+        SELECT CASE WHEN 1 = 2 THEN 'x' END, IIF(1 < 2, 'y', 'n'), CASE 2 WHEN 1 THEN 'a' WHEN 2 THEN 'b' END;
+     """, "NULL|y|b"),
+    ("integer-division: integers truncate toward zero, a real keeps the fraction, /0 is NULL", """
+        SELECT 5 / 2, 5 / 2.0, -7 / 2, 5 / 0, 3 / 2 * 2, 3 * 2 / 2;
+     """, "2|2.5|-3|NULL|2|3"),
+    ("modulo: % 0 is NULL and a real operand is cut to a whole number", """
+        SELECT 7 % 0, 7.5 % 2, -7 % 3, 7 % -3;
+     """, "NULL|1.0|-1|1"),
+    ("round: halves go away from zero and the result is a real", """
+        SELECT ROUND(2.5), ROUND(-2.5), ROUND(0.5), ROUND(1.5), typeof(ROUND(7)), ABS(-4), ROUND(3.14159, 2);
+     """, "3.0|-3.0|1.0|2.0|real|4|3.14"),
+    ("string-function: NULL in gives NULL, TRIM with characters, REPLACE replaces all", """
+        SELECT LENGTH(NULL), TRIM('xxhixx', 'x'), REPLACE('aaa', 'a', 'b'), UPPER('abc'), LOWER('ABC'), LENGTH('hello');
+     """, "NULL|hi|bbb|ABC|abc|5"),
+    ("substr: 1-based, a negative start counts from the end, 0 does not exist", """
+        SELECT SUBSTR('hello', 2), SUBSTR('hello', 2, 100), SUBSTR('hello', 6), SUBSTR('hello', -3, 2), SUBSTR('hello', 0, 2);
+     """, "ello|ello||ll|h"),
+    ("instr: 1-based and 0 when absent", """
+        SELECT INSTR('hello', 'h'), INSTR('hello', 'lo'), INSTR('hello', 'x');
+     """, "1|4|0"),
+    ("concatenation: NULL makes it NULL and + does not join", """
+        SELECT 'a' || 'b', 'n=' || 5, 'x' || NULL, '1' + '2', '1' || '2';
+     """, "ab|n=5|NULL|3|12"),
+    ("type-conversion: CAST truncates and reads leading digits, text counts as 0", """
+        SELECT CAST(3.9 AS INTEGER), CAST('12abc' AS INTEGER), '5' + 1, 'abc' + 1, CAST('abc' AS INTEGER), '3.5' + 1;
+     """, "3|12|6|1|0|4.5"),
+    ("typeof: the five kinds, and an integer division stays integer", """
+        SELECT typeof(1), typeof(1.0), typeof('a'), typeof(NULL), typeof(x'00'), typeof(1 / 2), typeof(1 / 2.0);
+     """, "integer|real|text|null|blob|integer|real"),
+    ("type-affinity: text that is not a number stays text in an INTEGER column", """
+        CREATE TABLE t (i INTEGER);
+        INSERT INTO t VALUES ('abc'), ('7');
+        SELECT typeof(i) FROM t ORDER BY rowid;
+     """, "text; integer"),
+    ("boolean: comparisons are the integers 1 and 0", """
+        SELECT 1 < 2, 2 < 1, TRUE, FALSE, NOT TRUE, typeof(1 < 2);
+     """, "1|0|1|0|0|integer"),
+    ("window-function: not allowed in WHERE", """
+        CREATE TABLE t (v INTEGER);
+        SELECT v FROM t WHERE ROW_NUMBER() OVER (ORDER BY v) = 1;
+     """, "ERROR: misuse of window function"),
+    ("window-function: rows are kept and OVER () sees the whole table", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (10), (20), (30);
+        SELECT COUNT(*), MIN(s) FROM (SELECT SUM(v) OVER () AS s FROM t);
+     """, "3|60"),
+    ("row-number: numbering restarts for each partition", """
+        CREATE TABLE s (g TEXT, v INTEGER);
+        INSERT INTO s VALUES ('a', 1), ('a', 5), ('b', 2), ('b', 3);
+        SELECT g, v, ROW_NUMBER() OVER (PARTITION BY g ORDER BY v DESC) AS n FROM s ORDER BY g, n;
+     """, "a|5|1; a|1|2; b|3|1; b|2|2"),
+    ("rank: RANK skips after a tie, DENSE_RANK does not, ROW_NUMBER never repeats", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (10), (20), (20), (30);
+        SELECT v, RANK() OVER w, DENSE_RANK() OVER w FROM t WINDOW w AS (ORDER BY v) ORDER BY v;
+     """, "10|1|1; 20|2|2; 20|2|2; 30|4|3"),
+    ("dense-rank: the second highest value", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (10), (20), (20), (30);
+        SELECT DISTINCT v FROM (SELECT v, DENSE_RANK() OVER (ORDER BY v DESC) AS r FROM t) WHERE r = 2;
+     """, "20"),
+    ("partition: every row of a group carries the group total", """
+        CREATE TABLE s (g TEXT, v INTEGER);
+        INSERT INTO s VALUES ('a', 1), ('a', 5), ('b', 2), ('b', 3);
+        SELECT g, v, SUM(v) OVER (PARTITION BY g) FROM s ORDER BY g, v;
+     """, "a|1|6; a|5|6; b|2|5; b|3|5"),
+    ("running-total: the default frame includes peers", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (2), (2), (5);
+        SELECT v, SUM(v) OVER (ORDER BY v) FROM t ORDER BY v;
+     """, "1|1; 2|5; 2|5; 5|10"),
+    ("lag: offset and default", """
+        CREATE TABLE t (id INTEGER, v INTEGER);
+        INSERT INTO t VALUES (1, 10), (2, 15), (3, 12);
+        SELECT id, LAG(v, 2, -1) OVER (ORDER BY id) FROM t ORDER BY id;
+     """, "1|-1; 2|-1; 3|10"),
+    ("lead: the last row has no next row", """
+        CREATE TABLE t (id INTEGER, v INTEGER);
+        INSERT INTO t VALUES (1, 10), (2, 15), (3, 12);
+        SELECT id, LEAD(v) OVER (ORDER BY id) FROM t ORDER BY id;
+     """, "1|15; 2|12; 3|NULL"),
+    ("cte: a later CTE can use an earlier one", """
+        WITH a AS (SELECT 1 AS x), b AS (SELECT x + 1 AS y FROM a) SELECT y FROM b;
+     """, "2"),
+    ("recursive-cte: it stops when no new rows appear", """
+        WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 4) SELECT GROUP_CONCAT(i) FROM n;
+     """, "1,2,3,4"),
+    ("date-function: strftime parts and modifiers", """
+        SELECT strftime('%m', '2024-03-15'), strftime('%d/%m/%Y', '2024-03-15'), date('2024-03-15', '-1 day', 'start of month'),
+               date('2024-01-31', '+1 month');
+     """, "03|15/03/2024|2024-03-01|2024-03-02"),
+    ("insert: omitted columns get their default and a failed multi-row insert adds nothing", """
+        CREATE TABLE t (a INTEGER PRIMARY KEY, b TEXT DEFAULT 'd');
+        INSERT INTO t (a) VALUES (1);
+        /*E*/ INSERT INTO t VALUES (2, 'x'), (3, 'y'), (1, 'dup');
+        SELECT COUNT(*), MIN(b) FROM t;
+     """, "1|d"),
+    ("insert: INSERT ... SELECT copies rows", """
+        CREATE TABLE a (n INTEGER);
+        CREATE TABLE b (n INTEGER);
+        INSERT INTO a VALUES (1), (2);
+        INSERT INTO b SELECT n * 10 FROM a;
+        SELECT SUM(n) FROM b;
+     """, "30"),
+    ("update: SET sees the old row and no WHERE changes every row", """
+        CREATE TABLE t (a INTEGER, b INTEGER);
+        INSERT INTO t VALUES (1, 0), (5, 0);
+        UPDATE t SET a = a + 1, b = a;
+        SELECT a, b FROM t ORDER BY a;
+     """, "2|1; 6|5"),
+    ("delete: DELETE without WHERE empties the table but keeps it", """
+        CREATE TABLE t (n INTEGER);
+        INSERT INTO t VALUES (1), (2);
+        DELETE FROM t;
+        SELECT COUNT(*) FROM t;
+     """, "0"),
+    ("upsert: DO NOTHING keeps the old row", """
+        CREATE TABLE t (k TEXT PRIMARY KEY, v INTEGER);
+        INSERT INTO t VALUES ('a', 1);
+        INSERT INTO t VALUES ('a', 99) ON CONFLICT (k) DO NOTHING;
+        SELECT v FROM t;
+     """, "1"),
+    ("or-replace: REPLACE resets the other columns to their defaults", """
+        CREATE TABLE t (id INTEGER PRIMARY KEY, a TEXT DEFAULT 'd', b TEXT);
+        INSERT INTO t VALUES (1, 'x', 'y');
+        INSERT OR REPLACE INTO t (id, b) VALUES (1, 'z');
+        SELECT a, b FROM t;
+     """, "d|z"),
+    ("constraint: a failing statement changes nothing", """
+        CREATE TABLE t (n INTEGER CHECK (n > 0));
+        /*E*/ INSERT INTO t VALUES (5), (-1);
+        SELECT COUNT(*) FROM t;
+     """, "0"),
+    ("primary-key: a duplicate fails", """
+        CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT);
+        INSERT INTO t VALUES (1, 'a');
+        INSERT INTO t VALUES (1, 'b');
+     """, "ERROR: UNIQUE constraint failed: t.id"),
+    ("primary-key: a text key still accepts NULL in SQLite, an INTEGER key is the rowid", """
+        CREATE TABLE k (k TEXT PRIMARY KEY);
+        CREATE TABLE t (id INTEGER PRIMARY KEY);
+        INSERT INTO k VALUES (NULL);
+        INSERT INTO t VALUES (NULL);
+        SELECT (SELECT COUNT(*) FROM k), (SELECT id = rowid FROM t);
+     """, "1|1"),
+    ("unique: a duplicate fails", """
+        CREATE TABLE t (email TEXT UNIQUE);
+        INSERT INTO t VALUES ('a');
+        INSERT INTO t VALUES ('a');
+     """, "ERROR: UNIQUE constraint failed: t.email"),
+    ("not-null: a NULL fails", """
+        CREATE TABLE t (name TEXT NOT NULL);
+        INSERT INTO t VALUES (NULL);
+     """, "ERROR: NOT NULL constraint failed: t.name"),
+    ("check-constraint: a false condition fails", """
+        CREATE TABLE t (age INTEGER CHECK (age >= 0));
+        INSERT INTO t VALUES (-1);
+     """, "ERROR: CHECK constraint failed"),
+    ("default-value: an explicit NULL is stored", """
+        CREATE TABLE t (a INTEGER, b INTEGER DEFAULT 7);
+        INSERT INTO t (a) VALUES (1);
+        INSERT INTO t (a, b) VALUES (2, NULL);
+        SELECT COUNT(*), COUNT(b) FROM t;
+     """, "2|1"),
+    ("foreign-key: ignored until PRAGMA foreign_keys = ON", """
+        CREATE TABLE u (id INTEGER PRIMARY KEY);
+        CREATE TABLE o (uid INTEGER REFERENCES u(id));
+        INSERT INTO o VALUES (99);
+        SELECT COUNT(*) FROM o;
+     """, "1"),
+    ("foreign-key: enforced after the PRAGMA", """
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE u (id INTEGER PRIMARY KEY);
+        CREATE TABLE o (uid INTEGER REFERENCES u(id));
+        INSERT INTO o VALUES (99);
+     """, "ERROR: FOREIGN KEY constraint failed"),
+    ("foreign-key: ON DELETE CASCADE deletes the children", """
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE u (id INTEGER PRIMARY KEY);
+        CREATE TABLE o (uid INTEGER REFERENCES u(id) ON DELETE CASCADE);
+        INSERT INTO u VALUES (1);
+        INSERT INTO o VALUES (1), (1);
+        DELETE FROM u;
+        SELECT COUNT(*) FROM o;
+     """, "0"),
+    ("alter-table: a NOT NULL column needs a default", """
+        CREATE TABLE t (a INTEGER);
+        INSERT INTO t VALUES (1);
+        ALTER TABLE t ADD COLUMN b INTEGER NOT NULL;
+     """, "ERROR: Cannot add a NOT NULL column with default value NULL"),
+    ("alter-table: rename and drop a column", """
+        CREATE TABLE t (a INTEGER, b INTEGER);
+        INSERT INTO t VALUES (1, 2);
+        ALTER TABLE t RENAME COLUMN a TO z;
+        ALTER TABLE t DROP COLUMN b;
+        SELECT z FROM t;
+     """, "1"),
+    ("view: it is read-only and shows the current rows", """
+        CREATE TABLE t (n INTEGER);
+        CREATE VIEW v AS SELECT n FROM t;
+        INSERT INTO v VALUES (1);
+     """, "ERROR: cannot modify v because it is a view"),
+    ("transaction: a committed change stays, a rolled-back one goes", """
+        CREATE TABLE t (v INTEGER);
+        BEGIN;
+        INSERT INTO t VALUES (1);
+        COMMIT;
+        BEGIN;
+        INSERT INTO t VALUES (2);
+        ROLLBACK;
+        SELECT COUNT(*) FROM t;
+     """, "1"),
+    ("rollback: undoes since BEGIN only", """
+        CREATE TABLE t (v INTEGER);
+        BEGIN;
+        INSERT INTO t VALUES (1);
+        COMMIT;
+        BEGIN;
+        DELETE FROM t;
+        ROLLBACK;
+        SELECT COUNT(*) FROM t;
+     """, "1"),
+    ("savepoint: RELEASE keeps the work, ROLLBACK TO drops it", """
+        CREATE TABLE t (v INTEGER);
+        BEGIN;
+        INSERT INTO t VALUES (1);
+        SAVEPOINT a;
+        INSERT INTO t VALUES (2);
+        RELEASE a;
+        SAVEPOINT b;
+        INSERT INTO t VALUES (3);
+        ROLLBACK TO b;
+        COMMIT;
+        SELECT GROUP_CONCAT(v) FROM t;
+     """, "1,2"),
+    ("trigger: OLD and NEW in an UPDATE trigger", """
+        CREATE TABLE t (v INTEGER);
+        CREATE TABLE log (o INTEGER, n INTEGER);
+        CREATE TRIGGER t_upd AFTER UPDATE ON t BEGIN INSERT INTO log VALUES (OLD.v, NEW.v); END;
+        INSERT INTO t VALUES (1);
+        UPDATE t SET v = 9;
+        SELECT o, n FROM log;
+     """, "1|9"),
+    ("index: it is listed by PRAGMA index_list and does not change answers", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (2), (2);
+        CREATE INDEX i ON t (v);
+        PRAGMA index_list('t');
+     """, "0|i|0|c|0"),
+    ("index: a UNIQUE index rejects duplicates", """
+        CREATE TABLE t (v INTEGER);
+        CREATE UNIQUE INDEX u ON t (v);
+        INSERT INTO t VALUES (1);
+        INSERT INTO t VALUES (1);
+     """, "ERROR: UNIQUE constraint failed"),
+    ("rowid: SELECT * does not show it and last_insert_rowid gives the newest", """
+        CREATE TABLE t (name TEXT);
+        INSERT INTO t VALUES ('a'), ('b');
+        SELECT (SELECT COUNT(*) FROM pragma_table_info('t')), last_insert_rowid(), (SELECT MAX(rowid) FROM t);
+     """, "1|2|2"),
+    ("autoincrement: a plain INTEGER PRIMARY KEY reuses the largest id", """
+        CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT);
+        INSERT INTO t (v) VALUES ('a'), ('b');
+        DELETE FROM t WHERE id = 2;
+        INSERT INTO t (v) VALUES ('c');
+        SELECT GROUP_CONCAT(id) FROM t;
+     """, "1,2"),
+    ("table: every row has the same columns", """
+        CREATE TABLE pet (id INTEGER, name TEXT);
+        INSERT INTO pet VALUES (1, 'rex'), (2, 'tom');
+        SELECT COUNT(*), (SELECT COUNT(*) FROM pragma_table_info('pet')) FROM pet;
+     """, "2|2"),
+    ("query: single quotes make text, double quotes name a column, = on text is case-sensitive", """
+        CREATE TABLE t ("my col" INTEGER);
+        INSERT INTO t VALUES (4);
+        SELECT "my col", 'a' = 'A', 'a' = 'a' FROM t;
+     """, "4|0|1"),
+    ("create-table: a second CREATE of the same name fails, IF NOT EXISTS does not", """
+        CREATE TABLE t (a INTEGER);
+        CREATE TABLE IF NOT EXISTS t (a INTEGER);
+        CREATE TABLE t (a INTEGER);
+     """, "ERROR: table t already exists"),
+    ("aggregate-filter: a FILTER that matches nothing gives NULL for SUM", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (2);
+        SELECT SUM(v) FILTER (WHERE v > 100), COUNT(*) FILTER (WHERE v > 1) FROM t;
+     """, "NULL|1"),
+    ("group-concat: NULL is skipped, no rows gives NULL, DISTINCT removes repeats", """
+        CREATE TABLE t (v INTEGER);
+        INSERT INTO t VALUES (1), (NULL), (1);
+        SELECT GROUP_CONCAT(v), GROUP_CONCAT(DISTINCT v), (SELECT GROUP_CONCAT(v) FROM t WHERE 0) FROM t;
+     """, "1,1|1|NULL"),
+    ("rows-affected: changes() is 0 when the WHERE matched nothing", """
+        CREATE TABLE t (n INTEGER);
+        INSERT INTO t VALUES (1);
+        DELETE FROM t WHERE n = 5;
+        SELECT changes();
+     """, "0"),
+    ("collation: a NOCASE column compares without case", """
+        CREATE TABLE t (n TEXT COLLATE NOCASE);
+        INSERT INTO t VALUES ('Ann');
+        SELECT COUNT(*) FROM t WHERE n = 'ann';
+     """, "1"),
+    ("iso-date: BETWEEN works on ISO text but a missing zero breaks it", """
+        SELECT '2024-01-31' BETWEEN '2024-01-01' AND '2024-01-31', '2024-1-31' BETWEEN '2024-01-01' AND '2024-01-31';
+     """, "1|0"),
+]
+
+#: SQL words whose rules no script can measure.
+SQL_NOT_ORACLE_CHECKED: set[str] = set()
+
+
+def _c_ids() -> set[str]:
+    return {e.id for e in glossary.all_entries("c")}
+
+
+def _sql_ids() -> set[str]:
+    return {e.id for e in glossary.all_entries("sql")}
+
+
+def _module_ids(prefix: str, language: str) -> dict[str, set[str]]:
+    import importlib
+    import pkgutil
+
+    found: dict[str, set[str]] = {}
+    for info in pkgutil.iter_modules(glossary.__path__):
+        if info.name.startswith(prefix):
+            module = importlib.import_module(f"code_coach.glossary.{info.name}")
+            found[info.name] = {item.id for item in module.TERMS if item.language == language}
+    return found
+
+
+def test_c_and_sql_are_full_glossary_languages():
+    c_modules = _module_ids("terms_c_", "c")
+    sql_modules = _module_ids("terms_sql_", "sql")
+    assert {"terms_c_core", "terms_c_text", "terms_c_memory", "terms_c_flow"} <= set(c_modules)
+    assert {"terms_sql_query", "terms_sql_funcs", "terms_sql_data"} <= set(sql_modules)
+    assert len(_c_ids()) >= 110 and len(_sql_ids()) >= 85, (len(_c_ids()), len(_sql_ids()))
+    assert sum(len(v) for v in c_modules.values()) == len(_c_ids()), "every C word lives in a terms_c_* file"
+    assert sum(len(v) for v in sql_modules.values()) == len(_sql_ids())
+    assert not glossary.LOAD_ERRORS
+    for lang in ("c", "sql"):
+        entries = glossary.all_entries(lang)
+        assert all(e.example and e.rules and e.see_also for e in entries), f"every {lang} card runs, has rules and links"
+        assert all(e.language == lang for e in entries)
+
+
+def test_each_c_and_sql_word_is_defined_without_borrowing_another_languages_words():
+    for lang in ("c", "sql"):
+        for e in glossary.all_entries(lang):
+            text = " ".join([e.definition, *e.rules, e.example])
+            for bad in (r"\bNone\b", r"console\.log", r"\belif\b", r"\bdef \w+\(", r"===", r"\bself\.", r"\bfinal\b[ \t]+\w+[ \t]*=", r"\bprint\("):
+                assert not re.search(bad, text), (lang, e.id, bad)
+    for e in glossary.all_entries("sql"):
+        assert "printf" not in " ".join([e.definition, *e.rules]), e.id
+        assert "#include" not in e.example, e.id
+    for e in glossary.all_entries("c"):
+        assert "SELECT" not in e.definition, e.id
+
+
+# ── the rules, held to the real thing ───────────────────────────────────
+
+def _dedented(programs) -> list[str]:
+    import textwrap
+
+    return [textwrap.dedent(p).strip("\n") for p in programs]
+
+
+def _c_matches(expected: str, got: str) -> bool:
+    if expected == "CE":
+        return "COMPILE ERROR" in got  # clang refuses; MSVC may accept, which shows as BUILDS DIFFER holding one
+    if expected == "DIFFER":
+        return got.startswith("BUILDS DIFFER") and "COMPILE ERROR" not in got
+    if expected == "STOPPED":
+        return got.startswith("STOPPED") or (got.startswith("BUILDS DIFFER") and "STOPPED" in got)
+    return got == expected
+
+
+@functools.cache
+def c_rule_results():
+    return c_oracle.check_items(_dedented(p for _n, p, _e in C_RULE_CHECKS))
+
+
+@functools.cache
+def c_warning_results():
+    return c_oracle.check_items(_dedented(p for _n, p, _e in C_WARNING_CHECKS))
+
+
+@functools.cache
+def c_ub_results() -> dict[int, str]:
+    return c_oracle.ub_findings(_dedented(p for _n, p, _e in C_UB_CHECKS))
+
+
+needs_c = pytest.mark.skipif(not c_oracle.HAVE_COMPILER, reason="needs a C compiler")
+
+
+def test_c_check_names_are_unique_and_named_after_real_words():
+    names = [c[0] for c in C_RULE_CHECKS] + [c[0] for c in C_WARNING_CHECKS] + [c[0] for c in C_UB_CHECKS]
+    # a name may repeat for different claims of one word only if the claim text differs
+    assert len(names) == len(set(names))
+    for name in names:
+        assert set(_check_ids(name)) <= _c_ids(), name
+    assert len(C_RULE_CHECKS) >= 150
+
+
+@needs_c
+@pytest.mark.parametrize("index", range(len(C_RULE_CHECKS)), ids=[c[0][:70] for c in C_RULE_CHECKS])
+def test_the_c_rules_hold_in_real_c(index):
+    name, _program, expected = C_RULE_CHECKS[index]
+    got = c_rule_results()[index].value
+    assert _c_matches(expected, got), f"{name}: C printed {got!r}, not {expected!r}"
+
+
+@needs_c
+@pytest.mark.parametrize("index", range(len(C_WARNING_CHECKS)), ids=[c[0][:60] for c in C_WARNING_CHECKS])
+def test_the_c_warnings_the_rules_promise_really_happen(index):
+    name, _program, flag = C_WARNING_CHECKS[index]
+    assert flag in c_warning_results()[index].warnings, (name, c_warning_results()[index])
+
+
+@pytest.mark.skipif(not c_oracle.sanitizer_available(), reason="needs clang's sanitizers")
+@pytest.mark.parametrize("index", range(len(C_UB_CHECKS)), ids=[c[0][:60] for c in C_UB_CHECKS])
+def test_the_c_undefined_behaviour_the_rules_name_is_found_by_the_sanitizer(index):
+    name, _program, needle = C_UB_CHECKS[index]
+    found = c_ub_results().get(index, "")
+    if needle:
+        assert needle in found, f"{name}: the sanitizer said {found!r}"
+    else:
+        assert found == "", f"{name}: the sanitizer complained: {found!r}"
+
+
+def test_c_not_oracle_checked_words_are_listed_honestly():
+    checked = {i for c in (*C_RULE_CHECKS, *C_WARNING_CHECKS, *C_UB_CHECKS) for i in _check_ids(c[0])}
+    assert not C_NOT_ORACLE_CHECKED & checked, "listed as unchecked but has a check"
+    assert _c_ids() == checked | C_NOT_ORACLE_CHECKED, sorted(_c_ids() ^ (checked | C_NOT_ORACLE_CHECKED))
+    assert len(C_NOT_ORACLE_CHECKED) <= 0.05 * len(_c_ids()), "nearly every C word has a measured rule"
+
+
+def _run_sql_lenient(program: str) -> str:
+    """sql_oracle.run_sql, except that a statement beginning `/*E*/` may fail (the error is swallowed)."""
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    rows = None
+    try:
+        for statement in sql_oracle._split(program):
+            tolerant = statement.startswith("/*E*/")
+            if tolerant:
+                statement = statement[5:].strip()
+            try:
+                cursor = db.execute(statement)
+            except sqlite3.Error as exc:
+                if tolerant:
+                    continue
+                return f"ERROR: {exc}"
+            if cursor.description is not None:
+                rows = cursor.fetchall()
+    finally:
+        db.close()
+    if rows is None:
+        return ""
+    return "; ".join("|".join(sql_oracle._show(v) for v in row) for row in rows)
+
+
+def test_sql_check_names_are_unique_and_named_after_real_words():
+    names = [c[0] for c in SQL_RULE_CHECKS]
+    assert len(names) == len(set(names))
+    for name in names:
+        assert set(_check_ids(name)) <= _sql_ids(), name
+    assert len(SQL_RULE_CHECKS) >= 100
+
+
+@pytest.mark.parametrize("index", range(len(SQL_RULE_CHECKS)), ids=[c[0][:70] for c in SQL_RULE_CHECKS])
+def test_the_sql_rules_hold_in_real_sqlite(index):
+    name, script, expected = SQL_RULE_CHECKS[index]
+    got = _run_sql_lenient(_dedented([script])[0])
+    if expected.startswith("ERROR"):
+        assert got.startswith(expected), f"{name}: SQLite said {got!r}, not {expected!r}"
+    else:
+        assert got == expected, f"{name}: SQLite printed {got!r}, not {expected!r}"
+
+
+def test_sql_not_oracle_checked_words_are_listed_honestly():
+    checked = {i for c in SQL_RULE_CHECKS for i in _check_ids(c[0])}
+    assert not SQL_NOT_ORACLE_CHECKED & checked
+    assert _sql_ids() == checked | SQL_NOT_ORACLE_CHECKED, sorted(_sql_ids() ^ (checked | SQL_NOT_ORACLE_CHECKED))
+
+
+def test_the_sql_examples_print_the_same_through_the_real_runner():
+    """The transaction, savepoint and pragma examples are the ones where an in-process connection could differ from the
+    driver 'Run it' uses: hold them (and one plain query) to the driver."""
+    for word in ("transaction", "rollback", "savepoint", "foreign-key", "select"):
+        item = entry("sql", word)
+        assert sql_oracle.driver_value(item.example) == item.example_output, word
+
+
+# ── matching ─────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize(
+    ("lang", "code", "expect"),
+    [
+        ("c", r'printf("%5.2f|%-4d\n", x, y);', {"printf", "format-specifier", "padding", "precision", "escape-sequence"}),
+        ("c", "uint8_t x = 200;\nx += 100;", {"fixed-width-integer", "integer-promotion"}),
+        ("c", "unsigned u = 0;\nu = u - 1;", {"unsigned"}),
+        ("c", "int q = -7 / 2;\nint r = -7 % 3;", {"division", "modulo"}),
+        ("c", "int *p = &x;\n*p = 5;", {"pointer", "address-of", "dereference"}),
+        ("c", "p = a + 2;\nint v = *p++;", {"pointer-arithmetic"}),
+        ("c", "char *p = NULL;\nif (p == NULL) return;", {"null-pointer", "pointer"}),
+        ("c", r'char s[] = "hi";' + "\nsize_t n = strlen(s);", {"string", "string-length", "size-t"}),
+        ("c", "strcpy(d, s);\nstrncpy(d, s, 3);\nstrcat(d, s);\nstrcmp(a, b);", {"strcpy", "strncpy", "strcat", "strcmp"}),
+        ("c", "memcpy(b, a, n);\nmemset(a, 0, n);", {"memcpy", "memset"}),
+        ("c", "flags |= 1u << 3;\nflags &= ~(1u << 0);", {"bit-shift", "bit-mask", "bitwise-operator"}),
+        ("c", "x = 0xFF & y;", {"hexadecimal", "bitwise-operator"}),
+        ("c", "struct Point { int x; int y; };\nstruct Point *p;\np->x = 1;", {"struct", "arrow-operator"}),
+        ("c", "struct P p = { .x = 1, .y = 2 };", {"designated-initializer"}),
+        ("c", "p = (struct P){ 1, 2 };", {"compound-literal"}),
+        ("c", "typedef unsigned char byte;\nenum Color { RED, GREEN };\nunion U { int i; float f; };", {"typedef", "enum", "union"}),
+        ("c", "int (*op)(int, int) = add;", {"function-pointer"}),
+        ("c", "qsort(a, n, sizeof a[0], cmp);", {"qsort", "sizeof"}),
+        ("c", "int *a = malloc(n * sizeof *a);\nfree(a);", {"dynamic-memory", "sizeof"}),
+        ("c", "#define SQ(x) ((x) * (x))\n#ifdef DEBUG\n#endif\n#include <stdio.h>", {"macro", "conditional-compilation", "header", "preprocessor"}),
+        ("c", r'#define SHOW(x) printf(#x " = %d\n", x)', {"stringify", "macro"}),
+        ("c", "switch (n) {\n  case 1: break;\n  default: break;\n}", {"switch", "break"}),
+        ("c", "do {\n  n--;\n} while (n > 0);", {"do-while-loop"}),
+        ("c", "for (int i = 0; i < n; i++) {\n  for (int j = 0; j < n; j++) {}\n}", {"for-loop", "nested-loop"}),
+        ("c", "for (i = 0, j = 9; i < j; i++, j--) {}", {"comma-operator", "increment"}),
+        ("c", "int m = a < b ? a : b;", {"ternary"}),
+        ("c", "if (p != NULL && *p > 0) {}", {"short-circuit", "null-pointer"}),
+        ("c", "if (x = 5) {}", {"assignment"}),
+        ("c", "int r = a & b == c;", {"precedence", "bitwise-operator"}),
+        ("c", "static int count = 0;\nextern int total;", {"static-variable", "extern"}),
+        ("c", "const char *s = \"a\" \"b\";\nconst int *p;", {"const-pointer", "constant", "string-literal"}),
+        ("c", "volatile int sensor;", {"volatile"}),
+        ("c", "int x = INT_MAX;\nsize_t n = SIZE_MAX;", {"integer-limits", "size-t", "overflow"}),
+        ("c", "int i = 0;\nint v = i++ + i++;", {"sequence-point", "side-effect"}),
+        ("c", "double d = 3.5;\nint n = (int)d;", {"floating-point", "cast"}),
+        ("c", "char c = 'a';\nint d = c - '0';", {"character", "ascii"}),
+        ("c", "int a[2][3];\nint b[4] = {1, 2};", {"multidimensional-array", "initialization", "array"}),
+        ("c", "struct Node { int v; struct Node *next; };\nwhile (p) p = p->next;", {"linked-list", "arrow-operator"}),
+        ("c", "char *t = strtok(line, \",\");\nlong v = strtol(s, &end, 10);", {"strtok", "string-to-number"}),
+        ("c", "if (isdigit(c) && isalpha(d)) {}", {"character-functions"}),
+        ("c", "int main(void) {\n  return 0;\n}", {"main-function", "return", "void"}),
+        ("c", "int twice(int);", {"function-declaration"}),
+        ("sql", "SELECT name FROM users WHERE age > 30;", {"select", "where-clause"}),
+        ("sql", "select g, count(*) from t group by g having count(*) > 1 order by g desc limit 3 offset 1;",
+         {"group-by", "having", "count", "order-by", "limit", "offset"}),
+        ("sql", "SELECT * FROM a LEFT JOIN b ON a.id = b.aid WHERE b.id IS NULL;", {"left-join", "join", "is-null"}),
+        ("sql", "SELECT * FROM a INNER JOIN b ON a.x = b.x CROSS JOIN c;", {"inner-join", "cross-join"}),
+        ("sql", "SELECT COALESCE(x, 0), NULLIF(y, ''), SUM(v), AVG(v), MIN(v), MAX(v) FROM t;", {"coalesce", "nullif", "sum", "average", "min-max"}),
+        ("sql", "SELECT DISTINCT c FROM t WHERE c LIKE 'a%' AND d IN (1, 2) AND e BETWEEN 1 AND 3;",
+         {"distinct", "like-operator", "in-operator", "between"}),
+        ("sql", "SELECT x FROM t WHERE x NOT IN (SELECT y FROM u) AND EXISTS (SELECT 1 FROM w);", {"not-in", "exists", "subquery"}),
+        ("sql", "SELECT 1 UNION SELECT 2 UNION ALL SELECT 3 INTERSECT SELECT 3 EXCEPT SELECT 4;", {"union", "union-all", "intersect", "except"}),
+        ("sql", "SELECT CASE WHEN n < 10 THEN 'low' ELSE 'high' END FROM t;", {"case-expression"}),
+        ("sql", "SELECT 5 / 2, 7 % 3, ROUND(2.5), CAST(x AS TEXT), typeof(y), 'a' || 'b', SUBSTR(s, 2), INSTR(s, 'a');",
+         {"integer-division", "modulo", "round", "type-conversion", "typeof", "concatenation", "substr", "instr"}),
+        ("sql", "SELECT ROW_NUMBER() OVER (PARTITION BY g ORDER BY v), RANK() OVER (ORDER BY v), DENSE_RANK() OVER (ORDER BY v), LAG(v) OVER (ORDER BY v), LEAD(v) OVER (ORDER BY v) FROM t;",
+         {"window-function", "row-number", "rank", "dense-rank", "partition", "lag", "lead"}),
+        ("sql", "SELECT SUM(v) OVER (ORDER BY id) FROM t;", {"running-total", "window-function"}),
+        ("sql", "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 5) SELECT i FROM n;", {"cte", "recursive-cte"}),
+        ("sql", "SELECT date('2024-03-15', '+1 month'), strftime('%Y', d), julianday(d);", {"date-function"}),
+        ("sql", "INSERT INTO t VALUES (1, 'a');\nUPDATE t SET v = 2 WHERE id = 1;\nDELETE FROM t WHERE id = 1;", {"insert", "update", "delete"}),
+        ("sql", "INSERT INTO t VALUES (1) ON CONFLICT (id) DO UPDATE SET v = excluded.v;\nINSERT OR REPLACE INTO t VALUES (2);",
+         {"upsert", "or-replace"}),
+        ("sql", "CREATE TABLE t (id INTEGER PRIMARY KEY AUTOINCREMENT, n TEXT NOT NULL UNIQUE DEFAULT 'x' CHECK (length(n) > 0));",
+         {"create-table", "primary-key", "autoincrement", "not-null", "unique", "default-value", "check-constraint"}),
+        ("sql", "PRAGMA foreign_keys = ON;\nCREATE TABLE o (uid INTEGER REFERENCES u(id));", {"foreign-key"}),
+        ("sql", "ALTER TABLE t ADD COLUMN c INTEGER;\nCREATE VIEW v AS SELECT 1;\nCREATE INDEX i ON t (c);", {"alter-table", "view", "index"}),
+        ("sql", "BEGIN;\nSAVEPOINT s;\nROLLBACK TO s;\nCOMMIT;", {"transaction", "savepoint", "rollback"}),
+        ("sql", "CREATE TRIGGER tr AFTER INSERT ON t BEGIN SELECT 1; END;", {"trigger"}),
+        ("sql", "SELECT rowid, * FROM t WHERE x GLOB 'a*' ORDER BY n COLLATE NOCASE;", {"rowid", "glob", "collation"}),
+        ("sql", "SELECT COUNT(*) FILTER (WHERE v > 1), GROUP_CONCAT(v, ','), changes() FROM t;", {"aggregate-filter", "group-concat", "rows-affected"}),
+    ],
+)
+def test_detection_on_c_and_sql_snippets(lang, code, expect):
+    got = set(ids(find_words(code, lang, limit=60)))
+    assert expect <= got, (expect - got, sorted(got))
+
+
+def test_a_word_inside_a_c_or_sql_string_or_comment_is_not_code():
+    assert "short-circuit" not in ids(find_words('puts("a && b");', "c", limit=60))
+    assert "short-circuit" not in ids(find_words("// a && b\nint x;", "c", limit=60))
+    assert "short-circuit" not in ids(find_words("/* a && b\n || c */ int x;", "c", limit=60))
+    assert "increment" not in ids(find_words("char c = '+'; char d = '-';", "c", limit=60))
+    assert "sizeof" not in ids(find_words('puts("sizeof");', "c", limit=60))
+    assert "sizeof" in ids(find_words('puts("a"); int n = sizeof(int);', "c", limit=60))
+    assert "macro" in ids(find_words("#define X 1", "c", limit=60)), "a preprocessor line is code"
+    assert "join" not in ids(find_words("SELECT 'left join' FROM t; -- cross join", "sql", limit=60))
+    assert "join" not in ids(find_words("SELECT 1 /* inner join */;", "sql", limit=60))
+    assert "join" not in ids(find_words('SELECT "left join" FROM t;', "sql", limit=60))
+    assert "like-operator" not in ids(find_words("SELECT 'it''s like ''a%''' ;", "sql", limit=60))
+    assert "select" in ids(find_words("SELECT 'a''b' FROM t;", "sql", limit=60))
+    blanked = glossary.blank_code("x = 'a'; // hi\ns = \"b\\\"c\"; /* d */ int y;", "c")
+    assert "hi" not in blanked and "b" not in blanked and "int y;" in blanked
+    assert glossary.blank_code("SELECT 'a''b', \"c d\" -- e\nFROM t", "sql") == "SELECT '', \"\" \nFROM t"
+    # a C character keeps a placeholder (the ASCII card looks for c - '0'), a C string is emptied, a comment is dropped
+    assert glossary.blank_code("char c = 'a'; int d = c - '0'; s = \"x\"; // y", "c") == "char c = '_'; int d = c - '_'; s = \"\"; "
+
+
+EVERYDAY_C = {
+    "variable", "integer", "operator", "assignment", "increment", "function", "return", "void", "main-function", "printf",
+    "format-specifier", "escape-sequence", "loop", "for-loop", "while-loop", "condition", "array", "index", "string",
+    "character", "puts", "division", "modulo", "comparison", "floating-point", "boolean", "expression", "precedence",
+    "initialization", "constant", "string-literal", "parameter", "argument", "pointer", "size-t", "header", "padding",
+    "precision", "break", "continue", "sizeof", "unsigned", "cast", "static-variable", "bitwise-operator", "ternary",
+}
+QUIET_C = [
+    "int x = 5;\nprintf(\"%d\\n\", x);",
+    "int add(int a, int b) {\n    return a + b;\n}\nint main(void) {\n    printf(\"%d\\n\", add(1, 2));\n    return 0;\n}",
+    "for (int i = 0; i < 10; i++) {\n    sum += a[i];\n}",
+    "if (x > 3) {\n    puts(\"big\");\n}",
+    "int a = 7 / 2;\nint b = -7 % 3;",
+    "while (n > 0) {\n    n--;\n}",
+    "double d = 2.5;\nprintf(\"%.1f\\n\", d);",
+    "char s[] = \"hi\";\nprintf(\"%s\\n\", s);",
+]
+EVERYDAY_SQL = {"select", "where-clause", "count", "order-by", "insert", "update", "delete", "group-by", "null", "table", "query",
+                "integer-division", "alias", "create-table", "limit", "sum", "join", "distinct", "like-operator", "in-operator"}
+QUIET_SQL = [
+    "SELECT name FROM users WHERE age > 30;",
+    "SELECT COUNT(*) FROM t;",
+    "SELECT a, b FROM t ORDER BY a LIMIT 5;",
+    "INSERT INTO t VALUES (1, 'a');",
+    "UPDATE t SET v = 2 WHERE id = 1;",
+    "DELETE FROM t WHERE id = 1;",
+    "SELECT 1;",
+]
+
+
+@pytest.mark.parametrize("code", QUIET_C)
+def test_plain_c_does_not_wake_the_specialised_cards(code):
+    woken = ids(find_words(code, "c", limit=80))
+    assert set(woken) <= EVERYDAY_C, (code, sorted(set(woken) - EVERYDAY_C))
+    assert len(woken) <= 9
+
+
+@pytest.mark.parametrize("code", QUIET_SQL)
+def test_plain_sql_does_not_wake_the_specialised_cards(code):
+    woken = ids(find_words(code, "sql", limit=80))
+    assert set(woken) <= EVERYDAY_SQL, (code, sorted(set(woken) - EVERYDAY_SQL))
+    assert len(woken) <= 5
+
+
+def test_generic_c_and_sql_words_are_never_loud():
+    for lang, words in (
+        ("c", ("variable", "integer", "operator", "expression", "assignment", "function", "parameter", "argument", "loop",
+               "iteration", "condition", "buffer", "byte", "character", "string", "index", "array", "division", "modulo",
+               "scope", "local-variable", "global-variable", "iteration", "call-stack", "boolean", "comparison", "swap")),
+        ("sql", ("table", "query", "boolean", "string-function", "alias", "null", "select", "integer-division", "modulo", "where-clause")),
+    ):
+        for word in words:
+            item = lookup(lang, word)
+            assert item is not None and item.priority <= 50, (lang, word)
+
+
+# ── words a pack author uses, and the counterparts of Python and JavaScript words ─────
+
+@pytest.mark.parametrize(
+    ("lang", "spoken", "wanted"),
+    [
+        ("c", "string", "string"), ("c", "char-array", "array"), ("c", "arrays", "array"), ("c", "loops", "loop"),
+        ("c", "recursive", "recursion"), ("c", "base-case", "recursion"), ("c", "sorting", "qsort"), ("c", "scope", "scope"),
+        ("c", "truthy", "boolean"), ("c", "falsy", "boolean"), ("c", "print", "printf"),
+        ("c", "integer-division", "division"), ("c", "remainder", "modulo"), ("c", "casting", "cast"), ("c", "type coercion", "type-conversion"),
+        ("c", "define", "macro"), ("c", "token-pasting", "stringify"), ("c", "enumerator", "enum"), ("c", "case", "switch"),
+        ("c", "address", "address-of"), ("c", "alias", "typedef"), ("c", "const", "constant"), ("c", "memmove", "memcpy"),
+        ("c", "string-comparison", "strcmp"), ("c", "bit-flag", "bit-mask"), ("c", "linkage", "extern"),
+        ("c", "function-prototype", "function-declaration"), ("c", "member", "struct"), ("c", "struct-copy", "struct"),
+        ("c", "pass-by-reference", "pass-by-value"), ("c", "truncation", "truncation"), ("c", "zero-initialization", "initialization"),
+        ("c", "lexicographic-order", "strcmp"), ("c", "array-of-pointers", "array-of-strings"), ("c", "char-arithmetic", "character"),
+        ("c", "parsing", "string-to-number"), ("c", "strtok", "strtok"), ("c", "buffer", "buffer"), ("c", "byte", "byte"),
+        ("c", "out-parameter", "out-parameter"), ("c", "end-pointer", "end-pointer"), ("c", "linked-list", "linked-list"),
+        ("c", "Null Terminator", "null-terminator"), ("c", "NUL", "null-terminator"), ("c", "%d", "format-specifier"),
+        ("c", "&&", "short-circuit"), ("c", "?:", "ternary"), ("c", "->", "arrow-operator"), ("c", "<<", "bit-shift"),
+        ("sql", "sorting", "order-by"), ("sql", "null-handling", "is-null"), ("sql", "duplicate", "distinct"),
+        ("sql", "integer-division", "integer-division"), ("sql", "string", "string-function"), ("sql", "type-conversion", "type-conversion"),
+        ("sql", "cast", "type-conversion"), ("sql", "on-conflict", "upsert"), ("sql", "excluded", "upsert"), ("sql", "replace", "or-replace"),
+        ("sql", "or-ignore", "or-replace"), ("sql", "add-column", "alter-table"), ("sql", "rename", "alter-table"),
+        ("sql", "commit", "transaction"), ("sql", "begin", "transaction"), ("sql", "atomicity", "transaction"), ("sql", "set-clause", "update"),
+        ("sql", "insert-select", "insert"), ("sql", "live-view", "view"), ("sql", "create-view", "view"), ("sql", "derived-table", "subquery"),
+        ("sql", "scalar-subquery", "subquery"), ("sql", "recursion", "recursive-cte"), ("sql", "with-clause", "cte"),
+        ("sql", "series", "recursive-cte"), ("sql", "tree", "recursive-cte"), ("sql", "pair", "self-join"), ("sql", "hierarchy", "self-join"),
+        ("sql", "pattern-matching", "like-operator"), ("sql", "wildcard", "like-operator"), ("sql", "escape", "like-operator"),
+        ("sql", "case-sensitivity", "collation"), ("sql", "text-comparison", "iso-date"), ("sql", "julian-day", "date-function"),
+        ("sql", "date-arithmetic", "date-function"), ("sql", "changes", "rows-affected"), ("sql", "filter", "aggregate-filter"),
+        ("sql", "group-concat", "group-concat"), ("sql", "tie", "order-by"), ("sql", "ddl", "create-table"),
+        ("sql", "Three-Valued Logic", "three-valued-logic"), ("sql", "COUNT(*)", "count"), ("sql", "set-operation", "union"),
+        ("sql", "where vs having", "having"), ("sql", "not in", "not-in"), ("sql", "left outer join", "left-join"),
+        ("sql", "ordering", "order-by"), ("sql", "autoincrement", "autoincrement"),
+    ],
+)
+def test_a_pack_authors_word_leads_to_the_c_or_sql_card(lang, spoken, wanted):
+    found = glossary.resolve(lang, spoken)
+    assert found is not None and found.id == wanted, (lang, spoken, found and found.id)
+
+
+def test_c_and_sql_say_their_own_rules_where_python_and_javascript_say_theirs():
+    assert "-7 % 3 is -1" in " ".join(entry("c", "modulo").rules) or "-1" in " ".join(entry("c", "modulo").rules)
+    assert "toward ZERO" in " ".join(entry("c", "division").rules)
+    assert "undefined" in " ".join(entry("c", "overflow").rules) and "wraps" in " ".join(entry("c", "overflow").rules)
+    assert "0 means false" in entry("c", "boolean").definition
+    assert "never" in " ".join(entry("c", "comparison").rules).lower() or "ADDRESSES" in " ".join(entry("c", "comparison").rules)
+    assert "NULL" in entry("sql", "null").definition and "NULL = NULL" in " ".join(entry("sql", "null").rules)
+    assert "toward zero" in entry("sql", "integer-division").definition
+    assert "first" in " ".join(entry("sql", "order-by").rules) and "NULL" in " ".join(entry("sql", "order-by").rules)
+    assert "1-based" in " ".join(entry("sql", "instr").rules) or "from 1" in entry("sql", "instr").definition
+    assert "PostgreSQL" not in " ".join(e.definition for e in glossary.all_entries("sql")), "SQL here means SQLite"
+
+
+# ── contexts: every C and SQL Brain Drills activity ──────────────────────
+
+def test_every_c_and_sql_activity_gets_words_derived_from_its_concepts():
+    played = [a for a in ACTIVITIES if "c" in a.languages or "sql" in a.languages]
+    assert len(played) >= 40, "the C and SQL packs are discovered"
+    for a in played:
+        for lang in ("c", "sql"):
+            if lang not in a.languages:
+                continue
+            got = words_for_context(a.id, lang)
+            assert got and all(w.language == lang for w in got), (a.id, lang)
+            resolved = [glossary.resolve(lang, c) for c in a.concepts]
+            assert ids(got) == list(dict.fromkeys(r.id for r in resolved if r)), (a.id, lang)
+            if len(a.concepts) >= 2:
+                assert len(got) >= 2, (a.id, lang)
+    assert ids(words_for_context("c_int", "c"))[:4] == ["integer", "division", "modulo", "overflow"]
+    assert ids(words_for_context("c_array", "c"))[:3] == ["array", "index", "pointer"]
+    assert ids(words_for_context("sql_null", "sql"))[:4] == ["null", "three-valued-logic", "coalesce", "aggregate-function"]
+    assert ids(words_for_context("sql_window", "sql"))[:3] == ["window-function", "row-number", "rank"]
+
+
+def test_c_and_sql_concepts_the_packs_use_resolve_almost_everywhere():
+    """Per activity at most one concept (usually none) goes without a card in its own language."""
+    lacking = {}
+    for a in ACTIVITIES:
+        for lang in ("c", "sql"):
+            if lang in a.languages:
+                gone = [c for c in a.concepts if glossary.resolve(lang, c) is None]
+                if gone:
+                    lacking[(a.id, lang)] = gone
+    assert all(len(v) <= 1 for v in lacking.values()), lacking
+
+
+def test_chips_and_find_words_for_a_c_or_sql_drill_come_from_that_glossary():
+    got = find_words("int x = 7 / 2;", "c", context="c_int")
+    assert ids(got)[:4] == ["integer", "division", "modulo", "overflow"] and all(w.language == "c" for w in got)
+    got = find_words("SELECT NULL = NULL;", "sql", context="sql_null")
+    assert ids(got)[:2] == ["null", "three-valued-logic"] and all(w.language == "sql" for w in got)
+    # the same activity id asked in a language it is not played in simply resolves in that glossary (nothing crashes)
+    assert isinstance(find_words("x", "sql", context="c_int"), list)
+
+
+# ── the API ──────────────────────────────────────────────────────────────
+
+def test_explain_for_c_and_sql_has_no_reader_but_still_gets_its_words():
+    r = explain('int a = 7 / 2;\nprintf("%d\\n", a % 3);', "c")
+    assert r.ok is False and "no reader" in r.summary
+    got = [w.id for w in r.words]
+    assert "division" in got and "modulo" in got and "printf" in got, got
+    assert r.words and all(w.language == "c" for w in r.words)
+    r = explain("SELECT g, COUNT(*) FROM t WHERE v IS NULL GROUP BY g;", "sql")
+    assert r.ok is False and "no reader" in r.summary
+    got = [w.id for w in r.words]
+    assert "group-by" in got and "is-null" in got and "count" in got, got
+    assert all(w.language == "sql" for w in r.words)
+    assert [w.id for w in explain("x", "c", context="c_bits").words][:3] == ["bitwise-operator", "bit-shift", "bit-mask"]
+    assert [w.id for w in explain("x", "sql", context="sql_count").words][:2] == ["where-clause", "null"]
+    assert explain("SELECT 1;", "postgresql").words == [], "PostgreSQL has no glossary"
+
+
+def test_glossary_route_knows_c_and_sql():
+    assert [w.id for w in server.glossary_words(language="c", term="sizeof").words] == ["sizeof"]
+    assert [w.id for w in server.glossary_words(language="c", term="->").words] == ["arrow-operator"]
+    assert [w.id for w in server.glossary_words(language="sql", term="COALESCE").words] == ["coalesce"]
+    assert [w.id for w in server.glossary_words(language="sql", term="||").words] == ["concatenation"]
+    assert [w.id for w in server.glossary_words(language="c", context="c_printf").words][:3] == ["printf", "format-specifier", "padding"]
+    assert [w.id for w in server.glossary_words(language="sql", context="sql_group").words][:3] == ["group-by", "having", "aggregate-function"]
+    assert len(server.glossary_words(language="c").words) == len(glossary.all_entries("c")) >= 110
+    assert len(server.glossary_words(language="sql").words) == len(glossary.all_entries("sql")) >= 85
+    assert server.glossary_words(language="postgresql", term="select").words == []
+    assert all(w.language == "c" for w in server.glossary_words(language="c", context="c_loop").words)
+    assert [w.id for w in server.glossary_words(language="sql", term="nonsense").words] == []
+
+
+def test_c_and_sql_are_read_quickly():
+    """Every detection pattern is bounded: long, adversarial input must not stall the matcher."""
+    import time
+
+    started = time.perf_counter()
+    for code in (
+        "i++ " * 5000, "f(" * 2000 + "i++, " * 2000, "*" * 8000, "case " * 3000, "&&" * 6000, "<<" * 6000, "0x" * 4000,
+        "'" * 6000, "(" * 6000, "for (" * 3000, "struct " * 3000, "a->b " * 4000, "#define " * 3000, "{ " * 6000, "int " * 4000,
+        "x = x++ + " * 2000, "printf(\"%d\"" * 3000, ", i" * 8000, "(int)" * 4000, "= " * 8000, "[" * 6000, "a[0][1]" * 2000,
+        "int a[3] = {" * 1500, "while (" * 3000, "do {" * 3000, "} while (" * 3000, "\\\\" * 6000,
+    ):
+        find_words(code, "c", limit=60)
+    find_words("int f(int n) {\n" + "  x += n * 2;\n" * 400 + "}\n" + "for (;;) { break; }\n" * 200, "c", limit=60)
+    find_words("int a[" + "9" * 3000 + "];", "c", limit=60)
+    assert time.perf_counter() - started < 6.0
+    started = time.perf_counter()
+    for code in (
+        "select " * 4000, "and or " * 3000, "(select " * 2000, "case when " * 2000, "over (" * 3000, "group by " * 3000, "'" * 6000,
+        "-- " * 4000, "/* " * 4000, "not in (" * 2000, "join on " * 3000, "x / " * 5000, "a || " * 5000, "insert or " * 3000,
+        "create table t (" * 1500, "primary key " * 3000, "begin; " * 3000, "with recursive " * 2000, "\"" * 6000, "filter (where " * 2000,
+    ):
+        find_words(code, "sql", limit=60)
+    find_words("SELECT " + ", ".join(f"c{i}" for i in range(2000)) + " FROM t WHERE " + " AND ".join(f"c{i} > {i}" for i in range(500)), "sql", limit=60)
+    assert time.perf_counter() - started < 6.0

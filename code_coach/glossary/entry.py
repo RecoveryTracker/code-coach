@@ -1,10 +1,10 @@
 """One glossary entry, and the helpers a terms module writes entries with.
 
 An entry teaches ONE word in ONE language. A word that means the same in Python,
-JavaScript and Dart (a loop, a variable) is written once with `both(...)` (alias
+JavaScript, Dart, C and SQL (a loop, a variable) is written once with `both(...)` (alias
 `all3`), which makes one entry per language dict it is given, from a shared
 definition plus a per-language example, so the rules and the example can never
-leak from one language into the other. `py`, `js` and `dart` write one language.
+leak from one language into the other. `py`, `js`, `dart`, `c` and `sql` write one language.
 """
 
 from __future__ import annotations
@@ -13,8 +13,9 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
-#: The glossary languages, in display order. Dart (and with it Flutter, which is Dart) was added 2026-10-22.
-LANGUAGES = ("python", "javascript", "dart")
+#: The glossary languages, in display order. Dart (and with it Flutter, which is Dart) was added 2026-10-22, C and SQL
+#: (SQLite's SQL) the day after.
+LANGUAGES = ("python", "javascript", "dart", "c", "sql")
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,14 @@ def dart(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
     return [entry("dart", id, term, definition, **kw)]
 
 
+def c(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
+    return [entry("c", id, term, definition, **kw)]
+
+
+def sql(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
+    return [entry("sql", id, term, definition, **kw)]
+
+
 def both(
     id: str,
     term: str,
@@ -111,13 +120,15 @@ def both(
     python: dict[str, Any] | None = None,
     javascript: dict[str, Any] | None = None,
     dart: dict[str, Any] | None = None,
+    c: dict[str, Any] | None = None,
+    sql: dict[str, Any] | None = None,
     **common: Any,
 ) -> list[Entry]:
-    """The same word in two or three languages. `common` is shared; each language dict overrides it
+    """The same word in up to five languages. `common` is shared; each language dict overrides it
     (and must hold at least its own `example` and `out`). Leave a language's dict as None
     to write the word for only the others."""
     out: list[Entry] = []
-    for language, own in (("python", python), ("javascript", javascript), ("dart", dart)):
+    for language, own in (("python", python), ("javascript", javascript), ("dart", dart), ("c", c), ("sql", sql)):
         if own is None:
             continue
         merged = {**common, **own}
@@ -127,5 +138,5 @@ def both(
     return out
 
 
-#: `both` writes up to three languages; the name says so where a file writes all of them.
+#: `both` writes up to five languages; `all3` is the older name, kept for the files that write the first three.
 all3 = both

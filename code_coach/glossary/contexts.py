@@ -21,7 +21,9 @@ Two sources, one answer:
 The same `concepts` serve every language an activity is played in: a Dart activity's concepts are resolved in
 Dart (`resolve("dart", word)`), so "switch", "tuple", "destructuring", "string-representation", "generator" or
 "optional-chaining" land on the Dart card for that idea (Dart words carry the Python and JavaScript spellings as
-`aka`). The original seven are not played in Dart; their hand-kept ids a language lacks are skipped.
+`aka`). C and SQL work the same way (a C activity's "string" is the char-array card, "sorting" is qsort; a SQL
+activity's "sorting" is ORDER BY). The original seven are not played in Dart, C or SQL; their hand-kept ids a
+language lacks are skipped.
 
 The brain package is imported lazily, inside `concepts_for`, so the glossary never
 needs it at import time.

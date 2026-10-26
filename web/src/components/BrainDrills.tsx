@@ -18,8 +18,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
 import { award } from "../lib/momentum";
 import {
+  DRILL_APP_LANGUAGES,
   answeredCount,
   backTarget,
+  brainLanguageFor,
   clockElapsed,
   clockFor,
   clockStart,
@@ -31,7 +33,9 @@ import {
   nextOpen,
   recordAnswer,
   resumeTarget,
+  sameAnswer,
   type BrainItem,
+  type BrainLang,
   type Clock,
   type RoundState,
 } from "../lib/brainRound";
@@ -40,30 +44,14 @@ import BrainPicker from "./BrainPicker";
 import BrainTools from "./BrainTools";
 import { QuestionWords } from "./WordsUsed";
 
-export type BrainLanguage = "javascript" | "python" | "dart";
-const LANGUAGE_NAMES: Record<BrainLanguage, string> = { javascript: "JavaScript", python: "Python", dart: "Dart" };
+export type BrainLanguage = BrainLang;
+const LANGUAGE_NAMES: Record<BrainLanguage, string> = {
+  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", sql: "SQL",
+};
 
-/**
- * Brain Drills has no language switch of its own: it follows the language
- * picked at the top of the app (the same one every other mode uses). Each app
- * language maps to the drills that fit it; TypeScript plays the JavaScript
- * drills and the farm's language plays Python's (it is Python syntax). A
- * language with no drills yet gives null and the screen says so.
- */
-export function brainLanguageFor(appLanguage: string): BrainLanguage | null {
-  switch (appLanguage) {
-    case "python":
-    case "tfwr":
-      return "python";
-    case "javascript":
-    case "typescript":
-      return "javascript";
-    case "dart":
-      return "dart";
-    default:
-      return null;
-  }
-}
+// Brain Drills follows the language picked at the top of the app: the mapping (brainLanguageFor) and the list of
+// languages the "no drills yet" screen offers (DRILL_APP_LANGUAGES) live in lib/brainRound.ts, where a test runs them.
+export { brainLanguageFor };
 
 /** How the app's language ids read in a sentence (the picker's own names are not passed down). */
 const APP_LANGUAGE_NAMES: Record<string, string> = {
@@ -74,13 +62,6 @@ const APP_LANGUAGE_NAMES: Record<string, string> = {
 function languageLabel(id: string): string {
   return APP_LANGUAGE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
-
-/** The languages that have drills, in the order they are offered. */
-const DRILL_APP_LANGUAGES: { id: string; name: string }[] = [
-  { id: "python", name: "Python" },
-  { id: "javascript", name: "JavaScript" },
-  { id: "dart", name: "Dart" },
-];
 
 type Result = { day: string; activity: string; seconds: number; errors: number; total: number; age: number };
 type ActivityInfo = {
@@ -142,16 +123,6 @@ export function groupActivities(
   return names
     .map((name) => ({ name, items: activities.filter((a) => nameOf(a) === name) }))
     .filter((g) => g.items.length > 0);
-}
-
-/** Forgive what a person types: spaces, case, and quotes round a string. */
-function same(given: string, answer: string): boolean {
-  // Python prints lists as "[1, 2]": spaces inside brackets don't matter.
-  const clean = (s: string) => {
-    const t = s.trim().replace(/^(['"`])(.*)\1$/s, "$2").trim().toLowerCase();
-    return /^[[({]/.test(t) ? t.replace(/\s+/g, "") : t;
-  };
-  return clean(given) === clean(answer);
 }
 
 export default function BrainDrills({
@@ -512,7 +483,7 @@ function Round({
   const answer = useCallback(
     (given: string) => {
       if (!items || !item || busy.current || showing || reviewing || count > 0) return;
-      const right = same(given, item.answer);
+      const right = sameAnswer(given, item.answer, language);
       const next = recordAnswer(rs, rs.index, given, right);
       if (right) {
         award("brain_item", `${activity.id}:${roundId.current}:${rs.index}`);
@@ -531,7 +502,7 @@ function Round({
       guard.current = performance.now() + 300;
       commit(next);
     },
-    [items, item, rs, showing, reviewing, count, finish, commit, activity.id],
+    [items, item, rs, showing, reviewing, count, finish, commit, activity.id, language],
   );
 
   const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});

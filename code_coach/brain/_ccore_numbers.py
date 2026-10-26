@@ -1,0 +1,212 @@
+"""C core pack, part 1: Integer Math, printf Format and Bits.
+
+Every answer is worked out by hand with the helpers of `_c_model.py` (`V`, `add`, `div`, `wrap`, `cfmt`, `fixed`...), and
+tests/test_brain_packs.py compiles every template with the real compilers in batches (tests/c_oracle.py).
+The prompts are the BODY of `main` (`stdio.h stdint.h string.h stddef.h` are in front) and print their own answer.
+"""
+
+from __future__ import annotations
+
+from ._c_model import (C, INT, U8, UINT, V, band, bor, bxor, cast, cfmt, fixed, inv, neg, popcount,
+                       shl, wrap)
+from ._model import Maker, tdiv, tmod
+
+
+def T(*lines: str) -> str:
+    return "\n".join(lines)
+
+
+# ── 1. Integer Math ─────────────────────────────────────────────────────
+
+INTEGER: list[Maker] = [
+    C(r'printf("%d\n", $n / $a);', lambda p: tdiv(p["n"], p["a"]), "Integer division throws the fraction away."),
+    C(r'printf("%d\n", -$n / $a);', lambda p: tdiv(-p["n"], p["a"]),
+      "Since C99 integer division cuts toward zero, so -n / a is minus the positive quotient."),
+    C(r'printf("%d\n", $n / -$a);', lambda p: tdiv(p["n"], -p["a"]), "Division cuts toward zero whichever operand is negative."),
+    C(r'printf("%d\n", -$n / -$a);', lambda p: tdiv(-p["n"], -p["a"]), "Two negatives divide to a positive, cut toward zero."),
+    C(r'printf("%d\n", $n % $a);', lambda p: tmod(p["n"], p["a"]), "% is the remainder after the division."),
+    C(r'printf("%d\n", -$n % $a);', lambda p: tmod(-p["n"], p["a"]),
+      "The result of % takes the sign of the left operand (C99): -n % a is minus the positive remainder."),
+    C(r'printf("%d\n", $n % -$a);', lambda p: tmod(p["n"], -p["a"]),
+      "The sign of the right operand does not matter: the remainder takes the sign of the left one."),
+    C(r'printf("%d\n", -$n % -$a);', lambda p: tmod(-p["n"], -p["a"]), "The remainder takes the sign of the left operand, so it is negative."),
+    C(r'printf("%d\n", $a + $b * $c);', lambda p: p["a"] + p["b"] * p["c"], "* happens before +."),
+    C(r'printf("%d\n", ($a + $b) * $c);', lambda p: (p["a"] + p["b"]) * p["c"], "The brackets go first."),
+    C(r'printf("%d\n", $n - $a - $b);', lambda p: p["n"] - p["a"] - p["b"], "Subtraction works from left to right."),
+    C(r'printf("%d\n", $n / $a * $a);', lambda p: tdiv(p["n"], p["a"]) * p["a"],
+      "Left to right: divide first (the fraction is lost), then multiply."),
+    C(r'printf("%d\n", $n * $a / $b);', lambda p: tdiv(p["n"] * p["a"], p["b"]), "Left to right: multiply first, then divide."),
+    C(r'printf("%d\n", $a / $n);', 0, "A smaller number divided by a bigger one is 0 in integer division."),
+    C(r'printf("%d\n", $a / $b + $c / $d);', lambda p: tdiv(p["a"], p["b"]) + tdiv(p["c"], p["d"]),
+      "Each division is an integer division on its own, then the two results are added."),
+    C(r'printf("%d\n", $n / $a / $b);', lambda p: tdiv(tdiv(p["n"], p["a"]), p["b"]), "Division works from left to right, cutting each time."),
+    C(r'printf("%d\n", $n % $a % $b);', lambda p: tmod(tmod(p["n"], p["a"]), p["b"]), "% works from left to right."),
+    C(r'printf("%d\n", $a * $b % $c);', lambda p: tmod(p["a"] * p["b"], p["c"]), "* and % have the same rank and go left to right."),
+    C(r'printf("%d\n", $n - $a % $b);', lambda p: p["n"] - tmod(p["a"], p["b"]), "% ranks above -, so the remainder is worked out first."),
+    C(r'printf("%.2f\n", $n / $h * 1.0);', lambda p: fixed(float(tdiv(p["n"], p["h"])), 2),
+      "n / h is an integer division; only then is the result turned into a double."),
+    C(r'printf("%.2f\n", $n * 1.0 / $h);', lambda p: fixed(p["n"] * 1.0 / p["h"], 2),
+      "n * 1.0 is a double, so the division keeps its fraction."),
+    C(r'printf("%.1f\n", (double)$n / $h);', lambda p: fixed(p["n"] / p["h"], 1),
+      "The cast makes the left side a double before the division."),
+    C(r'printf("%d\n", (int)$a.9 + $b);', lambda p: p["a"] + p["b"], "Casting a double to int cuts the fraction off: $a.9 becomes $a."),
+    C(r'printf("%d\n", (int)-$a.9);', lambda p: -p["a"], "Casting to int cuts toward zero, so -$a.9 becomes -$a."),
+    C(T(r'uint8_t x = $u;', r'x += $n;', r'printf("%d\n", x);'), lambda p: (p["u"] + p["n"]) % 256,
+      "A uint8_t wraps around after 255: the sum is taken modulo 256."),
+    C(T(r'uint8_t x = $a;', r'x -= $n;', r'printf("%d\n", x);'), lambda p: (p["a"] - p["n"]) % 256,
+      "Below 0 an unsigned type wraps around to 255 and counts down from there."),
+    C(T(r'uint8_t x = $u;', r'printf("%d\n", x + $n);'), lambda p: p["u"] + p["n"],
+      "uint8_t is promoted to int before the +, so nothing wraps: the sum is printed whole."),
+    C(T(r'uint8_t x = 255;', r'x++;', r'printf("%d\n", x);'), 0, "255 is the biggest uint8_t: one more wraps to 0."),
+    C(T(r'uint8_t x = 0;', r'x -= $a;', r'printf("%d\n", x);'), lambda p: 256 - p["a"], "Below 0 an unsigned type wraps to 256 minus the amount."),
+    C(T(r'uint8_t a = $u, b = $u2;', r'printf("%d\n", a + b);'), lambda p: p["u"] + p["u2"],
+      "Both are promoted to int, so the sum does not wrap: it is the whole sum."),
+    C(T(r'uint8_t a = $u, b = $u2;', r'printf("%d\n", (uint8_t)(a + b));'), lambda p: (p["u"] + p["u2"]) % 256,
+      "The cast squeezes the int sum back into a uint8_t: modulo 256."),
+    C(T(r'uint8_t a = $a;', r'printf("%d\n", ~a);'), lambda p: inv(V(p["a"], U8)),
+      "a is promoted to int first, so ~a flips 32 bits: it is -a - 1, not 255 - a."),
+    C(T(r'uint8_t a = $a;', r'printf("%d\n", (uint8_t)~a);'), lambda p: cast(inv(V(p["a"], U8)), U8),
+      "The cast keeps only the low 8 bits of the flipped value: 255 - a."),
+    C(T(r'uint8_t a = $a;', r'printf("%d\n", -a);'), lambda p: neg(V(p["a"], U8)), "a is promoted to int, so the minus gives a plain negative number."),
+    C(T(r'uint16_t x = $big;', r'x += 10000;', r'printf("%d\n", x);'), lambda p: (p["big"] + 10000) % 65536,
+      "A uint16_t wraps modulo 65536."),
+    C(T(r'uint16_t x = 0;', r'x -= $a;', r'printf("%d\n", x);'), lambda p: 65536 - p["a"], "Below 0 an unsigned 16-bit value wraps to 65536 minus the amount."),
+    C(T(r'uint32_t x = 0;', r'x -= $a;', r'printf("%u\n", x);'), lambda p: 2 ** 32 - p["a"], "Below 0 an unsigned 32-bit value wraps to 2 to the 32nd minus the amount."),
+    C(T(r'unsigned a = $a, b = $n;', r'printf("%u\n", a - b);'), lambda p: wrap(p["a"] - p["n"], UINT),
+      "unsigned subtraction never goes negative: it wraps around modulo 2 to the 32nd."),
+    C(T(r'unsigned x = $a;', r'printf("%d\n", x - $n > 0);'), lambda p: 1 if wrap(p["a"] - p["n"], UINT) > 0 else 0,
+      "x - n is unsigned, so it wraps to a huge positive number: it is always greater than 0 here."),
+    C(T(r'int a = -$a;', r'unsigned b = $b;', r'printf("%d\n", a < b);'), 0,
+      "The usual arithmetic conversions turn a into unsigned, a huge number: so a < b is false."),
+    C(T(r'int a = -$a;', r'unsigned b = $b;', r'printf("%d\n", a > b);'), 1,
+      "a is converted to unsigned, a huge number, so a > b is true."),
+    C(T(r'int a = $a;', r'unsigned b = $b;', r'printf("%d\n", a < b);'), lambda p: 1 if p["a"] < p["b"] else 0,
+      "Both are positive, so converting to unsigned changes nothing: an ordinary comparison."),
+    C(T(r'int8_t x = $a;', r'printf("%d\n", x * $m);'), lambda p: p["a"] * p["m"], "int8_t is promoted to int before the *, so nothing wraps."),
+    C(T(r'int16_t x = $m;', r'printf("%d\n", x * x);'), lambda p: p["m"] * p["m"], "int16_t is promoted to int, which holds the whole product."),
+    C(r'printf("%zu\n", sizeof(int16_t));', 2, "int16_t is 16 bits: 2 bytes."),
+    C(r'printf("%zu\n", sizeof(uint64_t));', 8, "uint64_t is 64 bits: 8 bytes."),
+    C(r'printf("%zu\n", sizeof(int32_t) * $a);', lambda p: 4 * p["a"], "sizeof(int32_t) is 4, and the result of sizeof is an unsigned number."),
+    C(r'printf("%zu\n", sizeof(int64_t) / sizeof(int16_t));', 4, "8 bytes divided by 2 bytes."),
+    C(T(r'unsigned x = 4294967290u;', r'x += $a * 2;', r'printf("%u\n", x);'), lambda p: wrap(4294967290 + p["a"] * 2, UINT),
+      "unsigned arithmetic wraps modulo 2 to the 32nd after 4294967295."),
+    C(T(r'int a = $big;', r'long long r = (long long)a * a;', r'printf("%lld\n", r);'), lambda p: p["big"] * p["big"],
+      "The cast makes the multiplication 64-bit, so the product (bigger than an int) is exact."),
+    C(T(r'int x = $n;', r'x /= 2;', r'x *= $a;', r'printf("%d\n", x);'), lambda p: tdiv(p["n"], 2) * p["a"],
+      "x /= 2 is an integer division that drops the fraction, then x *= a multiplies."),
+    C(T(r'int x = $n;', r'x %= $a;', r'x += $b;', r'printf("%d\n", x);'), lambda p: tmod(p["n"], p["a"]) + p["b"], "x %= a keeps the remainder; then b is added."),
+    C(r'printf("%d\n", 010 + $a);', lambda p: 8 + p["a"], "A leading 0 makes an octal number: 010 is 8."),
+    C(r'printf("%d\n", 0x1F + $a);', lambda p: 31 + p["a"], "0x1F is hexadecimal: 31."),
+    C(r'printf("%d\n", 7 / 2 * 2 == 6);', 1, "7 / 2 is 3 (the fraction is lost), times 2 is 6, so the comparison is true."),
+]
+
+
+# ── 2. printf Format ────────────────────────────────────────────────────
+
+PRINTF: list[Maker] = [
+    C(r'printf("|%d|\n", $n);', lambda p: cfmt("|%d|", p["n"]), "%d prints a whole number with no padding."),
+    C(r'printf("|%5d|\n", $n);', lambda p: cfmt("|%5d|", p["n"]), "%5d pads on the left with spaces to a width of 5."),
+    C(r'printf("|%-5d|\n", $n);', lambda p: cfmt("|%-5d|", p["n"]), "A minus flag pads on the right instead."),
+    C(r'printf("|%05d|\n", $n);', lambda p: cfmt("|%05d|", p["n"]), "The 0 flag pads with zeros on the left."),
+    C(r'printf("|%+d|\n", $n);', lambda p: cfmt("|%+d|", p["n"]), "The plus flag always writes the sign."),
+    C(r'printf("|% d|\n", $n);', lambda p: cfmt("|% d|", p["n"]), "The space flag leaves a space where a plus sign would go."),
+    C(r'printf("|%.3d|\n", $a);', lambda p: cfmt("|%.3d|", p["a"]), "A precision on %d is the least number of digits: zeros are added in front."),
+    C(r'printf("|%5.3d|\n", $a);', lambda p: cfmt("|%5.3d|", p["a"]), "At least 3 digits, then padded with spaces to a width of 5."),
+    C(r'printf("|%*d|\n", $a, $n);', lambda p: cfmt("|%*d|", p["a"], p["n"]), "A * takes the width from the next argument."),
+    C(r'printf("%x\n", $u);', lambda p: cfmt("%x", p["u"]), "%x writes hexadecimal in lower case."),
+    C(r'printf("%X\n", $u);', lambda p: cfmt("%X", p["u"]), "%X writes hexadecimal in capitals."),
+    C(r'printf("%#x\n", $u);', lambda p: cfmt("%#x", p["u"]), "The # flag adds the 0x prefix."),
+    C(r'printf("%o\n", $u);', lambda p: cfmt("%o", p["u"]), "%o writes octal."),
+    C(r'printf("%#o\n", $u);', lambda p: cfmt("%#o", p["u"]), "The # flag puts a leading 0 on octal."),
+    C(r'printf("|%04x|\n", $u2);', lambda p: cfmt("|%04x|", p["u2"]), "Hexadecimal padded with zeros to 4 digits."),
+    C(r'printf("%c\n", 97 + $a);', lambda p: cfmt("%c", 97 + p["a"]), "%c prints the character with that code: 97 is a."),
+    C(r'printf("%c\n", 65 + $d);', lambda p: cfmt("%c", 65 + p["d"]), "%c prints the character with that code: 65 is A."),
+    C(r'printf("%c%c%c\n", 97 + $a, 97 + $b, 97 + $c);', lambda p: cfmt("%c%c%c", 97 + p["a"], 97 + p["b"], 97 + p["c"]),
+      "Each %c prints one character, starting from 97, the code of a."),
+    C(r'printf("%s!\n", "$w");', lambda p: cfmt("%s!", p["w"]), "%s prints the string."),
+    C(r'printf("%s %s\n", "$w", "$z");', lambda p: cfmt("%s %s", p["w"], p["z"]), "Two %s print the two strings in order."),
+    C(r'printf("|%8s|\n", "$w");', lambda p: cfmt("|%8s|", p["w"]), "%8s pads the string on the left to a width of 8."),
+    C(r'printf("|%-8s|\n", "$w");', lambda p: cfmt("|%-8s|", p["w"]), "A minus pads on the right."),
+    C(r'printf("%.3s\n", "$w");', lambda p: cfmt("%.3s", p["w"]), "A precision on %s is the most characters it prints."),
+    C(r'printf("|%6.2f|\n", $n * 1.0 / $h);', lambda p: cfmt("|%6.2f|", p["n"] * 1.0 / p["h"]), "%6.2f writes 2 decimals and pads to a width of 6."),
+    C(r'printf("%.1f\n", $n / 8.0);', lambda p: cfmt("%.1f", p["n"] / 8.0), "%.1f rounds to one decimal."),
+    C(r'printf("%.2f\n", $a + 0.5);', lambda p: cfmt("%.2f", p["a"] + 0.5), "%.2f always writes two decimals."),
+    C(r'printf("|%-7.1f|\n", $n / 8.0);', lambda p: cfmt("|%-7.1f|", p["n"] / 8.0), "One decimal, left-aligned in a width of 7."),
+    C(r'printf("%d%%\n", $n);', lambda p: cfmt("%d%%", p["n"]), "%% prints a single percent sign."),
+    C(r'printf("%d:%02d\n", $a, $b);', lambda p: cfmt("%d:%02d", p["a"], p["b"]), "%02d pads to two digits with a zero."),
+    C(r'printf("%d-%d-%d\n", $a, $b, $c);', lambda p: cfmt("%d-%d-%d", p["a"], p["b"], p["c"]), "The arguments fill the %d conversions in order."),
+    C(r'printf("|%3d|%-3d|\n", $a, $b);', lambda p: cfmt("|%3d|%-3d|", p["a"], p["b"]), "The first is padded on the left, the second on the right."),
+    C(r'printf("%zu\n", sizeof(int32_t));', 4, "%zu prints a sizeof value; an int32_t is 4 bytes."),
+    C(r'printf("%d\n", printf("%s", "$w"));', lambda p: p["w"] + str(len(p["w"])),
+      "The inner printf prints the word first, and returns how many characters it wrote."),
+    C(r'printf("%u\n", (unsigned)-$a);', lambda p: 2 ** 32 - p["a"], "Converting a negative int to unsigned wraps around modulo 2 to the 32nd."),
+    C(r'printf("%lld\n", (long long)$big * 100000);', lambda p: p["big"] * 100000, "The cast makes it a 64-bit multiplication, and %lld prints a long long."),
+    C(r'printf("%d\n", (int)3.99 + $a);', lambda p: 3 + p["a"], "(int)3.99 cuts the fraction off to 3."),
+    C(r'printf("%d %c\n", 65 + $d, 65 + $d);', lambda p: cfmt("%d %c", 65 + p["d"], 65 + p["d"]), "The same number printed as a number and as a character."),
+    C(r'printf("%s\n", "a" "$w");', lambda p: "a" + p["w"], "Two string literals side by side are joined into one."),
+    C(r'printf("%i|%5i|\n", $a, $b);', lambda p: cfmt("%d|%5d|", p["a"], p["b"]), "%i means the same as %d."),
+    C(r'printf("|%5.1f|\n", $a + 0.5);', lambda p: cfmt("|%5.1f|", p["a"] + 0.5), "Width 5 with one decimal: padded with spaces on the left."),
+    C(r'printf("%.0f\n", $a + 0.7);', lambda p: cfmt("%.0f", p["a"] + 0.7), "%.0f rounds to the nearest whole number."),
+    C(r'printf("%08.3f\n", $a + 0.5);', lambda p: cfmt("%08.3f", p["a"] + 0.5), "Width 8 filled with zeros on the left, three decimals."),
+]
+
+
+# ── 3. Bits ─────────────────────────────────────────────────────────────
+
+def _u(x: int) -> V:
+    return V(x, UINT)
+
+
+def _i(x: int) -> V:
+    return V(x, INT)
+
+
+BITS: list[Maker] = [
+    C(r'printf("%d\n", $u & $u2);', lambda p: band(_i(p["u"]), _i(p["u2"])), "& keeps a bit only where both numbers have it."),
+    C(r'printf("%d\n", $u | $u2);', lambda p: bor(_i(p["u"]), _i(p["u2"])), "| keeps a bit where either number has it."),
+    C(r'printf("%d\n", $u ^ $u2);', lambda p: bxor(_i(p["u"]), _i(p["u2"])), "^ keeps a bit where exactly one of the numbers has it."),
+    C(r'printf("%x\n", $u & 0x0F);', lambda p: cfmt("%x", p["u"] & 0x0F), "& 0x0F keeps only the low four bits, one hex digit."),
+    C(r'printf("%x\n", $u >> 4);', lambda p: cfmt("%x", p["u"] >> 4), ">> 4 drops the low four bits: the top hex digit is left."),
+    C(r'printf("%d\n", $a << $b);', lambda p: p["a"] << p["b"], "<< shifts the bits left: a times 2 to the b."),
+    C(r'printf("%u\n", 1u << $s);', lambda p: 1 << p["s"], "1 shifted left by s is 2 to the s."),
+    C(r'printf("%d\n", $u >> $k);', lambda p: p["u"] >> p["k"], ">> shifts right: dividing by 2 to the k, the fraction is lost."),
+    C(r'printf("%d\n", ($u >> $k) & 1);', lambda p: (p["u"] >> p["k"]) & 1, "Shift the bit to the bottom, then & 1 reads it."),
+    C(r'printf("%d\n", ($u & (1 << $k)) != 0);', lambda p: 1 if p["u"] & (1 << p["k"]) else 0, "u & (1 << k) is nonzero exactly when bit k of u is set."),
+    C(T(r'unsigned x = $u;', r'x |= 1u << $b;', r'printf("%u\n", x);'), lambda p: p["u"] | (1 << p["b"]), "|= with a single bit sets that bit."),
+    C(T(r'unsigned x = $u;', r'x &= ~(1u << $b);', r'printf("%u\n", x);'), lambda p: p["u"] & ~(1 << p["b"]) & 0xFFFFFFFF,
+      "&= with the inverted bit clears that bit."),
+    C(T(r'unsigned x = $u;', r'x ^= 1u << $b;', r'printf("%u\n", x);'), lambda p: p["u"] ^ (1 << p["b"]), "^= with a bit flips that bit."),
+    C(r'printf("%u\n", ~0u);', 2 ** 32 - 1, "~0u is every bit of an unsigned int set."),
+    C(r'printf("%u\n", ~0u >> $s);', lambda p: (2 ** 32 - 1) >> p["s"], "All ones shifted right: the top s bits become zeros."),
+    C(r'printf("%u\n", ~0u << $s);', lambda p: shl(_u(2 ** 32 - 1), p["s"]), "All ones shifted left: the low s bits become zeros, and the top bits fall off."),
+    C(r'printf("%02x\n", ~$u & 0xFFu);', lambda p: cfmt("%02x", band(inv(_i(p["u"])), _u(0xFF)).v), "~u flips every bit; & 0xFF keeps the low byte: 255 - u."),
+    C(T(r'unsigned x = $u;', r'int c = 0;', r'while (x) {', r'    c += x & 1;', r'    x >>= 1;', r'}', r'printf("%d\n", c);'),
+      lambda p: popcount(p["u"]), "The loop adds the lowest bit and shifts: it counts the set bits."),
+    C(T(r'unsigned x = $u;', r'int c = 0;', r'while (x) {', r'    x &= x - 1;', r'    c++;', r'}', r'printf("%d\n", c);'),
+      lambda p: popcount(p["u"]), "x &= x - 1 clears the lowest set bit, so the loop counts the set bits."),
+    C(r'printf("%d\n", ($pw & ($pw - 1)) == 0);', lambda p: 1 if p["pw"] & (p["pw"] - 1) == 0 else 0, "A power of two has one bit, so n & (n - 1) is 0."),
+    C(T(r'unsigned x = $pw;', r'printf("%u\n", x & -x);'), lambda p: p["pw"] & -p["pw"], "x & -x keeps only the lowest set bit."),
+    C(r'printf("%u\n", (1u << $s) - 1);', lambda p: (1 << p["s"]) - 1, "A 1 shifted left by s, minus 1, is s one-bits."),
+    C(T(r'unsigned x = $u;', r'x = (x << 4 | x >> 4) & 0xFF;', r'printf("%u\n", x);'), lambda p: ((p["u"] << 4 | p["u"] >> 4) & 0xFF),
+      "The nibbles swap places; & 0xFF throws away what moved past the low byte."),
+    C(T(r'int a = $a, b = $b;', r'a ^= b;', r'b ^= a;', r'a ^= b;', r'printf("%d %d\n", a, b);'), lambda p: f"{p['b']} {p['a']}", "Three XORs swap the two values."),
+    C(r'printf("%d\n", $a ^ $a);', 0, "Anything XOR itself is 0."),
+    C(r'printf("%d\n", $u ^ 0xFF);', lambda p: p["u"] ^ 0xFF, "XOR with 0xFF flips the low eight bits."),
+    C(r'printf("%d\n", $a | $b & $c);', lambda p: p["a"] | (p["b"] & p["c"]), "& ranks above |, so b & c is worked out first."),
+    C(r'printf("%d\n", $a ^ $b & $c);', lambda p: p["a"] ^ (p["b"] & p["c"]), "& ranks above ^."),
+    C(r'printf("%d\n", $a & $b | $c);', lambda p: (p["a"] & p["b"]) | p["c"], "& ranks above |: the & is done first."),
+    C(r'printf("%d\n", $a | $b << $k);', lambda p: p["a"] | (p["b"] << p["k"]), "<< ranks above |, so b is shifted first."),
+    C(r'printf("%d\n", 1 << $k + 1);', lambda p: 1 << (p["k"] + 1), "+ ranks above <<: the shift count is k + 1."),
+    C(T(r'uint8_t x = $u;', r'printf("%d\n", x << 1);'), lambda p: p["u"] << 1, "x is promoted to int, so the shift does not lose the top bit."),
+    C(T(r'uint8_t x = $u;', r'printf("%d\n", (uint8_t)(x << 1));'), lambda p: (p["u"] << 1) & 0xFF, "The cast to uint8_t keeps only the low 8 bits of the shifted value."),
+    C(T(r'uint8_t x = $u;', r'printf("%d\n", x >> 1);'), lambda p: p["u"] >> 1, ">> 1 halves a positive number and drops the remainder."),
+    C(r'printf("%d\n", ~$a);', lambda p: -p["a"] - 1, "~a is -a - 1 for a two's complement int."),
+    C(r'printf("%x\n", 0x$hx & 0x$hy);', lambda p: cfmt("%x", p["hxv"] & p["hyv"]), "& keeps a bit only where both numbers have it."),
+    C(r'printf("%x\n", 0x$hx | 0x$hy);', lambda p: cfmt("%x", p["hxv"] | p["hyv"]), "| keeps a bit where either number has it."),
+    C(r'printf("%x\n", 0x$hx ^ 0x$hy);', lambda p: cfmt("%x", p["hxv"] ^ p["hyv"]), "^ keeps a bit where exactly one number has it."),
+    C(r'printf("%x\n", 0x$hx << 4);', lambda p: cfmt("%x", p["hxv"] << 4), "<< 4 moves every hex digit one place up and adds a 0."),
+    C(r'printf("%x\n", 0x$hx >> 4);', lambda p: cfmt("%x", p["hxv"] >> 4), ">> 4 drops the last hex digit."),
+    C(r'printf("%d\n", $a << 1 | 1);', lambda p: (p["a"] << 1) | 1, "<< ranks above |: shift first, then set the low bit."),
+    C(r'printf("%d\n", $n & 1);', lambda p: p["n"] & 1, "n & 1 is 1 for an odd number and 0 for an even one."),
+    C(r'printf("%d\n", $m & ~1);', lambda p: p["m"] & ~1, "& ~1 clears the lowest bit: an odd number loses 1."),
+]

@@ -27,7 +27,61 @@ export type BrainItem = {
   check?: string;
 };
 
-export type BrainLang = "javascript" | "python" | "dart";
+export type BrainLang = "javascript" | "python" | "dart" | "c" | "sql";
+
+/**
+ * Brain Drills has no language switch of its own: it follows the language picked at the top of the app. Each app
+ * language maps to the drills that fit it; TypeScript plays the JavaScript drills and the farm's language plays
+ * Python's (it is Python syntax). SQL is SQLite's. A language with no drills yet (PostgreSQL, Rust...) gives null.
+ */
+export function brainLanguageFor(appLanguage: string): BrainLang | null {
+  switch (appLanguage) {
+    case "python":
+    case "tfwr":
+      return "python";
+    case "javascript":
+    case "typescript":
+      return "javascript";
+    case "dart":
+      return "dart";
+    case "c":
+      return "c";
+    case "sql":
+      return "sql";
+    default:
+      return null;
+  }
+}
+
+/** The app languages that have drills, in the order the "no drills yet" screen offers them. */
+export const DRILL_APP_LANGUAGES: { id: string; name: string }[] = [
+  { id: "python", name: "Python" },
+  { id: "javascript", name: "JavaScript" },
+  { id: "dart", name: "Dart" },
+  { id: "c", name: "C" },
+  { id: "sql", name: "SQL" },
+];
+
+/** The languages whose "Run it" goes through the Brain Drills runner (`POST /api/brain/run`: a real dart, a real C
+ *  compiler, a real SQLite) instead of the tracer (/api/visualize), and that have no explainer yet. */
+export function runsOnTheRunner(lang: BrainLang): boolean {
+  return lang === "dart" || lang === "c" || lang === "sql";
+}
+
+/**
+ * Is what you typed the answer? Python, JavaScript and Dart forgive spaces, case and quotes round a string (and spaces
+ * inside brackets: Python prints lists as "[1, 2]"). C and SQL are EXACT but for the spaces at the ends: the answer
+ * of a C drill is a line printf wrote - `%x` against `%X`, the spaces of `|  42|` and a `char` are the question - and
+ * SQL text is case-sensitive (`UPPER('a')` is `A`).
+ */
+export function sameAnswer(given: string, answer: string, lang?: BrainLang): boolean {
+  if (lang === "c" || lang === "sql") return given.trim() === answer.trim();
+  const clean = (s: string) => {
+    const t = s.trim().replace(/^(['"`])(.*)\1$/s, "$2").trim().toLowerCase();
+    return /^[[({]/.test(t) ? t.replace(/\s+/g, "") : t;
+  };
+  return clean(given) === clean(answer);
+}
 
 /** What you said to one question, and whether it was right. */
 export type Answer = { given: string; right: boolean };
@@ -197,6 +251,20 @@ export function dartProgram(code: string): string {
   return "void main() {\n" + lines.map((ln) => (ln.trim() ? "  " + ln : ln)).join("\n") + "\n}";
 }
 
+/** The four headers a C drill program always has in front (tests/c_oracle.py `HEADERS`; a test holds the two equal). */
+export const C_HEADERS = "#include <stdio.h>\n#include <stdint.h>\n#include <string.h>\n#include <stddef.h>\n";
+
+/**
+ * The C program behind an item's code (the same rule as `full_program` in tests/c_oracle.py, which a test holds this
+ * to): the headers, then the code as it is when it mentions `main(` (globals, helper functions, `int main(void)`), else
+ * the code as the body of `int main(void)`. The program prints its own answer with printf.
+ */
+export function cProgram(code: string): string {
+  const body = code.replace(/\n+$/, "");
+  if (/\bmain\s*\(/.test(body)) return C_HEADERS + body + "\n";
+  return C_HEADERS + "int main(void) {\n" + body.split("\n").map((ln) => (ln.trim() ? "    " + ln : ln)).join("\n") + "\n}\n";
+}
+
 /** Why Flutter-widget questions have no "Run it": the browser has no Flutter. */
 export const FLUTTER_CANNOT_RUN =
   "Flutter widgets cannot run here: this answer was measured with Flutter itself (the explanation says how it is worked out).";
@@ -221,6 +289,14 @@ export function runnableFor(activityId: string, item: BrainItem, lang: BrainLang
       ok: true, code: dartProgram(source), run: "", parseIsTheAnswer: false,
       ...(item.answer === "fine" || item.answer === "error" ? { raisesIsTheAnswer: true } : {}),
     };
+  }
+  if (lang === "c" || lang === "sql") {
+    // Every C and SQL activity is a pack: the program is `check` when the item has one, else the prompt. A C program is
+    // the body of main (or a complete program) behind four headers, and prints its answer; a SQL program is the script
+    // itself, and the runner's SQLite driver prints the rows of its last SELECT.
+    const source = item.check || item.prompt;
+    if (!source.trim()) return { ok: false, reason: "There is no code to run here." };
+    return { ok: true, code: lang === "c" ? cProgram(source) : source.replace(/\s+$/, ""), run: "", parseIsTheAnswer: false };
   }
   const js = lang === "javascript";
   // (raisesIsTheAnswer is only present when it is true, so the other activities' shapes stay as they were.)

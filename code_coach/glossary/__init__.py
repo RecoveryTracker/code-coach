@@ -25,16 +25,16 @@ import re
 from typing import Any, Iterable
 
 from .contexts import CONTEXTS, concepts_for
-from .entry import LANGUAGES, Entry, all3, both, code, dart, entry, js, py
+from .entry import LANGUAGES, Entry, all3, both, c, code, dart, entry, js, py, sql
 
 __all__ = [
-    "CONTEXTS", "Entry", "LANGUAGES", "LOAD_ERRORS", "all3", "all_entries", "both", "code", "dart", "entry",
-    "find_words", "js", "language_for", "lookup", "payload", "py", "resolve", "words_for_context",
+    "CONTEXTS", "Entry", "LANGUAGES", "LOAD_ERRORS", "all3", "all_entries", "both", "c", "code", "dart", "entry",
+    "find_words", "js", "language_for", "lookup", "payload", "py", "resolve", "sql", "words_for_context",
 ]
 
 #: Languages the app can read that borrow another one's glossary. The farm's own language
-#: is Python's syntax; TypeScript is JavaScript with types. Dart is a glossary language of its own
-#: (and Flutter is Dart, so its words live in the Dart glossary).
+#: is Python's syntax; TypeScript is JavaScript with types. Dart, C and SQL are glossary languages of their own
+#: (Flutter is Dart, so its words live in the Dart glossary; SQL means SQLite's SQL - `postgresql` has no glossary).
 ALIASES = {"tfwr": "python", "typescript": "javascript"}
 
 #: A module that fails to import is skipped and recorded here (the tests fail on it).
@@ -217,6 +217,45 @@ _DART_BLANK = re.compile(
 )
 
 
+# C: // and /* */ comments, "strings" and 'c' characters (both with backslash escapes). A preprocessor line
+# (#include, #define) is CODE: nothing is blanked there except its strings and comments.
+_C_BLANK = re.compile(
+    r"""
+    (?P<comment>//[^\n]*|/\*[\s\S]*?(?:\*/|\Z))
+  | (?P<str>"(?:\\.|[^"\\\n])*"?)
+  | (?P<chr>'(?:\\.|[^'\\\n])*'?)
+    """,
+    re.X,
+)
+
+# SQL (SQLite): -- and /* */ comments, 'single-quoted strings' (a doubled '' is a quote inside one) and
+# "double-quoted identifiers" (blanked too, so a column called "select" wakes no card).
+_SQL_BLANK = re.compile(
+    r"""
+    (?P<comment>--[^\n]*|/\*[\s\S]*?(?:\*/|\Z))
+  | (?P<str>'(?:[^']|'')*'?)
+  | (?P<ident>"(?:[^"]|"")*"?)
+    """,
+    re.X,
+)
+
+
+def _blank_c(m: re.Match[str]) -> str:
+    if m.group("comment") is not None:
+        return "\n" * m.group("comment").count("\n")
+    if m.group("chr") is not None:
+        return "'_'"
+    return '""'
+
+
+def _blank_sql(m: re.Match[str]) -> str:
+    if m.group("comment") is not None:
+        return "\n" * m.group("comment").count("\n")
+    if m.group("ident") is not None:
+        return '""'
+    return "''" + "\n" * m.group("str").count("\n")
+
+
 def _blank_dart(m: re.Match[str]) -> str:
     if m.group("comment") is not None:
         return "\n" * m.group("comment").count("\n")
@@ -248,6 +287,10 @@ def blank_code(source: str, language: str) -> str:
         return _PY_BLANK.sub(_blank_py, source)
     if language == "dart":
         return _DART_BLANK.sub(_blank_dart, source)
+    if language == "c":
+        return _C_BLANK.sub(_blank_c, source)
+    if language == "sql":
+        return _SQL_BLANK.sub(_blank_sql, source)
     return _JS_BLANK.sub(_blank_js, source)
 
 

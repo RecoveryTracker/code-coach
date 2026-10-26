@@ -815,14 +815,16 @@ class BrainResultRequest(BaseModel):
     total: int = 1
     #: Set when the round is part of a Code age check: the three share it.
     checkId: str = ""
-    #: "javascript", "python" or "dart": code age is kept per language.
+    #: "javascript", "python", "dart", "c" or "sql": code age is kept per language.
     language: str = "javascript"
 
 
 class BrainRunRequest(BaseModel):
-    """Run a Brain Drills snippet for real - "Run it" for Dart, which has no tracer to go through /api/visualize."""
+    """Run a Brain Drills snippet for real - "Run it" for Dart, C and SQL, which have no tracer to go through
+    /api/visualize."""
 
     code: str = ""
+    #: "dart" (the default), "c" or "sql".
     language: str = "dart"
 
 

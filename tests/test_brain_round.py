@@ -212,6 +212,36 @@ out.fixed = {
   syntaxG: R.isSyntaxError("TypeError: x is not a SyntaxError"),
 };
 
+// ── Which drills each app language gets, and what the "no drills yet" screen offers ──
+out.mapping = Object.fromEntries(
+  ["python", "tfwr", "javascript", "typescript", "dart", "c", "sql", "postgresql", "rust", "cpp", "csharp", "go", "ruby", ""]
+    .map((id) => [id, R.brainLanguageFor(id)]));
+out.offered = R.DRILL_APP_LANGUAGES;
+out.runner = Object.fromEntries(["python", "javascript", "dart", "c", "sql"].map((l) => [l, R.runsOnTheRunner(l)]));
+out.cHeaders = R.C_HEADERS;
+out.cPrograms = {
+  body: R.cProgram("printf(\"%d\\n\", 7);"),
+  whole: R.cProgram("int main(void) {\n    puts(\"x\");\n}\n\n"),
+  indent: R.cProgram("int x = 1;\n\nprintf(\"%d\\n\", x);"),
+};
+out.same = {
+  pyCase: R.sameAnswer("TRUE", "True", "python"),
+  pyQuotes: R.sameAnswer("'ab'", "ab", "python"),
+  pyList: R.sameAnswer("[1,2]", "[1, 2]", "python"),
+  dartCase: R.sameAnswer("Hello", "hello", "dart"),
+  cExact: R.sameAnswer("ff", "ff", "c"),
+  cCase: R.sameAnswer("ff", "FF", "c"),
+  cInnerSpaces: R.sameAnswer("|42|", "|  42|", "c"),
+  cEnds: R.sameAnswer("  |  42|  ", "|  42|", "c"),
+  cQuotes: R.sameAnswer("'a'", "a", "c"),
+  sqlCase: R.sameAnswer("robot", "ROBOT", "sql"),
+  sqlNull: R.sameAnswer("NULL", "NULL", "sql"),
+  sqlBlank: R.sameAnswer("", "5", "sql"),
+  none: R.sameAnswer("A", "a"),
+};
+out.emptyC = R.runnableFor("c_int", { prompt: "  ", answer: "", explain: "", show: "" }, "c");
+out.emptySql = R.runnableFor("sql_count", { prompt: "", answer: "", explain: "", show: "" }, "sql");
+
 console.log(JSON.stringify(out));
 """
 
@@ -253,7 +283,7 @@ sys.stdout.write(json.dumps(result))
 
 def _items() -> list[dict]:
     seen: dict[tuple, dict] = {}
-    for language in ("javascript", "python", "dart"):
+    for language in ("javascript", "python", "dart", "c", "sql"):
         for activity in brain.activities_in(language):
             for seed in SEEDS:
                 for it in brain.make_round(activity.id, seed, language):
@@ -500,6 +530,123 @@ class RunItDart(unittest.TestCase):
         self.assertTrue(all(r["runnable"].get("raisesIsTheAnswer") for r in rows))
         others = [r for r in self._rows() if brain.ACTIVITIES_BY_ID[r["activity"]].oracle != "error"]
         self.assertFalse(any(r["runnable"].get("raisesIsTheAnswer") for r in others))
+
+
+class AppLanguageMapping(unittest.TestCase):
+    """`brainLanguageFor` (the screen follows the APP's language picker) and the "no drills yet" screen's buttons."""
+
+    def test_each_app_language_gets_its_drills(self):
+        m = results()["mapping"]
+        self.assertEqual({k: m[k] for k in ("python", "tfwr")}, {"python": "python", "tfwr": "python"})
+        self.assertEqual({k: m[k] for k in ("javascript", "typescript")}, {"javascript": "javascript", "typescript": "javascript"})
+        self.assertEqual((m["dart"], m["c"], m["sql"]), ("dart", "c", "sql"))
+
+    def test_a_language_with_no_drills_gives_none_including_postgresql(self):
+        m = results()["mapping"]
+        for lang in ("postgresql", "rust", "cpp", "csharp", "go", "ruby", ""):
+            self.assertIsNone(m[lang], lang)
+
+    def test_the_mapping_only_gives_languages_the_server_plays(self):
+        got = {v for v in results()["mapping"].values() if v}
+        self.assertEqual(got, set(brain.LANGUAGES))
+
+    def test_the_no_drills_screen_offers_every_drill_language(self):
+        offered = results()["offered"]
+        self.assertEqual([o["id"] for o in offered], ["python", "javascript", "dart", "c", "sql"])
+        self.assertEqual([o["name"] for o in offered], ["Python", "JavaScript", "Dart", "C", "SQL"])
+        for o in offered:  # a button switches the app to a language that really has drills
+            self.assertEqual(results()["mapping"][o["id"]], o["id"])
+
+    def test_dart_c_and_sql_run_on_the_runner(self):
+        self.assertEqual(results()["runner"], {"python": False, "javascript": False, "dart": True, "c": True, "sql": True})
+
+
+class TypedAnswers(unittest.TestCase):
+    """`sameAnswer`: Python, JavaScript and Dart forgive case, quotes and spaces inside brackets; C and SQL are exact."""
+
+    def test_the_forgiving_languages_keep_forgiving(self):
+        r = results()["same"]
+        self.assertTrue(r["pyCase"] and r["pyQuotes"] and r["pyList"] and r["dartCase"] and r["none"])
+
+    def test_c_and_sql_answers_are_exact_but_for_the_ends(self):
+        r = results()["same"]
+        self.assertTrue(r["cExact"] and r["cEnds"] and r["sqlNull"])
+        self.assertFalse(r["cCase"], "%x and %X are the question")
+        self.assertFalse(r["cInnerSpaces"], "the spaces of a padded field are the question")
+        self.assertFalse(r["cQuotes"])
+        self.assertFalse(r["sqlCase"], "SQL text is case-sensitive")
+        self.assertFalse(r["sqlBlank"])
+
+
+class RunItC(unittest.TestCase):
+    """C's "Run it": `cProgram` in brainRound.ts is the same rule as `full_program` in tests/c_oracle.py (the one the C
+    oracle compiles), and the programs it builds print each drill's answer under the real compiler."""
+
+    def _rows(self) -> list[dict]:
+        return [r for r in results()["runnables"] if r["language"] == "c"]
+
+    def test_the_browser_builds_the_program_the_oracle_compiles(self):
+        from tests import c_oracle
+
+        rows = self._rows()
+        self.assertGreater(len(rows), 100)
+        for r in rows:
+            item = r["item"]
+            self.assertTrue(r["runnable"]["ok"], item["prompt"])
+            self.assertEqual(r["runnable"]["code"], c_oracle.full_program(item["check"] or item["prompt"]), item["prompt"])
+            self.assertEqual(r["runnable"]["run"], "")
+            self.assertFalse(r["runnable"]["parseIsTheAnswer"])
+        self.assertEqual({r["activity"] for r in rows}, {a.id for a in brain.activities_in("c")})
+
+    def test_the_headers_and_a_few_fixed_cases(self):
+        from tests import c_oracle
+
+        self.assertEqual(results()["cHeaders"], c_oracle.HEADERS)
+        progs = results()["cPrograms"]
+        self.assertEqual(progs["body"], c_oracle.HEADERS + 'int main(void) {\n    printf("%d\\n", 7);\n}\n')
+        self.assertEqual(progs["whole"], c_oracle.HEADERS + 'int main(void) {\n    puts("x");\n}\n')
+        self.assertEqual(progs["indent"], c_oracle.HEADERS + 'int main(void) {\n    int x = 1;\n\n    printf("%d\\n", x);\n}\n')
+        self.assertFalse(results()["emptyC"]["ok"])
+
+    def test_the_real_run_it_path_prints_the_drills_answers(self):
+        from code_coach.gotchas.runner import run_program
+        from tests import c_oracle
+
+        if not c_oracle.HAVE_COMPILER:
+            self.skipTest("needs a C compiler")
+        picked: dict[str, list[dict]] = {}
+        for r in self._rows():
+            picked.setdefault(r["activity"], []).append(r)
+        for activity_id, rows in picked.items():
+            for r in rows[:2]:  # two per activity, through the very runner "Run it" calls
+                got = run_program("c", r["runnable"]["code"])
+                self.assertTrue(got.ok, (got.stderr, r["item"]["prompt"]))
+                self.assertEqual(got.stdout.strip(), r["item"]["answer"], r["item"]["prompt"])
+
+
+class RunItSql(unittest.TestCase):
+    """SQL's "Run it": the script itself, which the runner's SQLite driver prints the last SELECT of."""
+
+    def _rows(self) -> list[dict]:
+        return [r for r in results()["runnables"] if r["language"] == "sql"]
+
+    def test_the_browser_runs_the_script_as_it_is_shown(self):
+        rows = self._rows()
+        self.assertGreater(len(rows), 100)
+        for r in rows:
+            item = r["item"]
+            self.assertTrue(r["runnable"]["ok"], item["prompt"])
+            self.assertEqual(r["runnable"]["code"], (item["check"] or item["prompt"]).rstrip())
+            self.assertEqual(r["runnable"]["run"], "")
+        self.assertEqual({r["activity"] for r in rows}, {a.id for a in brain.activities_in("sql")})
+        self.assertFalse(results()["emptySql"]["ok"])
+
+    def test_sql_programs_print_the_drills_answers(self):
+        from tests import sql_oracle
+
+        wrong = [(r["item"]["prompt"], r["item"]["answer"], got) for r in self._rows()
+                 if (got := sql_oracle.run_sql(r["runnable"]["code"])) != r["item"]["answer"]]
+        self.assertEqual(wrong[:5], [], f"{len(wrong)} SQL programs disagree with the drill")
 
 
 class RunItFlutter(unittest.TestCase):

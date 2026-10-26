@@ -1,10 +1,21 @@
-"""The one drill item, shared by the JavaScript, Python and Dart templates."""
+"""The one drill item, shared by the templates of every language (JavaScript, Python, Dart, C, SQL)."""
 
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass
 from typing import Callable
+
+#: Every language an activity can be played in, in the order the package lists them (`brain.LANGUAGES`).
+LANGUAGES = ("python", "javascript", "dart", "c", "sql")
+#: Which fields of an Activity carry a language's generator and wording: (make, question, blurb). JavaScript is the
+#: base (`make`, `question`, `blurb`); the rest hold a generator only when the activity is played in that language.
+FIELDS = {
+    "python": ("make_py", "question_py", "blurb_py"),
+    "dart": ("make_dart", "question_dart", "blurb_dart"),
+    "c": ("make_c", "question_c", "blurb_c"),
+    "sql": ("make_sql", "question_sql", "blurb_sql"),
+}
 
 
 @dataclass(frozen=True)
@@ -51,6 +62,14 @@ class Activity:
     blurb_dart: str = ""
     #: The heading it sits under on the home screen (see GROUPS in the package).
     group: str = ""
+    #: The C version and the SQL version: its generator (None: the activity is not played in that language), and its
+    #: wording where it differs. (A language is playable exactly when it has a generator: `languages`.)
+    make_c: Callable[[random.Random], Item] | None = None
+    question_c: str = ""
+    blurb_c: str = ""
+    make_sql: Callable[[random.Random], Item] | None = None
+    question_sql: str = ""
+    blurb_sql: str = ""
     #: Glossary term ids (plain lowercase words) this activity drills; the glossary maps them back to the
     #: activity, so this is the one place the mapping lives.
     concepts: tuple[str, ...] = ()
@@ -59,12 +78,18 @@ class Activity:
     #: the answer; "" means the activity has a test of its own (the original seven). A Dart-only activity says
     #: how the real `dart`'s printed lines become the value (tests/dart_oracle.py): "value" (the lines, one line is
     #: the answer), "lines" (the lines glued together: Async Order's letters) or "error" (a pick between "fine" and
-    #: "error": did the snippet fail to compile or throw).
+    #: "error": did the snippet fail to compile or throw). C and SQL activities say "value" (tests/c_oracle.py and
+    #: tests/sql_oracle.py).
     oracle: str = ""
+
+    def generator(self, language: str) -> Callable[[random.Random], Item] | None:
+        """The generator of one language (None when the activity is not played in it)."""
+        if language == "javascript":
+            return self.make
+        return getattr(self, FIELDS[language][0]) if language in FIELDS else None
 
     @property
     def languages(self) -> tuple[str, ...]:
         """The languages this activity is played in, in the order of `brain.LANGUAGES` (an activity is playable in a
         language exactly when it has that language's generator)."""
-        have = {"python": self.make_py, "javascript": self.make, "dart": self.make_dart}
-        return tuple(lang for lang in ("python", "javascript", "dart") if have[lang] is not None)
+        return tuple(lang for lang in LANGUAGES if self.generator(lang) is not None)

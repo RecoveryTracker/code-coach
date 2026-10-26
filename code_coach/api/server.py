@@ -2499,22 +2499,25 @@ def brain_result(body: BrainResultRequest) -> dict:
 
 #: The longest snippet "Run it" will start (the drills' own programs are a few hundred characters).
 BRAIN_RUN_MAX_CODE = 4000
+#: The drill languages "Run it" runs through the Gotchas runner (the others have the tracer).
+BRAIN_RUN_LANGUAGES = ("dart", "c", "sql")
 
 
 @app.post("/api/brain/run")
 def brain_run(body: BrainRunRequest) -> dict:
-    """"Run it" for a Dart drill: the snippet, run for real by the Gotchas runner (a bare environment, an empty
-    working folder, no input, 5 seconds after the build, 64 KB of output). Only Dart: Python and JavaScript drills
-    go through /api/visualize. The answer has the shape of /api/visualize's (`ok`, `stdout`, `stderr`, `error`)
-    plus the runner's `compile_error`, `timed_out` and `seconds`."""
+    """"Run it" for a Dart, C or SQL drill: the snippet, run for real by the Gotchas runner (a bare environment, an
+    empty working folder, no input, 5 seconds after the build, 64 KB of output; C is compiled first, SQL goes through
+    the runner's SQLite driver, which prints the rows of the last SELECT). Python and JavaScript drills go through
+    /api/visualize. The answer has the shape of /api/visualize's (`ok`, `stdout`, `stderr`, `error`) plus the
+    runner's `compile_error`, `timed_out` and `seconds`."""
     from code_coach.gotchas.runner import RunnerUnavailable, run_program
 
-    if body.language != "dart":
+    if body.language not in BRAIN_RUN_LANGUAGES:
         raise HTTPException(status_code=400, detail="Run it goes through /api/visualize for Python and JavaScript")
     if not body.code.strip() or len(body.code) > BRAIN_RUN_MAX_CODE:
         raise HTTPException(status_code=400, detail="Send a snippet of up to %d characters" % BRAIN_RUN_MAX_CODE)
     try:
-        result = run_program("dart", body.code)
+        result = run_program(body.language, body.code)
     except RunnerUnavailable as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     payload = _run_payload(result)

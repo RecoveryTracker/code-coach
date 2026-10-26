@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { explainCode, runBrainCode, visualizeCode } from "../api";
-import { cleanError, isSyntaxError, runnableFor, type BrainItem, type BrainLang } from "../lib/brainRound";
+import { cleanError, isSyntaxError, runnableFor, runsOnTheRunner, type BrainItem, type BrainLang } from "../lib/brainRound";
 import type { ExplainResult, VisualizeResult } from "../types";
 import { WordsUsed } from "./WordsUsed";
 
@@ -25,8 +25,8 @@ type Props = {
 };
 
 const LOCKED = "Answer the question first - running or explaining it would give the answer away.";
-/** Explain reads Python and JavaScript only: Dart has no reader yet (the same words the app uses elsewhere). */
-const NO_DART_EXPLAIN = "Explain my code works in Python and JavaScript so far";
+/** Explain reads Python and JavaScript only: Dart, C and SQL have no reader yet (the same words the app uses elsewhere). */
+const NO_EXPLAIN = "Explain my code works in Python and JavaScript so far";
 
 export default function BrainTools({ activityId, item, language, unlocked }: Props) {
   const what = runnableFor(activityId, item, language);
@@ -53,13 +53,16 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
     }
     setRan("busy");
     setRunOpen(true);
-    // Dart has no tracer, so it is run by the Brain Drills runner instead (a real `dart`, in a throwaway folder).
-    (language === "dart" ? runBrainCode(what.run || what.code) : visualizeCode({ code: what.run || what.code, language }))
+    // Dart, C and SQL have no tracer, so they are run by the Brain Drills runner instead (a real `dart`, a real C
+    // compiler or SQLite, in a throwaway folder).
+    (runsOnTheRunner(language)
+      ? runBrainCode(what.run || what.code, language as "dart" | "c" | "sql")
+      : visualizeCode({ code: what.run || what.code, language }))
       .then((r) => alive.current && setRan(r))
       .catch(() => alive.current && setRan("down"));
   };
 
-  const explainOff = language === "dart";
+  const explainOff = runsOnTheRunner(language);
   const explain = () => {
     if (explainOff || !what.ok || !unlocked || explained === "busy") return;
     if (explained) {
@@ -97,7 +100,7 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
           onClick={explain}
           disabled={explainOff || !!disabledWhy || explained === "busy"}
           title={
-            (explainOff ? NO_DART_EXPLAIN : "") ||
+            (explainOff ? NO_EXPLAIN : "") ||
             disabledWhy ||
             (explained && explained !== "busy" ? "Hide the explanation" : "A plain-English walkthrough of this code")
           }

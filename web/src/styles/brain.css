@@ -347,26 +347,22 @@
   }
 }
 
-/* The JavaScript | Python switch on the home screen. */
+/* The "Switch to ..." buttons of the no-drills-yet screen: they wrap, so five of them fit at 375px. */
 .brain-lang {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 10px;
-  border: 1px solid var(--border, #232c38);
-  border-radius: 8px;
-  overflow: hidden;
 }
 
 .brain-lang-btn {
   padding: 6px 16px;
-  border: 0;
+  border: 1px solid var(--border, #232c38);
+  border-radius: 8px;
   background: transparent;
   color: var(--text-muted, #8b98a8);
   font: inherit;
   cursor: pointer;
-}
-
-.brain-lang-btn + .brain-lang-btn {
-  border-left: 1px solid var(--border, #232c38);
 }
 
 .brain-lang-btn.on {

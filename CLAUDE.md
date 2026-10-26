@@ -264,29 +264,36 @@ code_coach/farm/
   `tests/test_canvas_pywebapp.py`; library and session behaviour is in
   `tests/test_pyweb_lib.py`.
 - **Brain Drills** (`code_coach/brain/`): timed reflex activities in Python,
-  JavaScript or Dart. **The screen has no language switch of its own: it follows
+  JavaScript, Dart, C or SQL. **The screen has no language switch of its own: it follows
   the app's language picker at the top** (`BrainDrills` takes `appLanguage` from
-  `App.tsx`; `brainLanguageFor()` maps python/tfwr -> Python, javascript/typescript ->
-  JavaScript, dart -> Dart, anything else -> none, and the screen then says there
-  are no drills for that language yet and offers "Switch to Python / JavaScript /
-  Dart", which changes the app's language like the picker does). The server routes
+  `App.tsx`; `brainLanguageFor()` - pure, in `lib/brainRound.ts`, tested by
+  `tests/test_brain_round.py` - maps python/tfwr -> Python, javascript/typescript ->
+  JavaScript, dart -> Dart, c -> C, sql -> SQL (SQLite semantics), anything else
+  (PostgreSQL included) -> none, and the screen then says there
+  are no drills for that language yet and offers five "Switch to Python / JavaScript /
+  Dart / C / SQL" buttons (`DRILL_APP_LANGUAGES`; they wrap, so 375px is fine), which
+  change the app's language like the picker does). The server routes
   `/api/brain` and `/api/brain/round` still default to Python when no language is
-  sent. (`LANGUAGES` = python, javascript, dart, in that order;
+  sent. (`LANGUAGES` = python, javascript, dart, c, sql, in that order, held in
+  `items.py` with the field table `FIELDS`;
   scores kept per language, `Result.language`; the saved
-  `brain_drills.json` of older versions has no `"dart"` and still loads, a
-  Dart round writes `"language": "dart"` the first time), filed under
+  `brain_drills.json` of older versions has no `"dart"`, `"c"` or `"sql"` and still
+  loads, a Dart, C or SQL round writes its `"language"` the first time), filed under
   headings on the home screen (`Activity.group`, `GROUPS`: Quick reads,
   Predict the result, Spot the problem, Remember; a language's home lists
   only its own activities and only the headings they sit under), and a "code
   age" from 20 to 80. **An activity is played in a language exactly when it
   has that language's generator** (`make` JavaScript, `make_py` Python,
-  `make_dart` Dart: `Activity.languages`, `brain.activities_in(language)`;
+  `make_dart` Dart, `make_c` C, `make_sql` SQL, with `question_*`/`blurb_*` where
+  the wording differs: `Activity.languages`, `Activity.generator(language)`,
+  `brain.activities_in(language)`;
   `activity_for(id, language)` raises KeyError for one it is not played in,
   and `/api/brain/round|result` answer 404): the 71 older activities have
-  Python and JavaScript, the Dart Core Pack is Dart-only. The Code age check
+  Python and JavaScript, the Dart, C and SQL core packs are single-language. The Code age check
   is per language: `brain.CHECK` (eval, truthy, brackets) for Python and
   JavaScript, `brain.CHECKS["dart"]` (`dart_eval`, `dart_null`,
-  `dart_final`) for Dart, read through `brain.check_for(language)` (the
+  `dart_final`) for Dart, `CHECKS["c"]` (`c_int`, `c_printf`, `c_loop`) for C and
+  `CHECKS["sql"]` (`sql_count`, `sql_null`, `sql_scalar`) for SQL, read through `brain.check_for(language)` (the
   home payload's `check`); a check's age needs its three results in THAT
   language. The original seven live in
   `__init__.py` (JavaScript) and `pythonic.py`; every other activity is a
@@ -302,15 +309,19 @@ code_coach/farm/
   to a finished cell). "Run it" is `/api/visualize` and "Explain" is
   `/api/explain`, both told the drill's language (`language` in the request;
   blank = the app's saved one). `round_payload` carries each item's `check`
-  code, which the loop and final-value programs are built from. DART has no
-  tracer and no explainer: "Run it" is `POST /api/brain/run {code}`
-  (`runBrainCode` in `api.ts`; the Gotchas runner's `run_program("dart")`:
-  the SDK's real dart.exe, a bare environment, 5 s after the build, 64 KB;
-  snippets up to 4000 characters) and "Explain my code" is disabled with the
+  code, which the loop and final-value programs are built from. DART, C and SQL have no
+  tracer and no explainer: "Run it" is `POST /api/brain/run {code, language}` with language
+  `dart` (the default), `c` or `sql` (`runBrainCode` in `api.ts`, `runsOnTheRunner()` in
+  `brainRound.ts`; the Gotchas runner's `run_program(language)`:
+  the SDK's real dart.exe, or the C compiler `compile_c` picks (clang here, MSVC if it is
+  all there is), or the runner's SQLite driver that prints the last SELECT's rows; a bare
+  environment, 5 s after the build, 64 KB; snippets up to 4000 characters; any other language
+  is a 400; a compile error comes back with `compile_error` and no throwaway path) and
+  "Explain my code" is disabled with the
   tooltip "Explain my code works in Python and JavaScript so far"; the
-  "Words in this question" chips ask the glossary for language `dart` (a full
-  third glossary language since 2026-10-22: see "Glossary"), so Dart and Flutter
-  drills show their chips with no web change.
+  "Words in this question" chips ask the glossary for the drill's language: `dart` (2026-10-22), `c` and `sql`
+  (2026-10-23) are full glossary languages of their own (see "Glossary"), so their drills show their chips
+  with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
 - **Brain Drills packs** (how a new activity gets in; the Reading Pack in
   `pack_reading.py` is the model). Add `code_coach/brain/pack_<name>.py`
   exposing `ACTIVITIES: tuple[Activity, ...]` and touch nothing else:
@@ -384,6 +395,67 @@ code_coach/farm/
   shorthands; type inference traps are real (`fold(0, (s, x) => s + x)` inside
   `print(...)` fails to compile, `Future(() => throw 'x').catchError(...)`
   throws an ArgumentError: the oracle catches both).
+  **C packs** (`pack_ccore.py` is the model: group "C core", ids `c_*`, 8 activities of 42-56
+  templates; templates are `_ccore_numbers.py`, `_ccore_text.py`, `_ccore_flow.py`, the model `_c_model.py`).
+  Build the generator with `Pool([...])` of `_c_model.C(fmt, answer, why)` templates and pass
+  `make_c=` (a C-only activity, `oracle="value"`). **Write the C in a RAW string** (`r'printf("%d\n", $a);'`):
+  holes are `$a $b $c $d` ints 2-9, `$n` 10-40, `$m` 50-99, `$u` 200-250, `$u2` 50-120, `$big`
+  30000-60000, `$k` 1-3, `$h` 2/4/5, `$s` 3-15, `$pw`, `$hx $hy` (hex digits) and `$hxv $hyv`,
+  `$x $y` letters, `$X`, `$w $z` words, `$L $i $j $f` (length, positions and a letter of `$w`), `$r` 0/1,
+  `$q` 0-2; `T(*lines)` joins lines, `PF("%d", "expr")` is `printf("%d\n", expr);`. A model function may
+  `raise Retry` to pick new parameters (`fixed()` does for a rounding tie). **The item convention**
+  (shared by the oracle, "Run it" - `cProgram` in `brainRound.ts`, whose `C_HEADERS` a test holds equal to
+  `c_oracle.HEADERS` - and `check`): `stdio.h stdint.h string.h stddef.h` are always included and an item never
+  writes `#include`; the program is `check` or the prompt; if it mentions `main(` it is a COMPLETE program
+  (globals and helper functions, then `int main(void)`), else it is the BODY of `main`; it PRINTS ITS OWN ANSWER
+  with `printf` and the answer is its output with the whitespace at both ends cut off (so a padding question
+  prints `|  42|`, never `  42`). The model (`_c_model.py`) has `CType`/`V` values with C's promotion and usual
+  arithmetic conversions, wraparound, truncating `/` `%`, shifts and bit ops, `cfmt` (printf: `%d %i %u %x %X
+  %o %c %s %f %%`, flags `-+ 0#`, width, precision, `*`, `%zu`), `fixed`, `strcmp_sign`, `c_strchr`...
+  **Portable C only** (what the Gotchas C cards follow, enforced by `c_oracle.lint` with the shared
+  `tests/test_gotchas_c.BANNED`, and by the sanitizer run): no undefined behaviour (signed overflow, out of
+  bounds, `x++ + x`, over-wide shifts, `%d` for an `unsigned`), nothing implementation-defined (plain `char`
+  above 127, right shift of a negative, `sizeof(long)`, `%p`, string-literal identity, order of evaluation of
+  arguments), nothing random or timed, no `malloc`; `int` is 32 bits and `long long` 64 here. Chained
+  comparisons (`a < b < c`) are a clang ERROR: do not write them. **The C oracle** (`tests/c_oracle.py`) is
+  batched like Dart's but builds three ways: every body item is `static void iN(void)` in ONE `batch.c` (a
+  `#line 1 "itemN.c"` names the item and the line in every compiler message), every complete program is its own
+  translation unit (file-level names made `static` by `isolate()`, `main` renamed) compiled 8 at a time, a
+  generated `main` calls the items between `@@S<id>@@`/`@@E<id>@@` markers and survives a crash or a hang
+  (the item is named and skipped, the rest run), and the whole batch is built with clang `-O0 -fsigned-char`,
+  clang `-O2 -funsigned-char` and MSVC `/Od` (when Visual Studio is installed): the three must print the same
+  or the value is `BUILDS DIFFER: ...`; a third check builds with `-fsanitize=undefined` (recovering, so one
+  run names every item with undefined behaviour). Strict flags `-std=c11 -Wall -Wextra -pedantic`; warnings are
+  kept per item and only `BENIGN_WARNINGS` (test_gotchas_c) plus `BRAIN_BENIGN` (the traps themselves:
+  `xor-used-as-pow`, `missing-braces`, `logical-not-parentheses`, `bool-operation`) may appear. An item that does not compile is named by
+  file and line and removed; `tests/test_brain_packs.py` runs ALL C activities in one batch (every template on 6
+  seeds + 12 rounds, ~2000 programs: ~60 s for the three builds and the sanitizer) and picks a new C pack up
+  with no edit: `pytest tests/test_brain_packs.py -k "COracle or CShape or CAndSql"`. **To check ONE pack while writing it**: `.venv/Scripts/python.exe -m tests.brain_check ccore` (a pack name, an activity id or a prefix such as `c_loop`; shape rules, the oracle on every build, the warning lint and the sanitizer for C, the oracle for SQL; `--seeds N`; exit 1 on any problem). Traps found: `i3_main` has no
+  implicit `return 0`, so `isolate()` adds it; two complete programs both defining `counter()` clash at link time
+  without `static`; a pack file holding `printf("%d\n"...` must not go through a shell heredoc (the backslashes).
+  **SQL packs** (`pack_sqlcore.py`: group "SQL core", ids `sql_*`, 8 activities of 40-80 templates;
+  templates `_sqlcore_rows.py`, `_sqlcore_joins.py`, `_sqlcore_funcs.py`, the model `_sql_model.py`). Pass
+  `make_sql=`, `oracle="value"`. A template is a plain function `(rng) -> Item` wrapped by `fit(f)` (which re-rolls
+  an item over 220 characters / 10 lines, or one that `raise Retry`s, e.g. a tie where the answer must be unique);
+  build the script with `Tbl(name, [(col, type)], rows)` (`.lines()` is `CREATE TABLE ...;` and
+  `INSERT INTO t VALUES (1,'a'),(2,NULL);`) and `sql_item(tables, query, answer, why)`; the answer is a Python
+  value, a list of row tuples, or text. **The item convention**: the prompt IS the whole script ending in the
+  query asked about (`check` is blank), "Run it" runs it through the runner's SQLite driver, and the
+  value is what that driver prints for the LAST statement that returns rows: columns joined with `|`, rows with
+  `; `, NULL as `NULL`, text bare, an integer as digits, a real as Python's `repr` (`2.0`, `0.30000000000000004`).
+  An answer is ONE value (a number, a word, `NULL`; avoid lists and answers with quotes). **C and SQL answers are compared
+  EXACTLY** (`sameAnswer` in `brainRound.ts`: only the spaces at the ends are forgiven; Python, JavaScript and Dart still
+  ignore case and quotes), so `%x` against `%X`, the spaces of `|  42|` and `UPPER('a')` are real questions; a query that returns no rows prints nothing and is never
+  an answer. SQLite semantics, not PostgreSQL's (`7 / 2` is 3, `x / 0` is NULL, NULLs sort first, `LIKE` ignores
+  ASCII case, `ROUND` gives a real); SQLite here is 3.45 (window functions, `NULLS LAST`, `IIF` fine). The model
+  (`_sql_model.py`) is a tiny relational one: tables are lists of tuples, `None` is NULL, a condition returns
+  True/False/None (`t_and t_or t_not eq gt between in_list not_in like`), `where` keeps only True rows,
+  `count_star count_col count_distinct sum_ avg_ min_ max_ group order_by cross inner left_join
+  row_number rank_dense running_sum` (the default window frame includes a row's PEERS) `sql_div sql_mod sql_round
+  concat substr instr coalesce nullif type_of`. **The SQL oracle** (`tests/sql_oracle.py`) runs each script in a
+  FRESH in-memory database through Python's sqlite3 (a loop, ~0.3 ms an item, 14000 items in 4 s) and renders the
+  last SELECT's rows like the driver; a test holds the in-process renderer to the real driver on a sample from every
+  activity. Run just it with `pytest tests/test_brain_packs.py -k "Sql"`, or one pack with `-m tests.brain_check sqlcore`.
 - **Flutter pack convention** (Dart-language activities about WIDGETS; `pack_flutterlayout.py`, group "Flutter layout",
   ids `fl_*`, is the model). An activity passes `make_dart=` and `oracle="flutter"`, and **its id must start with
   `fl_`** (the browser's `runnableFor` refuses "Run it" for `fl_*` with "Flutter widgets cannot run here: this answer was
@@ -433,8 +505,8 @@ Free mode), `BrainTools`, and the Workbook and Forms (`Katas.tsx`) walkthroughs.
 
 ```text
 code_coach/glossary/
-  entry.py            Entry (frozen dataclass) + the writers: py(...), js(...), dart(...), both(...) (= all3: up to
-                      three languages, one dict each)
+  entry.py            Entry (frozen dataclass) + the writers: py(...), js(...), dart(...), c(...), sql(...), both(...)
+                      (= all3: up to five languages, one dict each)
   terms_values.py     truthy/falsy/boolean, types, numbers, strings, mutable/immutable, reference
   terms_basics.py     expression, operator, precedence, variable, scope, syntax, brackets, import...
   terms_flow.py       condition, comparison, short-circuit, branch, loops, index/slice, exceptions, recursion
@@ -473,6 +545,30 @@ code_coach/glossary/
                       Center/Align, Stack/Positioned, Wrap, AspectRatio, ConstrainedBox, overflow, ListView(.builder),
                       GestureDetector, InkWell, TextField/TextEditingController, Form/validator, Navigator, Route,
                       MaterialApp, Scaffold, Text. Most have NO example (a widget cannot run in plain `dart`).
+  terms_c_*.py        C, the fourth language (added 2026-10-23; ~137 words): core (integer types, fixed-width, signed/
+                      unsigned, two's complement, promotion, usual arithmetic conversions, casts, overflow, `/` and `%`
+                      truncation, floating point, char/ASCII, sizeof/size_t, limits.h, undefined vs implementation-
+                      defined behaviour, truthiness, comparison, assignment, ++/--, precedence/associativity,
+                      short-circuit, ?:, comma, side effects, sequence points, bit operators/shifts/masks, hex/octal/
+                      binary, const/volatile), text (printf and its specifiers/width/precision, escapes, strings as
+                      char arrays, the terminator, strlen vs sizeof, strcpy/strncpy/strcat/strcmp/strchr/strstr/memcpy/
+                      memset/memcmp/snprintf/puts, ctype, atoi/strtol, buffer overflow), memory (arrays, decay, 2-D,
+                      pointers, &, *, NULL, pointer arithmetic, `**`, void*, const pointers, dangling, malloc/free,
+                      structs, ->, designated initialisers, compound literals, padding, unions, enums, typedef,
+                      function pointers, callbacks, qsort, swap, segfault), flow (loops, break/continue, switch and
+                      fallthrough, if/else, functions, parameters, pass by value, prototypes, main, recursion, call
+                      stack, scope, locals/globals/static, storage duration, shadowing, extern, headers, #define,
+                      #x/##, #if), more (the words later packs added: truncation, out-parameter, end pointer, linked
+                      list, buffer, byte, strtok)
+  terms_sql_*.py      SQL (SQLite's SQL), the fifth language (~89 words): query (SELECT, alias, DISTINCT, WHERE, AND/OR,
+                      NULL, three-valued logic, IS NULL, COALESCE/NULLIF, LIKE/GLOB, IN/NOT IN-with-NULL, BETWEEN,
+                      COUNT/SUM/AVG/MIN/MAX, GROUP BY/HAVING, ORDER BY/LIMIT/OFFSET, joins, subqueries, EXISTS,
+                      UNION/UNION ALL/INTERSECT/EXCEPT), funcs (CASE, integer division, %, ROUND, string functions,
+                      SUBSTR 1-based, INSTR, ||, CAST, typeof, type affinity, boolean, window functions: ROW_NUMBER/
+                      RANK/DENSE_RANK/PARTITION BY/running total/LAG/LEAD, CTE, recursive CTE, dates), data (tables,
+                      INSERT/UPDATE/DELETE, upsert, OR REPLACE/IGNORE, constraints, PRIMARY KEY/UNIQUE/NOT NULL/CHECK/
+                      DEFAULT/FOREIGN KEY, ALTER TABLE, views, transactions, rollback, savepoints, triggers, indexes,
+                      rowid, AUTOINCREMENT), more (FILTER, GROUP_CONCAT, changes(), COLLATE, ISO dates)
   contexts.py         CONTEXTS: the seven ORIGINAL Brain Drills activities -> the words they always teach, plus
                       concepts_for(): every other activity's `concepts`, read lazily from code_coach.brain
   __init__.py         the loader (terms_* found BY NAME), find_words, lookup, resolve, context_words, words_for_context, payload
@@ -516,6 +612,25 @@ code_coach/glossary/
   four inputs, primes against a sieve): add a line there when you add a runnable rule. Write a rule only if you can say how a test would catch it being false.
   Keep every rule language-correct: Python's empty list is falsy, JavaScript's is truthy; `%` takes the sign of the
   right side in Python and the left in JavaScript; `round(2.5)` is 2 but `Math.round(2.5)` is 3.
+- **C and SQL are held to the real compilers and SQLite the same way.** A C example is the BODY of `main` unless it
+  mentions `main(` (the four Brain Drills headers are always in front; a complete program may `#include` more), and all
+  of them run in ONE batch through `tests/c_oracle.py` on every build it has (clang -O0 signed char, clang -O2 unsigned
+  char, MSVC /Od): the builds must agree, so a card never depends on plain `char`, `sizeof(long)` or an address. A SQL
+  example is a whole script whose LAST row-returning statement is printed as the Gotchas SQL driver prints it
+  (`a|b; c|d`, NULL as `NULL`), in a fresh in-memory SQLite (`tests/sql_oracle.py`); the transaction, savepoint and
+  foreign-key examples are also run through the real driver. Rules are backed by `C_RULE_CHECKS` (name =
+  `"<entry id>: the claim"`, a program, the exact output - or `CE` = clang refuses it (MSVC accepting it is tolerated),
+  `STOPPED` = it crashes, `DIFFER` = the builds disagree: plain `char`), `C_WARNING_CHECKS` (a rule that promises a
+  warning, e.g. `if (y = x)` -> `-Wparentheses`) and `C_UB_CHECKS` (undefined behaviour named by clang's sanitizer: signed
+  overflow, an index out of bounds, `/ 0`, an over-wide shift; and unsigned wraparound is NOT reported), and by
+  `SQL_RULE_CHECKS` (scripts; an expected value starting `ERROR` is a prefix; a statement written `/*E*/ INSERT ...`
+  may fail without ending the script - used to show that a failing multi-row INSERT adds nothing). Tests make
+  the checks and `C_NOT_ORACLE_CHECKED` / `SQL_NOT_ORACLE_CHECKED` partition the ids: today the only C word without a
+  measured rule is `volatile` (what it forbids the optimiser cannot be seen in a portable program) and every SQL word
+  has one. Traps found: clang refuses a chained comparison `a < b < c` (a card shows `(a < b) < c`), `isalpha` and
+  friends return a non-zero value that is not 1, `ALTER TABLE ... ADD COLUMN ... NOT NULL` is accepted on an EMPTY
+  table, a window function cannot sit inside an aggregate, `SUBSTR(s, 0, 2)` is one character, and a `;` inside a
+  `--` comment is not a statement end (so the `/*E*/` marker is a block comment).
 - **Detect hygiene.** A regex must never backtrack without end: `(?:[ \t]+[^\n]*\n?)*?` (an OPTIONAL newline after a
   `[^\n]*`) once hung `find_words` on a class with a few methods - use `[ \t]+\S[^\n]*\n` for "one more indented line".
   A test feeds a 40-method class and 300-line loops through every pattern. Generic words (`sum`, `state`, `counter`,
@@ -526,8 +641,13 @@ code_coach/glossary/
   string contents blanked, so a word inside a string is not code (a pattern starting `raw:` sees the code as written) -
   sorted by `priority` (high first) then first appearance; never more than `limit`, no word twice. An unknown language,
   junk or empty code: `[]` or just the context's words, never an error. `language_for` maps `tfwr` to Python and
-  `typescript` to JavaScript, and `dart` is its own language; any other app language has no glossary yet, so `words` is
-  empty. Dart strings are blanked by their own rules (`//` and `/* */`, raw `r'..'`, triple quotes, `'` and `"`).
+  `typescript` to JavaScript; `dart`, `c` and `sql` are languages of their own (`postgresql` is NOT `sql`: the SQL
+  glossary is SQLite's); any other app language has no glossary yet, so `words` is empty. Strings are blanked by each
+  language's own rules: Dart (`//` and `/* */`, raw `r'..'`, triple quotes, `'` and `"`), C (`//`, `/* */`, `"..."` and
+  `'c'` with backslash escapes; a `#define` or `#include` line is CODE, so the macro words are found), SQL (`--`,
+  `/* */`, `'text'` with `''` inside, and `"identifiers"`, so a column called "select" wakes nothing). **SQL detect
+  patterns start with `(?i)`** (keywords are case-insensitive) and **every `.{n}`-style gap in a pattern is bounded**
+  (`[^;\n]{0,60}`, never `[^\n]*`): a test feeds both languages 20 adversarial strings (`i++ ` x 5000, `select ` x 4000...).
 - **Contexts** (what a Brain Drills activity always teaches, shown first by `find_words` and as the "Words in this
   question" chips). The ORIGINAL seven keep their hand-written ids in `contexts.CONTEXTS` (eval: expression, evaluate,
   operator, precedence; truthy: truthy, falsy; loops: loop, iteration, off-by-one, range (Python only); trace: variable,
@@ -545,7 +665,10 @@ code_coach/glossary/
   `test_concepts_that_resolve_in_no_language_the_activity_is_played_in_are_few_and_visible` fails (naming the words) when
   an activity has more than `MAX_UNRESOLVED_PER_ACTIVITY` concepts that no entry answers to IN A LANGUAGE IT IS PLAYED IN (a
   Dart activity is judged by the Dart glossary alone, so a Dart pack author's new word needs a Dart entry or an `aka` on one;
-  today every Dart/Flutter concept of every pack resolves in Dart). The original seven are not played in Dart: their
+  today every Dart/Flutter concept of every pack resolves in Dart, and so does every C and SQL concept of every
+  pack in its own language - the packs' loose spellings are `aka`: `address` -> address-of, `sorting` -> qsort in C but
+  order-by in SQL, `truncation` has a card of its own, `padding` is the printf width card with a note on struct padding,
+  `replace` -> OR REPLACE, `rename` -> ALTER TABLE, `filter` -> the FILTER clause). The original seven are not played in Dart, C or SQL: their
   hand-kept ids are only required in Python and JavaScript. **Teaching a pack author's new word** = writing
   the entry in a `terms_brain_<theme>.py` (or any `terms_*.py`) with the word as its id, term or an `aka`; a word that
   genuinely exists in only one language is fine - prefer a counterpart under the same word when there is one
@@ -554,14 +677,17 @@ code_coach/glossary/
   passes nothing.
 - **API**: `POST /api/explain` takes an optional `context` and answers `words: [{id, term, language, definition, rules,
   example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged; for
-  Dart the answer stays `ok: false` with "no reader yet", and `words` still ride along, because the handler adds them
-  whenever the language has a glossary but no explainer);
+  Dart, C and SQL the answer stays `ok: false` with "no reader yet", and `words` still ride along, because the handler
+  adds them whenever the language has a glossary but no explainer - one place, nothing language-specific);
   `GET /api/glossary?language=&term=&context=` gives one word (id, term or alias), a context's words, or the whole
   language, and never an error (unknown means `[]`). "See also" chips jump to a card already on screen or fetch the word.
-- **Not yet**: other app languages (C, Go...), the Workbook/Predict modes passing a `context` of their own, a
-  syntax-error-aware match (Free mode with a typo shows the words of the code, not "syntax error"), and a Dart/Flutter
-  reader for Explain (the chips and cards need none). The Brain Drills Explain button for Dart stays disabled, so its
-  "Words used" are seen in Free mode (the coach strip) only.
+- **Not yet**: other app languages (C++, Go, Rust...; PostgreSQL deliberately maps to nothing), the Workbook/Predict
+  modes passing a `context` of their own, a syntax-error-aware match (Free mode with a typo shows the words of the code,
+  not "syntax error"), and a Dart/Flutter/C/SQL reader for Explain (the chips and cards need none). The Brain Drills
+  Explain button for Dart, C and SQL stays disabled ("works in Python and JavaScript so far"), so their "Words used"
+  are seen in Free mode (the coach strip) only. A C or SQL card that is a drill concept needs no web change; a new
+  C/SQL pack needs no glossary edit unless it uses a word nobody has an entry or an `aka` for (the unresolved-concepts
+  test then names it).
 
 ## Gotchas (the "<Language> Quiz" feed: 19 languages)
 

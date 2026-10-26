@@ -268,12 +268,16 @@ def test_each_c_card_is_one_short_program():
         assert max(len(line) for line in lines) <= 76, f"{it.id} has a very wide line"
 
 
+#: Everything a portable C program here must stay away from (the Brain Drills C oracle, tests/c_oracle.py, shares it).
+BANNED = re.compile(
+    r"%p|\brand\b|\bsrand\b|\btime\b|\bclock\b|\bgetenv\b|\bargv\b|\bargc\b|\bscanf\b|\bgets\b|\bfgets\b"
+    r"|\bgetchar\b|\b__\w+|#pragma|\basm\b|\bsizeof\s*\(\s*(?:long|short|void)\b"
+    r"|\bINT_MAX\b|\bINT_MIN\b|\bLONG_MAX\b|\bLONG_MIN\b|\bmalloc\b|\bgoto\b|\bsignal\b|\bsetjmp\b|\bFILE\b"
+    r"|\bfopen\b|\bsystem\b|\bunion\b|\boffsetof\b|\bpthread|\bthread_local\b|\b_Thread|\bwchar|\blocale")
+
+
 def test_a_c_card_uses_nothing_that_differs_between_machines():
-    banned = re.compile(
-        r"%p|\brand\b|\bsrand\b|\btime\b|\bclock\b|\bgetenv\b|\bargv\b|\bargc\b|\bscanf\b|\bgets\b|\bfgets\b"
-        r"|\bgetchar\b|\b__\w+|#pragma|\basm\b|\bsizeof\s*\(\s*(?:long|short|void)\b"
-        r"|\bINT_MAX\b|\bINT_MIN\b|\bLONG_MAX\b|\bLONG_MIN\b|\bmalloc\b|\bgoto\b|\bsignal\b|\bsetjmp\b|\bFILE\b"
-        r"|\bfopen\b|\bsystem\b|\bunion\b|\boffsetof\b|\bpthread|\bthread_local\b|\b_Thread|\bwchar|\blocale")
+    banned = BANNED
     for it in C_ITEMS:
         found = banned.search(it.code)
         assert not found, f"{it.id} uses {found.group(0)!r}, which can differ between machines"
