@@ -70,7 +70,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Run and code tracing both need the Dart SDK on your PATH. "
             "Tracing starts two Dart VMs, so it takes a couple of seconds."
         ),
-        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank", "tracer"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "bank", "tracer", "explainer"),
     ),
     Language(
         id="javascript",
@@ -106,7 +106,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run executes your query against a small "
             "sample database — users and orders — and prints the rows."
         ),
-        ready=("reference", "workbook", "typing", "fundamentals", "runner"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "explainer"),
     ),
     Language(
         id="postgresql",
@@ -135,7 +135,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run needs gcc or clang on your PATH; without "
             "one the drills still work, only Run won't."
         ),
-        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "explainer"),
     ),
     Language(
         id="cpp",

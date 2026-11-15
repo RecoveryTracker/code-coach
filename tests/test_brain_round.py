@@ -218,6 +218,15 @@ out.mapping = Object.fromEntries(
     .map((id) => [id, R.brainLanguageFor(id)]));
 out.offered = R.DRILL_APP_LANGUAGES;
 out.runner = Object.fromEntries(["python", "javascript", "dart", "c", "sql"].map((l) => [l, R.runsOnTheRunner(l)]));
+out.canExplain = Object.fromEntries(["python", "javascript", "dart", "c", "sql"].map((l) => [l, R.canExplain(l)]));
+out.explainSource = {
+  dart: R.explainSource("dart_eval", { prompt: "7 ~/ 2", answer: "3", explain: "", show: "", check: "print(7 ~/ 2);" }, "dart"),
+  flutter: R.explainSource("fl_flex", { prompt: "Row(children: [Text('a')])", answer: "1", explain: "", show: "" }, "dart"),
+  c: R.explainSource("c_int", { prompt: "printf(\"%d\n\", 7 / 2);", answer: "3", explain: "", show: "" }, "c"),
+  sql: R.explainSource("sql_count", { prompt: "SELECT 1;", answer: "1", explain: "", show: "" }, "sql"),
+  blank: R.explainSource("c_int", { prompt: "  ", answer: "", explain: "", show: "" }, "c"),
+  flutterRuns: R.runnableFor("fl_flex", { prompt: "Row()", answer: "1", explain: "", show: "" }, "dart").ok,
+};
 out.cHeaders = R.C_HEADERS;
 out.cPrograms = {
   body: R.cProgram("printf(\"%d\\n\", 7);"),
@@ -556,6 +565,17 @@ class AppLanguageMapping(unittest.TestCase):
         self.assertEqual([o["name"] for o in offered], ["Python", "JavaScript", "Dart", "C", "SQL"])
         for o in offered:  # a button switches the app to a language that really has drills
             self.assertEqual(results()["mapping"][o["id"]], o["id"])
+
+    def test_every_drill_language_can_explain_and_dart_c_sql_send_the_prompt_itself(self):
+        r = results()
+        self.assertEqual(r["canExplain"], {"python": True, "javascript": True, "dart": True, "c": True, "sql": True})
+        src = r["explainSource"]
+        self.assertEqual(src["dart"], "7 ~/ 2", "what the screen shows, not the wrapped program (the server wraps it to run it)")
+        self.assertEqual(src["c"], 'printf("%d\n", 7 / 2);')
+        self.assertEqual(src["sql"], "SELECT 1;")
+        self.assertTrue(src["flutter"].startswith("Row("), "Flutter widgets are explained although they cannot run")
+        self.assertFalse(src["flutterRuns"], "...and Run it stays refused")
+        self.assertEqual(src["blank"], "", "nothing to explain")
 
     def test_dart_c_and_sql_run_on_the_runner(self):
         self.assertEqual(results()["runner"], {"python": False, "javascript": False, "dart": True, "c": True, "sql": True})

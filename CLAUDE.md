@@ -310,15 +310,16 @@ code_coach/farm/
   `/api/explain`, both told the drill's language (`language` in the request;
   blank = the app's saved one). `round_payload` carries each item's `check`
   code, which the loop and final-value programs are built from. DART, C and SQL have no
-  tracer and no explainer: "Run it" is `POST /api/brain/run {code, language}` with language
+  tracer: "Run it" is `POST /api/brain/run {code, language}` with language
   `dart` (the default), `c` or `sql` (`runBrainCode` in `api.ts`, `runsOnTheRunner()` in
   `brainRound.ts`; the Gotchas runner's `run_program(language)`:
   the SDK's real dart.exe, or the C compiler `compile_c` picks (clang here, MSVC if it is
   all there is), or the runner's SQLite driver that prints the last SELECT's rows; a bare
   environment, 5 s after the build, 64 KB; snippets up to 4000 characters; any other language
-  is a 400; a compile error comes back with `compile_error` and no throwaway path) and
-  "Explain my code" is disabled with the
-  tooltip "Explain my code works in Python and JavaScript so far"; the
+  is a 400; a compile error comes back with `compile_error` and no throwaway path). "Explain my code"
+  works in all five languages (2026-11): `canExplain` / `explainSource` in `brainRound.ts` (Dart, C and SQL send the question's
+  own prompt, not the wrapped program: the server wraps a fragment to run it for the output note; a Flutter drill is
+  explained although "Run it" stays refused); see "Explain my code for Dart, C and SQL". The
   "Words in this question" chips ask the glossary for the drill's language: `dart` (2026-10-22), `c` and `sql`
   (2026-10-23) are full glossary languages of their own (see "Glossary"), so their drills show their chips
   with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
@@ -695,18 +696,72 @@ code_coach/glossary/
   `isinstance` <-> `instanceof`, `self` -> `this`). `BrainTools` passes `activityId` as `context`; every other caller
   passes nothing.
 - **API**: `POST /api/explain` takes an optional `context` and answers `words: [{id, term, language, definition, rules,
-  example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged; for
-  Dart, C and SQL the answer stays `ok: false` with "no reader yet", and `words` still ride along, because the handler
-  adds them whenever the language has a glossary but no explainer - one place, nothing language-specific);
+  example, example_output, see_also: [{id, term}], counts_false, counts_true}]` (the other fields are unchanged; a language
+  with no explainer - PostgreSQL - still answers `ok: false` "no reader yet", and the handler adds `words` whenever the
+  language has a glossary: one `find_words` call, nothing language-specific);
   `GET /api/glossary?language=&term=&context=` gives one word (id, term or alias), a context's words, or the whole
   language, and never an error (unknown means `[]`). "See also" chips jump to a card already on screen or fetch the word.
 - **Not yet**: other app languages (C++, Go, Rust...; PostgreSQL deliberately maps to nothing), the Workbook/Predict
   modes passing a `context` of their own, a syntax-error-aware match (Free mode with a typo shows the words of the code,
-  not "syntax error"), and a Dart/Flutter/C/SQL reader for Explain (the chips and cards need none). The Brain Drills
-  Explain button for Dart, C and SQL stays disabled ("works in Python and JavaScript so far"), so their "Words used"
-  are seen in Free mode (the coach strip) only. A C or SQL card that is a drill concept needs no web change; a new
+  not "syntax error"), (Dart, C and SQL now have readers, so their "Words used" show under
+  Explain everywhere, Brain Drills included). A C or SQL card that is a drill concept needs no web change; a new
   C/SQL pack needs no glossary edit unless it uses a word nobody has an entry or an `aka` for (the unresolved-concepts
   test then names it).
+
+## Explain my code for Dart, C and SQL
+
+Built 2026-11 (the language ranking is Python, JavaScript, Dart, C, SQL, so the button had to work in all five). Three readers,
+no cloud AI and no new dependency, each returning the same dict as `explain_js` (`ok, summary, lines [{line, depth, source, text}],
+output_notes, error_note`; the handler adds `words` once):
+
+```text
+code_coach/explain_expr.py      tokenizer + precedence-climbing parser for ONE C-family expression (Dart and C), and `say()`
+code_coach/explain_common.py    `read_pieces`: code -> statements/headers/arguments that know what they are nested in
+                                (a stack of ( [ { frames; modes stmt | arg | cont | pp), FALLBACK text, run notes
+code_coach/explain_programs.py  `wrap(language, code, context)`: THE one place a fragment becomes a runnable program
+code_coach/explain_dart.py      Dart + Flutter widget code (`explain_dart(code, run=True, context="")`)
+code_coach/explain_c.py         C (`explain_c`), printf specifiers read one by one
+code_coach/explain_sql.py       SQLite SQL: own tokenizer, statements -> clauses, a small expression parser
+tests/explain_corpus.py         the acceptance corpus + coverage / alignment / never-raises helpers
+```
+
+- **How a line is read.** Dart and C go piece by piece (a piece = one statement, header or argument that starts on a physical
+  line; `Column(children: [` is one piece, its brackets auto-closed to be parsed). SQL goes statement -> clause: a row sits on the
+  line where the clause (or the select item, JOIN, VALUES tuple, column definition, extra AND/OR line) starts, and subqueries /
+  CTEs / view bodies / trigger bodies get their own rows one level deeper. A piece nobody reads gets the row
+  "A line this reader does not break down yet." - never a guess. `_read_rows(code)` returns `(rows, lines, fallback lines)`
+  and is what the coverage test counts.
+- **Rules that state facts** live in each module's `FACTS` and are held to the real toolchain: a claim is written
+  `` `EXPR` gives `VALUE` `` (Dart, SQL) or `` `printf(...)` prints `OUT` `` (C) and the test runs every one in `dart`, the C
+  oracle (clang -O0/-O2, MSVC) or SQLite and compares; the facts that are not one expression (`final` reassignment, `late`,
+  switch fall-through in C, the macro parenthesis trap, LEFT JOIN + WHERE, `DELETE` with no WHERE...) are programs in each test's
+  `EXTRA`, and a test fails for a fact with no check. **Write a new rule sentence with a claim in it, or add an `EXTRA` case.**
+  Each rule sentence is shown once per explanation.
+- **Output notes** (why the output looks like this): the code is run for real with `gotchas.runner.run_program` after
+  `explain_programs.wrap` (Dart: the body of `main` unless it mentions `main(`, a bare last line printed - the same rule as
+  `dartProgram` and `tests/dart_oracle.full_program`; C: the four headers + body of `int main(void)` unless `main(` appears, a
+  program with its own `#include` as it is - `cProgram`, `c_oracle.full_program`; SQL: the script, the driver prints the last
+  SELECT's rows). Tests hold the wrapper equal to the oracles and to the browser's functions; "Run it" still sends what
+  `brainRound.ts` builds (unchanged). Time: the program gets 3 s (+ the compiler's allowance); measured here Dart about 1-2 s,
+  C 0.8-1 s, SQL 0.1-0.2 s; a run that exceeds it is a note, never an exception, as is a missing toolchain. A compile error is
+  `error_note` ("It does not compile: line 3: error: ...", the lines the wrapper added taken off, no temp path), a runtime error
+  "It stopped with an error: ...", a program that prints nothing gets no output note. **Flutter widgets are never run**
+  (`is_flutter`: `package:flutter`, widget class names, or a drill id `fl_ / fs_ / fw_`): the note says "Flutter widgets cannot run
+  here". A multi-clause SELECT also gets the evaluation-order note (FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT).
+- **Wiring**: `ready` has `explainer` for dart, c and sql (`languages.py`); `_explain_with` dispatches to the readers (Dart gets the
+  drill's `context` for Flutter detection); PostgreSQL still answers "no reader yet", and the sentence is built from the
+  languages that have the capability ("Explain my code works in Python, JavaScript, Dart, C and SQL so far"). The readers never
+  mention the glossary (a test greps).
+- **Coverage today** (non-structural lines with a specific row; closing-brace / comment-only lines are not rows): Dart 99.9 % of
+  5,989 Brain Drills lines, 95.1 % of 595 Gotchas lines, 100 % of 8,951 Workbook lines; C 100 % / 100 % / 100 % (3,937 / 904 /
+  15,301); SQL 100 % / 100 % / 100 % (2,493 / 423 / 2,559). The test needs >= 90 % per corpus and prints the 15 commonest
+  fallback shapes. What still falls back: a Dart statement that starts with a literal (`{(1, 2)}.length`), `?[` null-aware
+  index, a continuation line that begins with `.join(`, object-pattern declarations. A control-flow statement that a rule fails
+  to read is NOT counted as a call (it falls back), so dropping a rule drops the coverage test.
+- **Not oracle-checked** (stated, but nothing runs them): the plain-English meaning of each Dart/C type word, "a pointer to ...",
+  what `ON CONFLICT ... DO UPDATE`, triggers, views, savepoints and `ALTER TABLE` rows say beyond their keyword, the CREATE TABLE
+  column notes, widget/lifecycle descriptions (`initState`, `build`, `StatelessWidget`), the label / `goto` / enum-constant
+  rows, and which operators the rows spell as words. The truth tests cover only the `FACTS` sentences.
 
 ## Gotchas (the "<Language> Quiz" feed: 19 languages)
 

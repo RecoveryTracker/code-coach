@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { explainCode, runBrainCode, visualizeCode } from "../api";
-import { cleanError, isSyntaxError, runnableFor, runsOnTheRunner, type BrainItem, type BrainLang } from "../lib/brainRound";
+import { canExplain, cleanError, explainSource, isSyntaxError, runnableFor, runsOnTheRunner, type BrainItem, type BrainLang } from "../lib/brainRound";
 import type { ExplainResult, VisualizeResult } from "../types";
 import { WordsUsed } from "./WordsUsed";
 
@@ -25,8 +25,8 @@ type Props = {
 };
 
 const LOCKED = "Answer the question first - running or explaining it would give the answer away.";
-/** Explain reads Python and JavaScript only: Dart, C and SQL have no reader yet (the same words the app uses elsewhere). */
-const NO_EXPLAIN = "Explain my code works in Python and JavaScript so far";
+/** Shown only for a language with no explainer (none of the five drill languages today; the server says which have one). */
+const NO_EXPLAIN = "Explain my code does not read this language yet";
 
 export default function BrainTools({ activityId, item, language, unlocked }: Props) {
   const what = runnableFor(activityId, item, language);
@@ -62,9 +62,13 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
       .catch(() => alive.current && setRan("down"));
   };
 
-  const explainOff = runsOnTheRunner(language);
+  const source = explainSource(activityId, item, language);
+  const explainOff = !canExplain(language);
+  // Explain has its own reason to be off: it needs code to read, not a program that can run (Flutter widgets cannot run
+  // here, but they can be read).
+  const explainWhy = explainOff ? NO_EXPLAIN : !source ? "There is no code to explain here." : unlocked ? "" : LOCKED;
   const explain = () => {
-    if (explainOff || !what.ok || !unlocked || explained === "busy") return;
+    if (explainOff || !source || !unlocked || explained === "busy") return;
     if (explained) {
       setExplained(null);
       return;
@@ -72,7 +76,7 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
     setExplained("busy");
     setExplainOpen(true);
     // The activity id is the glossary's context: it always teaches that drill's words first.
-    explainCode(what.code, language, activityId)
+    explainCode(source, language, activityId)
       .then((r) => alive.current && setExplained(r))
       .catch(() => alive.current && setExplained("down"));
   };
@@ -98,16 +102,15 @@ export default function BrainTools({ activityId, item, language, unlocked }: Pro
           className={explained && explained !== "busy" ? "ws-btn on" : "ws-btn"}
           aria-pressed={!!explained && explained !== "busy"}
           onClick={explain}
-          disabled={explainOff || !!disabledWhy || explained === "busy"}
+          disabled={!!explainWhy || explained === "busy"}
           title={
-            (explainOff ? NO_EXPLAIN : "") ||
-            disabledWhy ||
+            explainWhy ||
             (explained && explained !== "busy" ? "Hide the explanation" : "A plain-English walkthrough of this code")
           }
         >
           {explained === "busy" ? "Reading…" : explained ? "Hide explain" : "Explain my code"}
         </button>
-        {disabledWhy ? <span className="brain-tools-why">{disabledWhy}</span> : null}
+        {disabledWhy || explainWhy ? <span className="brain-tools-why">{disabledWhy && explainWhy ? (unlocked ? disabledWhy : LOCKED) : disabledWhy || explainWhy}</span> : null}
       </div>
 
       {ran && ran !== "busy" ? (

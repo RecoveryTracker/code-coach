@@ -68,6 +68,12 @@ export function runsOnTheRunner(lang: BrainLang): boolean {
   return lang === "dart" || lang === "c" || lang === "sql";
 }
 
+/** Every drill language has an explainer now (Python and JavaScript read with their parsers, Dart, C and SQL with the
+ *  statement readers in code_coach/explain_dart.py, explain_c.py, explain_sql.py). */
+export function canExplain(lang: BrainLang): boolean {
+  return lang === "python" || lang === "javascript" || lang === "dart" || lang === "c" || lang === "sql";
+}
+
 /**
  * Is what you typed the answer? Python, JavaScript and Dart forgive spaces, case and quotes round a string (and spaces
  * inside brackets: Python prints lists as "[1, 2]"). C and SQL are EXACT but for the spaces at the ends: the answer
@@ -263,6 +269,17 @@ export function cProgram(code: string): string {
   const body = code.replace(/\n+$/, "");
   if (/\bmain\s*\(/.test(body)) return C_HEADERS + body + "\n";
   return C_HEADERS + "int main(void) {\n" + body.split("\n").map((ln) => (ln.trim() ? "    " + ln : ln)).join("\n") + "\n}\n";
+}
+
+/**
+ * The code "Explain my code" reads for one question. Dart, C and SQL send the question's own code (what the screen
+ * shows: the server wraps a fragment in `main` itself to run it for the output note); Python and JavaScript send the
+ * program the drill builds. Flutter items can be explained although they cannot run. "" = nothing to explain.
+ */
+export function explainSource(activityId: string, item: BrainItem, lang: BrainLang): string {
+  if (lang === "dart" || lang === "c" || lang === "sql") return item.prompt.trim() ? item.prompt : "";
+  const what = runnableFor(activityId, item, lang);
+  return what.ok ? what.code : "";
 }
 
 /** Why Flutter-widget questions have no "Run it": the browser has no Flutter. */

@@ -1097,15 +1097,14 @@ class DartHistoryTests(unittest.TestCase):
         with self.assertRaises(HTTPException):
             brain_result(BrainResultRequest(activity="eval", seconds=40, errors=0, total=20, language="dart"))
 
-    def test_explain_has_no_dart_reader_but_the_dart_words_are_there(self) -> None:
-        # Dart has no explainer (the answer says so) but it IS a glossary language now:
-        # the words of the activity and of the code come back with the "no reader yet" answer.
+    def test_explain_reads_dart_and_the_dart_words_come_first(self) -> None:
+        # Dart has a reader (code_coach/explain_dart.py) and is a glossary language: the words of the activity come back first.
         from code_coach.api import server
         from code_coach.api.schemas import ExplainRequest
 
         reply = server.explain(ExplainRequest(code="print(1 + 1);", language="dart", context="dart_eval"))
-        self.assertFalse(reply.ok)
-        self.assertIn("Python and JavaScript", reply.summary)
+        self.assertTrue(reply.ok)
+        self.assertTrue(reply.lines, "the code is read line by line")
         self.assertTrue(reply.words, "Dart is a glossary language: the context's words come back")
         self.assertEqual(reply.words[0].language, "dart")
         self.assertEqual(reply.words[0].id, "expression")

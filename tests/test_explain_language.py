@@ -82,9 +82,12 @@ class ExplainLanguage(unittest.TestCase):
 
     def test_a_language_without_an_explainer_still_says_so(self):
         saved("python")
-        r = explain("SELECT 1;", "sql")
+        r = explain("SELECT 1;", "postgresql")
         self.assertFalse(r.ok)
         self.assertIn("no reader", r.summary)
+        # the sentence names the languages that DO have a reader, built from the registry
+        for name in ("Python", "JavaScript", "Dart", "C", "SQL"):
+            self.assertIn(name, r.summary)
 
 
 @unittest.skipUnless(HAS_NODE, "needs node")

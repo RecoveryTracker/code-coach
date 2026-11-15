@@ -1497,11 +1497,10 @@ def test_explain_for_a_language_without_a_glossary_has_no_words():
     assert explain("fn main() {}", "rust").words == []
 
 
-def test_explain_for_dart_has_no_reader_but_still_gets_its_dart_words():
-    """Dart has a glossary but no explainer: the answer is still the honest 'no reader yet', and the words (which
-    are about the code, not about the missing walkthrough) ride along, from the one place in the handler."""
+def test_explain_for_dart_reads_the_code_and_gets_its_dart_words():
+    """Dart has a reader (code_coach/explain_dart.py) AND a glossary: the words ride along, from the one place in the handler."""
     r = explain("String? name;\nprint(name ?? 'guest');\n", "dart")
-    assert r.ok is False and "no reader" in r.summary
+    assert r.ok is True and r.lines
     got = [w.id for w in r.words]
     assert "null-coalescing" in got and "nullable-type" in got, got
     assert r.words and all(w.language == "dart" for w in r.words)
@@ -1512,7 +1511,8 @@ def test_explain_for_dart_has_no_reader_but_still_gets_its_dart_words():
 def test_words_are_added_in_the_handler_only():
     src = Path(server.__file__).read_text(encoding="utf-8")
     assert src.count("glossary.find_words(") == 1
-    for reader in ("code_coach/explain.py", "code_coach/explain_js.py", "code_coach/farm/explain_farm.py"):
+    for reader in ("code_coach/explain.py", "code_coach/explain_js.py", "code_coach/farm/explain_farm.py", "code_coach/explain_dart.py",
+                   "code_coach/explain_c.py", "code_coach/explain_sql.py", "code_coach/explain_common.py", "code_coach/explain_expr.py"):
         assert "glossary" not in (ROOT / reader).read_text(encoding="utf-8"), reader
 
 
@@ -1656,7 +1656,9 @@ def test_every_explanation_view_renders_the_words(rel):
 
 def test_brain_drills_passes_the_activity_as_context_and_shows_chips_on_a_miss():
     tools = read("components/BrainTools.tsx")
-    assert re.search(r"explainCode\(what\.code, language, activityId\)", tools)
+    # The code explained is explainSource(...) (the question's own prompt for Dart, C and SQL); the context is the activity.
+    assert re.search(r"explainCode\(source, language, activityId\)", tools)
+    assert "explainSource(activityId, item, language)" in tools
     assert "ws-btn on" in tools and "Hide explain" in tools, "the Explain button is still a toggle"
     drills = read("components/BrainDrills.tsx")
     assert re.search(r"record\.right \? null : \(\s*<QuestionWords", drills)
@@ -5463,14 +5465,14 @@ def test_chips_and_find_words_for_a_c_or_sql_drill_come_from_that_glossary():
 
 # ── the API ──────────────────────────────────────────────────────────────
 
-def test_explain_for_c_and_sql_has_no_reader_but_still_gets_its_words():
+def test_explain_for_c_and_sql_reads_the_code_and_gets_its_words():
     r = explain('int a = 7 / 2;\nprintf("%d\\n", a % 3);', "c")
-    assert r.ok is False and "no reader" in r.summary
+    assert r.ok is True and r.lines
     got = [w.id for w in r.words]
     assert "division" in got and "modulo" in got and "printf" in got, got
     assert r.words and all(w.language == "c" for w in r.words)
     r = explain("SELECT g, COUNT(*) FROM t WHERE v IS NULL GROUP BY g;", "sql")
-    assert r.ok is False and "no reader" in r.summary
+    assert r.ok is True and r.lines
     got = [w.id for w in r.words]
     assert "group-by" in got and "is-null" in got and "count" in got, got
     assert all(w.language == "sql" for w in r.words)
