@@ -43,8 +43,11 @@ runs as chunks, each its own command, each well under the limit:
 
 | Chunk | What | About |
 |---|---|---|
-| A | `tests/test_[a-c]*.py` | 7 min |
-| B | `tests/test_[d-k]*.py` | 9 min |
+| A | `tests/test_[a-c]*.py` | 32 min |
+| B1 | `tests/test_d*.py tests/test_e*.py` | 6 min |
+| B2 | `tests/test_f*.py` | 14 min |
+| B3 | `tests/test_glossary.py tests/test_[h-k]*.py` | 3 min |
+| B4 | `tests/test_gotchas*.py` (alone: ~50 min, near the limit) | 50 min |
 | C | `tests/test_[l-s]*.py` | 15 min |
 | D | `tests/test_[t-v]*.py` | 4 min |
 | E1 | `tests/test_workbook.py -k "not _part"` | 24 min |
