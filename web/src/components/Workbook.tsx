@@ -26,6 +26,18 @@ import {
   saveWorkbookDraft,
 } from "../api";
 import { award } from "../lib/momentum";
+import {
+  bounds,
+  cleanRange,
+  deal,
+  poolFor,
+  rangeLabel,
+  reachedPage,
+  readRange,
+  writeRange,
+  type Card,
+  type Range,
+} from "../lib/workbookShuffle";
 import { VizPanel } from "./VizPanel";
 import { WordsUsed } from "./WordsUsed";
 import type {
@@ -79,8 +91,30 @@ const TIERS: { id: string; name: string; blurb: string }[] = [
   },
 ];
 
+/**
+ * Shuffle: random exercises from a range of pages, instead of one page in
+ * order. `deck` is the range dealt out (lib/workbookShuffle.ts), `at` the card
+ * on screen, `deals` how many decks have been dealt (so the same exercise
+ * coming up again in the next deck still starts with an empty box).
+ */
+type Shuffle = {
+  range: Range;
+  deck: Card[];
+  at: number;
+  deals: number;
+  /** Cards answered right on the first Check / cards checked at least once. */
+  right: number;
+  tried: number;
+  /** Whether the card on screen has been checked yet (only the first try is scored). */
+  scored: boolean;
+};
+
 export default function Workbook({ language }: Props) {
   const [data, setData] = useState<WorkbookData | null>(null);
+  const [shuffle, setShuffle] = useState<Shuffle | null>(null);
+  /** The "Shuffle" panel in the page list: choose a range, then Start. */
+  const [shuffleOpen, setShuffleOpen] = useState(false);
+  const [rangeText, setRangeText] = useState({ from: "", to: "" });
   const [error, setError] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
@@ -130,6 +164,8 @@ export default function Workbook({ language }: Props) {
     let cancelled = false;
     setData(null);
     setError(null);
+    setShuffle(null);
+    setShuffleOpen(false);
     (async () => {
       try {
         const got = await fetchWorkbook(language);
@@ -156,9 +192,12 @@ export default function Workbook({ language }: Props) {
     };
   }, [language]);
 
+  // In a shuffle the card decides the page and the exercise; otherwise the
+  // page you picked and where you are on it.
+  const card = shuffle ? (shuffle.deck[shuffle.at] ?? null) : null;
   const page: WorkbookPage | null = useMemo(
-    () => data?.pages.find((p) => p.id === pageId) ?? null,
-    [data, pageId],
+    () => data?.pages.find((p) => p.id === (card ? card.pageId : pageId)) ?? null,
+    [data, pageId, card],
   );
 
   /**
@@ -187,7 +226,11 @@ export default function Workbook({ language }: Props) {
       })),
     ];
   }, [data]);
-  const exercise = page?.exercises[index] ?? null;
+  const exercise = card
+    ? (page?.exercises.find((e) => e.id === card.exerciseId) ?? null)
+    : (page?.exercises[index] ?? null);
+  /** Changes for every card a shuffle shows, so the box empties even if an exercise comes round again. */
+  const shuffleTurn = shuffle ? `${shuffle.deals}:${shuffle.at}` : "";
 
   // Opening a page lands on the first exercise you have not done, so coming
   // back to one you are halfway through carries on rather than making you
@@ -236,7 +279,9 @@ export default function Workbook({ language }: Props) {
 
   const rememberDraft = useCallback(
     (text: string) => {
-      if (!page || !exercise) return;
+      // A shuffle is practice from an empty box: what you type there is not
+      // kept as the exercise's draft (it would replace the answer you left).
+      if (!page || !exercise || shuffle) return;
       pending.current = {
         pageId: page.id,
         exerciseId: exercise.id,
@@ -245,7 +290,7 @@ export default function Workbook({ language }: Props) {
       if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
       draftTimer.current = window.setTimeout(flushDraft, 600);
     },
-    [page, exercise, flushDraft],
+    [page, exercise, flushDraft, shuffle],
   );
 
   // Leaving the screen entirely still has to keep what is in the box.
@@ -265,12 +310,12 @@ export default function Workbook({ language }: Props) {
       setRestored(false);
       // The walkthrough was about the code as it was a moment ago.
       setWalkthrough(null);
-      if (exercise) {
+      if (exercise && !shuffle) {
         setMine((was) => ({ ...was, [exercise.id]: text }));
       }
       rememberDraft(text);
     },
-    [exercise, rememberDraft],
+    [exercise, rememberDraft, shuffle],
   );
 
   // A new exercise starts empty and focused, so the only thing between
@@ -282,7 +327,8 @@ export default function Workbook({ language }: Props) {
     // Send whatever the last exercise was left holding before swapping the
     // box out from under it.
     flushDraft();
-    const kept = exercise ? (mineRef.current[exercise.id] ?? "") : "";
+    // A shuffle card always starts empty: the point is writing it from nothing.
+    const kept = exercise && !shuffleTurn ? (mineRef.current[exercise.id] ?? "") : "";
     setCode(kept);
     setRestored(kept !== "");
     setResult(null);
@@ -291,7 +337,7 @@ export default function Workbook({ language }: Props) {
     setCostOpen(false);
     setRevealed(false);
     box.current?.focus();
-  }, [exercise?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exercise?.id, shuffleTurn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Editing through React means the value comes back on the next render, and
   // the browser has by then put the caret at the end. Anything that edits the
@@ -340,8 +386,14 @@ export default function Workbook({ language }: Props) {
         exercise_id: exercise.id,
         code,
         language,
+        review: !!shuffle,
       });
       setResult(got);
+      if (shuffle && !shuffle.scored) {
+        setShuffle((s) =>
+          s ? { ...s, scored: true, tried: s.tried + 1, right: s.right + (got.passed ? 1 : 0) } : s,
+        );
+      }
       if (got.passed) {
         award("workbook_page", `${page.id}:${exercise.id}`);
         setDone((was) => new Set(was).add(exercise.id));
@@ -352,7 +404,7 @@ export default function Workbook({ language }: Props) {
     } finally {
       setChecking(false);
     }
-  }, [checking, code, exercise, language, page]);
+  }, [checking, code, exercise, language, page, shuffle]);
 
   const pageAfter = useMemo(() => {
     if (!data || !page) return null;
@@ -360,14 +412,47 @@ export default function Workbook({ language }: Props) {
     return at === -1 ? null : (data.pages[at + 1] ?? null);
   }, [data, page]);
 
-  const atPageEnd = page ? index >= page.exercises.length - 1 : false;
+  const atPageEnd = !shuffle && page ? index >= page.exercises.length - 1 : false;
+
+  /**
+   * Start a shuffle over pages from..to. Nothing happens for a range with no
+   * exercises in it (the panel says so instead).
+   */
+  const startShuffle = useCallback(
+    (want: Range) => {
+      if (!data) return;
+      const range = cleanRange(want, data.pages);
+      const pool = poolFor(data.pages, range);
+      if (pool.length === 0) return;
+      writeRange(language, range);
+      setRangeText({ from: String(range.from), to: String(range.to) });
+      setShuffle({ range, deck: deal(pool), at: 0, deals: 1, right: 0, tried: 0, scored: false });
+      setShuffleOpen(false);
+    },
+    [data, language],
+  );
+
+  /** The next card, dealing a fresh deck when this one runs out (so a shuffle never ends). */
+  const nextCard = useCallback(() => {
+    setShuffle((s) => {
+      if (!s || !data) return s;
+      if (s.at + 1 < s.deck.length) return { ...s, at: s.at + 1, scored: false };
+      const deck = deal(poolFor(data.pages, s.range), Math.random, s.deck[s.at]?.pageId ?? "");
+      return { ...s, deck, at: 0, deals: s.deals + 1, scored: false };
+    });
+  }, [data]);
 
   const move = useCallback(
     (delta: number) => {
+      if (shuffle) {
+        // Back goes to the card before (it starts empty again, and is not scored twice).
+        setShuffle((s) => (s ? { ...s, at: Math.max(0, s.at + delta), scored: true } : s));
+        return;
+      }
       if (!page) return;
       setIndex((i) => Math.min(page.exercises.length - 1, Math.max(0, i + delta)));
     },
-    [page],
+    [page, shuffle],
   );
 
   // Up and down step through the pages - "Which is bigger" to "Two
@@ -384,7 +469,7 @@ export default function Workbook({ language }: Props) {
         target instanceof HTMLInputElement ||
         target instanceof HTMLSelectElement ||
         target?.isContentEditable;
-      if (typing || !data || !page) return;
+      if (typing || !data || !page || shuffle) return;
       const at = data.pages.findIndex((p) => p.id === page.id);
       const to = data.pages[at + (event.key === "ArrowDown" ? 1 : -1)];
       event.preventDefault();
@@ -392,16 +477,20 @@ export default function Workbook({ language }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [data, page]);
+  }, [data, page, shuffle]);
 
   /** Forward: the next exercise, or the next page once this one runs out. */
   const onward = useCallback(() => {
+    if (shuffle) {
+      nextCard();
+      return;
+    }
     if (atPageEnd) {
       if (pageAfter) setPageId(pageAfter.id);
       return;
     }
     move(1);
-  }, [atPageEnd, move, pageAfter]);
+  }, [atPageEnd, move, nextCard, pageAfter, shuffle]);
 
   // Once an answer is right, the cursor goes to Next so plain Enter carries
   // on. Done in an effect rather than inside check() because the button's
@@ -487,6 +576,8 @@ export default function Workbook({ language }: Props) {
     );
   }
 
+  const reached = reachedPage(data.pages, done, data.at || pageId);
+
   const pageDone = page
     ? page.exercises.filter((e) => done.has(e.id)).length
     : 0;
@@ -500,6 +591,28 @@ export default function Workbook({ language }: Props) {
           A sentence, an empty box, and you write it. {data.pages.length} pages,
           one new idea each, twelve goes at every one.
         </p>
+        <ShufflePanel
+          pages={data.pages}
+          reached={reached}
+          active={shuffle}
+          open={shuffleOpen}
+          rangeText={rangeText}
+          setRangeText={setRangeText}
+          onToggle={() => {
+            if (shuffle) {
+              setShuffle(null);
+              setShuffleOpen(false);
+              return;
+            }
+            if (!shuffleOpen) {
+              const kept = readRange(language);
+              const r = kept ? cleanRange(kept, data.pages) : { from: bounds(data.pages).from, to: reached };
+              setRangeText({ from: String(r.from), to: String(r.to) });
+            }
+            setShuffleOpen((o) => !o);
+          }}
+          onStart={startShuffle}
+        />
         {sections.map((section) => (
           <div className="wb-section" key={section.id}>
             <h4 className="wb-section-head">
@@ -517,8 +630,12 @@ export default function Workbook({ language }: Props) {
                 <button
                   key={p.id}
                   type="button"
-                  className={`lessons-pick${p.id === pageId ? " on" : ""}`}
-                  onClick={() => setPageId(p.id)}
+                  className={`lessons-pick${p.id === pageId && !shuffle ? " on" : ""}`}
+                  onClick={() => {
+                    // Picking a page ends a shuffle: you asked for that page.
+                    setShuffle(null);
+                    setPageId(p.id);
+                  }}
                 >
                   <span className="lessons-pick-name">
                     {p.number}. {p.name}
@@ -537,6 +654,23 @@ export default function Workbook({ language }: Props) {
 
       {page && exercise ? (
         <article className="lessons-open wb">
+          {shuffle ? (
+            <header className="wb-shuffle-head">
+              <p className="wb-shuffle-line">
+                <strong>Shuffle</strong> · {rangeLabel(shuffle.range)} ·{" "}
+                <span data-testid="wb-shuffle-score">
+                  {shuffle.right} of {shuffle.tried} right first try
+                </span>
+                <button type="button" className="ws-btn wb-shuffle-stop" onClick={() => setShuffle(null)}>
+                  Stop shuffle
+                </button>
+              </p>
+              {/* Which page it came from, but not the page's example: that would hand you the shape. */}
+              <h3>
+                From page {page.number}: {page.name}
+              </h3>
+            </header>
+          ) : (
           <header>
             <h3>
               {page.number}. {page.name}
@@ -544,7 +678,9 @@ export default function Workbook({ language }: Props) {
             <p className="lessons-blurb">{page.teaches}</p>
             <p className="wb-example">{page.example}</p>
           </header>
+          )}
 
+          {shuffle ? null : (
           <div className="wb-track" aria-label="Progress through this page">
             {page.exercises.map((e, i) => (
               <button
@@ -566,6 +702,7 @@ export default function Workbook({ language }: Props) {
               {pageDone} / {page.exercises.length}
             </span>
           </div>
+          )}
 
           <p className="wb-prompt">{exercise.prompt}</p>
 
@@ -610,7 +747,7 @@ export default function Workbook({ language }: Props) {
               type="button"
               className="ws-btn"
               onClick={() => move(-1)}
-              disabled={index === 0}
+              disabled={shuffle ? shuffle.at === 0 : index === 0}
             >
               ‹ Back
             </button>
@@ -619,7 +756,7 @@ export default function Workbook({ language }: Props) {
               type="button"
               className={`ws-btn${result?.passed ? " primary" : ""}`}
               onClick={onward}
-              disabled={atPageEnd && !pageAfter}
+              disabled={!shuffle && atPageEnd && !pageAfter}
             >
               {atPageEnd && pageAfter ? "Next page ›" : "Next ›"}
             </button>
@@ -780,13 +917,16 @@ export default function Workbook({ language }: Props) {
             result.passed ? (
               <div className="wb-verdict ok">
                 <strong>Right.</strong>{" "}
-                {!atPageEnd
+                {shuffle
+                  ? "Press Enter for another."
+                  : !atPageEnd
                   ? "Press Enter for the next one."
                   : allDone && pageAfter
                     ? `Page finished — Enter starts ${pageAfter.name}.`
                     : allDone
                       ? "That is the last page finished."
                       : "Last one on the page. Enter moves on."}
+                <Printed stdout={result.stdout} label="It printed" />
               </div>
             ) : (
               <div className="wb-verdict bad">
@@ -794,10 +934,12 @@ export default function Workbook({ language }: Props) {
                   <>
                     <strong>Right output, but the code would crash.</strong>{" "}
                     {result.problem}
+                    <Printed stdout={result.stdout} label="It printed" />
                   </>
                 ) : result.failed_to_run ? (
                   <>
                     <strong>It didn't run.</strong>
+                    <Printed stdout={result.stdout} label="It printed before it stopped" />
                     <pre className="wb-stderr">
                       {result.stderr.trim() || "No output and a non-zero exit."}
                     </pre>
@@ -808,7 +950,7 @@ export default function Workbook({ language }: Props) {
                     <div className="wb-diff">
                       <div>
                         <h4>You printed</h4>
-                        <pre>{result.stdout.trim() || "(nothing)"}</pre>
+                        <pre>{shown(result.stdout) || "(nothing)"}</pre>
                       </div>
                       <div>
                         <h4>It wanted</h4>
@@ -842,6 +984,116 @@ export default function Workbook({ language }: Props) {
             </div>
           ) : null}
         </article>
+      ) : null}
+    </div>
+  );
+}
+
+/** Output as printed: only the trailing newline(s) go, so leading spaces and indentation stay visible. */
+function shown(stdout: string): string {
+  return (stdout ?? "").replace(/\s+$/, "");
+}
+
+/** What the program printed, under a verdict. Nothing at all is said plainly, so "it printed nothing" is never a blank. */
+function Printed({ stdout, label }: { stdout: string; label: string }) {
+  const out = shown(stdout);
+  if (!out && label !== "It printed") return null;
+  return (
+    <div className="wb-printed" data-testid="wb-printed">
+      <h4>{label}</h4>
+      <pre>{out || "(nothing)"}</pre>
+    </div>
+  );
+}
+
+/**
+ * The Shuffle button and its panel, at the top of the page list.
+ *
+ * Shuffle is a toggle like the rest of the app's buttons: blue while a shuffle
+ * is on, and pressing it again stops the shuffle. Not on, it opens the panel:
+ * "Up to where I am" (page 1 to the furthest page you have reached) or any
+ * range typed as two page numbers - "21 or below" is 1 to 21.
+ */
+function ShufflePanel({
+  pages,
+  reached,
+  active,
+  open,
+  rangeText,
+  setRangeText,
+  onToggle,
+  onStart,
+}: {
+  pages: WorkbookPage[];
+  reached: number;
+  active: Shuffle | null;
+  open: boolean;
+  rangeText: { from: string; to: string };
+  setRangeText: (r: { from: string; to: string }) => void;
+  onToggle: () => void;
+  onStart: (r: Range) => void;
+}) {
+  const first = bounds(pages).from;
+  const typed = cleanRange({ from: Number(rangeText.from), to: Number(rangeText.to) }, pages);
+  const typedOk = rangeText.from.trim() !== "" && rangeText.to.trim() !== "";
+  const count = typedOk ? poolFor(pages, typed).length : 0;
+  const upTo = { from: first, to: reached };
+  const go = () => {
+    if (typedOk && count > 0) onStart(typed);
+  };
+  return (
+    <div className="wb-shuffle">
+      <button
+        type="button"
+        className={active || open ? "ws-btn on" : "ws-btn"}
+        aria-pressed={!!active}
+        aria-expanded={open}
+        onClick={onToggle}
+        title={active ? "Stop the shuffle and go back to your page" : "Random exercises from a range of pages"}
+      >
+        {active ? "Shuffle on" : "Shuffle"}
+      </button>
+      {open && !active ? (
+        <div className="wb-shuffle-panel" data-testid="wb-shuffle-panel">
+          <p className="wb-shuffle-blurb">Random exercises from the pages you choose, one at a time, never the same one twice until they have all come up.</p>
+          <button type="button" className="ws-btn primary" onClick={() => onStart(upTo)}>
+            Up to where I am ({rangeLabel(upTo)})
+          </button>
+          <div className="wb-shuffle-range">
+            <label>
+              Pages{" "}
+              <input
+                type="number"
+                inputMode="numeric"
+                aria-label="First page"
+                value={rangeText.from}
+                onChange={(e) => setRangeText({ ...rangeText, from: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && go()}
+              />
+            </label>
+            <label>
+              to{" "}
+              <input
+                type="number"
+                inputMode="numeric"
+                aria-label="Last page"
+                value={rangeText.to}
+                onChange={(e) => setRangeText({ ...rangeText, to: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && go()}
+              />
+            </label>
+            <button type="button" className="ws-btn" onClick={go} disabled={!typedOk || count === 0}>
+              Start
+            </button>
+          </div>
+          <p className="wb-shuffle-count">
+            {typedOk
+              ? count > 0
+                ? `${rangeLabel(typed)}: ${count} exercises`
+                : "No exercises on those pages."
+              : "Type the first and last page."}
+          </p>
+        </div>
       ) : null}
     </div>
   );

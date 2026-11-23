@@ -669,6 +669,8 @@ export function checkWorkbook(body: {
   exercise_id: string;
   code: string;
   language: string;
+  /** Shuffle: count a pass, but leave the current page and the kept answer alone. */
+  review?: boolean;
 }): Promise<WorkbookCheck> {
   return request("/api/workbook/check", {
     method: "POST",

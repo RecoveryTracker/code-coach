@@ -319,6 +319,10 @@ class WorkbookCheckRequest(BaseModel):
     page_id: str = ""
     exercise_id: str = ""
     code: str = ""
+    # Shuffle (random exercises from a range of pages): the attempt is checked
+    # and a pass is counted, but it does not move "the page you were on" and a
+    # wrong attempt does not replace the answer you kept for that exercise.
+    review: bool = False
     # The screen carries its own language picker, so it says which one rather
     # than leaving the server to guess from the store.
     language: str | None = None

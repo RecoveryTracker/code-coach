@@ -100,6 +100,12 @@ Most modes take content as a new module plus a one-line registration:
   on its own: its scripting pages (pathlib, argparse, files, JSON, csv, logging,
   exit codes, http.server, asyncio) are 342-351, then web servers and HTTP (352-361) and data practice
   (362-371) - the last base pages; Review pages are numbered after them.
+- **Workbook Shuffle** (2026-11): the Shuffle button over the page list deals random exercises from a page range
+  ("Up to where I am" = page 1 to the furthest page with a solved exercise or the current page; or any "Pages A to B").
+  Rules in the pure `web/src/lib/workbookShuffle.ts` (deal: every card once per deck, no page twice in a row where
+  avoidable, endless by re-dealing); `tests/test_workbook_shuffle.py`. A shuffle card starts with an EMPTY box, keeps no
+  draft, and checks with `review: true`, so the server marks a pass done (and keeps that answer) but never moves "the page
+  you were on" and never replaces your kept answer with a wrong attempt. Every verdict shows what the code printed.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's

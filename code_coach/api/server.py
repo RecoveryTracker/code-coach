@@ -983,13 +983,17 @@ def workbook_check(body: WorkbookCheckRequest) -> WorkbookCheckResponse:
     progress = _store.load()
     # Where you were is worth keeping whether or not the answer was right —
     # coming back to the page you were stuck on is the point.
-    progress.set_workbook_page(language, body.page_id)
+    if not body.review:
+        progress.set_workbook_page(language, body.page_id)
     # And so is what you wrote. This used to keep only correct answers, on the
     # grounds that the file should be a record of your work rather than your
     # typos; the effect was that going to another exercise and back threw away
     # everything you had not yet got right, which is exactly the work you most
     # wanted back.
-    progress.remember_workbook_answer(language, found.id, body.code)
+    # (In shuffle only a right answer is kept: a wrong go at an old exercise
+    # must not overwrite the answer you got right on that page.)
+    if passed or not body.review:
+        progress.remember_workbook_answer(language, found.id, body.code)
     if passed:
         progress.mark_workbook(language, found.id)
     _store.save(progress)
