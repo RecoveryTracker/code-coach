@@ -166,6 +166,13 @@ export function staleReason(s: RoundSnapshot, ctx: ResumeContext): string {
   if (act.kind === "pick" && !s.items.every((i) => act.choices.includes(i.answer))) {
     return "the activity's choices changed";
   }
+  // A Shuffle round's questions each name their own activity: each must still be here and still fit.
+  for (const i of s.items) {
+    if (!i.activity) continue;
+    const own = byId.get(i.activity);
+    if (!own) return "a shuffled question's activity is gone";
+    if (own.kind === "pick" && !own.choices.includes(i.answer)) return "the activity's choices changed";
+  }
   if (s.checkLeft.some((id) => !byId.has(id))) return "the check changed";
   return "";
 }

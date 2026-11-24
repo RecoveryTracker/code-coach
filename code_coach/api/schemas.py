@@ -821,6 +821,9 @@ class BrainResultRequest(BaseModel):
     checkId: str = ""
     #: "javascript", "python", "dart", "c" or "sql": code age is kept per language.
     language: str = "javascript"
+    #: A shuffle round (activity "shuffle"): the activity each question came from, in order. Its code age is held
+    #: to their average par and slow times.
+    activities: list[str] = []
 
 
 class BrainRunRequest(BaseModel):

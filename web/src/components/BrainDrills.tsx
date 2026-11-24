@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { fetchBrain, fetchBrainRound, postBrainResult } from "../api";
+import { fetchBrain, fetchBrainRound, fetchBrainShuffle, postBrainResult } from "../api";
 import { award } from "../lib/momentum";
 import {
   DRILL_APP_LANGUAGES,
@@ -103,8 +103,45 @@ export type BrainSummary = {
   streak: number;
   checkAges: { day: string; age: number }[];
   trainedToday: boolean;
+  /** Shuffle's own best and last, the headings it can draw from, and its question count. */
+  shuffle?: { best: Result | null; last: Result | null; groups: string[]; count: number };
 };
 export type { BrainItem };
+
+/** The id a Shuffle round is played and kept under (the server's brain.SHUFFLE_ID). */
+export const SHUFFLE_ID = "shuffle";
+
+/**
+ * Shuffle is played through the same Round as an activity: this stands in for "the activity" (its title, and the
+ * size the resume check allows), while every question uses the activity it came from.
+ */
+export function shuffleActivity(count = 16): ActivityInfo {
+  return {
+    id: SHUFFLE_ID, title: "Shuffle", blurb: "", question: "", count, kind: "type", choices: ["", ""],
+    showSeconds: 0, group: "", concepts: [], best: null, last: null,
+  } as unknown as ActivityInfo;
+}
+
+const SHUFFLE_GROUPS_KEY = (language: string) => `code-coach:brain-shuffle-groups:${language}`;
+
+/** The headings last picked for Shuffle in this language (null: none saved, which means all). */
+function readShuffleGroups(language: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(SHUFFLE_GROUPS_KEY(language));
+    const got = raw ? (JSON.parse(raw) as unknown) : null;
+    return Array.isArray(got) && got.every((g) => typeof g === "string") ? got : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeShuffleGroups(language: string, groups: string[]): void {
+  try {
+    localStorage.setItem(SHUFFLE_GROUPS_KEY(language), JSON.stringify(groups));
+  } catch {
+    /* the choice just won't be remembered */
+  }
+}
 type Miss = { item: BrainItem; given: string };
 
 type Screen =
@@ -179,16 +216,37 @@ export default function BrainDrills({
     setScreen({ name: "home" });
   }, [language]);
 
-  const byId = useMemo(() => new Map((summary?.activities ?? []).map((a) => [a.id, a])), [summary]);
+  const shuffleInfo = useMemo(() => shuffleActivity(summary?.shuffle?.count ?? 16), [summary]);
+  const byId = useMemo(
+    () => new Map([...(summary?.activities ?? []), shuffleInfo].map((a) => [a.id, a])),
+    [summary, shuffleInfo],
+  );
+  /** Which headings Shuffle draws from (the chips on its card); all of them unless you chose otherwise. */
+  const [shuffleGroups, setShuffleGroups] = useState<string[] | null>(null);
+  useEffect(() => {
+    setShuffleGroups(readShuffleGroups(language));
+  }, [language]);
+  const allShuffleGroups = summary?.shuffle?.groups ?? [];
+  const pickedGroups = (shuffleGroups ?? allShuffleGroups).filter((g) => allShuffleGroups.includes(g));
+  const toggleShuffleGroup = useCallback(
+    (g: string) => {
+      const now = pickedGroups.includes(g) ? pickedGroups.filter((x) => x !== g) : [...pickedGroups, g];
+      // Never none: turning the last one off leaves it on.
+      if (now.length === 0) return;
+      setShuffleGroups(now);
+      writeShuffleGroups(language, now);
+    },
+    [pickedGroups, language],
+  );
 
   // A round saved for this language, offered on the home screen. Coming back to the Brain Drills tab resumes it
   // straight away (below); this is for arriving at the home screen some other way (the language picker).
   const homeResume = useMemo(() => {
     if (screen.name !== "home" || !summary || !drillLanguage || summary.language !== language) return null;
-    const snap = loadResumable({ language, activities: summary.activities, now: Date.now() });
+    const snap = loadResumable({ language, activities: [...summary.activities, shuffleInfo], now: Date.now() });
     const act = snap ? byId.get(snap.activityId) : undefined;
     return snap && act ? { snap, act } : null;
-  }, [screen.name, summary, drillLanguage, language, byId]);
+  }, [screen.name, summary, drillLanguage, language, byId, shuffleInfo]);
 
   const resumeRound = useCallback(
     (snap: RoundSnapshot, activity: ActivityInfo) => {
@@ -208,10 +266,10 @@ export default function BrainDrills({
     if (!summary || !drillLanguage || summary.language !== language) return;
     if (autoResumed.current || language !== firstLanguage.current) return;
     autoResumed.current = true;
-    const snap = loadResumable({ language, activities: summary.activities, now: Date.now() });
+    const snap = loadResumable({ language, activities: [...summary.activities, shuffleInfo], now: Date.now() });
     const act = snap ? byId.get(snap.activityId) : undefined;
     if (snap && act) resumeRound(snap, act);
-  }, [summary, drillLanguage, language, byId, resumeRound]);
+  }, [summary, drillLanguage, language, byId, resumeRound, shuffleInfo]);
 
   const start = useCallback(
     (activity: ActivityInfo) => {
@@ -245,6 +303,8 @@ export default function BrainDrills({
       try {
         const got = await postBrainResult({
           activity: activity.id, seconds, errors: misses.length, total, checkId: s.checkId, language,
+          // A Shuffle round's age is held to the par times of the activities its questions came from.
+          activities: activity.id === SHUFFLE_ID ? (final?.items ?? []).map((i) => i.activity ?? "") : undefined,
         });
         // Momentum, apart from the stamps and code age above: the round, and the whole check.
         award("brain_round", `${activity.id}:${s.checkId || "solo"}:${Date.now().toString(36)}`);
@@ -312,6 +372,8 @@ export default function BrainDrills({
         checkStep={screen.checkId ? summary.check.length - screen.checkLeft.length : 0}
         checkSize={summary.check.length}
         resume={screen.resume}
+        activities={byId}
+        shuffleGroups={pickedGroups}
         onQuit={() => setScreen({ name: "home" })}
         onDone={(seconds, misses, total, final) =>
           void finished(screen.activity, seconds, misses, total, screen, final)
@@ -395,6 +457,58 @@ export default function BrainDrills({
 
       {summary.checkAges.length > 1 ? <AgeChart points={summary.checkAges} /> : null}
 
+      {allShuffleGroups.length ? (
+        <section className="brain-shuffle" aria-labelledby="brain-shuffle-title">
+          <div className="brain-shuffle-main">
+            <h3 className="brain-group-title" id="brain-shuffle-title">
+              Shuffle
+            </h3>
+            <p className="brain-shuffle-blurb">
+              {summary.shuffle?.count ?? 16} questions from all over the drills you pick, one after another.
+            </p>
+            <div className="brain-shuffle-groups" role="group" aria-label="Which drills to shuffle">
+              {allShuffleGroups.map((g) => {
+                const on = pickedGroups.includes(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    className={on ? "ws-btn brain-chip on" : "ws-btn brain-chip"}
+                    aria-pressed={on}
+                    onClick={() => toggleShuffleGroup(g)}
+                    title={on && pickedGroups.length === 1 ? "At least one stays on" : undefined}
+                  >
+                    {g}
+                  </button>
+                );
+              })}
+              {pickedGroups.length < allShuffleGroups.length ? (
+                <button
+                  type="button"
+                  className="ws-btn brain-chip brain-chip-all"
+                  onClick={() => {
+                    setShuffleGroups(allShuffleGroups);
+                    writeShuffleGroups(language, allShuffleGroups);
+                  }}
+                >
+                  All
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="brain-shuffle-side">
+            <button type="button" className="ws-btn primary" data-testid="brain-shuffle-start" onClick={() => start(shuffleInfo)}>
+              Start shuffle
+            </button>
+            <span className="brain-card-best">
+              {summary.shuffle?.best
+                ? `best: age ${summary.shuffle.best.age} · ${summary.shuffle.best.seconds.toFixed(1)}s`
+                : "not tried yet"}
+            </span>
+          </div>
+        </section>
+      ) : null}
+
       <div className="brain-groups">
         {groupActivities(summary.activities, summary.groups).map((g) => {
           const slug = `brain-group-${g.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
@@ -442,10 +556,16 @@ function Round({
   checkStep,
   checkSize,
   resume,
+  activities,
+  shuffleGroups,
   onQuit,
   onDone,
 }: {
   activity: ActivityInfo;
+  /** Every activity by id: a Shuffle round's questions each use the one they came from. */
+  activities: Map<string, ActivityInfo>;
+  /** A Shuffle round: the headings to draw from. */
+  shuffleGroups: string[];
   language: BrainLanguage;
   /** The Code age check this round belongs to (blank for a single activity); kept in the snapshot. */
   checkId: string;
@@ -542,7 +662,7 @@ function Round({
   useEffect(() => {
     if (resume) return; // the questions are the saved ones: never fetched again
     let alive = true;
-    fetchBrainRound(activity.id, language).then((r) => {
+    (activity.id === SHUFFLE_ID ? fetchBrainShuffle(language, shuffleGroups) : fetchBrainRound(activity.id, language)).then((r) => {
       if (!alive) return;
       setItems(r.items);
       setRs(newRound(r.items.length));
@@ -550,7 +670,7 @@ function Round({
     return () => {
       alive = false;
     };
-  }, [activity.id, language]);
+  }, [activity.id, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3, 2, 1 - then the clock starts.
   useEffect(() => {
@@ -575,6 +695,8 @@ function Round({
   const record = rs.answers[rs.index] ?? null;
   const reviewing = record !== null;
   const answered = answeredCount(rs);
+  // The activity this question belongs to: the round's own, or in a Shuffle the one the question came from.
+  const cur = (item?.activity && activities.get(item.activity)) || activity;
 
   // Variable Recall: show what to remember, then hide it. Landing on an
   // unanswered one - by answering, Back or the picker - shows it again; an
@@ -662,7 +784,7 @@ function Round({
       const right = sameAnswer(given, item.answer, language);
       const next = recordAnswer(rs, rs.index, given, right);
       if (right) {
-        award("brain_item", `${activity.id}:${roundId.current}:${rs.index}`);
+        award("brain_item", `${cur.id}:${roundId.current}:${rs.index}`);
         busy.current = true;
         setFlash(true);
         // Leaving inside this 120 ms must still keep the answer just given.
@@ -680,7 +802,7 @@ function Round({
       guard.current = performance.now() + 300;
       commit(next);
     },
-    [items, item, rs, showing, reviewing, count, finish, commit, activity.id, language],
+    [items, item, rs, showing, reviewing, count, finish, commit, cur.id, language],
   );
 
   const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -713,12 +835,12 @@ function Round({
       if (performance.now() >= guard.current) forward();
       return;
     }
-    if (activity.kind !== "pick") return;
+    if (cur.kind !== "pick") return;
     const left = e.key === "ArrowLeft" || e.key.toLowerCase() === "f";
     const right = e.key === "ArrowRight" || e.key.toLowerCase() === "j";
     if (left || right) {
       e.preventDefault();
-      answer(activity.choices[left ? 0 : 1]);
+      answer(cur.choices[left ? 0 : 1]);
     }
   };
   useEffect(() => {
@@ -736,6 +858,7 @@ function Round({
     <div className="brain-wrap brain-play">
       <div className="brain-play-top">
         <strong>{activity.title}</strong>
+        {cur !== activity ? <span className="brain-from">{cur.title}</span> : null}
         {checkSize && checkStep ? <span className="brain-check-step">Code age check · {checkStep} of {checkSize}</span> : null}
         <span className="brain-progress" title={`${answered} of ${total} answered`}>
           {total ? `${rs.index + 1} / ${total}` : ""}
@@ -789,7 +912,7 @@ function Round({
                 <pre className="brain-code">{item.show}</pre>
               </>
             ) : null}
-            <p className="brain-question">{showing ? "Remember these:" : activity.question}</p>
+            <p className="brain-question">{showing ? "Remember these:" : cur.question}</p>
             <pre className="brain-code">{showing ? item?.show : item?.prompt}</pre>
             {reviewing && item && record ? (
               <div className={`brain-miss${record.right ? " brain-hit" : ""}`} role="status">
@@ -799,7 +922,7 @@ function Round({
                 )}
                 {item.explain ? <p className="brain-why">{item.explain}</p> : null}
                 {record.right ? null : (
-                  <QuestionWords key={`${rs.index}-${activity.id}`} activityId={activity.id} language={language} scope="miss" />
+                  <QuestionWords key={`${rs.index}-${cur.id}`} activityId={cur.id} language={language} scope="miss" />
                 )}
                 <div className="brain-review-actions">
                   <button type="button" className="ws-btn brain-go" onClick={forward} ref={nextBtn} data-primary="true">
@@ -813,7 +936,7 @@ function Round({
                 </div>
                 <span className="brain-paused">clock paused</span>
               </div>
-            ) : showing ? null : activity.kind === "type" ? (
+            ) : showing ? null : cur.kind === "type" ? (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -832,7 +955,7 @@ function Round({
               </form>
             ) : (
               <div className="brain-picks">
-                {activity.choices.map((choice, k) => (
+                {cur.choices.map((choice, k) => (
                   <button key={choice} type="button" className="ws-btn brain-pick" onClick={() => answer(choice)}>
                     {k === 0 ? "← " : ""}
                     {choice}
@@ -845,7 +968,7 @@ function Round({
           {item ? (
             <BrainTools
               key={rs.index}
-              activityId={activity.id}
+              activityId={cur.id}
               item={item}
               language={language}
               unlocked={reviewing}

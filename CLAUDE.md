@@ -332,6 +332,17 @@ code_coach/farm/
   "Words in this question" chips ask the glossary for the drill's language: `dart` (2026-10-22), `c` and `sql`
   (2026-10-23) are full glossary languages of their own (see "Glossary"), so their drills show their chips
   with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
+- **Brain Drills Shuffle** (2026-11; `brain.make_shuffle` / `shuffle_payload`, `GET /api/brain/shuffle?language=&groups=`,
+  `tests/test_brain_shuffle.py`): one round of `SHUFFLE_COUNT` (16) questions from many activities of the language, under
+  the home-screen headings ticked on the Shuffle card (chips; all by default; remembered per language in localStorage
+  `code-coach:brain-shuffle-groups:<language>`; never none). Show-then-hide activities (Variable Recall) are left out;
+  never the same activity twice in a row. Each item carries `activity`, and `Round` reads the question, kind, choices,
+  Run it, Explain context, "Words" chips and Momentum key from THAT activity (`cur`); the round itself is played under
+  the stand-in `shuffleActivity()` (id `shuffle`, no activity may take it). The result posts activity `shuffle` with
+  `activities` (each question's): kept under "shuffle" in `brain_drills.json`, counts for the stamp, its own best in the
+  home payload's `shuffle`, never part of a Code age check; its age is the usual formula against the AVERAGE par/slow of
+  those activities (`shuffle_age`). A saved Shuffle round resumes like any round, but `staleReason` also drops it when a
+  question's activity is gone or its pick choices changed.
 - **Brain Drills resume** (`web/src/lib/brainResume.ts`, tested by `tests/test_brain_resume.py`): a round in progress
   survives leaving the tab (App mounts a mode only while it is open, so leaving unmounts `BrainDrills`) and a page
   reload. One snapshot per LANGUAGE (a Python round and a Dart round are separate), kept in a module-level Map

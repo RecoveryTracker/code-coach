@@ -622,11 +622,117 @@ def summary(today: date | None = None, language: str = "javascript") -> dict[str
         ],
         "check": list(check_for(language)),
         "groups": _groups(language),
+        # The shuffle's own best and last (it is not one of the activities).
+        "shuffle": {"best": best.get(SHUFFLE_ID), "last": last.get(SHUFFLE_ID),
+                    "groups": shuffle_groups(language),
+                    "count": SHUFFLE_COUNT},
         "stamps": [{"day": d, "trained": d in days} for d in recent],
         "streak": streak,
         "checkAges": [{"day": d, "age": check_by_day[d]} for d in sorted(check_by_day)][-60:],
         "trainedToday": today.isoformat() in days,
     }
+
+
+# ── Shuffle: one round of questions from many activities ────────────────
+
+#: The id a shuffle round is played and kept under. No activity may take it (a test holds that).
+SHUFFLE_ID = "shuffle"
+#: Questions in a shuffle round.
+SHUFFLE_COUNT = 16
+
+
+def shuffle_activities(language: str, groups: list[str] | tuple[str, ...] = ()) -> tuple[Activity, ...]:
+    """The activities a shuffle draws from: the language's, under the given home-screen headings (all of them when
+    none is given or none of the given ones exists). Activities that show something first and then hide it (Variable
+    Recall) are left out: a shuffle round is one question after another, with no "Remember these" phase."""
+    here = tuple(a for a in activities_in(language) if a.show_seconds <= 0)
+    wanted = {g for g in groups if g}
+    picked = tuple(a for a in here if a.group in wanted)
+    return picked or here
+
+
+def shuffle_groups(language: str, groups: list[str] | tuple[str, ...] = ()) -> list[str]:
+    """The headings a shuffle draws from, in the home screen's order."""
+    under = {a.group for a in shuffle_activities(language, groups)}
+    return [g for g in _groups(language) if g in under]
+
+
+def make_shuffle(language: str, groups: list[str] | tuple[str, ...] = (), seed: int | None = None,
+                 count: int = SHUFFLE_COUNT) -> list[tuple[str, Item]]:
+    """A shuffle round: `count` questions, each from a randomly chosen activity, never the same activity twice in a
+    row when there is more than one, and no question twice. Each comes with the id of the activity that made it (its
+    question, its kind, its choices and its Run it / Explain all come from that activity)."""
+    pool = shuffle_activities(language, groups)
+    if not pool:
+        return []
+    rng = random.Random(seed)
+    out: list[tuple[str, Item]] = []
+    seen: set[str] = set()
+    last = ""
+    tries = 0
+    while len(out) < count and tries < count * 50:
+        tries += 1
+        choices = [a for a in pool if a.id != last] or list(pool)
+        activity = activity_for(rng.choice(choices).id, language)
+        item = activity.make(rng)
+        key = activity.id + "|" + item.prompt + "|" + item.show
+        if key in seen and tries < count * 25:
+            continue
+        seen.add(key)
+        out.append((activity.id, item))
+        last = activity.id
+    return out
+
+
+def shuffle_payload(language: str, groups: list[str] | tuple[str, ...] = (), seed: int | None = None) -> dict[str, Any]:
+    return {
+        "activity": SHUFFLE_ID,
+        "language": language,
+        "groups": shuffle_groups(language, groups),
+        "items": [{"prompt": i.prompt, "answer": i.answer, "explain": i.explain, "show": i.show, "check": i.check,
+                   "activity": aid}
+                  for aid, i in make_shuffle(language, groups, seed)],
+    }
+
+
+def shuffle_age(seconds: float, errors: int, total: int, activity_ids: list[str], language: str) -> int:
+    """A shuffle round's code age: the same formula as one activity's, against the AVERAGE par and slow times of the
+    activities its questions came from (so a round of slow-to-read questions is not held to a quick one's par). Ids
+    that are not activities played in this language are ignored; none left means the plain 20-80 by mistakes."""
+    total = max(1, total)
+    acts = []
+    for aid in activity_ids:
+        try:
+            acts.append(activity_for(aid, language))
+        except KeyError:
+            continue
+    if not acts:
+        age = 20 + 60 * (errors / total)
+    else:
+        par = sum(a.par for a in acts) / len(acts)
+        slow = sum(a.slow for a in acts) / len(acts)
+        per = seconds / total
+        speed = (per - par) / max(0.001, slow - par)
+        age = 20 + 60 * min(1.0, max(0.0, speed)) + 5 * errors
+    return int(round(min(80, max(20, age))))
+
+
+def record_shuffle(seconds: float, errors: int, total: int, activity_ids: list[str], language: str,
+                   today: date | None = None) -> Result:
+    """Keep a finished shuffle round (activity "shuffle"): it counts for the day's stamp and has a best of its own,
+    but is never part of a Code age check."""
+    if language not in LANGUAGES:
+        raise KeyError(language)
+    seconds = max(0.0, float(seconds))
+    errors = max(0, int(errors))
+    total = max(1, int(total))
+    result = Result((today or date.today()).isoformat(), SHUFFLE_ID, round(seconds, 2), errors, total,
+                    shuffle_age(seconds, errors, total, list(activity_ids), language), "", language)
+    state = _load()
+    state["results"].append(asdict(result))
+    state["results"] = state["results"][-2000:]
+    _save(state)
+    return result
 
 
 def round_payload(activity_id: str, seed: int | None = None, language: str = "javascript") -> dict[str, Any]:

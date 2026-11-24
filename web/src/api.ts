@@ -261,6 +261,16 @@ export function fetchBrainRound(
   );
 }
 
+/** A Shuffle round: questions from many activities (`groups`: home-screen headings, none = all), each naming its activity. */
+export function fetchBrainShuffle(
+  language: string,
+  groups: string[],
+): Promise<{ activity: string; groups: string[]; items: BrainItem[] }> {
+  return request(
+    `/api/brain/shuffle?language=${encodeURIComponent(language)}&groups=${encodeURIComponent(groups.join(","))}`,
+  );
+}
+
 /** Keep a finished round; its code age, and whether it beat the best. */
 export function postBrainResult(body: {
   activity: string;
@@ -269,6 +279,8 @@ export function postBrainResult(body: {
   total: number;
   checkId: string;
   language: string;
+  /** A Shuffle round: each question's activity, in order. */
+  activities?: string[];
 }): Promise<{ age: number; best: boolean }> {
   return request("/api/brain/result", { method: "POST", body: JSON.stringify(body) });
 }

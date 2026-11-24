@@ -25,6 +25,8 @@ export type BrainItem = {
   show: string;
   /** Code that works the answer out (loops, final values); blank when the prompt itself is the program. */
   check?: string;
+  /** A Shuffle round's question names the activity it came from (its question, kind, choices, Run it, Explain). */
+  activity?: string;
 };
 
 export type BrainLang = "javascript" | "python" | "dart" | "c" | "sql";

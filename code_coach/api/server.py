@@ -2501,10 +2501,29 @@ def brain_round(activity: str = "", seed: int | None = None, language: str = "py
     return brain.round_payload(activity, seed, language)
 
 
+@app.get("/api/brain/shuffle")
+def brain_shuffle(language: str = "python", groups: str = "", seed: int | None = None) -> dict:
+    """A shuffle round: questions from many activities of a language (`groups`: comma-separated home-screen headings,
+    blank = all), each item naming the activity it came from."""
+    from code_coach import brain
+
+    if language not in brain.LANGUAGES:
+        raise HTTPException(status_code=404, detail=f"Unknown language {language}")
+    return brain.shuffle_payload(language, [g.strip() for g in groups.split(",")], seed)
+
+
 @app.post("/api/brain/result")
 def brain_result(body: BrainResultRequest) -> dict:
     """Keep a finished round; answers with its code age and whether it beat the best."""
     from code_coach import brain
+
+    if body.activity == brain.SHUFFLE_ID:
+        if body.language not in brain.LANGUAGES:
+            raise HTTPException(status_code=404, detail=f"Unknown language {body.language}")
+        before = brain.summary(language=body.language)["shuffle"]["best"]
+        result = brain.record_shuffle(body.seconds, body.errors, body.total, body.activities, body.language)
+        best = before is None or (result.age, result.seconds) < (before["age"], before["seconds"])
+        return {"age": result.age, "best": best}
 
     if body.activity not in brain.ACTIVITIES_BY_ID:
         raise HTTPException(status_code=404, detail=f"Unknown activity {body.activity}")
