@@ -36,7 +36,7 @@
  * preference rather than at what the language does.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { checkMagnet, fetchMagnets } from "../api";
 import { LAST_KEYS } from "../lastKeys";
@@ -66,7 +66,23 @@ type Piece = { key: number; text: string };
 /** One stage of the program: its label, and what has been put under it. */
 type Bin = { label: string; pieces: Piece[] };
 
-export default function Magnets() {
+/** Only the puzzles in this language, and no headings left empty by that. */
+function inLanguage(list: MagnetList | null, language: string): MagnetList["families"] {
+  return (list?.families ?? [])
+    .map((f) => ({ ...f, magnets: f.magnets.filter((m) => m.language === language) }))
+    .filter((f) => f.magnets.length > 0);
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
+};
+
+/**
+ * Only the language picked in the top bar, like Bug Hunt: every language's
+ * puzzles in one list is four languages' worth of list for someone learning
+ * one, and the picker is where the language is chosen for every screen.
+ */
+export default function Magnets({ language }: { language: string }) {
   const [list, setList] = useState<MagnetList | null>(null);
   const [chosen, setChosen] = useState("");
   const [tray, setTray] = useState<Piece[]>([]);
@@ -76,10 +92,15 @@ export default function Magnets() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
 
+  /* Read by load() at the moment the list arrives, so a reload for another
+     go does not need to be rebuilt every time the language changes. */
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
   const load = useCallback((keepOn?: string) => {
     return fetchMagnets().then((data) => {
       setList(data);
-      const all = data.families.flatMap((f) => f.magnets);
+      const all = inLanguage(data, languageRef.current).flatMap((f) => f.magnets);
       let want = keepOn ?? "";
       if (!want) {
         try {
@@ -100,12 +121,21 @@ export default function Magnets() {
     );
   }, [load]);
 
+  const shown = useMemo(() => inLanguage(list, language), [list, language]);
+
   const puzzle = useMemo(
-    () =>
-      list?.families.flatMap((f) => f.magnets).find((m) => m.id === chosen) ??
-      null,
-    [list, chosen],
+    () => shown.flatMap((f) => f.magnets).find((m) => m.id === chosen) ?? null,
+    [shown, chosen],
   );
+
+  /* Switching language with a puzzle open: it is no longer on the list, so
+     move to this language's next one. */
+  useEffect(() => {
+    if (!list) return;
+    const here = shown.flatMap((f) => f.magnets);
+    if (!here.some((m) => m.id === chosen)) setChosen(nextUp(here)?.id ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, list]);
 
   /* Keyed on the id rather than the object: the list is rebuilt after a
      pass, which changes the object's identity, and an effect watching the
@@ -212,14 +242,28 @@ export default function Magnets() {
   }, [puzzle, load]);
 
   const leastDone = useMemo(
-    () => nextUp(list?.families.flatMap((f) => f.magnets) ?? []),
-    [list],
+    () => nextUp(shown.flatMap((f) => f.magnets)),
+    [shown],
   );
 
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
   }
-  if (!list || !puzzle) return <div className="lessons-empty">Loading…</div>;
+  if (!list) return <div className="lessons-empty">Loading…</div>;
+  if (!shown.length) {
+    /* Say which languages do have puzzles rather than show an empty screen
+       that looks broken. Taken from the list, so it cannot fall out of step. */
+    const have = [...new Set(list.families.flatMap((f) => f.magnets.map((m) => m.language)))]
+      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .join(", ");
+    return (
+      <div className="lessons-empty" data-testid="magnets-none">
+        No Magnets in this language yet. There are puzzles in {have} —
+        switch the language at the top to try them.
+      </div>
+    );
+  }
+  if (!puzzle) return <div className="lessons-empty">Loading…</div>;
 
   return (
     <div className="lessons-wrap">
@@ -246,7 +290,7 @@ export default function Magnets() {
             Next up: {leastDone.name}
           </button>
         ) : null}
-        {list.families.map((family) => (
+        {shown.map((family) => (
           <div key={family.name} className="wb-section">
             <h4 className="wb-section-head">
               {family.name}
@@ -274,7 +318,7 @@ export default function Magnets() {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby" } as Record<string, string>)[puzzle.language] ?? puzzle.language}
+              {LANGUAGE_NAMES[puzzle.language] ?? puzzle.language}
             </span>
           </h3>
         </header>

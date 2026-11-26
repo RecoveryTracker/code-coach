@@ -1415,7 +1415,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Magnets />
+        <Magnets language={viewingLanguage} />
       </div>
     );
   }

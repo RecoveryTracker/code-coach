@@ -166,11 +166,8 @@ work and progress are stored separately and survive updates.
 
 ## What it is
 
-Typing practice for LeetCode: 52 solutions across 13 patterns, typed verbatim so
-the shapes end up in muscle memory. It checks each line as you go and tells you
-exactly which one is off — including indentation, since that's syntax in Python.
-
-There's a **Foundations** track too if you'd rather start with plain Python.
-
-Pick a class from the dropdown at the top left and start typing. The
-[README](README.md) covers the rest.
+A local practice app for learning to program by repetition: a workbook of small
+exercises, timed drills, reading-code quizzes, LeetCode with a coach, and more,
+in Python, JavaScript, Dart and other languages. Start with **Session** at the
+top left if you don't know where to begin. The [README](README.md) covers the
+rest.

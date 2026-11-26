@@ -10,36 +10,67 @@ The method is repetition. Nothing here is "completed" — every mode counts how
 many goes you have had at each item and offers you whatever you have done least
 and longest ago.
 
+### Quick start
+
+You need **Python 3.10+**, **Node 18+** and **Git**. On Windows, in PowerShell:
+
+```powershell
+git clone https://github.com/RecoveryTracker/code-coach.git
+cd code-coach
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+cd web; npm install; cd ..
+.\start.bat
+```
+
+On macOS or Linux:
+
+```bash
+git clone https://github.com/RecoveryTracker/code-coach.git
+cd code-coach
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+(cd web && npm install)
+./scripts/dev.sh
+```
+
+The app opens at **http://localhost:5173**. After the first time, starting it is
+only the last line. Nothing installed yet, or something went wrong? See
+[Setup](#setup) below, or on Windows the step-by-step
+**[SETUP-WINDOWS.md](SETUP-WINDOWS.md)**.
+
 ---
 
 ## What is in it
 
-Twenty-two modes, all sharing one row of names at the top of every screen.
+Twenty-four modes, all sharing one row of names at the top of every screen. Session, Typing, Workbook and Brain Drills come first; after them the modes run from easiest to hardest.
 
 | Mode | What you do |
 |------|-------------|
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise. Its History view shows how much of each practice you have touched and what is due to be done again |
-| **Brain Drills** | Timed JavaScript reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. Seven activities, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest |
-| **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages |
-| **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 192 across 21 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, Dart, C and Ruby |
+| **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
+| **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages. Shuffle deals random exercises from a range of pages |
+| **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C and SQL, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
+| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. Python, JavaScript, Dart, C and Ruby, showing only the language picked at the top |
+| **Predict** | Read the code, say what it prints. 100 puzzles: Python, 37 JavaScript, 24 Dart and 12 C |
+| **Gotchas** | Quiz cards where the obvious answer is a trap, one at a time and endless. Python and JavaScript |
+| **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
+| **Flutter** | Read Flutter widget code and say what it builds, how it lays out, or what rebuilds after a `setState`. 16 questions in four families: the widget tree, layout, state and rebuilds, lifecycle and async |
 | **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 29 moments, in Python, JavaScript and Dart |
 | **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 29 of them, in Python, JavaScript and Dart |
+| **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
+| **Forms** | Write a function; it is called with inputs you have not seen. 192 across 21 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, Dart, C and Ruby |
+| **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re`, JavaScript's `RegExp` or Dart's `RegExp`). 32 tasks, from single letters to lookarounds |
+| **Canvas** | JavaScript you can watch and play, written a step at a time, each step starting where the last one finished. Four tracks, 47 steps: Dodge and Breakout, two games; Farm, a drone to program on a grid of soil; and To-do, a web page built step by step, whose checks run in a real browser |
+| **Farm** | A copy of the programming game The Farmer Was Replaced. Write the program that runs a drone around a farm, and spend the harvest on research, the language included: no `while` until you have bought Loops. Playable in the game's own language, Python, JavaScript and Dart |
+| **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
+| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 15 puzzles, in Python, JavaScript and Dart (typed signatures included) |
 | **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 37 hunts, in Python, JavaScript and Dart |
 | **Tickets** | One small codebase and the team's queue of work against it: bug reports, features, a change of rules, a refactor. Each ticket starts from the code as the last one left it, and is checked on what it asks and on everything that already worked. 12 tickets in two projects: a shop's orders in Python and a team task board in JavaScript |
-| **Farm** | A copy of the programming game The Farmer Was Replaced. Write the program that runs a drone around a farm, and spend the harvest on research, the language included: no `while` until you have bought Loops. Playable in the game's own language, Python, JavaScript and Dart |
-| **Canvas** | JavaScript you can watch and play, written a step at a time, each step starting where the last one finished. Four tracks, 47 steps: Dodge and Breakout, two games; Farm, a drone to program on a grid of soil; and To-do, a web page built step by step, whose checks run in a real browser |
-| **Flutter** | Read Flutter widget code and say what it builds, how it lays out, or what rebuilds after a `setState`. 16 questions in four families: the widget tree, layout, state and rebuilds, lifecycle and async |
-| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 15 puzzles, in Python, JavaScript and Dart (typed signatures included) |
-| **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re`, JavaScript's `RegExp` or Dart's `RegExp`). 32 tasks, from single letters to lookarounds |
-| **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
-| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. JavaScript, Dart and C |
-| **Predict** | Read the code, say what it prints. 100 puzzles: Python, 37 JavaScript, 24 Dart and 12 C |
-| **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
 | **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
-| **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Concepts** | The questions an interview asks that are not coding problems |
 | **Reference** | Cheat sheets and flashcards for the language you are in |
+| **Free mode** | The editor with the exercises paused: code anything you like |
 
 The look is a choice: the swatch button in the top bar switches the whole app between Original, Dark, Purple, Light, Northern Lights and Arcade, and remembers it per browser.
 
@@ -77,10 +108,13 @@ git clone https://github.com/RecoveryTracker/code-coach.git
 cd code-coach
 ```
 
-**Windows**
+**Windows** (PowerShell; Windows PowerShell 5.1, the one Windows 10 comes with,
+has no `&&`, so these are one per line)
 
-```bash
-python -m venv .venv && .venv\Scripts\pip install -r requirements.txt && cd web && npm install
+```powershell
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+cd web; npm install; cd ..
 ```
 
 **macOS / Linux**
