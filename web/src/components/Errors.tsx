@@ -21,7 +21,7 @@
  * nothing.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { checkError, fetchErrors } from "../api";
 import type { ErrorCheck, ErrorCrash, ErrorList } from "../types";
@@ -42,8 +42,27 @@ function nextUp<T extends { done: number; last: string }>(
   }, all[0]);
 }
 
-export default function Errors() {
-  const [list, setList] = useState<ErrorList | null>(null);
+/** Only the language picked in the top bar, with no headings left empty by that. */
+function inLanguage(list: ErrorList | null, language: string): ErrorList | null {
+  return list ? { ...list, families: list.families
+    .map((f) => ({ ...f, crashes: f.crashes.filter((c) => c.language === language) }))
+    .filter((f) => f.crashes.length > 0) } : null;
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
+};
+
+/**
+ * Only the language picked in the top bar, like Bug Hunt and Magnets: every
+ * language mixed in one list is several languages' worth of list for someone
+ * learning one, and the picker is where the language is chosen for every screen.
+ */
+export default function Errors({ language }: { language: string }) {
+  const [allLanguages, setList] = useState<ErrorList | null>(null);
+  const list = useMemo(() => inLanguage(allLanguages, language), [allLanguages, language]);
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [chosen, setChosen] = useState("");
   const [line, setLine] = useState(0);
   const [meaning, setMeaning] = useState("");
@@ -57,7 +76,7 @@ export default function Errors() {
       .then((data) => {
         if (!alive) return;
         setList(data);
-        const all = data.families.flatMap((f) => f.crashes);
+        const all = (inLanguage(data, languageRef.current)?.families ?? []).flatMap((f) => f.crashes);
         let last = "";
         try {
           last = localStorage.getItem(LAST_KEY) ?? "";
@@ -144,8 +163,31 @@ export default function Errors() {
     [list],
   );
 
+  /* Switching language with one open: it is no longer on the list, so move
+     to the first of this language's. */
+  useEffect(() => {
+    if (!list) return;
+    const here = list.families.flatMap((f) => f.crashes);
+    if (here.length && !here.some((x) => x.id === chosen)) setChosen(here[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, allLanguages]);
+
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
+  }
+  if (!list || !allLanguages) return <div className="lessons-empty">Loading…</div>;
+  if (!list.families.length) {
+    /* Say which languages do have them rather than show an empty screen that
+       looks broken. Taken from the list, so it cannot fall out of step. */
+    const have = [...new Set(allLanguages.families.flatMap((f) => f.crashes.map((c) => c.language)))]
+      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .join(", ");
+    return (
+      <div className="lessons-empty" data-testid="crashes-none">
+        None of these in this language yet. There are crashes in {have} — switch
+        the language at the top to try them.
+      </div>
+    );
   }
   if (!list || !item) return <div className="lessons-empty">Loading…</div>;
 

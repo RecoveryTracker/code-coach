@@ -69,8 +69,25 @@ function nextUp<T extends { done: number; last: string }>(
   }, all[0]);
 }
 
-export default function Predict() {
-  const [list, setList] = useState<PredictList | null>(null);
+/** Only the language picked in the top bar, with no headings left empty by that. */
+function inLanguage(list: PredictList | null, language: string): PredictList | null {
+  return list ? { ...list, families: list.families.filter((f) => f.language === language) } : null;
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
+};
+
+/**
+ * Only the language picked in the top bar, like Bug Hunt and Magnets: every
+ * language mixed in one list is several languages' worth of list for someone
+ * learning one, and the picker is where the language is chosen for every screen.
+ */
+export default function Predict({ language: picked }: { language: string }) {
+  const [allLanguages, setList] = useState<PredictList | null>(null);
+  const list = useMemo(() => inLanguage(allLanguages, picked), [allLanguages, picked]);
+  const languageRef = useRef(picked);
+  languageRef.current = picked;
   const [chosen, setChosen] = useState("");
   const [guess, setGuess] = useState("");
   const [result, setResult] = useState<PredictCheck | null>(null);
@@ -85,7 +102,7 @@ export default function Predict() {
       .then((data) => {
         if (!alive) return;
         setList(data);
-        const all = data.families.flatMap((f) => f.puzzles);
+        const all = (inLanguage(data, languageRef.current)?.families ?? []).flatMap((f) => f.puzzles);
         let last = "";
         try {
           last = localStorage.getItem(LAST_KEY) ?? "";
@@ -186,8 +203,31 @@ export default function Predict() {
     return family?.language ?? "python";
   }, [list, chosen]);
 
+  /* Switching language with one open: it is no longer on the list, so move
+     to the first of this language's. */
+  useEffect(() => {
+    if (!list) return;
+    const here = list.families.flatMap((f) => f.puzzles);
+    if (here.length && !here.some((x) => x.id === chosen)) setChosen(here[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, allLanguages]);
+
   if (error && !list) {
     return <div className="lessons-empty">Could not load these: {error}</div>;
+  }
+  if (!list || !allLanguages) return <div className="lessons-empty">Loading…</div>;
+  if (!list.families.length) {
+    /* Say which languages do have them rather than show an empty screen that
+       looks broken. Taken from the list, so it cannot fall out of step. */
+    const have = [...new Set(allLanguages.families.map((f) => f.language))]
+      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .join(", ");
+    return (
+      <div className="lessons-empty" data-testid="puzzles-none">
+        None of these in this language yet. There are puzzles in {have} — switch
+        the language at the top to try them.
+      </div>
+    );
   }
   if (!list || !puzzle) return <div className="lessons-empty">Loading…</div>;
 

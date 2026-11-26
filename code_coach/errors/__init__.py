@@ -110,6 +110,19 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
                 return found.group(2).strip(), int(found.group(1))
         return "", 0
 
+    if language == "python":
+        import re
+
+        # Python prints the calls first and the message last, so both come
+        # from the bottom: the last line that is not indented is the
+        # message, and the last frame is where it crashed - inside the
+        # function, not at the call that got there.
+        lines = [raw for raw in err.splitlines() if raw.strip()]
+        message = next((raw.strip() for raw in reversed(lines)
+                        if not raw[:1].isspace() and not raw.startswith("Traceback")), "")
+        frames = re.findall(r'File "[^"]*", line (\d+)', err)
+        return message, int(frames[-1]) if frames else 0
+
     message, line = "", 0
     previous = ""
     for raw in err.splitlines():
@@ -154,8 +167,9 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
     from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
+    from code_coach.errors.content_python import PY_CRASHES
 
-    everything = (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    everything = (*PY_CRASHES, *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
         *if_ruby(RUBY_CRASHES))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
@@ -170,9 +184,10 @@ def crash_families() -> tuple[str, ...]:
     from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
+    from code_coach.errors.content_python import PY_CRASHES
 
     seen: list[str] = []
-    for c in (*MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    for c in (*PY_CRASHES, *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
         *if_ruby(RUBY_CRASHES)):
         if c.family not in seen:
             seen.append(c.family)

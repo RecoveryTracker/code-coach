@@ -106,13 +106,15 @@ def _t(**kw) -> Trace:
     return Trace(**kw)
 
 
-def render(value: Any, heap: dict) -> str:
+def render(value: Any, heap: dict, language: str = "javascript") -> str:
     """One of the tracer's values, as the language would write it.
 
     Kept here rather than in the test so the rendering the suite trusts
     is the rendering the module documents — and so a puzzle's expected
     value is written in the same notation the screen shows.
     """
+    if language == "python":
+        return render_python(value, heap)
     kind = value.get("k")
     if kind == "prim":
         t, v = value.get("t"), value.get("v")
@@ -139,6 +141,39 @@ def render_heap(thing: dict, heap: dict) -> str:
             f"{_key(k)}: {render(v, heap)}" for k, v in pairs
         )
         return "{ " + inner + " }" if inner else "{}"
+    return "?"
+
+
+def render_python(value: Any, heap: dict) -> str:
+    """A tracer value as Python's repr writes it: True, None, 'text',
+    (1, 2), (1,), {'a': 1}, {1, 2} and set(), so a puzzle's answer is
+    written the way print(repr(x)) would show it."""
+    kind = value.get("k")
+    if kind == "prim":
+        t, v = value.get("t"), value.get("v")
+        if t == "bool":
+            return "True" if v else "False"
+        if t == "none":
+            return "None"
+        if t == "str":
+            return repr(str(v))
+        if t == "float":
+            return repr(float(v))
+        return str(v)
+    if kind != "ref":
+        return "?"
+    thing = heap.get(str(value.get("id")), {})
+    tk = thing.get("k")
+    items = [render_python(x, heap) for x in thing.get("items", [])]
+    if tk == "list" and thing.get("tuple"):
+        return "(" + items[0] + ",)" if len(items) == 1 else "(" + ", ".join(items) + ")"
+    if tk == "list":
+        return "[" + ", ".join(items) + "]"
+    if tk == "set":
+        return "{" + ", ".join(items) + "}" if items else "set()"
+    if tk == "dict":
+        return "{" + ", ".join(
+            f"{render_python(k, heap)}: {render_python(v, heap)}" for k, v in thing.get("pairs", [])) + "}"
     return "?"
 
 
@@ -188,7 +223,7 @@ def _value_at_once(
         found = (step.get("vars") or {}).get(variable)
         if found is None:
             return ""
-        return render(found, step.get("heap") or {})
+        return render(found, step.get("heap") or {}, language)
     return ""
 
 
@@ -198,8 +233,9 @@ def traces(family: str | None = None) -> tuple[Trace, ...]:
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
     from code_coach.trace.content_dart2 import DART_TRACES_2
+    from code_coach.trace.content_python import PY_TRACES
 
-    everything = (*ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2))
+    everything = (*PY_TRACES, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2))
     if family is not None:
         everything = tuple(t for t in everything if t.family == family)
     return tuple(sorted(everything, key=lambda t: t.level))
@@ -211,9 +247,10 @@ def trace_families() -> tuple[str, ...]:
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
     from code_coach.trace.content_dart2 import DART_TRACES_2
+    from code_coach.trace.content_python import PY_TRACES
 
     seen: list[str] = []
-    for t in (*ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2)):
+    for t in (*PY_TRACES, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2)):
         if t.family not in seen:
             seen.append(t.family)
     return tuple(seen)

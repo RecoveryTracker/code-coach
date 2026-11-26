@@ -1294,7 +1294,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <TraceValue />
+        <TraceValue language={viewingLanguage} />
       </div>
     );
   }
@@ -1303,7 +1303,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Errors />
+        <Errors language={viewingLanguage} />
       </div>
     );
   }
@@ -1424,7 +1424,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Predict />
+        <Predict language={viewingLanguage} />
       </div>
     );
   }
