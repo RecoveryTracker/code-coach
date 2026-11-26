@@ -30,9 +30,32 @@ export const MODES = [
     title: "One queue across every practice — whatever you have done least",
   },
   {
+    id: "typing",
+    label: "Typing",
+    title: "Keyboard practice — key sections, symbols, speed and vocabulary",
+  },
+  {
+    id: "workbook",
+    label: "Workbook",
+    title: "Pages of small exercises you solve by typing",
+  },
+  {
     id: "brain",
     label: "Brain Drills",
     title: "A minute of quick-fire Python, JavaScript and Dart reflexes a day, scored as your code age",
+  },
+  {
+    /* From here on, easiest to hardest: putting lines back in order,
+       then reading code, then writing it, then whole programs. */
+    id: "magnets",
+    label: "Magnets",
+    title:
+      "The lines of a working program, shuffled — put them back in order",
+  },
+  {
+    id: "predict",
+    label: "Predict",
+    title: "Read the code and say what it prints, then watch it happen",
   },
   {
     id: "gotchas",
@@ -40,9 +63,24 @@ export const MODES = [
     title: "Python and JavaScript quiz cards where the obvious answer is a trap - one at a time, endless",
   },
   {
-    id: "workbook",
-    label: "Workbook",
-    title: "Pages of small exercises you solve by typing",
+    id: "styles",
+    label: "HTML & CSS",
+    title: "Read the markup and styles, say what the browser makes of it",
+  },
+  {
+    id: "flutter",
+    label: "Flutter",
+    title: "Read Flutter widget code and say what it builds, lays out or rebuilds",
+  },
+  {
+    id: "trace",
+    label: "Trace",
+    title: "Stop the program part way and say what a variable holds",
+  },
+  {
+    id: "errors",
+    label: "Errors",
+    title: "Read the message, find the line, say what it is telling you",
   },
   {
     id: "lessons",
@@ -60,19 +98,29 @@ export const MODES = [
       + "haven't seen",
   },
   {
-    id: "predict",
-    label: "Predict",
-    title: "Read the code and say what it prints, then watch it happen",
+    id: "regex",
+    label: "Regex",
+    title: "Write a pattern that finds these strings and leaves those alone",
   },
   {
-    id: "trace",
-    label: "Trace",
-    title: "Stop the program part way and say what a variable holds",
+    id: "canvas",
+    label: "Canvas",
+    title: "Write JavaScript that draws and moves - build a real game a step at a time",
   },
   {
-    id: "errors",
-    label: "Errors",
-    title: "Read the message, find the line, say what it is telling you",
+    id: "farm",
+    label: "Farm",
+    title: "The Farmer Was Replaced: program a drone to run a farm - in Python, JavaScript or Dart",
+  },
+  {
+    id: "cases",
+    label: "Case files",
+    title: "A mystery in a database - query real PostgreSQL to solve it",
+  },
+  {
+    id: "puzzles",
+    label: "Puzzles",
+    title: "Solve part one, and part two changes the rules - same input, new question",
   },
   {
     id: "bughunt",
@@ -85,55 +133,9 @@ export const MODES = [
     title: "A team codebase and its ticket queue - make the change without breaking what worked",
   },
   {
-    id: "farm",
-    label: "Farm",
-    title: "The Farmer Was Replaced: program a drone to run a farm - in Python, JavaScript or Dart",
-  },
-  {
-    id: "canvas",
-    label: "Canvas",
-    title: "Write JavaScript that draws and moves - build a real game a step at a time",
-  },
-  {
-    id: "flutter",
-    label: "Flutter",
-    title: "Read Flutter widget code and say what it builds, lays out or rebuilds",
-  },
-  {
-    id: "puzzles",
-    label: "Puzzles",
-    title: "Solve part one, and part two changes the rules - same input, new question",
-  },
-  {
-    id: "regex",
-    label: "Regex",
-    title: "Write a pattern that finds these strings and leaves those alone",
-  },
-  {
-    id: "cases",
-    label: "Case files",
-    title: "A mystery in a database - query real PostgreSQL to solve it",
-  },
-  {
-    id: "magnets",
-    label: "Magnets",
-    title:
-      "The lines of a working program, shuffled — put them back in order",
-  },
-  {
-    id: "styles",
-    label: "HTML & CSS",
-    title: "Read the markup and styles, say what the browser makes of it",
-  },
-  {
     id: "leetcode",
     label: "LeetCode",
     title: "The interview problems, with the editor and the coach",
-  },
-  {
-    id: "typing",
-    label: "Typing",
-    title: "Keyboard practice — key sections, symbols, speed and vocabulary",
   },
   {
     id: "concepts",
