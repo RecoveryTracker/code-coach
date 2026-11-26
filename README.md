@@ -51,21 +51,21 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages. Shuffle deals random exercises from a range of pages |
 | **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C and SQL, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
-| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 61 puzzles: 9 Python, 28 JavaScript, 12 Dart, 6 C and 6 Ruby |
-| **Predict** | Read the code, say what it prints. 255 puzzles: 81 Python, 126 JavaScript, 24 Dart, 12 C and 12 Ruby |
+| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 101 puzzles: 22 Python, 28 JavaScript, 10 TypeScript, 12 Dart, 14 C, 9 Rust and 6 Ruby |
+| **Predict** | Read the code, say what it prints. 314 puzzles: 81 Python, 126 JavaScript, 17 TypeScript, 24 Dart, 25 C, 16 Rust, 13 C++ and 12 Ruby |
 | **Gotchas** | Quiz cards where the obvious answer is a trap, one at a time and endless. Python and JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
 | **Flutter** | Read Flutter widget code and say what it builds, how it lays out, or what rebuilds after a `setState`. 16 questions in four families: the widget tree, layout, state and rebuilds, lifecycle and async |
-| **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 42 moments: 13 Python, 17 JavaScript and 12 Dart |
-| **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 58 of them: 14 Python, 26 JavaScript, 12 Dart and 6 Ruby |
+| **Trace** | Stop a program part way and say what a variable holds, then step through and watch. 52 moments: 23 Python, 17 JavaScript and 12 Dart |
+| **Errors** | A program that crashed and the message it printed. Which line, and what is it telling you? 94 of them: 22 Python, 26 JavaScript, 15 TypeScript, 12 Dart, 13 Rust and 6 Ruby |
 | **Lessons** | The LeetCode patterns, taught — how to get from a question to a solution |
-| **Forms** | Write a function; it is called with inputs you have not seen. 192 across 21 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, Dart, C and Ruby |
+| **Forms** | Write a function; it is called with inputs you have not seen. 218 across 21 families, including The Odin Project's computer science section, Fix the bug, and Change it — working code and a change request, in Python, JavaScript, TypeScript, Dart, C, Rust and Ruby |
 | **Regex** | Write a pattern that finds the strings on one side and leaves the other side alone, run in the real engine of your language (Python's `re`, JavaScript's `RegExp` or Dart's `RegExp`). 32 tasks, from single letters to lookarounds |
 | **Canvas** | JavaScript you can watch and play, written a step at a time, each step starting where the last one finished. Four tracks, 47 steps: Dodge and Breakout, two games; Farm, a drone to program on a grid of soil; and To-do, a web page built step by step, whose checks run in a real browser |
 | **Farm** | A copy of the programming game The Farmer Was Replaced. Write the program that runs a drone around a farm, and spend the harvest on research, the language included: no `while` until you have bought Loops. Playable in the game's own language, Python, JavaScript and Dart |
 | **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
-| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 15 puzzles, in Python, JavaScript and Dart (typed signatures included) |
-| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 64 hunts: 16 Python, 27 JavaScript, 15 Dart and 6 Ruby |
+| **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 21 puzzles, in Python, JavaScript, TypeScript, Dart and Rust (typed signatures included) |
+| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 80 hunts: 21 Python, 27 JavaScript, 6 TypeScript, 15 Dart, 5 Rust and 6 Ruby |
 | **Tickets** | One small codebase and the team's queue of work against it: bug reports, features, a change of rules, a refactor. Each ticket starts from the code as the last one left it, and is checked on what it asks and on everything that already worked. 12 tickets in two projects: a shop's orders in Python and a team task board in JavaScript |
 | **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
 | **Concepts** | The questions an interview asks that are not coding problems |

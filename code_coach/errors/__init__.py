@@ -110,6 +110,35 @@ def engine_report(code: str, language: str = "javascript") -> tuple[str, int]:
                 return found.group(2).strip(), int(found.group(1))
         return "", 0
 
+    if language == "rust":
+        import re
+
+        # A compile error: "error[E0382]: ..." and, below it, " --> file.rs:4:23".
+        # A panic: "panicked at file.rs:4:21:" and the message on the next line.
+        lines = err.splitlines()
+        for i, raw in enumerate(lines):
+            if raw.startswith("error[") or (raw.startswith("error:") and "aborting" not in raw):
+                for nxt in lines[i + 1:]:
+                    found = re.search(r"-->\s+.+?\.rs:(\d+):\d+", nxt)
+                    if found:
+                        return raw.strip(), int(found.group(1))
+                return raw.strip(), 0
+            found = re.search(r"panicked at .+?\.rs:(\d+):\d+:$", raw)
+            if found:
+                return (lines[i + 1].strip() if i + 1 < len(lines) else ""), int(found.group(1))
+        return "", 0
+
+    if language == "typescript":
+        import re
+
+        # tsc: "file.ts(2,1): error TS2322: Type 'string' is not ...". The
+        # first error is the one recorded; the line is in the brackets.
+        for raw in err.splitlines():
+            found = re.search(r"\.ts\((\d+),\d+\): (error TS\d+: .*)$", raw)
+            if found:
+                return found.group(2).strip(), int(found.group(1))
+        return "", 0
+
     if language == "python":
         import re
 
@@ -168,8 +197,12 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
     from code_coach.errors.content_python import PY_CRASHES
+    from code_coach.errors.content_rust import RUST_CRASHES
+    from code_coach.errors.content_python2 import PY_CRASHES_2
+    from code_coach.errors.content_ts import TS_CRASHES
+    from code_coach.engine import if_rust, if_typescript
 
-    everything = (*PY_CRASHES, *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    everything = (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
         *if_ruby(RUBY_CRASHES))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
@@ -185,9 +218,13 @@ def crash_families() -> tuple[str, ...]:
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
     from code_coach.errors.content_python import PY_CRASHES
+    from code_coach.errors.content_rust import RUST_CRASHES
+    from code_coach.errors.content_python2 import PY_CRASHES_2
+    from code_coach.errors.content_ts import TS_CRASHES
+    from code_coach.engine import if_rust, if_typescript
 
     seen: list[str] = []
-    for c in (*PY_CRASHES, *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    for c in (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
         *if_ruby(RUBY_CRASHES)):
         if c.family not in seen:
             seen.append(c.family)

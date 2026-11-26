@@ -27,6 +27,7 @@ import { checkError, fetchErrors } from "../api";
 import type { ErrorCheck, ErrorCrash, ErrorList } from "../types";
 import { LAST_KEYS } from "../lastKeys";
 import { award } from "../lib/momentum";
+import { languageName } from "../lib/languageNames";
 
 /** Which one you were on. */
 const LAST_KEY = LAST_KEYS.errors;
@@ -48,10 +49,6 @@ function inLanguage(list: ErrorList | null, language: string): ErrorList | null 
     .map((f) => ({ ...f, crashes: f.crashes.filter((c) => c.language === language) }))
     .filter((f) => f.crashes.length > 0) } : null;
 }
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
-};
 
 /**
  * Only the language picked in the top bar, like Bug Hunt and Magnets: every
@@ -180,7 +177,7 @@ export default function Errors({ language }: { language: string }) {
     /* Say which languages do have them rather than show an empty screen that
        looks broken. Taken from the list, so it cannot fall out of step. */
     const have = [...new Set(allLanguages.families.flatMap((f) => f.crashes.map((c) => c.language)))]
-      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .map((l) => languageName(l))
       .join(", ");
     return (
       <div className="lessons-empty" data-testid="crashes-none">
@@ -246,7 +243,7 @@ export default function Errors({ language }: { language: string }) {
           <h3>
             {item.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", python: "Python", dart: "Dart", ruby: "Ruby" } as Record<string, string>)[item.language] ?? item.language}
+              {languageName(item.language)}
             </span>
           </h3>
         </header>

@@ -18,6 +18,7 @@ import { checkPuzzle, fetchPuzzleAnswer, fetchPuzzles } from "../api";
 import { LAST_KEYS } from "../lastKeys";
 import { award } from "../lib/momentum";
 import type { KataCaseResult, PuzzleCheck, PuzzleInfo, PuzzleList, PuzzlePartInfo } from "../types";
+import { languageName } from "../lib/languageNames";
 
 const LAST_KEY = LAST_KEYS.puzzles;
 const OPENED_KEY = "code-coach:puzzles-part-two";
@@ -30,19 +31,13 @@ function nextUp<T extends { done: number; last: string }>(all: T[]): T | null {
   }, all[0]);
 }
 
-const LANGUAGE_NAMES: Record<string, string> = {
-  python: "Python",
-  javascript: "JavaScript",
-  dart: "Dart",
-};
-
 /** A value as it would be written in the language being practised. */
 function show(value: unknown, language: string): string {
   const py = language === "python";
   if (value === null || value === undefined) return py ? "None" : "null";
   if (typeof value === "boolean") return py ? (value ? "True" : "False") : String(value);
   if (typeof value === "string") {
-    if (language === "javascript") return JSON.stringify(value);
+    if (language === "javascript" || language === "typescript") return JSON.stringify(value);
     // Python and Dart both write strings in single quotes by habit.
     return value.includes("'") ? JSON.stringify(value) : `'${value}'`;
   }
@@ -63,7 +58,43 @@ function stub(name: string, part: PuzzlePartInfo, language: string): string {
     const typed = params.map((p, i) => `${part.dart.types[i]} ${p}`).join(", ");
     return `${part.dart.returns} ${name}(${typed}) {\n}\n`;
   }
+  if (language === "rust") {
+    const typed = params.map((p, i) => `${p}: ${rustType(part.dart.types[i])}`).join(", ");
+    return `fn ${name}(${typed}) -> ${rustType(part.dart.returns)} {\n}\n`;
+  }
+  if (language === "typescript") {
+    const typed = params.map((p, i) => `${p}: ${tsType(part.dart.types[i])}`).join(", ");
+    return `function ${name}(${typed}): ${tsType(part.dart.returns)} {\n}\n`;
+  }
   return `function ${name}(${params.join(", ")}) {\n}\n`;
+}
+
+/**
+ * A Dart type as TypeScript writes it. The puzzles keep one set of types,
+ * Dart's, and the TypeScript answers are built from the same ones, so the
+ * stub here and the answer on the server always agree.
+ */
+function rustType(dart: string | undefined): string {
+  const t = (dart ?? "").trim();
+  if (t === "int") return "i32";
+  if (t === "double" || t === "num") return "f64";
+  if (t === "String" || t === "bool") return t === "bool" ? "bool" : "String";
+  if (t.startsWith("List<") && t.endsWith(">")) return `Vec<${rustType(t.slice(5, -1))}>`;
+  return "()";
+}
+
+function tsType(dart: string | undefined): string {
+  const t = (dart ?? "").trim();
+  if (t === "int" || t === "double" || t === "num") return "number";
+  if (t === "String") return "string";
+  if (t === "bool") return "boolean";
+  if (t.endsWith("?")) return `${tsType(t.slice(0, -1))} | null`;
+  if (t.startsWith("List<") && t.endsWith(">")) {
+    const inner = tsType(t.slice(5, -1));
+    return inner.includes(" ") ? `(${inner})[]` : `${inner}[]`;
+  }
+  if (t.startsWith("Map<String,") && t.endsWith(">")) return `Record<string, ${tsType(t.slice(11, -1))}>`;
+  return "unknown";
 }
 
 /** Puzzles whose part two is open, per language: "id:language". */
@@ -239,7 +270,7 @@ export default function Puzzles({ language }: { language: string }) {
         <header>
           <h3>
             {item.title}
-            <span className="predict-lang">{LANGUAGE_NAMES[language] ?? language}</span>
+            <span className="predict-lang">{languageName(language)}</span>
           </h3>
         </header>
         <p className="lessons-blurb">{item.story}</p>

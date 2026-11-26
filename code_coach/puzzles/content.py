@@ -572,9 +572,10 @@ def _all() -> tuple[Puzzle, ...]:
     # the first six keep their place ahead of the newer ones.
     from code_coach.puzzles.content2 import MORE_PUZZLES
     from code_coach.puzzles.content3 import MORE_PUZZLES_2
+    from code_coach.puzzles.content4 import MORE_PUZZLES_3
 
     first = (NIGHT, SORTING, PASSWORDS, GARDEN, BUS, CHAIN)
-    return tuple(sorted(first + MORE_PUZZLES + MORE_PUZZLES_2, key=lambda p: p.level))
+    return tuple(sorted(first + MORE_PUZZLES + MORE_PUZZLES_2 + MORE_PUZZLES_3, key=lambda p: p.level))
 
 
 PUZZLES: tuple[Puzzle, ...] = _all()

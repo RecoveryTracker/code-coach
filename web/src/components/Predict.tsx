@@ -27,6 +27,7 @@ import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type { PredictCheck, PredictList, PredictPuzzle } from "../types";
 import { LAST_KEYS } from "../lastKeys";
+import { languageName, languageTag } from "../lib/languageNames";
 
 /** What you guessed, per puzzle, so coming back does not lose it. */
 const DRAFT_KEY = "code-coach:predict-drafts";
@@ -73,10 +74,6 @@ function nextUp<T extends { done: number; last: string }>(
 function inLanguage(list: PredictList | null, language: string): PredictList | null {
   return list ? { ...list, families: list.families.filter((f) => f.language === language) } : null;
 }
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
-};
 
 /**
  * Only the language picked in the top bar, like Bug Hunt and Magnets: every
@@ -220,7 +217,7 @@ export default function Predict({ language: picked }: { language: string }) {
     /* Say which languages do have them rather than show an empty screen that
        looks broken. Taken from the list, so it cannot fall out of step. */
     const have = [...new Set(allLanguages.families.map((f) => f.language))]
-      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .map((l) => languageName(l))
       .join(", ");
     return (
       <div className="lessons-empty" data-testid="puzzles-none">
@@ -260,7 +257,7 @@ export default function Predict({ language: picked }: { language: string }) {
             <h4 className="wb-section-head">
               {family.name}
               <span className="wb-section-count">
-                {({ javascript: "JS", dart: "Dart", python: "Py", c: "C", ruby: "Rb" } as Record<string, string>)[family.language] ?? family.language} ·{" "}
+                {languageTag(family.language)} ·{" "}
                 {family.puzzles.length}
               </span>
             </h4>
@@ -288,7 +285,7 @@ export default function Predict({ language: picked }: { language: string }) {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", dart: "Dart", python: "Python", c: "C", ruby: "Ruby" } as Record<string, string>)[language] ?? language}
+              {languageName(language)}
             </span>
           </h3>
         </header>

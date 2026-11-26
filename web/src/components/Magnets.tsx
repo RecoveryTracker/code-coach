@@ -42,6 +42,7 @@ import { checkMagnet, fetchMagnets } from "../api";
 import { LAST_KEYS } from "../lastKeys";
 import { award } from "../lib/momentum";
 import type { MagnetCheck, MagnetList, MagnetPuzzle } from "../types";
+import { languageName } from "../lib/languageNames";
 
 /** Which puzzle you were on. */
 const LAST_KEY = LAST_KEYS.magnets;
@@ -72,10 +73,6 @@ function inLanguage(list: MagnetList | null, language: string): MagnetList["fami
     .map((f) => ({ ...f, magnets: f.magnets.filter((m) => m.language === language) }))
     .filter((f) => f.magnets.length > 0);
 }
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
-};
 
 /**
  * Only the language picked in the top bar, like Bug Hunt: every language's
@@ -254,7 +251,7 @@ export default function Magnets({ language }: { language: string }) {
     /* Say which languages do have puzzles rather than show an empty screen
        that looks broken. Taken from the list, so it cannot fall out of step. */
     const have = [...new Set(list.families.flatMap((f) => f.magnets.map((m) => m.language)))]
-      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .map((l) => languageName(l))
       .join(", ");
     return (
       <div className="lessons-empty" data-testid="magnets-none">
@@ -318,7 +315,7 @@ export default function Magnets({ language }: { language: string }) {
           <h3>
             {puzzle.name}
             <span className="predict-lang">
-              {LANGUAGE_NAMES[puzzle.language] ?? puzzle.language}
+              {languageName(puzzle.language)}
             </span>
           </h3>
         </header>

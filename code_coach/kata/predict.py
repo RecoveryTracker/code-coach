@@ -26,9 +26,15 @@ nothing except that the author had not run it. It is not in the file.
 
 from __future__ import annotations
 
+import shutil
+
 from code_coach.kata.predict_js import JS_PUZZLES
 from code_coach.kata.predict_c import C_PUZZLES
 from code_coach.kata.predict_ruby import RUBY_PUZZLES
+from code_coach.kata.predict_c2 import C_PUZZLES_2
+from code_coach.kata.predict_rust import RUST_PUZZLES
+from code_coach.kata.predict_ts import TS_PUZZLES
+from code_coach.kata.predict_cpp import CPP_PUZZLES
 from code_coach.kata.predict_dart import DART_PUZZLES
 from code_coach.kata.predict_dart2 import DART_PUZZLES_2
 from code_coach.kata.predict_js2 import JS_PUZZLES_2
@@ -567,13 +573,15 @@ FLOW: tuple[Puzzle, ...] = (
 PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
     + JS_PUZZLES_2 + JS_PUZZLES_3 + JS_GAME_PUZZLES + JS_ASYNC_PUZZLES + JS_PLANETS_PUZZLES + JS_LIFTING_PUZZLES
-    + JS_NODE_PUZZLES + JS_MUSIC_PUZZLES + JS_COOKING_PUZZLES + PY_EXTRA_PUZZLES + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES + RUBY_PUZZLES
+    + JS_NODE_PUZZLES + JS_MUSIC_PUZZLES + JS_COOKING_PUZZLES + PY_EXTRA_PUZZLES + DART_PUZZLES + DART_PUZZLES_2 + C_PUZZLES + C_PUZZLES_2 + RUBY_PUZZLES
+    + TS_PUZZLES + RUST_PUZZLES + CPP_PUZZLES
 )
 
 
 def _offered() -> tuple[Puzzle, ...]:
     """PUZZLES, less any whose language this machine cannot run."""
-    from code_coach.engine import c_available, dart_available, ruby_available
+    from code_coach.engine import (c_available, dart_available, ruby_available, rust_available,
+                                   typescript_available)
 
     missing = set()
     if not dart_available():
@@ -582,6 +590,12 @@ def _offered() -> tuple[Puzzle, ...]:
         missing.add("c")
     if not ruby_available():
         missing.add("ruby")
+    if not typescript_available():
+        missing.add("typescript")
+    if not rust_available():
+        missing.add("rust")
+    if not (shutil.which("g++") or shutil.which("clang++")):
+        missing.add("cpp")
     return tuple(p for p in PUZZLES if p.language not in missing)
 
 

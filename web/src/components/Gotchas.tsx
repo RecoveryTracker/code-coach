@@ -161,8 +161,13 @@ function RunIt({ card }: { card: GotchaCard }) {
   );
 }
 
-export default function Gotchas() {
-  const [language, setLanguage] = useState<GotchaLang>(savedLanguage);
+/**
+ * `language` is the one picked at the top of the app. It decides which
+ * language's cards are dealt, the same as on every other screen; the menu
+ * here can still switch, for a language the top picker does not offer.
+ */
+export default function Gotchas({ language: picked }: { language?: string } = {}) {
+  const [language, setLanguage] = useState<GotchaLang>(() => picked || savedLanguage());
   // Which languages the server can run here, with their card counts; null until it has said.
   const [offered, setOffered] = useState<LangInfo[] | null>(null);
   // Every language's colouring rules, sent once with the first summary.
@@ -260,6 +265,15 @@ export default function Gotchas() {
     setCard(null);
     setLanguage(next);
   };
+
+  /* The top picker changed: follow it, when this machine has cards in that
+     language (otherwise stay on what is showing rather than fall back to
+     Python and look as if the picker were ignored). */
+  useEffect(() => {
+    if (!picked || !offered || picked === language) return;
+    if (offered.some((l) => l.id === picked)) pickLanguage(picked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, offered]);
 
   // The switch shows each language's card count, kept current as you add or delete cards of your own.
   const switchable = useMemo(

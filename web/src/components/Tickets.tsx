@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import "../styles/tickets.css";
 import { award } from "../lib/momentum";
+import { languageName } from "../lib/languageNames";
 
 // ── Types and requests ───────────────────────────────────────
 //
@@ -178,11 +179,6 @@ const KIND_LABEL: Record<TicketKind, string> = {
   change: "Change of rules",
 };
 
-const LANGUAGE_LABEL: Record<string, string> = {
-  python: "Python",
-  javascript: "JavaScript",
-};
-
 // ── One function's result ────────────────────────────────────
 
 function FunctionResult({ fn, language }: { fn: TicketFunctionResult; language: string }) {
@@ -224,7 +220,11 @@ function FunctionResult({ fn, language }: { fn: TicketFunctionResult; language: 
 
 // ── The screen ───────────────────────────────────────────────
 
-export default function Tickets() {
+/**
+ * `language` is the one picked at the top of the app: when a project is
+ * written in it, that project is the one opened. The tabs can still switch.
+ */
+export default function Tickets({ language: picked }: { language?: string } = {}) {
   const [list, setList] = useState<TicketList | null>(null);
   const [projectId, setProjectId] = useState("");
   const [ticketId, setTicketId] = useState("");
@@ -242,8 +242,12 @@ export default function Tickets() {
         if (!alive) return;
         setList(data);
         const last = readLast();
+        const inPicked = data.projects.filter((p) => p.language === picked);
         const home =
-          data.projects.find((p) => p.tickets.some((t) => t.id === last)) ?? data.projects[0];
+          inPicked.find((p) => p.tickets.some((t) => t.id === last)) ??
+          inPicked[0] ??
+          data.projects.find((p) => p.tickets.some((t) => t.id === last)) ??
+          data.projects[0];
         if (!home) return;
         setProjectId(home.id);
         const first =
@@ -305,6 +309,15 @@ export default function Tickets() {
     const first = p.tickets.find((t) => !t.done) ?? p.tickets[0];
     if (first) setTicketId(first.id);
   };
+
+  /* The top picker changed: open the project written in that language, if
+     there is one and it is not already open. */
+  useEffect(() => {
+    if (!list || !picked || proj?.language === picked) return;
+    const match = list.projects.find((p) => p.language === picked);
+    if (match) pickProject(match.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked]);
 
   const run = useCallback(async () => {
     if (!proj || !tick || running) return;
@@ -383,7 +396,7 @@ export default function Tickets() {
             >
               {p.title}
               <span className="ticket-project-lang">
-                {LANGUAGE_LABEL[p.language] ?? p.language}
+                {languageName(p.language)}
               </span>
             </button>
           ))}
@@ -415,7 +428,7 @@ export default function Tickets() {
           <h3>
             <span className={`ticket-kind ticket-kind-${tick.kind}`}>{KIND_LABEL[tick.kind]}</span>
             {tick.title}
-            <span className="predict-lang">{LANGUAGE_LABEL[proj.language] ?? proj.language}</span>
+            <span className="predict-lang">{languageName(proj.language)}</span>
           </h3>
         </header>
         {index === 0 ? <p className="lessons-blurb">{proj.story}</p> : null}

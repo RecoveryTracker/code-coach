@@ -238,23 +238,23 @@ class LanguageTests(unittest.TestCase):
                 self.assertEqual(set(got), {language})
 
     def test_a_language_with_no_hunts_gets_none_rather_than_wrong_ones(self) -> None:
-        self.assertEqual(self._hunt_languages("rust"), [])
+        self.assertEqual(self._hunt_languages("go"), [])
 
     def test_the_queue_is_still_full_when_a_practice_has_nothing(self) -> None:
-        """Rust has no hunts, and the session should fill from the rest
+        """Go has no hunts, and the session should fill from the rest
         rather than come up short."""
         progress = StudentProgress()
-        progress.language = "rust"
+        progress.language = "go"
         self.assertEqual(len(queue(progress, 20)), 20)
 
     def test_puzzles_are_dealt_in_every_language_they_are_written_in(self) -> None:
         """A puzzle is written in both Python and JavaScript, so it is
-        dealt to either - and to neither when the picker says Rust."""
+        dealt to either - and to neither when the picker says Go."""
         from code_coach.session import SOURCES
 
         source = next(s for s in SOURCES if s.key == "puzzles")
         progress = StudentProgress()
-        for language, want in (("python", True), ("javascript", True), ("rust", False)):
+        for language, want in (("python", True), ("javascript", True), ("go", False)):
             with self.subTest(language=language):
                 progress.language = language
                 self.assertEqual(bool(dealable(source, progress)), want)

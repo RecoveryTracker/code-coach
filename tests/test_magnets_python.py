@@ -51,7 +51,8 @@ class ShapeTests(unittest.TestCase):
         for m in PY_MAGNETS:
             with self.subTest(magnet=m.id):
                 self.assertIs(magnet(m.id), m)
-        self.assertEqual([m.id for m in magnets(FAMILY)], [m.id for m in PY_MAGNETS])
+        # The family holds this set and content_python2's, easiest first.
+        self.assertTrue({m.id for m in PY_MAGNETS} <= {m.id for m in magnets(FAMILY)})
 
     def test_no_id_is_taken_by_another_puzzle(self) -> None:
         ids = [m.id for m in magnets()]
@@ -167,7 +168,7 @@ class RouteTests(unittest.TestCase):
         from code_coach.api import server
 
         family = next(f for f in server.magnet_list()["families"] if f["name"] == FAMILY)
-        self.assertEqual([r["id"] for r in family["magnets"]], [m.id for m in PY_MAGNETS])
+        self.assertTrue({m.id for m in PY_MAGNETS} <= {r["id"] for r in family["magnets"]})
         for row in family["magnets"]:
             self.assertEqual(row["language"], "python")
             self.assertNotIn("plan", row)

@@ -1339,7 +1339,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Tickets />
+        <Tickets language={viewingLanguage} />
       </div>
     );
   }
@@ -1370,7 +1370,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Gotchas />
+        <Gotchas language={viewingLanguage} />
       </div>
     );
   }
@@ -1379,7 +1379,7 @@ export default function App() {
     return (
       <div className="typing-shell farm-shell">
         {modeBar}
-        <FarmMode />
+        <FarmMode language={viewingLanguage} />
       </div>
     );
   }
@@ -1433,7 +1433,7 @@ export default function App() {
     return (
       <div className="typing-shell">
         {modeBar}
-        <Katas />
+        <Katas language={viewingLanguage} />
       </div>
     );
   }

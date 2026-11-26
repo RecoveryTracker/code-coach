@@ -183,6 +183,8 @@ class ReferenceTests(unittest.TestCase):
                     "dart": f"{k.returns} {k.name}(",
                     "c": f"{k.name}(",
                     "ruby": f"def {k.name}(",
+                    "typescript": f"function {k.name}(",
+                    "rust": f"fn {k.name}(",
                 }.get(k.language, f"def {k.name}(")
                 self.assertIn(opener, shown)
                 self.assertNotIn(f"def {k.solve.__name__}(", shown)
@@ -368,7 +370,7 @@ class RouteTests(unittest.TestCase):
                 # Python and JavaScript open with a keyword; Dart opens
                 # with the return type, so it ends with the brace instead.
                 self.assertTrue(
-                    entry["signature"].startswith(("def ", "function "))
+                    entry["signature"].startswith(("def ", "function ", "fn "))
                     or entry["signature"].endswith(") {"))
                 self.assertGreater(entry["cases"], 0)
 
@@ -839,6 +841,14 @@ class JavaScriptTests(unittest.TestCase):
                 elif k.language == "dart":
                     self.assertTrue(k.signature.startswith(f"{k.returns} {k.name}("))
                     self.assertTrue(k.signature.endswith("{"))
+                elif k.language == "typescript":
+                    self.assertTrue(k.signature.startswith(f"function {k.name}("))
+                    self.assertTrue(k.signature.endswith("{"))
+                    self.assertIn("):", k.signature, "a TypeScript signature says what it returns")
+                elif k.language == "rust":
+                    self.assertTrue(k.signature.startswith(f"fn {k.name}("))
+                    self.assertTrue(k.signature.endswith("{"))
+                    self.assertEqual(len(k.types), len(k.params), "one Rust type per parameter")
                 else:
                     self.assertTrue(k.signature.startswith("def "))
 
@@ -941,6 +951,16 @@ class RouteLanguageTests(unittest.TestCase):
                 from code_coach.engine import ruby_available
 
                 if not ruby_available():
+                    continue
+            if language == "typescript":
+                from code_coach.engine import typescript_available
+
+                if not typescript_available():
+                    continue
+            if language == "rust":
+                from code_coach.engine import rust_available
+
+                if not rust_available():
                     continue
             with self.subTest(language=language):
                 first = next(

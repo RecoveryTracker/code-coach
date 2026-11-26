@@ -31,6 +31,7 @@ import type {
   BugHuntList,
   BugHuntTry,
 } from "../types";
+import { languageName } from "../lib/languageNames";
 
 const LAST_KEY = LAST_KEYS.bughunt;
 
@@ -362,7 +363,7 @@ export default function BugHunt({ language }: { language: string }) {
           <h3>
             {hunt.title}
             <span className="predict-lang">
-              {lang === "javascript" ? "JavaScript" : "Python"}
+              {languageName(lang)}
             </span>
           </h3>
         </header>

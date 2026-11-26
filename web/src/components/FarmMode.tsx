@@ -49,7 +49,12 @@ import { HUD_H, MENU_H, WINDOW_IDS, useFarmWindows, type Area, type WinId } from
 import { WINDOW_DEFS } from "./farm/windowDefs";
 import "../styles/farm.css";
 
-export default function FarmMode() {
+/**
+ * `language` is the one picked at the top of the app: when there is a farm in
+ * it, that is the farm shown. The game's own language and the switch here are
+ * still there for languages the top picker does not offer.
+ */
+export default function FarmMode({ language: picked }: { language?: string } = {}) {
   const [overview, setOverview] = useState<FarmOverview | null>(null);
   const [state, setState] = useState<FarmState | null>(null);
   const [language, setLanguage] = useState("python");
@@ -251,6 +256,14 @@ export default function FarmMode() {
     },
     [language, entry, flush, enterFarm],
   );
+
+  /* The top picker changed (or the farm has just opened): go to the farm in
+     that language, when this machine has one. */
+  useEffect(() => {
+    if (!picked || !overview || picked === language) return;
+    if (overview.languages.includes(picked)) void pickLanguage(picked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, !!overview]);
 
   const openFile = useCallback(
     async (name: string) => {

@@ -266,6 +266,10 @@ def _all() -> tuple[Hunt, ...]:
     from code_coach.bughunt.content import JAVASCRIPT_HUNTS, PYTHON_HUNTS
     from code_coach.bughunt.content2 import JAVASCRIPT_HUNTS_2, PYTHON_HUNTS_2
     from code_coach.bughunt.content7 import PYTHON_HUNTS_3
+    from code_coach.bughunt.content8 import PYTHON_HUNTS_4
+    from code_coach.bughunt.content_ts import TS_HUNTS
+    from code_coach.bughunt.content_rust import RUST_HUNTS
+    from code_coach.engine import if_rust, if_typescript
     from code_coach.bughunt.content3 import DART_HUNTS
     from code_coach.bughunt.content_ruby import RUBY_HUNTS
     from code_coach.engine import if_dart, if_ruby
@@ -274,9 +278,9 @@ def _all() -> tuple[Hunt, ...]:
     from code_coach.bughunt.content6 import JAVASCRIPT_HUNTS_3
     from code_coach.bughunt.content_jsgame import JS_GAME_HUNTS
 
-    return (PYTHON_HUNTS + PYTHON_HUNTS_2 + PYTHON_HUNTS_3 + JAVASCRIPT_HUNTS
-            + JAVASCRIPT_HUNTS_2 + JAVASCRIPT_HUNTS_3 + JS_GAME_HUNTS + if_dart(DART_HUNTS + DART_HUNTS_2 + DART_HUNTS_3)
-            + if_ruby(RUBY_HUNTS))
+    return (PYTHON_HUNTS + PYTHON_HUNTS_2 + PYTHON_HUNTS_3 + PYTHON_HUNTS_4 + JAVASCRIPT_HUNTS
+            + JAVASCRIPT_HUNTS_2 + JAVASCRIPT_HUNTS_3 + if_typescript(TS_HUNTS) + JS_GAME_HUNTS + if_dart(DART_HUNTS + DART_HUNTS_2 + DART_HUNTS_3)
+            + if_ruby(RUBY_HUNTS) + if_rust(RUST_HUNTS))
 
 
 def hunt(hunt_id: str) -> Hunt | None:

@@ -12,12 +12,15 @@ from __future__ import annotations
 import unittest
 
 from code_coach.trace import one_trace, render, render_python, traces, value_at
-from code_coach.trace.content_python import PY_TRACES
+from code_coach.trace.content_python import PY_TRACES as FIRST
+from code_coach.trace.content_python2 import PY_TRACES_2
+
+PY_TRACES = FIRST + PY_TRACES_2
 
 
 class ShapeTests(unittest.TestCase):
     def test_they_are_one_registered_python_family(self) -> None:
-        self.assertGreaterEqual(len(PY_TRACES), 12)
+        self.assertGreaterEqual(len(PY_TRACES), 23)
         for t in PY_TRACES:
             with self.subTest(trace=t.id):
                 self.assertEqual((t.family, t.language), ("Python", "python"))
@@ -29,8 +32,9 @@ class ShapeTests(unittest.TestCase):
         self.assertEqual(len({t.id for t in traces()}), len(traces()))
 
     def test_the_ranking_was_done(self) -> None:
-        levels = [t.level for t in PY_TRACES]
-        self.assertEqual(levels, sorted(levels))
+        for group in (FIRST, PY_TRACES_2):
+            levels = [t.level for t in group]
+            self.assertEqual(levels, sorted(levels))
         self.assertGreater(len(set(levels)), 2)
 
 

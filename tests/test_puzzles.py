@@ -11,6 +11,7 @@ So the twist test insists the run completed before it counts the fail.
 
 from __future__ import annotations
 
+import shutil
 import unittest
 
 from code_coach.puzzles import (
@@ -23,14 +24,16 @@ from code_coach.puzzles import (
     supports,
 )
 
-from code_coach.engine import dart_available
+from code_coach.engine import dart_available, typescript_available
 
-LANGUAGES = ("python", "javascript", "dart")
+LANGUAGES = ("python", "javascript", "dart", "typescript", "rust")
 #: The ones this machine can run. Dart comes with Flutter and is not
 #: everywhere; a machine without it skips the Dart runs rather than
 #: failing them, because a red suite for a missing optional toolchain
 #: trains people to ignore red.
-RUNNABLE = tuple(lang for lang in LANGUAGES if lang != "dart" or dart_available())
+RUNNABLE = tuple(lang for lang in LANGUAGES
+                 if (lang != "dart" or dart_available()) and (lang != "typescript" or typescript_available())
+                 and (lang != "rust" or shutil.which("rustc") is not None))
 
 
 class CollectionTests(unittest.TestCase):
@@ -58,7 +61,7 @@ class CollectionTests(unittest.TestCase):
     def test_only_the_languages_with_answers_are_offered(self) -> None:
         self.assertEqual(set(NAMES), set(LANGUAGES))
         self.assertTrue(all(supports(lang) for lang in RUNNABLE))
-        self.assertFalse(supports("rust"))
+        self.assertFalse(supports("ruby"))
 
 
 class OracleTests(unittest.TestCase):
@@ -201,7 +204,7 @@ class RouteTests(unittest.TestCase):
 
         with self.assertRaises(HTTPException) as caught:
             puzzle_check(PuzzleCheckRequest(
-                puzzle_id=puzzles()[0].id, part=1, code="", language="rust"))
+                puzzle_id=puzzles()[0].id, part=1, code="", language="ruby"))
         self.assertEqual(caught.exception.status_code, 400)
 
 

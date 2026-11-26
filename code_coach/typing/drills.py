@@ -35,6 +35,11 @@ from code_coach.typing.snippets_pydata import PYDATA_BLOCKS, PYDATA_LINES
 from code_coach.typing.snippets_pygame import PYGAME_BLOCKS, PYGAME_LINES
 from code_coach.typing.snippets_pyscript import PYSCRIPT_BLOCKS, PYSCRIPT_LINES
 from code_coach.typing.snippets_pysci import PYSCI_BLOCKS, PYSCI_LINES
+from code_coach.typing.snippets_pyalgo import PYALGO_BLOCKS, PYALGO_LINES
+from code_coach.typing.snippets_pyclass import PYCLASS_BLOCKS, PYCLASS_LINES
+from code_coach.typing.snippets_sqlquery import SQLQUERY_BLOCKS, SQLQUERY_LINES
+from code_coach.typing.snippets_jsalgo import JSALGO_BLOCKS, JSALGO_LINES
+from code_coach.typing.snippets_dartalgo import DARTALGO_BLOCKS, DARTALGO_LINES
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -69,7 +74,7 @@ from code_coach.typing.snippets import (
     USEFUL,
     VISUALS,
 )
-from code_coach.typing.vocab import GENERAL, TECHNICAL, meaning_for
+from code_coach.typing.vocab import GENERAL, GENERAL_MORE, TECHNICAL, TECHNICAL_MORE, meaning_for
 
 # ── Sections: which characters a drill draws from ───────────
 
@@ -242,12 +247,12 @@ THEMES: tuple[Theme, ...] = (
     Theme(
         "vocab", "Vocabulary",
         "Words worth knowing, with their meaning shown as you type them.",
-        tuple(w.word for w in GENERAL),
+        tuple(w.word for w in GENERAL + GENERAL_MORE),
     ),
     Theme(
         "jargon", "Programming Words",
         "The vocabulary of documentation and code review.",
-        tuple(w.word for w in TECHNICAL),
+        tuple(w.word for w in TECHNICAL + TECHNICAL_MORE),
     ),
     Theme(
         "scripture", "Scripture",
@@ -600,6 +605,20 @@ THEMES: tuple[Theme, ...] = (
         language="python",
     ),
     Theme(
+        "pyalgo", "Python Algorithm Code",
+        "Two pointers, sliding windows, binary search, BFS, heaps, memo and DP tables.",
+        passages=PYALGO_LINES,
+        blocks=PYALGO_BLOCKS,
+        language="python",
+    ),
+    Theme(
+        "pyclass", "Python Classes and Types",
+        "Dataclasses, properties, dunder methods, inheritance, ABCs, enums and 3.12 type hints.",
+        passages=PYCLASS_LINES,
+        blocks=PYCLASS_BLOCKS,
+        language="python",
+    ),
+    Theme(
         "jscode", "JavaScript Code",
         "Destructuring, arrows and promises, plus the JavaScript solutions.",
         passages=code_lines_for("javascript", curated=JAVASCRIPT_CODE),
@@ -609,6 +628,13 @@ THEMES: tuple[Theme, ...] = (
     # Game code is still JavaScript, so it is drilled and described as
     # JavaScript; it is its own theme because it leans on the browser
     # (canvas, frames, keys) and on library APIs the plain pool avoids.
+    Theme(
+        "jsalgo", "JavaScript Algorithm Code",
+        "Two pointers, windows, binary search, Map and Set, BFS, memo, DP and comparators.",
+        passages=JSALGO_LINES,
+        blocks=JSALGO_BLOCKS,
+        language="javascript",
+    ),
     Theme(
         "jsgame", "JavaScript Game Code",
         "Canvas, the frame loop, collisions, and Phaser, PixiJS, Three.js "
@@ -677,10 +703,24 @@ THEMES: tuple[Theme, ...] = (
         language="dart",
     ),
     Theme(
+        "dartalgo", "Dart Algorithm Code",
+        "Two pointers, binary search, maps and sets, queues, memo with ??=, DP tables and sorts.",
+        passages=DARTALGO_LINES,
+        blocks=DARTALGO_BLOCKS,
+        language="dart",
+    ),
+    Theme(
         "sqlcode", "SQL Code",
         "Selects, joins, grouping and the odd transaction.",
         passages=code_lines_for("sql", curated=SQL_CODE),
         blocks=code_blocks_for("sql"),
+        language="sql",
+    ),
+    Theme(
+        "sqlquery", "SQL Query Patterns",
+        "Window functions, CTEs, CASE, EXISTS, set operations, upserts, dates and NULLs.",
+        passages=SQLQUERY_LINES,
+        blocks=SQLQUERY_BLOCKS,
         language="sql",
     ),
     Theme(
@@ -748,10 +788,10 @@ THEMES: tuple[Theme, ...] = (
 #: then its close relatives (TypeScript after JavaScript, PostgreSQL
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
-    "python": ("pycode", "pygame", "pydata", "pyscript", "pysci"),
-    "javascript": ("jscode", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode"),
-    "dart": ("dartcode",),
-    "sql": ("sqlcode", "postgresqlcode"),
+    "python": ("pycode", "pygame", "pydata", "pyscript", "pysci", "pyalgo", "pyclass"),
+    "javascript": ("jscode", "jsalgo", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode"),
+    "dart": ("dartcode", "dartalgo"),
+    "sql": ("sqlcode", "sqlquery", "postgresqlcode"),
     "clang": ("ccode", "cppcode"),
     "rust": ("rustcode",),
     "go": ("gocode",),

@@ -26,6 +26,7 @@ from pathlib import Path
 from code_coach.engine import msvc_available, run_code
 from code_coach.magnets import Magnet, magnet, magnets, same_pieces
 from code_coach.magnets.content_c import C_MAGNETS
+from code_coach.magnets.content_c2 import C_MAGNETS_2
 
 FAMILY = "C"
 NEEDS_C = "needs a C compiler (gcc, clang or MSVC)"
@@ -299,7 +300,7 @@ class RegisteredTests(unittest.TestCase):
             f for f in served["families"] if f["name"] == FAMILY)
         self.assertEqual(
             [row["id"] for row in family["magnets"]],
-            [m.id for m in C_MAGNETS])
+            [m.id for m in sorted(C_MAGNETS + C_MAGNETS_2, key=lambda m: m.level)])
         for row in family["magnets"]:
             with self.subTest(magnet=row["id"]):
                 self.assertEqual(row["language"], "c")

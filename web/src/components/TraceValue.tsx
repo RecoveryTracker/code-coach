@@ -24,6 +24,7 @@ import { award } from "../lib/momentum";
 import { VizPanel } from "./VizPanel";
 import type { TraceCheck, TraceList, TraceMoment } from "../types";
 import { LAST_KEYS } from "../lastKeys";
+import { languageName } from "../lib/languageNames";
 
 /** Which one you were on. */
 const LAST_KEY = LAST_KEYS.trace;
@@ -45,10 +46,6 @@ function inLanguage(list: TraceList | null, language: string): TraceList | null 
     .map((f) => ({ ...f, traces: f.traces.filter((t) => t.language === language) }))
     .filter((f) => f.traces.length > 0) } : null;
 }
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", ruby: "Ruby",
-};
 
 /**
  * Only the language picked in the top bar, like Bug Hunt and Magnets: every
@@ -174,7 +171,7 @@ export default function TraceValue({ language }: { language: string }) {
     /* Say which languages do have them rather than show an empty screen that
        looks broken. Taken from the list, so it cannot fall out of step. */
     const have = [...new Set(allLanguages.families.flatMap((f) => f.traces.map((t) => t.language)))]
-      .map((l) => LANGUAGE_NAMES[l] ?? l)
+      .map((l) => languageName(l))
       .join(", ");
     return (
       <div className="lessons-empty" data-testid="traces-none">
@@ -241,7 +238,7 @@ export default function TraceValue({ language }: { language: string }) {
           <h3>
             {moment.name}
             <span className="predict-lang">
-              {({ javascript: "JavaScript", python: "Python", dart: "Dart" } as Record<string, string>)[moment.language] ?? moment.language}
+              {languageName(moment.language)}
             </span>
           </h3>
         </header>

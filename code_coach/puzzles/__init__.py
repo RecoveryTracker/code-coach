@@ -9,7 +9,7 @@ a change to code you wrote yourself, which is the Change it idea turned
 on your own work: the helper you wrote for part one is either reusable
 or it is not, and finding out which is the lesson.
 
-Every puzzle can be written in Python, JavaScript or Dart and follows
+Every puzzle can be written in Python, JavaScript, TypeScript, Dart or Rust and follows
 the language picker. The oracle is Python either way, for the reason the
 katas give: the answers are numbers, strings, lists and booleans, which
 mean the same thing in both.
@@ -37,6 +37,8 @@ NAMES = {
     "python": ("part_one", "part_two"),
     "javascript": ("partOne", "partTwo"),
     "dart": ("partOne", "partTwo"),
+    "typescript": ("partOne", "partTwo"),
+    "rust": ("part_one", "part_two"),
 }
 
 
@@ -84,6 +86,14 @@ def answer_for(puzzle: Puzzle, n: int, language: str) -> str:
         from code_coach.puzzles.dart import DART
 
         return DART[puzzle.id].answer(n).strip()
+    if language == "typescript":
+        from code_coach.puzzles.ts import TS
+
+        return TS[puzzle.id][n - 1].strip()
+    if language == "rust":
+        from code_coach.puzzles.rust import RUST
+
+        return RUST[puzzle.id][n - 1].strip()
     part = puzzle.part(n)
     return (part.js_answer if language == "javascript" else part.py_answer).strip()
 
@@ -105,7 +115,11 @@ def as_kata(puzzle: Puzzle, n: int, language: str):
     from code_coach.kata import Kata
 
     part = puzzle.part(n)
-    types, returns = dart_signature(puzzle, n) if language == "dart" else ((), "")
+    types, returns = dart_signature(puzzle, n) if language in ("dart", "rust") else ((), "")
+    if language == "rust":
+        from code_coach.puzzles.rust import rust_type
+
+        types, returns = tuple(rust_type(t) for t in types), rust_type(returns)
     return Kata(
         id=f"{puzzle.id}-{n}", name=function_name(language, n),
         brief=part.brief, params=part.params, cases=part.cases,
@@ -133,6 +147,14 @@ def supports(language: str) -> bool:
         from code_coach.engine import dart_available
 
         return dart_available()
+    if language == "typescript":
+        from code_coach.engine import typescript_available
+
+        return typescript_available()
+    if language == "rust":
+        from shutil import which
+
+        return which("rustc") is not None
     return language in NAMES
 
 

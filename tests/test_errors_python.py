@@ -16,7 +16,11 @@ import unittest
 
 from code_coach.engine import run_code
 from code_coach.errors import crash, crashes, engine_report
-from code_coach.errors.content_python import PY_CRASHES
+from code_coach.errors.content_python import PY_CRASHES as FIRST
+from code_coach.errors.content_python2 import PY_CRASHES_2
+
+#: Both Python sets: the family "Python" holds them together.
+PY_CRASHES = FIRST + PY_CRASHES_2
 
 
 @functools.lru_cache(maxsize=None)
@@ -51,8 +55,10 @@ class ShapeTests(unittest.TestCase):
                 self.assertGreaterEqual(len(c.numbered), 2)
 
     def test_the_ranking_was_done(self) -> None:
+        for group in (FIRST, PY_CRASHES_2):
+            levels = [c.level for c in group]
+            self.assertEqual(levels, sorted(levels))
         levels = [c.level for c in PY_CRASHES]
-        self.assertEqual(levels, sorted(levels))
         self.assertGreater(len(set(levels)), 2)
         for level in levels:
             self.assertIn(level, range(1, 6))

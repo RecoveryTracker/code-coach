@@ -88,6 +88,12 @@ class Kata:
     c_answer: str = ""
     #: The worked answer in Ruby. Run through kata/ruby_harness.py.
     ruby_answer: str = ""
+    #: The worked answer in TypeScript. Run through TS_DRIVER, so it has to
+    #: pass `tsc --strict` as well as every case.
+    ts_answer: str = ""
+    #: The worked answer in Rust. Run through kata/rust_harness.py, which
+    #: needs `types` (one Rust type per parameter) and `returns`.
+    rust_answer: str = ""
     #: How hard this one is, 1 to 5, and the order a family is read in.
     #:
     #: A judgement rather than anything derivable — there is no measure
@@ -180,6 +186,16 @@ class Kata:
             return f"{self.returns or 'dynamic'} {self.name}({typed or joined}) {{"
         if self.language == "javascript":
             return f"function {self.name}({joined}) {{"
+        if self.language == "rust":
+            from code_coach.kata.rust_harness import signature as rust_signature
+
+            return rust_signature(self)
+        if self.language == "typescript":
+            # The typed line from the worked answer: in TypeScript the types
+            # are part of the question, and a signature without them would
+            # not even compile under --strict.
+            first = self.ts_answer.strip().split("\n", 1)[0]
+            return first if first.endswith("{") else f"function {self.name}({joined}) {{"
         return f"def {self.name}({joined}):"
 
     def answer(self, args) -> Any:
@@ -220,6 +236,10 @@ class Kata:
             return self.c_answer.strip()
         if self.language == "ruby":
             return self.ruby_answer.strip()
+        if self.language == "typescript":
+            return self.ts_answer.strip()
+        if self.language == "rust":
+            return self.rust_answer.strip()
         source = textwrap.dedent(inspect.getsource(self.solve)).strip()
         return source.replace(
             f"def {self.solve.__name__}", f"def {self.name}", 1)
@@ -318,6 +338,43 @@ JS_DRIVER = '''
 '''
 
 
+#: The JavaScript driver, written so `tsc --strict` accepts it: the engine
+#: type-checks the whole file before it runs anything, so the marker has to
+#: be valid TypeScript as well as the student's code. The function is called
+#: through `unknown`, because its real parameter types are the student's and
+#: the cases arrive as JSON. A missing function is a compile error here
+#: ("Cannot find name"), which `_ts_missing` turns into the usual message.
+TS_DRIVER = '''
+
+// ── the marker ───────────────────────────────────────────────
+{{
+  const kataFn = {name} as unknown as (...args: unknown[]) => unknown;
+  const kataCases = JSON.parse({cases!r}) as unknown[][];
+  const kataResults: unknown[] = [];
+  for (const args of kataCases) {{
+    const before = JSON.stringify(args);
+    let got: unknown;
+    try {{
+      got = kataFn(...args);
+    }} catch (error) {{
+      const e = error as Error;
+      kataResults.push({{ error: e.constructor.name + ": " + e.message }});
+      continue;
+    }}
+    const changed = JSON.stringify(args) !== before;
+    if (got === undefined) got = null;
+    try {{
+      JSON.stringify(got);
+    }} catch {{
+      got = String(got);
+    }}
+    kataResults.push({{ got: got, changed: changed }});
+  }}
+  console.log("<<<KATA>>>" + JSON.stringify(kataResults));
+}}
+'''
+
+
 #: The same driver in Dart. Same marker, same one entry per case, same
 #: before-and-after check on the arguments, so `judge` reads it without
 #: knowing which language wrote the line.
@@ -404,7 +461,11 @@ def harness(kata: Kata, code: str) -> str:
         from code_coach.kata import ruby_harness
 
         return ruby_harness.harness(kata, code)
-    driver = JS_DRIVER if kata.language == "javascript" else DRIVER
+    if kata.language == "rust":
+        from code_coach.kata import rust_harness
+
+        return rust_harness.harness(kata, code)
+    driver = {"javascript": JS_DRIVER, "typescript": TS_DRIVER}.get(kata.language, DRIVER)
     return code.rstrip() + "\n" + driver.format(
         cases=json.dumps([list(case) for case in kata.cases]),
         name=kata.name,
@@ -471,7 +532,13 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
             stdout = NO_FUNCTION
         else:
             stdout = c_harness.unpack(kata, stdout, stderr, exit_code, MARKER)
-    if NO_FUNCTION in stdout or _dart_missing(kata, stdout, stderr):
+    if kata.language == "rust":
+        from code_coach.kata import rust_harness
+
+        if rust_harness.missing(kata, stdout, stderr):
+            stdout = NO_FUNCTION
+        stderr = rust_harness.tidy(stderr)
+    if NO_FUNCTION in stdout or _dart_missing(kata, stdout, stderr) or _ts_missing(kata, stdout, stderr):
         return Outcome(
             broke=f"there is no function called {kata.name} — check the "
                   f"name against the signature above")
@@ -526,6 +593,14 @@ def _dart_missing(kata: Kata, stdout: str, stderr: str) -> bool:
                        f"Undefined name '{kata.name}'"))
 
 
+def _ts_missing(kata: Kata, stdout: str, stderr: str) -> bool:
+    """TypeScript's compile error for a function that is not there: the
+    driver names it, so tsc refuses the whole file before anything runs."""
+    if kata.language != "typescript" or MARKER in stdout:
+        return False
+    return f"Cannot find name '{kata.name}'" in (stderr or "") + (stdout or "")
+
+
 def _tidy(detail: str) -> str:
     """Take the temporary file out of a traceback.
 
@@ -538,6 +613,9 @@ def _tidy(detail: str) -> str:
 
     # Python writes: File "<path>", line 4
     detail = re.sub(r'File "[^"]*", line', "Line", detail)
+
+    # tsc writes: <path>.ts(3,5): error TS2322: ...
+    detail = re.sub(r"(?m)^\S*?\.ts\((\d+),\d+\): ", r"Line \1: ", detail)
 
     # Node writes the path bare and then the line: <path>.js:39. Split
     # on the extension rather than on the first colon, because on
@@ -623,6 +701,9 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.content2 import MORE
     from code_coach.kata.ruby_bugs import RUBY_BUGS
     from code_coach.kata.ruby_katas import RUBY_KATAS
+    from code_coach.kata.ts_katas import TS_KATAS
+    from code_coach.kata.rust_katas import RUST_KATAS
+    from code_coach.engine import if_rust, if_typescript
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
@@ -646,6 +727,8 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
                   + DART_MODIFY + DART_MODIFY_2)
         + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
         + if_ruby(RUBY_KATAS + RUBY_BUGS)
+        + if_typescript(TS_KATAS)
+        + if_rust(RUST_KATAS)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -668,6 +751,9 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.content2 import MORE
     from code_coach.kata.ruby_bugs import RUBY_BUGS
     from code_coach.kata.ruby_katas import RUBY_KATAS
+    from code_coach.kata.ts_katas import TS_KATAS
+    from code_coach.kata.rust_katas import RUST_KATAS
+    from code_coach.engine import if_rust, if_typescript
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
@@ -691,6 +777,8 @@ def _in_file_order() -> tuple[Kata, ...]:
                   + DART_MODIFY + DART_MODIFY_2)
         + if_c(C_KATAS + C_KATAS_2 + C_BUGS + C_BUGS_2 + C_MODIFY)
         + if_ruby(RUBY_KATAS + RUBY_BUGS)
+        + if_typescript(TS_KATAS)
+        + if_rust(RUST_KATAS)
     )
 
 

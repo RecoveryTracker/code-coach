@@ -61,7 +61,8 @@ class PuzzleTests(unittest.TestCase):
                 self.assertIn(
                     {"python": "print", "javascript": "console.log",
                      "dart": "print(", "c": "printf(",
-                     "ruby": "p"}[p.language],
+                     "ruby": "p", "typescript": "console.log",
+                     "rust": "println!", "cpp": "std::cout"}[p.language],
                     p.code)
 
     def test_the_answer_is_not_sitting_in_the_snippet(self) -> None:

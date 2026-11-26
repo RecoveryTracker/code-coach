@@ -831,6 +831,21 @@ def compile_c(
     return built.returncode == 0 and exe.exists(), text
 
 
+def rust_available() -> bool:
+    """rustc on the PATH: the Rust puzzles are offered only where they can be built."""
+    return _which("rustc") is not None
+
+
+def if_rust(items) -> tuple:
+    """The items, or nothing when rustc is not installed."""
+    return tuple(items) if rust_available() else ()
+
+
+def if_typescript(items) -> tuple:
+    """The items, or nothing when TypeScript cannot be compiled here."""
+    return tuple(items) if typescript_available() else ()
+
+
 def if_c(items) -> tuple:
     """The items, if a C compiler is installed - otherwise none of them."""
     return tuple(items) if c_available() else ()

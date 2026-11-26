@@ -37,6 +37,7 @@ import type {
   KataSummary,
 } from "../types";
 import { LAST_KEYS } from "../lastKeys";
+import { languageName } from "../lib/languageNames";
 
 /** How wide one press of Tab is. */
 const INDENT = "    ";
@@ -49,14 +50,6 @@ const LAST_KEY = LAST_KEYS.forms;
 
 /** Which language you were filtering to. */
 const LANG_KEY = "code-coach:kata-language";
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  python: "Python",
-  javascript: "JavaScript",
-  dart: "Dart",
-  c: "C",
-  ruby: "Ruby",
-};
 
 function readDrafts(): Record<string, string> {
   try {
@@ -111,7 +104,7 @@ function asPython(value: unknown): string {
 function asValue(value: unknown, language: string): string {
   if (language === "python") return asPython(value);
   if (value === null || value === undefined) {
-    return language === "ruby" ? "nil" : language === "c" ? "NULL" : "null";
+    return language === "ruby" ? "nil" : language === "c" ? "NULL" : language === "rust" ? "None" : "null";
   }
   if (typeof value === "string") {
     if (language === "dart" && !value.includes("'")) return `'${value}'`;
@@ -152,7 +145,12 @@ function nextUp<T extends { done: number; last: string }>(
   }, all[0]);
 }
 
-export default function Katas() {
+/**
+ * `language` is the one picked at the top of the app: the list narrows to it
+ * whenever there are forms in that language, the same as every other screen.
+ * The buttons here can still widen it to every language or pick another.
+ */
+export default function Katas({ language: picked }: { language?: string } = {}) {
   const [list, setList] = useState<KataList | null>(null);
   const [chosen, setChosen] = useState<string>("");
   const [code, setCode] = useState("");
@@ -168,7 +166,7 @@ export default function Katas() {
   // about what you are learning this month rather than this minute.
   const [only, setOnly] = useState<string>(() => {
     try {
-      return localStorage.getItem(LANG_KEY) ?? "";
+      return picked || (localStorage.getItem(LANG_KEY) ?? "");
     } catch {
       return "";
     }
@@ -361,6 +359,14 @@ export default function Katas() {
     [list, chosen],
   );
 
+  /* The top picker changed, or the list arrived: follow the picker when there
+     are forms in that language. */
+  useEffect(() => {
+    if (!picked || !list) return;
+    if (list.families.some((f) => f.language === picked)) pickLanguage(picked);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, !!list]);
+
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
@@ -474,7 +480,7 @@ print(${asCall(kata.name, pick.args)})
                 className={`ws-btn${only === id ? " on" : ""}`}
                 onClick={() => pickLanguage(id)}
               >
-                {LANGUAGE_NAMES[id] ?? id}
+                {languageName(id)}
               </button>
             ))}
           </div>

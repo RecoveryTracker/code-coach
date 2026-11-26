@@ -35,26 +35,24 @@ an old build plan, kept for history.
   Farm has `POST /api/farm/reset`; Brain Drills keeps
   `~/.code_coach/brain_drills.json`).
 
-## Shipping: the full suite, in chunks
+## Shipping: the full suite, in two runs
 
-Push only after the full suite is green. It takes about 1 hour 45 minutes
-serially, and a background command is now stopped after ~30 minutes, so it
-runs as chunks, each its own command, each well under the limit:
+Push only after the full suite is green. Serially it takes about 1 hour 45
+minutes, and a background command is stopped after ~30 minutes, so it runs as
+two parallel (pytest-xdist) runs, each its own background command:
 
-| Chunk | What | About |
+| Run | What | About |
 |---|---|---|
-| A | `tests/test_[a-c]*.py` | 32 min |
-| B1 | `tests/test_d*.py tests/test_e*.py` | 6 min |
-| B2 | `tests/test_f*.py` | 14 min |
-| B3 | `tests/test_glossary.py tests/test_[h-k]*.py` | 3 min |
-| B4 | `tests/test_gotchas*.py` (alone: ~50 min, near the limit) | 50 min |
-| C | `tests/test_[l-s]*.py` | 15 min |
-| D | `tests/test_[t-v]*.py` | 4 min |
-| E1 | `tests/test_workbook.py -k "not _part"` | 24 min |
-| E2 | the other `tests/test_w*.py` with `-k "not _part"` | 2 min |
-| F | `tests/test_workbook.py tests/test_worked_lessons.py -k "_part1 or _part2 or _parts"` | 16 min |
-| G | `tests/test_workbook.py -k "_part3 or _part4"` | 16 min |
-| H | `tests/test_workbook.py -k "_part5 or _part6"` | 16 min |
+| P1 | everything except `test_workbook.py`, `test_worked_lessons.py`, `test_gotchas*.py`, with `-n 6` | 26 min |
+| P2 | `tests/test_workbook.py tests/test_worked_lessons.py tests/test_gotchas*.py` | 1 h 35 min on `-n 4` |
+
+P2 is slower parallel than as serial chunks (its tests start many compilers
+and the cleanup tests see other workers' processes), so either split it into
+serial chunks (`tests/test_gotchas*.py` ~50 min; `tests/test_workbook.py -k
+"not _part"` ~24 min; `-k "_part1 or _part2 or _parts"`, `-k "_part3 or
+_part4"`, `-k "_part5 or _part6"` ~16 min each) or run it on `-n 4` and re-run
+its failures serially. Known load flakes: `test_gotchas_langs.py` cleanup and
+timing cases and `test_workbook.py::ReferenceRunTests` - they pass serially.
 
 Run each with `./.venv/Scripts/python.exe -m pytest -q -p no:randomly -rf`
 and save its log. Before starting, **freeze the list of files the commit
@@ -68,8 +66,7 @@ at the end. That means:
 
 The test fixtures remove their own scratch folders (they used to leave one per
 test in the temp directory - 190,000 of them - and every Python start scans
-that folder, which added minutes to the suite). Parallel pytest (xdist) was tried and rejected: on this 4-core machine the
-process start-up contention made tests time out.
+that folder, which added minutes to the suite). Parallel runs (`-n`) need `pytest-xdist` in the venv.
 
 ## Editing on Windows
 
