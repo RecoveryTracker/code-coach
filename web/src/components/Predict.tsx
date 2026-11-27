@@ -303,7 +303,11 @@ export default function Predict({ language: picked }: { language: string }) {
           autoCapitalize="off"
           autoCorrect="off"
           aria-label="What you think it prints"
-          placeholder="One line per line of output…"
+          placeholder={
+            picked === "sql"
+              ? "The rows, one per line, values separated by spaces (the header is optional; (no rows) or blank for none)…"
+              : "One line per line of output…"
+          }
           onChange={(e) => {
             onGuess(e.target.value);
             // A verdict next to a changed guess says something untrue.

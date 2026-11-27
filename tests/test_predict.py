@@ -41,6 +41,8 @@ class PuzzleTests(unittest.TestCase):
             with self.subTest(puzzle=p.id, language=p.language):
                 stdout, stderr, code = run_code(p.code, language=p.language)
                 self.assertEqual(code, 0, (stderr or stdout)[:300])
+                if p.language == "sql":  # the runner pads the last column of a result table with spaces
+                    stdout = "\n".join(line.rstrip() for line in stdout.split("\n"))
                 self.assertEqual(
                     stdout.rstrip("\n"), p.expect,
                     f"{p.id}: {p.language} prints {stdout.rstrip()!r} "
@@ -62,7 +64,8 @@ class PuzzleTests(unittest.TestCase):
                     {"python": "print", "javascript": "console.log",
                      "dart": "print(", "c": "printf(",
                      "ruby": "p", "typescript": "console.log",
-                     "rust": "println!", "cpp": "std::cout"}[p.language],
+                     "rust": "println!", "cpp": "std::cout",
+                     "sql": "SELECT"}[p.language],
                     p.code)
 
     def test_the_answer_is_not_sitting_in_the_snippet(self) -> None:

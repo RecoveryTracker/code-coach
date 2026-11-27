@@ -48,6 +48,7 @@ from code_coach.kata.predict_jslifting import JS_LIFTING_PUZZLES
 from code_coach.kata.predict_jsmusic import JS_MUSIC_PUZZLES
 from code_coach.kata.predict_jsnode import JS_NODE_PUZZLES
 from code_coach.kata.predict_jsplanets import JS_PLANETS_PUZZLES
+from code_coach.kata.predict_sql import SQL_PUZZLES
 from code_coach.kata.puzzle import Puzzle, _p
 
 
@@ -575,7 +576,7 @@ PUZZLES: tuple[Puzzle, ...] = (
     MUTATION + TRUTH + SEQUENCES + NUMBERS + FLOW + JS_PUZZLES
     + JS_PUZZLES_2 + JS_PUZZLES_3 + JS_GAME_PUZZLES + JS_ASYNC_PUZZLES + JS_PLANETS_PUZZLES + JS_LIFTING_PUZZLES
     + JS_NODE_PUZZLES + JS_MUSIC_PUZZLES + JS_COOKING_PUZZLES + PY_EXTRA_PUZZLES + DART_PUZZLES + DART_PUZZLES_2 + DART_PUZZLES_3 + C_PUZZLES + C_PUZZLES_2 + RUBY_PUZZLES
-    + TS_PUZZLES + RUST_PUZZLES + CPP_PUZZLES
+    + TS_PUZZLES + RUST_PUZZLES + CPP_PUZZLES + SQL_PUZZLES
 )
 
 

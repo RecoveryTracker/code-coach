@@ -1661,7 +1661,14 @@ def predict_check(body: PredictCheckRequest) -> PredictCheckResponse:
         lines = text.replace("\r\n", "\n").split("\n")
         return "\n".join(line.rstrip() for line in lines).strip()
 
-    passed = tidy(body.guess) == tidy(found.expect)
+    if found.language == "sql":
+        # A SQL answer is a result table: only its rows' values are marked (header, dashes and alignment are not
+        # the question). See kata/predict_sql.sql_same.
+        from code_coach.kata.predict_sql import sql_same
+
+        passed = sql_same(body.guess, found.expect)
+    else:
+        passed = tidy(body.guess) == tidy(found.expect)
     done = 0
     if passed:
         progress = _store.load()

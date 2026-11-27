@@ -105,6 +105,10 @@ Most modes take content as a new module plus a one-line registration:
   you were on" and never replaces your kept answer with a wrong attempt. Every verdict shows what the code printed.
 - **Predict / Magnets / Errors / Bug Hunt**: a module per family (e.g.
   `kata/predict_jsasync.py`), added to the registry list in that package.
+  **SQL Predict** (`kata/predict_sql.py`): `engine.run_code(language="sql")` is `sql_runner.run_sql`, which prints
+  every statement and a SELECT as a padded table (header, dash line, rows), so each puzzle is ONE statement with its
+  data inline (`WITH t(x) AS (VALUES ...)`) and `expect` is that table; `predict_check` marks a SQL guess by its rows'
+  VALUES only (`predict_sql.sql_same`: header and dashes optional, alignment ignored, blank or `(no rows)` = no rows).
 - **Typing**: themes in `typing/drills.py`. `BESIDE_LORE` keeps a language's
   code themes next to its lore.
 - **Session queue**: every source the server deals needs a key in
