@@ -51,7 +51,7 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages. Shuffle deals random exercises from a range of pages |
 | **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C, SQL, TypeScript and Rust, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
-| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 109 puzzles: 22 Python, 28 JavaScript, 10 TypeScript, 20 Dart, 14 C, 9 Rust and 6 Ruby |
+| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 129 puzzles: 22 Python, 28 JavaScript, 20 TypeScript, 20 Dart, 14 C, 19 Rust and 6 Ruby |
 | **Predict** | Read the code, say what it prints. 344 puzzles: 81 Python, 126 JavaScript, 17 TypeScript, 39 Dart, 25 C, 15 SQL, 16 Rust, 13 C++ and 12 Ruby |
 | **Gotchas** | Quiz cards where the obvious answer is a trap, one at a time and endless. Python and JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |

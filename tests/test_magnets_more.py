@@ -16,9 +16,12 @@ from code_coach.magnets import magnet, magnets, same_pieces
 from code_coach.magnets.content_c2 import C_MAGNETS_2
 from code_coach.magnets.content_python2 import PY_MAGNETS_2
 from code_coach.magnets.content_rust import RUST_MAGNETS
+from code_coach.magnets.content_rust2 import RUST_MAGNETS_2
 from code_coach.magnets.content_ts import TS_MAGNETS
+from code_coach.magnets.content_ts2 import TS_MAGNETS_2
 
 SETS = (("python", "Python", PY_MAGNETS_2), ("typescript", "TypeScript", TS_MAGNETS), ("rust", "Rust", RUST_MAGNETS),
+        ("typescript", "TypeScript", TS_MAGNETS_2), ("rust", "Rust", RUST_MAGNETS_2),
         ("c", "C", C_MAGNETS_2))
 GIVEAWAYS = ("(", ")", ":", "=", "[", "]", "{", "}", "#", "@", "\"", "'", "*", "+", "<", ">", ";", "&", "?")
 
