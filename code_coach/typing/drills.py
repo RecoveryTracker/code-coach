@@ -40,6 +40,10 @@ from code_coach.typing.snippets_pyclass import PYCLASS_BLOCKS, PYCLASS_LINES
 from code_coach.typing.snippets_sqlquery import SQLQUERY_BLOCKS, SQLQUERY_LINES
 from code_coach.typing.snippets_jsalgo import JSALGO_BLOCKS, JSALGO_LINES
 from code_coach.typing.snippets_dartalgo import DARTALGO_BLOCKS, DARTALGO_LINES
+from code_coach.typing.snippets_tsalgo import TSALGO_BLOCKS, TSALGO_LINES
+from code_coach.typing.snippets_calgo import CALGO_BLOCKS, CALGO_LINES
+from code_coach.typing.snippets_rustalgo import RUSTALGO_BLOCKS, RUSTALGO_LINES
+from code_coach.typing.snippets_dartclass import DARTCLASS_BLOCKS, DARTCLASS_LINES
 from code_coach.typing import blocks_new, rails, rails2, snippets3
 from code_coach.typing.keys import (
     BOTTOM_ROW,
@@ -696,6 +700,13 @@ THEMES: tuple[Theme, ...] = (
         language="typescript",
     ),
     Theme(
+        "tsalgo", "TypeScript Algorithm Code",
+        "Two pointers, windows, binary search, Map and Record, BFS, memo, DP and comparators, with generics, tuples and as const.",
+        passages=TSALGO_LINES,
+        blocks=TSALGO_BLOCKS,
+        language="typescript",
+    ),
+    Theme(
         "dartcode", "Dart Code",
         "Null-safe declarations and futures, plus the Dart solutions.",
         passages=code_lines_for("dart", curated=DART_CODE),
@@ -707,6 +718,13 @@ THEMES: tuple[Theme, ...] = (
         "Two pointers, binary search, maps and sets, queues, memo with ??=, DP tables and sorts.",
         passages=DARTALGO_LINES,
         blocks=DARTALGO_BLOCKS,
+        language="dart",
+    ),
+    Theme(
+        "dartclass", "Dart Classes and Types",
+        "Constructors, getters, equality, inheritance, mixins, generics, enums, sealed classes and records.",
+        passages=DARTCLASS_LINES,
+        blocks=DARTCLASS_BLOCKS,
         language="dart",
     ),
     Theme(
@@ -739,6 +757,13 @@ THEMES: tuple[Theme, ...] = (
         language="c",
     ),
     Theme(
+        "calgo", "C Algorithm Code",
+        "Two pointers, binary search, stacks and queues as arrays, counts[26], qsort, prefix sums and bit tricks.",
+        passages=CALGO_LINES,
+        blocks=CALGO_BLOCKS,
+        language="c",
+    ),
+    Theme(
         "cppcode", "C++ Code",
         "The standard library shapes, and the punctuation that comes with them.",
         passages=code_lines_for("cpp"),
@@ -750,6 +775,13 @@ THEMES: tuple[Theme, ...] = (
         "Ownership, matches and the question mark.",
         passages=code_lines_for("rust"),
         blocks=code_blocks_for("rust"),
+        language="rust",
+    ),
+    Theme(
+        "rustalgo", "Rust Algorithm Code",
+        "Two pointers, binary search, HashMap counting, VecDeque BFS, DP tables, iterator chains and sorts.",
+        passages=RUSTALGO_LINES,
+        blocks=RUSTALGO_BLOCKS,
         language="rust",
     ),
     Theme(
@@ -789,11 +821,11 @@ THEMES: tuple[Theme, ...] = (
 #: after SQL, C++ after C, Rails after Ruby).
 BESIDE_LORE: dict[str, tuple[str, ...]] = {
     "python": ("pycode", "pygame", "pydata", "pyscript", "pysci", "pyalgo", "pyclass"),
-    "javascript": ("jscode", "jsalgo", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode"),
-    "dart": ("dartcode", "dartalgo"),
+    "javascript": ("jscode", "jsalgo", "jsgame", "jsgamelore", "jsplanets", "jslifting", "jsnode", "jsmusic", "jscooking", "tscode", "tsalgo"),
+    "dart": ("dartcode", "dartalgo", "dartclass"),
     "sql": ("sqlcode", "sqlquery", "postgresqlcode"),
-    "clang": ("ccode", "cppcode"),
-    "rust": ("rustcode",),
+    "clang": ("ccode", "calgo", "cppcode"),
+    "rust": ("rustcode", "rustalgo"),
     "go": ("gocode",),
     "java": ("javacode",),
     "kotlin": ("kotlincode",),
