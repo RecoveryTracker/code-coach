@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import unittest
 
-from code_coach.engine import c_available, run_code, typescript_available
+from code_coach.engine import c_available, cpp_available, run_code, typescript_available
 from code_coach.magnets import magnet, magnets, same_pieces
 from code_coach.magnets.content_c2 import C_MAGNETS_2
+from code_coach.magnets.content_cpp import CPP_MAGNETS
 from code_coach.magnets.content_python2 import PY_MAGNETS_2
 from code_coach.magnets.content_rust import RUST_MAGNETS
 from code_coach.magnets.content_rust2 import RUST_MAGNETS_2
@@ -22,7 +23,7 @@ from code_coach.magnets.content_ts2 import TS_MAGNETS_2
 
 SETS = (("python", "Python", PY_MAGNETS_2), ("typescript", "TypeScript", TS_MAGNETS), ("rust", "Rust", RUST_MAGNETS),
         ("typescript", "TypeScript", TS_MAGNETS_2), ("rust", "Rust", RUST_MAGNETS_2),
-        ("c", "C", C_MAGNETS_2))
+        ("c", "C", C_MAGNETS_2), ("cpp", "C++", CPP_MAGNETS))
 GIVEAWAYS = ("(", ")", ":", "=", "[", "]", "{", "}", "#", "@", "\"", "'", "*", "+", "<", ">", ";", "&", "?")
 
 
@@ -36,6 +37,8 @@ def _run(code: str, language: str) -> str:
 def _usable(language: str) -> bool:
     if language == "c":
         return c_available()
+    if language == "cpp":
+        return cpp_available()
     return language != "typescript" or typescript_available()
 
 

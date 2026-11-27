@@ -132,7 +132,8 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     """Every puzzle, or one family's, easiest first within the family."""
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
     from code_coach.magnets.content_jsgame import JS_GAME_MAGNETS
-    from code_coach.engine import if_c, if_dart, if_ruby
+    from code_coach.engine import if_c, if_cpp, if_dart, if_ruby
+    from code_coach.magnets.content_cpp import CPP_MAGNETS
     from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
@@ -148,7 +149,7 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     from code_coach.engine import if_rust, if_typescript
 
     everything = (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS + TS_MAGNETS_2), *if_rust(RUST_MAGNETS + RUST_MAGNETS_2), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2 + DART_MAGNETS_3),
-        *if_c(C_MAGNETS + C_MAGNETS_2), *if_ruby(RUBY_MAGNETS))
+        *if_c(C_MAGNETS + C_MAGNETS_2), *if_cpp(CPP_MAGNETS), *if_ruby(RUBY_MAGNETS))
     if family is not None:
         everything = tuple(m for m in everything if m.family == family)
     return tuple(sorted(everything, key=lambda m: m.level))
@@ -157,7 +158,8 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
 def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content import ARRAYS, ASYNC, FUNCTIONS, OBJECTS
     from code_coach.magnets.content_jsgame import JS_GAME_MAGNETS
-    from code_coach.engine import if_c, if_dart, if_ruby
+    from code_coach.engine import if_c, if_cpp, if_dart, if_ruby
+    from code_coach.magnets.content_cpp import CPP_MAGNETS
     from code_coach.magnets.content_c import C_MAGNETS
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
@@ -174,7 +176,7 @@ def magnet_families() -> tuple[str, ...]:
 
     seen: list[str] = []
     for m in (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS + TS_MAGNETS_2), *if_rust(RUST_MAGNETS + RUST_MAGNETS_2), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2 + DART_MAGNETS_3),
-        *if_c(C_MAGNETS + C_MAGNETS_2), *if_ruby(RUBY_MAGNETS)):
+        *if_c(C_MAGNETS + C_MAGNETS_2), *if_cpp(CPP_MAGNETS), *if_ruby(RUBY_MAGNETS)):
         if m.family not in seen:
             seen.append(m.family)
     return tuple(seen)

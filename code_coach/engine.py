@@ -851,6 +851,16 @@ def if_c(items) -> tuple:
     return tuple(items) if c_available() else ()
 
 
+def cpp_available() -> bool:
+    """Whether C++ can be compiled here: g++ or clang++, or MSVC on Windows."""
+    return bool(_which("g++") or _which("clang++") or msvc_available())
+
+
+def if_cpp(items) -> tuple:
+    """The items, if a C++ compiler is installed - otherwise none of them."""
+    return tuple(items) if cpp_available() else ()
+
+
 def ruby_available() -> bool:
     """Whether Ruby can run here - on PATH or in the app's own .tools."""
     return _interpreter_for(Path("probe.rb")) is not None
