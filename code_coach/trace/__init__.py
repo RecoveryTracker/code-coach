@@ -233,10 +233,11 @@ def traces(family: str | None = None) -> tuple[Trace, ...]:
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
     from code_coach.trace.content_dart2 import DART_TRACES_2
+    from code_coach.trace.content_dart3 import DART_TRACES_3
     from code_coach.trace.content_python import PY_TRACES
     from code_coach.trace.content_python2 import PY_TRACES_2
 
-    everything = (*PY_TRACES, *PY_TRACES_2, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2))
+    everything = (*PY_TRACES, *PY_TRACES_2, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2 + DART_TRACES_3))
     if family is not None:
         everything = tuple(t for t in everything if t.family == family)
     return tuple(sorted(everything, key=lambda t: t.level))
@@ -248,11 +249,12 @@ def trace_families() -> tuple[str, ...]:
     from code_coach.engine import if_dart
     from code_coach.trace.content_dart import DART_TRACES
     from code_coach.trace.content_dart2 import DART_TRACES_2
+    from code_coach.trace.content_dart3 import DART_TRACES_3
     from code_coach.trace.content_python import PY_TRACES
     from code_coach.trace.content_python2 import PY_TRACES_2
 
     seen: list[str] = []
-    for t in (*PY_TRACES, *PY_TRACES_2, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2)):
+    for t in (*PY_TRACES, *PY_TRACES_2, *ALIASING, *LOOPS, *SCOPE, *JS_TRACES_2, *if_dart(DART_TRACES + DART_TRACES_2 + DART_TRACES_3)):
         if t.family not in seen:
             seen.append(t.family)
     return tuple(seen)

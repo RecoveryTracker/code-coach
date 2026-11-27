@@ -275,11 +275,12 @@ def _all() -> tuple[Hunt, ...]:
     from code_coach.engine import if_dart, if_ruby
     from code_coach.bughunt.content4 import DART_HUNTS_2
     from code_coach.bughunt.content5 import DART_HUNTS_3
+    from code_coach.bughunt.content9 import DART_HUNTS_4
     from code_coach.bughunt.content6 import JAVASCRIPT_HUNTS_3
     from code_coach.bughunt.content_jsgame import JS_GAME_HUNTS
 
     return (PYTHON_HUNTS + PYTHON_HUNTS_2 + PYTHON_HUNTS_3 + PYTHON_HUNTS_4 + JAVASCRIPT_HUNTS
-            + JAVASCRIPT_HUNTS_2 + JAVASCRIPT_HUNTS_3 + if_typescript(TS_HUNTS) + JS_GAME_HUNTS + if_dart(DART_HUNTS + DART_HUNTS_2 + DART_HUNTS_3)
+            + JAVASCRIPT_HUNTS_2 + JAVASCRIPT_HUNTS_3 + if_typescript(TS_HUNTS) + JS_GAME_HUNTS + if_dart(DART_HUNTS + DART_HUNTS_2 + DART_HUNTS_3 + DART_HUNTS_4)
             + if_ruby(RUBY_HUNTS) + if_rust(RUST_HUNTS))
 
 

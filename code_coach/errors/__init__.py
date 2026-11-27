@@ -196,13 +196,14 @@ def crashes(family: str | None = None) -> tuple[Crash, ...]:
     from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
+    from code_coach.errors.content_dart3 import DART_CRASHES_3
     from code_coach.errors.content_python import PY_CRASHES
     from code_coach.errors.content_rust import RUST_CRASHES
     from code_coach.errors.content_python2 import PY_CRASHES_2
     from code_coach.errors.content_ts import TS_CRASHES
     from code_coach.engine import if_rust, if_typescript
 
-    everything = (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    everything = (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2 + DART_CRASHES_3),
         *if_ruby(RUBY_CRASHES))
     if family is not None:
         everything = tuple(c for c in everything if c.family == family)
@@ -217,6 +218,7 @@ def crash_families() -> tuple[str, ...]:
     from code_coach.engine import if_dart, if_ruby
     from code_coach.errors.content_dart import DART_CRASHES
     from code_coach.errors.content_dart2 import DART_CRASHES_2
+    from code_coach.errors.content_dart3 import DART_CRASHES_3
     from code_coach.errors.content_python import PY_CRASHES
     from code_coach.errors.content_rust import RUST_CRASHES
     from code_coach.errors.content_python2 import PY_CRASHES_2
@@ -224,7 +226,7 @@ def crash_families() -> tuple[str, ...]:
     from code_coach.engine import if_rust, if_typescript
 
     seen: list[str] = []
-    for c in (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2),
+    for c in (*PY_CRASHES, *PY_CRASHES_2, *if_typescript(TS_CRASHES), *if_rust(RUST_CRASHES), *MISSING, *NAMES, *WRONG_KIND, *JS_CRASHES_2, *JS_GAME_CRASHES, *if_dart(DART_CRASHES + DART_CRASHES_2 + DART_CRASHES_3),
         *if_ruby(RUBY_CRASHES)):
         if c.family not in seen:
             seen.append(c.family)

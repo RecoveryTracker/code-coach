@@ -137,6 +137,7 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
     from code_coach.magnets.content_dart2 import DART_MAGNETS_2
+    from code_coach.magnets.content_dart3 import DART_MAGNETS_3
     from code_coach.magnets.content_python import PY_MAGNETS
     from code_coach.magnets.content_python2 import PY_MAGNETS_2
     from code_coach.magnets.content_c2 import C_MAGNETS_2
@@ -144,7 +145,7 @@ def magnets(family: str | None = None) -> tuple[Magnet, ...]:
     from code_coach.magnets.content_rust import RUST_MAGNETS
     from code_coach.engine import if_rust, if_typescript
 
-    everything = (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS), *if_rust(RUST_MAGNETS), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+    everything = (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS), *if_rust(RUST_MAGNETS), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2 + DART_MAGNETS_3),
         *if_c(C_MAGNETS + C_MAGNETS_2), *if_ruby(RUBY_MAGNETS))
     if family is not None:
         everything = tuple(m for m in everything if m.family == family)
@@ -159,6 +160,7 @@ def magnet_families() -> tuple[str, ...]:
     from code_coach.magnets.content_ruby import RUBY_MAGNETS
     from code_coach.magnets.content_dart import DART_MAGNETS
     from code_coach.magnets.content_dart2 import DART_MAGNETS_2
+    from code_coach.magnets.content_dart3 import DART_MAGNETS_3
     from code_coach.magnets.content_python import PY_MAGNETS
     from code_coach.magnets.content_python2 import PY_MAGNETS_2
     from code_coach.magnets.content_c2 import C_MAGNETS_2
@@ -167,7 +169,7 @@ def magnet_families() -> tuple[str, ...]:
     from code_coach.engine import if_rust, if_typescript
 
     seen: list[str] = []
-    for m in (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS), *if_rust(RUST_MAGNETS), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2),
+    for m in (*PY_MAGNETS, *PY_MAGNETS_2, *if_typescript(TS_MAGNETS), *if_rust(RUST_MAGNETS), *FUNCTIONS, *ARRAYS, *OBJECTS, *ASYNC, *JS_GAME_MAGNETS, *if_dart(DART_MAGNETS + DART_MAGNETS_2 + DART_MAGNETS_3),
         *if_c(C_MAGNETS + C_MAGNETS_2), *if_ruby(RUBY_MAGNETS)):
         if m.family not in seen:
             seen.append(m.family)
