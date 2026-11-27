@@ -252,10 +252,10 @@ DART_PUZZLES_2: tuple[Puzzle, ...] = (
             "    });\n"
             "\n"
             "void main() {\n"
-            "  Future.wait([after(30), after(10), after(20)]).then(print);\n"
+            "  Future.wait([after(300), after(100), after(200)]).then(print);\n"
             "}"
         ),
-        expect="done 10\ndone 20\ndone 30\n[30, 10, 20]",
+        expect="done 100\ndone 200\ndone 300\n[300, 100, 200]",
         why=(
             "All three start at once, so they finish in order of how "
             "long they take. But `Future.wait` gives back the results in "

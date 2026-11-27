@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import random
+import re
 import sys
 
 from code_coach import brain
@@ -53,7 +54,8 @@ def _shape(item) -> list[str]:
         problems.append("prompt over 220 characters or 10 lines")
     if not item.answer or len(item.answer) > 40 or item.answer != item.answer.strip() or "\n" in item.answer:
         problems.append(f"answer {item.answer!r} is empty, long, padded or has a newline")
-    if "$" in item.prompt or "$" in item.explain:
+    # a TypeScript template literal's ${...} is code; any other $ is a hole left unfilled
+    if re.search(r"\$(?!\{)", item.prompt) or "$" in item.explain:
         problems.append("a $ hole is left")
     if len(item.explain.strip()) < 8:
         problems.append("no explanation")

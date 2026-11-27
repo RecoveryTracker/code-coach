@@ -11,6 +11,7 @@ from __future__ import annotations
 from . import _tscore_basics as basics
 from . import _tscore_data as data
 from . import _tscore_types as types
+from . import _tscore_templates as templates
 from ._model import Pool
 from .items import Activity
 
@@ -20,7 +21,7 @@ NOTE = " The code runs under tsc --strict."
 
 ACTIVITIES: tuple[Activity, ...] = (
     Activity("ts_eval", "TS Eval", "Arithmetic, strings, templates, typeof, Math and conversions: what does console.log print?" + NOTE,
-             "What does it print?", 16, "type", 3.0, 12.0, make_ts=Pool(basics.EVAL), group=GROUP,
+             "What does it print?", 16, "type", 3.0, 12.0, make_ts=Pool(basics.EVAL + templates.TEMPLATE_LITERALS), group=GROUP,
              concepts=("expression", "operator", "precedence", "template literal", "type coercion", "typeof", "string"),
              oracle="value"),
     Activity("ts_narrow", "Narrowing", "A union goes in, the type check picks the branch: what prints?" + NOTE,

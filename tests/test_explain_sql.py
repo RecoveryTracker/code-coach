@@ -170,7 +170,7 @@ def test_the_api_reads_sql_and_puts_the_drills_sql_words_first():
 def test_postgresql_still_has_no_reader_and_the_sentence_lists_the_real_languages():
     r = server.explain(ExplainRequest(code="SELECT 1;", language="postgresql"))
     assert r.ok is False and "no reader" in r.summary
-    for name in ("Python", "JavaScript", "Dart", "C", "SQL"):
+    for name in ("Python", "JavaScript", "Dart", "C", "SQL", "Rust"):
         assert name in r.summary
 
 

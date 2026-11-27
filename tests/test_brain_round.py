@@ -585,7 +585,7 @@ class AppLanguageMapping(unittest.TestCase):
     def test_every_drill_language_can_explain_and_dart_c_sql_send_the_prompt_itself(self):
         r = results()
         self.assertEqual(r["canExplain"], {"python": True, "javascript": True, "dart": True, "c": True, "sql": True,
-                                           "typescript": True, "rust": False}, "Rust has no reader yet")
+                                           "typescript": True, "rust": True}, "Rust has explain_rust.py")
         src = r["explainSource"]
         self.assertEqual(src["dart"], "7 ~/ 2", "what the screen shows, not the wrapped program (the server wraps it to run it)")
         self.assertEqual(src["c"], 'printf("%d\n", 7 / 2);')

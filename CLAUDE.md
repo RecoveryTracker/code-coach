@@ -495,8 +495,10 @@ code_coach/farm/
   (else `BUILDS DIFFER`: an implicit overflow). `#![allow(warnings)]`; deny lints stay errors. Run them with
   `pytest tests/test_brain_packs.py -k "Typed or TypeScriptOracle or RustOracle"`, or one pack with
   `-m tests.brain_check tscore` / `rustcore`. Rust has a glossary of its own (`terms_rust_*.py`, see "Glossary"), so a
-  Rust drill shows "Words in this question"; TypeScript's words are JavaScript's, through the glossary's alias. There is
-  no explainer for Rust (`canExplain`), so a Rust drill has "Run it" but no "Explain".
+  Rust drill shows "Words in this question"; TypeScript's words are JavaScript's, through the glossary's alias. Both
+  have "Explain" (`canExplain`): TypeScript through JavaScript's reader, Rust through `explain_rust.py`. A TypeScript
+  prompt may hold a template literal: `${...}` is written `$${...}` in a template (`_tscore_templates.py`), and the
+  shape rule allows `${` in TypeScript prompts only (any other `$` is still an unfilled hole).
   **SQL packs** (`pack_sqlcore.py`: group "SQL core", ids `sql_*`, 8 activities of 40-80 templates;
   templates `_sqlcore_rows.py`, `_sqlcore_joins.py`, `_sqlcore_funcs.py`, the model `_sql_model.py`). Pass
   `make_sql=`, `oracle="value"`. A template is a plain function `(rng) -> Item` wrapped by `fit(f)` (which re-rolls
@@ -763,7 +765,7 @@ code_coach/glossary/
   C/SQL pack needs no glossary edit unless it uses a word nobody has an entry or an `aka` for (the unresolved-concepts
   test then names it).
 
-## Explain my code for Dart, C and SQL
+## Explain my code for Dart, C, SQL and Rust
 
 Built 2026-11 (the language ranking is Python, JavaScript, Dart, C, SQL, so the button had to work in all five). Three readers,
 no cloud AI and no new dependency, each returning the same dict as `explain_js` (`ok, summary, lines [{line, depth, source, text}],
@@ -777,6 +779,11 @@ code_coach/explain_programs.py  `wrap(language, code, context)`: THE one place a
 code_coach/explain_dart.py      Dart + Flutter widget code (`explain_dart(code, run=True, context="")`)
 code_coach/explain_c.py         C (`explain_c`), printf specifiers read one by one
 code_coach/explain_sql.py       SQLite SQL: own tokenizer, statements -> clauses, a small expression parser
+code_coach/explain_rust.py      Rust (2026-11-27; `explain_rust`): its own tokenizer (lifetimes vs 'a', raw/byte
+                                strings, nested comments), piece splitter, expression/pattern/type/format readers;
+                                tracks which names own a String/Vec/Box so `let t = s;` is called a MOVE; FACTS held to
+                                rustc by tests/test_explain_rust.py (claims + EXTRA programs); 100 % coverage of the
+                                Rust drills, glossary examples and Gotchas cards
 tests/explain_corpus.py         the acceptance corpus + coverage / alignment / never-raises helpers
 ```
 
@@ -803,7 +810,7 @@ tests/explain_corpus.py         the acceptance corpus + coverage / alignment / n
   "It stopped with an error: ...", a program that prints nothing gets no output note. **Flutter widgets are never run**
   (`is_flutter`: `package:flutter`, widget class names, or a drill id `fl_ / fs_ / fw_`): the note says "Flutter widgets cannot run
   here". A multi-clause SELECT also gets the evaluation-order note (FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT).
-- **Wiring**: `ready` has `explainer` for dart, c and sql (`languages.py`); `_explain_with` dispatches to the readers (Dart gets the
+- **Wiring**: `ready` has `explainer` for dart, c, sql and rust (`languages.py`); `_explain_with` dispatches to the readers (Dart gets the
   drill's `context` for Flutter detection); PostgreSQL still answers "no reader yet", and the sentence is built from the
   languages that have the capability ("Explain my code works in Python, JavaScript, Dart, C and SQL so far"). The readers never
   mention the glossary (a test greps).

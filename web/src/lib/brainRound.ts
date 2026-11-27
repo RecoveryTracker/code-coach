@@ -76,12 +76,12 @@ export function runsOnTheRunner(lang: BrainLang): boolean {
   return lang === "dart" || lang === "c" || lang === "sql" || lang === "typescript" || lang === "rust";
 }
 
-/** Which drill languages have an explainer: Python and JavaScript read with their parsers (TypeScript with
- *  JavaScript's), Dart, C and SQL with the statement readers in code_coach/explain_dart.py, explain_c.py,
- *  explain_sql.py. Rust has no reader yet. */
+/** Every drill language has an explainer: Python and JavaScript read with their parsers (TypeScript with
+ *  JavaScript's), Dart, C, SQL and Rust with the statement readers in code_coach/explain_dart.py, explain_c.py,
+ *  explain_sql.py, explain_rust.py. */
 export function canExplain(lang: BrainLang): boolean {
   return lang === "python" || lang === "javascript" || lang === "dart" || lang === "c" || lang === "sql" ||
-    lang === "typescript";
+    lang === "typescript" || lang === "rust";
 }
 
 /**

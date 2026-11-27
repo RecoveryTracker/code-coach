@@ -90,6 +90,18 @@ def c_program(code: str) -> Program:
     return Program(C_HEADERS + "int main(void) {\n" + body + "\n}\n", C_HEADERS.count("\n") + 1)
 
 
+_RUST_MAIN = re.compile(r"\bfn\s+main\s*\(")
+
+
+def rust_program(code: str) -> Program:
+    """The body of `fn main()` unless the code has its own `fn main(` (`rustProgram`, `tests/rust_oracle.full_program`)."""
+    body = code.rstrip()
+    if _RUST_MAIN.search(body):
+        return Program(body + "\n")
+    indented = "\n".join("    " + ln if ln.strip() else ln for ln in body.split("\n"))
+    return Program("fn main() {\n" + indented + "\n}\n", 1)
+
+
 def sql_program(code: str) -> Program:
     return Program(code.rstrip())
 
@@ -101,4 +113,6 @@ def wrap(language: str, code: str, context: str = "") -> Program:
         return c_program(code)
     if language == "sql":
         return sql_program(code)
+    if language == "rust":
+        return rust_program(code)
     raise ValueError(f"no program convention for {language}")

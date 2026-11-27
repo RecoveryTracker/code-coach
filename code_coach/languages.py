@@ -159,7 +159,7 @@ LANGUAGES: tuple[Language, ...] = (
             "Fundamentals only. Run needs rustc on your PATH; without it the "
             "drills still work, only Run won't."
         ),
-        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks"),
+        ready=("reference", "workbook", "typing", "fundamentals", "runner", "checks", "explainer"),
     ),
     Language(
         id="go",

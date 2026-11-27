@@ -1546,10 +1546,10 @@ def test_explain_for_a_language_without_a_glossary_has_no_words():
     assert explain("package main\nfunc main() {}", "go").words == []
 
 
-def test_explain_for_rust_has_no_reader_yet_but_brings_its_rust_words():
-    """Rust has a glossary (terms_rust_*.py) but no reader: the answer says so, and the words still come."""
+def test_explain_for_rust_reads_the_code_and_brings_its_rust_words():
+    """Rust has a reader (code_coach/explain_rust.py) AND a glossary (terms_rust_*.py): the words ride along."""
     r = explain("fn main() {\n    let v = vec![1, 2];\n    let w = v.clone();\n}", "rust")
-    assert r.ok is False
+    assert r.ok is True and r.lines
     assert r.words and all(w.language == "rust" for w in r.words)
     assert "clone" in [w.id for w in r.words]
 

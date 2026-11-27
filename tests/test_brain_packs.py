@@ -310,7 +310,9 @@ class ShapeTests(unittest.TestCase):
                     with self.subTest(activity=a.id, language=language, prompt=i.prompt):
                         self.assertGreaterEqual(len(i.explain.strip()), 8)
                         self.assertNotIn("$", i.explain, "an unfilled hole")
-                        if language != "dart":  # Dart's own string interpolation is written with a $
+                        if language == "typescript":  # a template literal's ${...} is TypeScript, any other $ a hole
+                            self.assertNotRegex(i.prompt, r"\$(?!\{)", "an unfilled hole")
+                        elif language != "dart":  # Dart's own string interpolation is written with a $
                             self.assertNotIn("$", i.prompt, "an unfilled hole")
 
     def test_a_seed_gives_the_same_round(self) -> None:

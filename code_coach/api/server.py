@@ -1297,7 +1297,7 @@ def _explain_with(body: ExplainRequest, lang, asked: str) -> ExplainResponse:
         # PostgreSQL came back as "Python can't run this — there's a syntax error",
         # which blames the student for writing correct SQL. The sentence is built from the
         # languages that DO have a reader, so it stays true as readers are added.
-        order = ["python", "javascript", "dart", "c", "sql"]
+        order = ["python", "javascript", "dart", "c", "sql", "rust"]
         have = [x for x in LANGUAGES if "explainer" in x.ready and x.id != "tfwr"]
         have.sort(key=lambda x: order.index(x.id) if x.id in order else len(order))
         names = [x.name.replace(" (Flutter)", "") for x in have]
@@ -1310,13 +1310,15 @@ def _explain_with(body: ExplainRequest, lang, asked: str) -> ExplainResponse:
             ),
         )
 
-    if lang.id in ("dart", "c", "sql"):
-        # Dart (and Flutter widget code), C and SQLite's SQL: read statement by statement, and run for real
-        # for the output note (code_coach/explain_dart.py, explain_c.py, explain_sql.py).
+    if lang.id in ("dart", "c", "sql", "rust"):
+        # Dart (and Flutter widget code), C, SQLite's SQL and Rust: read statement by statement, and run for real
+        # for the output note (code_coach/explain_dart.py, explain_c.py, explain_sql.py, explain_rust.py).
         if lang.id == "dart":
             from code_coach.explain_dart import explain_dart as reader
         elif lang.id == "c":
             from code_coach.explain_c import explain_c as reader
+        elif lang.id == "rust":
+            from code_coach.explain_rust import explain_rust as reader
         else:
             from code_coach.explain_sql import explain_sql as reader
         return ExplainResponse(**reader(body.code or "", context=body.context or ""))
