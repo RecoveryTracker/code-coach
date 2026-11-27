@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 #: The glossary languages, in display order. Dart (and with it Flutter, which is Dart) was added 2026-10-22, C and SQL
-#: (SQLite's SQL) the day after.
-LANGUAGES = ("python", "javascript", "dart", "c", "sql")
+#: (SQLite's SQL) the day after, Rust on 2026-11-26.
+LANGUAGES = ("python", "javascript", "dart", "c", "sql", "rust")
 
 
 @dataclass(frozen=True)
@@ -112,6 +112,10 @@ def sql(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
     return [entry("sql", id, term, definition, **kw)]
 
 
+def rust(id: str, term: str, definition: str, **kw: Any) -> list[Entry]:
+    return [entry("rust", id, term, definition, **kw)]
+
+
 def both(
     id: str,
     term: str,
@@ -122,13 +126,15 @@ def both(
     dart: dict[str, Any] | None = None,
     c: dict[str, Any] | None = None,
     sql: dict[str, Any] | None = None,
+    rust: dict[str, Any] | None = None,
     **common: Any,
 ) -> list[Entry]:
     """The same word in up to five languages. `common` is shared; each language dict overrides it
     (and must hold at least its own `example` and `out`). Leave a language's dict as None
     to write the word for only the others."""
     out: list[Entry] = []
-    for language, own in (("python", python), ("javascript", javascript), ("dart", dart), ("c", c), ("sql", sql)):
+    for language, own in (("python", python), ("javascript", javascript), ("dart", dart), ("c", c), ("sql", sql),
+                          ("rust", rust)):
         if own is None:
             continue
         merged = {**common, **own}

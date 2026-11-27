@@ -25,16 +25,17 @@ import re
 from typing import Any, Iterable
 
 from .contexts import CONTEXTS, concepts_for
-from .entry import LANGUAGES, Entry, all3, both, c, code, dart, entry, js, py, sql
+from .entry import LANGUAGES, Entry, all3, both, c, code, dart, entry, js, py, rust, sql
 
 __all__ = [
     "CONTEXTS", "Entry", "LANGUAGES", "LOAD_ERRORS", "all3", "all_entries", "both", "c", "code", "dart", "entry",
-    "find_words", "js", "language_for", "lookup", "payload", "py", "resolve", "sql", "words_for_context",
+    "find_words", "js", "language_for", "lookup", "payload", "py", "resolve", "rust", "sql", "words_for_context",
 ]
 
 #: Languages the app can read that borrow another one's glossary. The farm's own language
 #: is Python's syntax; TypeScript is JavaScript with types. Dart, C and SQL are glossary languages of their own
 #: (Flutter is Dart, so its words live in the Dart glossary; SQL means SQLite's SQL - `postgresql` has no glossary).
+#: Rust is a glossary language of its own too (2026-11-26).
 ALIASES = {"tfwr": "python", "typescript": "javascript"}
 
 #: A module that fails to import is skipped and recorded here (the tests fail on it).
@@ -240,6 +241,29 @@ _SQL_BLANK = re.compile(
 )
 
 
+# Rust: // and /* */ comments (block comments nest; the inner ones are blanked with the outer), "strings" with escapes,
+# raw strings r"..." / r#"..."# (any number of #), byte strings b"..", and char literals 'c' / '\n' / b'x' - but NOT a
+# lifetime ('a, 'static), which has no closing quote right after one character or escape.
+_RUST_BLANK = re.compile(
+    r"""
+    (?P<comment>//[^\n]*|/\*(?:[^*/]|\*(?!/)|/(?!\*)|/\*[\s\S]*?\*/)*(?:\*/|\Z))
+  | (?P<raw>b?r(?P<hashes>\#*)"[\s\S]*?(?:"(?P=hashes)|\Z))
+  | (?P<str>b?"(?:\\.|[^"\\])*"?)
+  | (?P<chr>b?'(?:\\(?:u\{[0-9a-fA-F]{1,6}\}|x[0-9a-fA-F]{2}|.)|[^'\\\n])')
+    """,
+    re.X,
+)
+
+
+def _blank_rust(m: re.Match[str]) -> str:
+    if m.group("comment") is not None:
+        return "\n" * m.group("comment").count("\n")
+    if m.group("chr") is not None:
+        return "'_'"
+    text = m.group("raw") if m.group("raw") is not None else m.group("str")
+    return '""' + "\n" * text.count("\n")
+
+
 def _blank_c(m: re.Match[str]) -> str:
     if m.group("comment") is not None:
         return "\n" * m.group("comment").count("\n")
@@ -291,6 +315,8 @@ def blank_code(source: str, language: str) -> str:
         return _C_BLANK.sub(_blank_c, source)
     if language == "sql":
         return _SQL_BLANK.sub(_blank_sql, source)
+    if language == "rust":
+        return _RUST_BLANK.sub(_blank_rust, source)
     return _JS_BLANK.sub(_blank_js, source)
 
 

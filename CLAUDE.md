@@ -494,8 +494,9 @@ code_coach/farm/
   builds, overflow wraps), each item runs in `catch_unwind` between markers, and the two builds must print the same
   (else `BUILDS DIFFER`: an implicit overflow). `#![allow(warnings)]`; deny lints stay errors. Run them with
   `pytest tests/test_brain_packs.py -k "Typed or TypeScriptOracle or RustOracle"`, or one pack with
-  `-m tests.brain_check tscore` / `rustcore`. No glossary for Rust yet (TypeScript's words are JavaScript's, through the
-  glossary's alias), and no explainer for Rust (`canExplain`), so a Rust drill has "Run it" but no "Explain".
+  `-m tests.brain_check tscore` / `rustcore`. Rust has a glossary of its own (`terms_rust_*.py`, see "Glossary"), so a
+  Rust drill shows "Words in this question"; TypeScript's words are JavaScript's, through the glossary's alias. There is
+  no explainer for Rust (`canExplain`), so a Rust drill has "Run it" but no "Explain".
   **SQL packs** (`pack_sqlcore.py`: group "SQL core", ids `sql_*`, 8 activities of 40-80 templates;
   templates `_sqlcore_rows.py`, `_sqlcore_joins.py`, `_sqlcore_funcs.py`, the model `_sql_model.py`). Pass
   `make_sql=`, `oracle="value"`. A template is a plain function `(rng) -> Item` wrapped by `fit(f)` (which re-rolls
@@ -632,6 +633,17 @@ code_coach/glossary/
                       INSERT/UPDATE/DELETE, upsert, OR REPLACE/IGNORE, constraints, PRIMARY KEY/UNIQUE/NOT NULL/CHECK/
                       DEFAULT/FOREIGN KEY, ALTER TABLE, views, transactions, rollback, savepoints, triggers, indexes,
                       rowid, AUTOINCREMENT), more (FILTER, GROUP_CONCAT, changes(), COLLATE, ISO dates)
+  terms_rust_*.py     RUST, the sixth language (2026-11-26; ~105 words, ~490 rule checks): core (integers, casts, wrapping/checked
+                      arithmetic, overflow, floats, char vs u8, let/mut, shadowing, expressions, if/loop/while/for,
+                      labeled break, macros), ownership (move, Copy, clone, borrowing, &mut, the borrow checker,
+                      lifetimes, Box/Rc/RefCell, drop), types (struct, enum, impl, self, traits, dyn, generics, derive,
+                      Option/Result, match, if let / let else, ?, unwrap, panic), data (String vs &str, formatting,
+                      slices, Vec, maps and sets, VecDeque, iterators, closures, collect, fold). Every example runs
+                      through tests/rust_oracle.py (debug and -O must agree), and every rule is a program in
+                      `tests/glossary_rust_checks.py` (`RUST_RULE_CHECKS`: expected output, `CE` = rustc refuses it,
+                      `PANIC`), which with `RUST_NOT_ORACLE_CHECKED` partitions the ids (tests/test_glossary_rust.py).
+                      Blanking: `//` and nested `/* */`, raw strings `r#"..."#`, byte strings, char literals - but a
+                      lifetime `'a` stays code.
   contexts.py         CONTEXTS: the seven ORIGINAL Brain Drills activities -> the words they always teach, plus
                       concepts_for(): every other activity's `concepts`, read lazily from code_coach.brain
   __init__.py         the loader (terms_* found BY NAME), find_words, lookup, resolve, context_words, words_for_context, payload
@@ -744,7 +756,7 @@ code_coach/glossary/
   language has a glossary: one `find_words` call, nothing language-specific);
   `GET /api/glossary?language=&term=&context=` gives one word (id, term or alias), a context's words, or the whole
   language, and never an error (unknown means `[]`). "See also" chips jump to a card already on screen or fetch the word.
-- **Not yet**: other app languages (C++, Go, Rust...; PostgreSQL deliberately maps to nothing), the Workbook/Predict
+- **Not yet**: other app languages (C++, Go...; PostgreSQL deliberately maps to nothing), the Workbook/Predict
   modes passing a `context` of their own, a syntax-error-aware match (Free mode with a typo shows the words of the code,
   not "syntax error"), (Dart, C and SQL now have readers, so their "Words used" show under
   Explain everywhere, Brain Drills included). A C or SQL card that is a drill concept needs no web change; a new

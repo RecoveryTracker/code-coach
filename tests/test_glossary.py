@@ -38,7 +38,7 @@ from code_coach.api.schemas import ExplainRequest, ExplainResponse
 from code_coach.brain import ACTIVITIES
 from code_coach.explain import explain_code
 from code_coach.glossary import CONTEXTS, find_words, lookup, words_for_context
-from tests import c_oracle, dart_oracle, flutter_oracle, sql_oracle
+from tests import c_oracle, dart_oracle, flutter_oracle, rust_oracle, sql_oracle
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -193,7 +193,18 @@ def example_results() -> dict[tuple[str, str], tuple[int, str, str]]:
     for e in glossary.all_entries("sql"):  # every SQL example, in a fresh in-memory SQLite each
         if e.example:
             found[(e.language, e.id)] = _value_result(sql_oracle.run_sql(e.example))
+    if rust_oracle.HAVE_RUSTC:  # every Rust example, in crates built debug and -O (tests/rust_oracle.py)
+        rust_items = [e for e in glossary.all_entries("rust") if e.example]
+        runs = rust_oracle.rust_results([e.example for e in rust_items])
+        found.update({(e.language, e.id): _rust_result(r) for e, r in zip(rust_items, runs)})
     return found
+
+
+def _rust_result(run) -> tuple[int, str, str]:
+    """A RustRun as (exit code, stdout, stderr): a compile error, a panic or builds that differ is a failure."""
+    if not run.compiled or run.panicked or run.out.startswith(("BUILDS DIFFER", "HANG", "CRASH")):
+        return 1, "", run.value
+    return 0, run.out + "\n", ""
 
 
 @pytest.mark.parametrize(("lang", "id_"), ENTRIES)
@@ -207,6 +218,8 @@ def test_example_prints_exactly_what_the_entry_says(lang, id_):
         pytest.skip("needs dart")
     if lang == "c" and not c_oracle.HAVE_COMPILER:
         pytest.skip("needs a C compiler")
+    if lang == "rust" and not rust_oracle.HAVE_RUSTC:
+        pytest.skip("needs rustc")
     code, out, err = example_results()[(lang, id_)]
     assert code == 0, f"{lang}:{id_} crashed:\n{err[-600:]}"
     assert out.rstrip("\n") == e.example_output, f"{lang}:{id_} printed\n{out!r}\nnot\n{e.example_output!r}"
@@ -639,11 +652,12 @@ def test_aliases_borrow_a_glossary():
     assert glossary.language_for("tfwr") == "python"
     assert glossary.language_for("TypeScript") == "javascript"
     assert glossary.language_for("dart") == "dart" and glossary.language_for(" Dart ") == "dart"
-    assert glossary.LANGUAGES == ("python", "javascript", "dart", "c", "sql")
+    assert glossary.LANGUAGES == ("python", "javascript", "dart", "c", "sql", "rust")
+    assert glossary.language_for("rust") == "rust" and glossary.language_for(" Rust ") == "rust"
     assert glossary.language_for("c") == "c" and glossary.language_for(" C ") == "c"
     assert glossary.language_for("sql") == "sql" and glossary.language_for("SQL") == "sql"
     assert glossary.language_for("postgresql") == "", "PostgreSQL is not SQLite: it has no glossary"
-    assert glossary.language_for("cpp") == "" and glossary.language_for("rust") == ""
+    assert glossary.language_for("cpp") == "" and glossary.language_for("go") == ""
     assert glossary.language_for(None) == ""
 
 
@@ -1369,6 +1383,40 @@ int main(void) {
   int (*fp)(int, int) = NULL; Node *n = malloc(sizeof *n); free(n); return n->next ? 1 : 0;
 }
 '''
+#: A Rust program that wakes many cards at once (the limit test).
+RUST_SINK = r'''
+use std::collections::{BTreeMap, HashMap};
+#[derive(Debug, Clone, PartialEq)]
+struct Point { x: i32, y: i32 }
+enum Shape { Circle(f64), Square(f64) }
+trait Area { fn area(&self) -> f64; }
+impl Area for Shape {
+    fn area(&self) -> f64 { match self { Shape::Circle(r) => 3.14 * r * r, Shape::Square(s) => s * s } }
+}
+fn longest<'a>(a: &'a str, b: &'a str) -> &'a str { if a.len() > b.len() { a } else { b } }
+fn parse(s: &str) -> Result<i32, String> { s.parse::<i32>().map_err(|e| e.to_string()) }
+fn main() {
+    let mut v: Vec<i32> = vec![3, 1, 2];
+    v.sort();
+    let s = String::from("hi");
+    let t = s.clone();
+    let r = &mut v;
+    r.push(4);
+    let total: i32 = v.iter().map(|x| x * 2).filter(|x| *x > 2).sum();
+    let mut m: HashMap<&str, i32> = HashMap::new();
+    *m.entry("a").or_insert(0) += 1;
+    let b: BTreeMap<i32, i32> = BTreeMap::new();
+    if let Some(x) = v.first() { println!("{x} {total} {t} {:?}", b); }
+    let n: u8 = 250u8.wrapping_add(10);
+    let q = parse("7").unwrap_or(0) as i64;
+    let boxed: Box<dyn Area> = Box::new(Shape::Square(2.0));
+    for (i, c) in "ab".chars().enumerate() { println!("{i}{c}{n}{q}{}", boxed.area()); }
+    loop { break; }
+    let p = Point { x: 1, y: 2 };
+    println!("{:?} {}", p, longest("a", "bb"));
+}
+'''
+
 SQL_SINK = '''
 WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 5)
 SELECT g, COUNT(*), SUM(v), AVG(v), MIN(v), MAX(v), COALESCE(x, 0), NULLIF(y, ''),
@@ -1405,6 +1453,7 @@ def test_find_words_never_exceeds_the_limit_with_the_whole_vocabulary_in_play():
         "dart": DART_SINK,
         "c": C_SINK,
         "sql": SQL_SINK,
+        "rust": RUST_SINK,
     }
     for lang in LANGS:
         for limit in (1, 2, 3, 5, 8, 13, 40):
@@ -1494,7 +1543,15 @@ def test_explain_with_no_context_still_works_and_old_fields_are_unchanged():
 def test_explain_for_a_language_without_a_glossary_has_no_words():
     r = explain("SELECT 1;", "postgresql")
     assert r.ok is False and r.words == []
-    assert explain("fn main() {}", "rust").words == []
+    assert explain("package main\nfunc main() {}", "go").words == []
+
+
+def test_explain_for_rust_has_no_reader_yet_but_brings_its_rust_words():
+    """Rust has a glossary (terms_rust_*.py) but no reader: the answer says so, and the words still come."""
+    r = explain("fn main() {\n    let v = vec![1, 2];\n    let w = v.clone();\n}", "rust")
+    assert r.ok is False
+    assert r.words and all(w.language == "rust" for w in r.words)
+    assert "clone" in [w.id for w in r.words]
 
 
 def test_explain_for_dart_reads_the_code_and_gets_its_dart_words():
