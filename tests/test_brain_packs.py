@@ -47,13 +47,16 @@ from pathlib import Path
 from code_coach import brain
 from code_coach.brain import ACTIVITIES, ACTIVITIES_BY_ID, CHECK, activities_in, activity_for, make_round
 from code_coach.brain.items import Activity
-from tests import c_oracle, dart_oracle, flutter_oracle, sql_oracle
+from tests import c_oracle, dart_oracle, flutter_oracle, rust_oracle, sql_oracle, ts_oracle
 
 NODE = shutil.which("node")
 ORIGINAL_IDS = ("eval", "truthy", "loops", "trace", "brackets", "recall", "syntax")
-LANGS = ("python", "javascript", "dart", "c", "sql")
+LANGS = ("python", "javascript", "dart", "c", "sql", "typescript", "rust")
 #: How a Dart activity's printed lines become its value (Activity.oracle); python and javascript only have "value".
 DART_MODES = ("value", "lines", "error")
+#: How a TypeScript or Rust activity's run becomes its value: "value" (what it printed) or "error" (a fine/error pick:
+#: it does not compile, or it throws / panics).
+TYPED_MODES = ("value", "error")
 #: A Dart-language activity about Flutter WIDGETS: held to a real `flutter test` (tests/flutter_oracle.py), not to `dart`.
 FLUTTER_MODE = "flutter"
 SEEDS = range(40)
@@ -159,6 +162,8 @@ class DiscoveryTests(unittest.TestCase):
             if a.id not in ORIGINAL_IDS:
                 if a.languages == ("dart",):
                     self.assertIn(a.oracle, DART_MODES + (FLUTTER_MODE,), f"{a.id} needs oracle in {DART_MODES + (FLUTTER_MODE,)}")
+                elif a.languages in (("typescript",), ("rust",)):
+                    self.assertIn(a.oracle, TYPED_MODES, f"{a.id} needs oracle in {TYPED_MODES}")
                 else:
                     self.assertEqual(a.oracle, "value", f"{a.id} needs oracle='value'")
 
@@ -166,7 +171,8 @@ class DiscoveryTests(unittest.TestCase):
         for a in ACTIVITIES:
             self.assertEqual(a.languages, tuple(
                 lang for lang, make in (("python", a.make_py), ("javascript", a.make), ("dart", a.make_dart),
-                                        ("c", a.make_c), ("sql", a.make_sql)) if make))
+                                        ("c", a.make_c), ("sql", a.make_sql), ("typescript", a.make_ts),
+                                        ("rust", a.make_rs)) if make))
             for language in LANGS:
                 if language in a.languages:
                     self.assertEqual(activity_for(a.id, language).id, a.id)
@@ -213,8 +219,8 @@ class DiscoveryTests(unittest.TestCase):
             for a in s["activities"]:
                 self.assertTrue(a["group"], a["id"])
                 self.assertTrue(a["concepts"], a["id"])
-            self.assertEqual(s["languages"], ["python", "javascript", "dart", "c", "sql"],
-                             "Python first, then JavaScript, Dart, C and SQL")
+            self.assertEqual(s["languages"], ["python", "javascript", "dart", "c", "sql", "typescript", "rust"],
+                             "Python first, then JavaScript, Dart, C, SQL, TypeScript and Rust")
             self.assertEqual(set(s["groups"]), {a["group"] for a in s["activities"]}, "no empty heading")
             self.assertEqual(s["check"], list(brain.check_for(language)))
 
@@ -283,7 +289,11 @@ class ShapeTests(unittest.TestCase):
         # C prints numbers and text (1 and 0 for a truth value); SQL prints 1/0 and NULL (typeof() says the word null).
         c_banned = re.compile(r"\b(True|False|None|undefined|null)\b")
         sql_banned = re.compile(r"\b(True|False|None|undefined)\b")
-        banned = {"python": py_banned, "javascript": js_banned, "dart": dart_banned, "c": c_banned, "sql": sql_banned}
+        # TypeScript prints like JavaScript; Rust says true/false and None/Some(..), never null or undefined.
+        ts_banned = js_banned
+        rust_banned = re.compile(r"\b(True|False|null|undefined)\b")
+        banned = {"python": py_banned, "javascript": js_banned, "dart": dart_banned, "c": c_banned, "sql": sql_banned,
+                  "typescript": ts_banned, "rust": rust_banned}
         for language, pattern in banned.items():
             for a in activities_in(language):
                 for seed in range(10):
@@ -1195,7 +1205,7 @@ class CAndSqlHistoryTests(unittest.TestCase):
             self.assertEqual(brain.summary(today=day, language=language)["check"], list(trio))
         self.assertEqual(brain.summary(today=day, language="dart")["checkAges"], [], "a C or SQL check is not a Dart one")
         self.assertEqual(brain.summary(today=day, language="python")["checkAges"], [])
-        self.assertEqual(len({brain.check_for(x) for x in LANGS}), 4, "Python and JavaScript share one trio, the rest have their own")
+        self.assertEqual(len({brain.check_for(x) for x in LANGS}), len(LANGS) - 1, "Python and JavaScript share one trio, the rest have their own")
 
     def test_the_routes_know_c_and_sql(self) -> None:
         from fastapi import HTTPException
@@ -1276,7 +1286,7 @@ class CAndSqlHistoryTests(unittest.TestCase):
         from code_coach.api.schemas import BrainRunRequest
         from code_coach.api.server import brain_run
 
-        for language in ("python", "javascript", "rust", ""):
+        for language in ("python", "javascript", "go", ""):
             with self.assertRaises(HTTPException) as caught:
                 brain_run(BrainRunRequest(code="print(1)", language=language))
             self.assertEqual(caught.exception.status_code, 400, language)
@@ -1295,3 +1305,257 @@ class CAndSqlHistoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ── TypeScript and Rust: held to `tsc --strict` + node and to rustc (debug and -O), in batches ───────
+
+TYPED_TEMPLATE_SEEDS = range(5)
+TYPED_ROUND_SEEDS = range(10)
+
+
+def _typed_samples(activity, language: str) -> list:
+    seen: dict[str, object] = {}
+    for seed in TYPED_ROUND_SEEDS:
+        for item in make_round(activity.id, seed, language):
+            seen.setdefault(item.prompt + "\x00" + item.check, item)
+    for template in getattr(activity_for(activity.id, language).make, "templates", ()):
+        for seed in TYPED_TEMPLATE_SEEDS:
+            item = template(random.Random(seed))
+            seen.setdefault(item.prompt + "\x00" + item.check, item)
+    return list(seen.values())
+
+
+_TYPED: dict[str, dict] = {}
+
+
+def typed_results(language: str) -> dict:
+    """{activity id: [(item, run)]} for EVERY activity of TypeScript or Rust, in one batch per language, made once per
+    test process."""
+    if language not in _TYPED:
+        samples = {a.id: _typed_samples(a, language) for a in activities_in(language)}
+        flat = [(a_id, i) for a_id, items in samples.items() for i in items]
+        run = ts_oracle.ts_results if language == "typescript" else rust_oracle.rust_results
+        got = run([i.check or i.prompt for _, i in flat])
+        out: dict[str, list] = {a_id: [] for a_id in samples}
+        for (a_id, i), g in zip(flat, got):
+            out[a_id].append((i, g))
+        _TYPED[language] = out
+    return _TYPED[language]
+
+
+def _typed_wrong(language: str) -> dict[str, list]:
+    wrong = {}
+    for a_id, pairs in typed_results(language).items():
+        mode = ACTIVITIES_BY_ID[a_id].oracle
+        bad = [(i.prompt, i.answer, g.verdict if mode == "error" else g.value) for i, g in pairs
+               if (g.verdict if mode == "error" else g.value) != i.answer]
+        if bad:
+            wrong[a_id] = (len(bad), len(pairs), bad[:3])
+    return wrong
+
+
+class TypedShapeTests(unittest.TestCase):
+    """What needs no compiler: how the TypeScript and Rust core packs are wired and what their items look like."""
+
+    PACKS = (("pack_tscore", "typescript", "TypeScript core", "ts_",
+              ["ts_eval", "ts_narrow", "ts_compile", "ts_generics", "ts_classes", "ts_arrays", "ts_enum", "ts_null"]),
+             ("pack_rustcore", "rust", "Rust core", "rs_",
+              ["rs_eval", "rs_own", "rs_borrow", "rs_match", "rs_iter", "rs_string", "rs_struct", "rs_collect"]))
+
+    def test_each_core_pack_is_eight_single_language_activities_with_many_templates(self) -> None:
+        import importlib
+
+        for pack, language, group, prefix, ids in self.PACKS:
+            with self.subTest(pack=pack):
+                if pack not in brain.PACKS:
+                    self.skipTest(f"no {pack}")
+                acts = importlib.import_module(f"code_coach.brain.{pack}").ACTIVITIES
+                self.assertEqual([a.id for a in acts], ids)
+                for a in acts:
+                    self.assertEqual(a.languages, (language,), a.id)
+                    self.assertEqual(a.group, group)
+                    self.assertTrue(a.id.startswith(prefix))
+                    self.assertIn(a.oracle, TYPED_MODES)
+                    if a.oracle == "error":
+                        self.assertEqual((a.kind, a.choices), ("pick", ("fine", "error")), a.id)
+                    self.assertGreaterEqual(len(a.generator(language).templates), 25, a.id)
+                self.assertTrue(set(brain.check_for(language)) <= set(ids))
+
+    def test_a_typescript_or_rust_activity_is_listed_under_its_language_alone(self) -> None:
+        for language in ("typescript", "rust"):
+            only = [a.id for a in ACTIVITIES if a.languages == (language,)]
+            if not only:
+                continue
+            for other in LANGS:
+                if other == language:
+                    continue
+                listed = {x["id"] for x in brain.summary(language=other)["activities"]}
+                self.assertFalse(listed & set(only), (language, other))
+            mine = {x["id"] for x in brain.summary(language=language)["activities"]}
+            self.assertEqual(mine, {a.id for a in activities_in(language)})
+            self.assertTrue(set(brain.check_for(language)) <= mine)
+
+    def test_an_item_prints_its_own_answer(self) -> None:
+        for language, printer in (("typescript", "console.log"), ("rust", "println!")):
+            for a in activities_in(language):
+                for i in _typed_samples(a, language):
+                    with self.subTest(activity=a.id, prompt=i.prompt):
+                        program = i.check or i.prompt
+                        if a.oracle == "value":
+                            self.assertIn(printer, program, "an item prints its own answer")
+                        self.assertNotIn("$", i.explain)
+                        self.assertTrue(i.explain.strip())
+
+
+@unittest.skipUnless(ts_oracle.HAVE_TSC, "needs node and web/node_modules/typescript")
+class TypeScriptOracleTests(unittest.TestCase):
+    """THE ORACLE for every TypeScript activity: every template on several seeds plus whole rounds, in ONE `tsc --strict`
+    program and one node run (tests/ts_oracle.py). A new TypeScript pack is picked up with no edit."""
+
+    def test_typescript_answers_are_what_tsc_and_node_print(self) -> None:
+        if not activities_in("typescript"):
+            self.skipTest("no TypeScript activities")
+        for a_id, pairs in typed_results("typescript").items():
+            self.assertGreater(len(pairs), 20, a_id)
+        self.assertEqual(_typed_wrong("typescript"), {})
+
+    def test_a_fine_or_error_round_holds_both_answers_for_real(self) -> None:
+        for a_id, pairs in typed_results("typescript").items():
+            if ACTIVITIES_BY_ID[a_id].oracle == "error":
+                self.assertEqual({g.verdict for _, g in pairs}, {"fine", "error"}, a_id)
+
+
+@unittest.skipUnless(ts_oracle.HAVE_TSC, "needs node and web/node_modules/typescript")
+class TypeScriptOracleSelfTests(unittest.TestCase):
+    def test_the_harness_tells_values_compile_errors_throws_and_hangs_apart(self) -> None:
+        got = ts_oracle.ts_results([
+            "console.log(7 / 2);",
+            'const n: number = "a";\nconsole.log(n);',
+            'throw new RangeError("nope");',
+            "while (true) {}",
+            "const xs = [1, 2];\nconsole.log(xs, { a: 'x' });",
+            'const name = "a";\nconsole.log(name);',
+            "console.log('after');",
+        ])
+        self.assertEqual(got[0].value, "3.5")
+        self.assertFalse(got[1].compiled)
+        self.assertIn("TS2322", got[1].value)
+        self.assertIn("item1.ts(1,7)", got[1].value, "named by the item's own file and line")
+        self.assertEqual((got[2].verdict, got[2].threw), ("error", True))
+        self.assertIn("RangeError: nope", got[2].value)
+        self.assertEqual(got[3].verdict, "error")
+        self.assertIn("HANG", got[3].value)
+        self.assertEqual(got[4].value, "[ 1, 2 ] { a: 'x' }", "printed as console.log prints")
+        self.assertEqual(got[5].value, "a", "a module: a top-level name never clashes with the DOM library")
+        self.assertEqual((got[6].value, got[6].verdict), ("after", "fine"), "the rest still run")
+
+    def test_a_syntax_error_in_one_item_never_hides_a_type_error_in_another(self) -> None:
+        # tsc skips every semantic check while any file has a syntax error: the oracle takes those files out first
+        got = ts_oracle.ts_results(["console.log(5.toString());", 'const n: number = "a";\nconsole.log(n);',
+                                    "console.log(1);"])
+        self.assertEqual([g.verdict for g in got], ["error", "error", "fine"])
+        self.assertIn("TS2322", got[1].value)
+
+    def test_a_batch_of_thousands_of_files_fits_the_command_line(self) -> None:
+        got = ts_oracle.ts_values([f"console.log({k});" for k in range(2500)])
+        self.assertEqual(got[2499], "2499")
+
+    def test_two_items_may_declare_the_same_names(self) -> None:
+        got = ts_oracle.ts_values(["interface P { x: number }\nconst p: P = { x: 1 };\nconsole.log(p.x);",
+                                   "interface P { x: string }\nconst p: P = { x: 'q' };\nconsole.log(p.x);"])
+        self.assertEqual(got, ["1", "q"])
+
+    def test_a_wrong_model_fails_the_oracle(self) -> None:
+        self.assertNotEqual(ts_oracle.ts_values(["console.log([10, 9, 1].sort());"])[0], "[ 1, 9, 10 ]",
+                            "the default sort compares strings")
+
+
+@unittest.skipUnless(rust_oracle.HAVE_RUSTC, "needs rustc")
+class RustOracleTests(unittest.TestCase):
+    """THE ORACLE for every Rust activity: every template on several seeds plus whole rounds, in crates built debug AND -O
+    (tests/rust_oracle.py), which must agree. A new Rust pack is picked up with no edit."""
+
+    def test_rust_answers_are_what_rustc_builds_print(self) -> None:
+        if not activities_in("rust"):
+            self.skipTest("no Rust activities")
+        for a_id, pairs in typed_results("rust").items():
+            self.assertGreater(len(pairs), 20, a_id)
+        self.assertEqual(_typed_wrong("rust"), {})
+
+    def test_a_fine_or_error_round_holds_both_answers_for_real(self) -> None:
+        for a_id, pairs in typed_results("rust").items():
+            if ACTIVITIES_BY_ID[a_id].oracle == "error":
+                self.assertEqual({g.verdict for _, g in pairs}, {"fine", "error"}, a_id)
+
+    def test_no_value_item_differs_between_debug_and_release(self) -> None:
+        differ = [(a_id, i.prompt) for a_id, pairs in typed_results("rust").items() for i, g in pairs
+                  if g.value.startswith("BUILDS DIFFER")]
+        self.assertEqual(differ[:5], [])
+
+
+@unittest.skipUnless(rust_oracle.HAVE_RUSTC, "needs rustc")
+class RustOracleSelfTests(unittest.TestCase):
+    def test_the_harness_tells_values_borrow_errors_panics_overflow_and_hangs_apart(self) -> None:
+        got = rust_oracle.rust_results([
+            'println!("{}", -7 / 2);',
+            'let s = String::from("a");\nlet t = s;\nprintln!("{}", s);',
+            'let v: Vec<i32> = Vec::new();\nprintln!("{}", v[3]);',
+            'let mut x: u8 = 250;\nx += std::hint::black_box(10u8);\nprintln!("{}", x);',
+            "loop {}",
+            'struct P { x: i32 }\nfn main() {\n    println!("{}", P { x: 4 }.x);\n}',
+            'struct P { x: f64 }\nfn main() {\n    println!("{:?}", P { x: 2.0 }.x);\n}',
+            'println!("after");',
+        ])
+        self.assertEqual(got[0].value, "-3")
+        self.assertFalse(got[1].compiled)
+        self.assertIn("E0382", got[1].value, "the borrow checker ran")
+        self.assertTrue(got[2].panicked)
+        self.assertIn("index out of bounds", got[2].value)
+        self.assertTrue(got[3].value.startswith("BUILDS DIFFER"), "debug panics on overflow, -O wraps")
+        self.assertEqual(got[4].value, "HANG")
+        self.assertEqual(got[5].value, "4")
+        self.assertEqual(got[6].value, "2.0", "two programs may both declare struct P")
+        self.assertEqual((got[7].value, got[7].verdict), ("after", "fine"), "the rest still run")
+
+    def test_an_error_only_the_real_build_finds_is_a_compile_error_not_a_crash(self) -> None:
+        # unconditional_panic is a deny lint raised in code generation, after `--emit=metadata` said yes
+        got = rust_oracle.rust_results(["let a = [1, 2, 3];\nprintln!(\"{}\", a[5]);", 'println!("{}", 3);'])
+        self.assertFalse(got[0].compiled)
+        self.assertEqual((got[0].verdict, got[1].value), ("error", "3"))
+
+    def test_an_item_the_batch_refuses_is_judged_on_its_own(self) -> None:
+        # a type error in one item never makes its neighbour fail
+        got = rust_oracle.rust_results(['let x: i32 = "a";\nprintln!("{}", x);', 'println!("{}", 1 + 1);'])
+        self.assertEqual((got[0].verdict, got[1].value), ("error", "2"))
+
+    def test_a_wrong_model_fails_the_oracle(self) -> None:
+        self.assertNotEqual(rust_oracle.rust_values(['println!("{}", "h\\u{e9}".len());'])[0], "2", "len() counts bytes")
+
+
+class TypedRunItTests(unittest.TestCase):
+    @unittest.skipUnless(ts_oracle.HAVE_TSC, "needs tsc")
+    def test_run_it_runs_a_typescript_program_for_real(self) -> None:
+        from code_coach.api.schemas import BrainRunRequest
+        from code_coach.api.server import brain_run
+
+        ok = brain_run(BrainRunRequest(code=ts_oracle.full_program("const n: number = 7;\nconsole.log(n / 2);"),
+                                       language="typescript"))
+        self.assertTrue(ok["ok"], ok)
+        self.assertEqual(ok["stdout"].strip(), "3.5")
+        broken = brain_run(BrainRunRequest(code=ts_oracle.full_program('const n: number = "a";'), language="typescript"))
+        self.assertFalse(broken["ok"])
+        self.assertTrue(broken["compile_error"])
+
+    @unittest.skipUnless(rust_oracle.HAVE_RUSTC, "needs rustc")
+    def test_run_it_runs_a_rust_program_for_real(self) -> None:
+        from code_coach.api.schemas import BrainRunRequest
+        from code_coach.api.server import brain_run
+
+        ok = brain_run(BrainRunRequest(code=rust_oracle.full_program('let v = vec![1, 2];\nprintln!("{:?}", v);'),
+                                       language="rust"))
+        self.assertTrue(ok["ok"], ok)
+        self.assertEqual(ok["stdout"].strip(), "[1, 2]")
+        broken = brain_run(BrainRunRequest(code=rust_oracle.full_program('let s = String::new();\nlet t = s;\nprintln!("{}", s);'),
+                                           language="rust"))
+        self.assertFalse(broken["ok"])
+        self.assertTrue(broken["compile_error"])

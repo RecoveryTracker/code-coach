@@ -2541,12 +2541,12 @@ def brain_result(body: BrainResultRequest) -> dict:
 #: The longest snippet "Run it" will start (the drills' own programs are a few hundred characters).
 BRAIN_RUN_MAX_CODE = 4000
 #: The drill languages "Run it" runs through the Gotchas runner (the others have the tracer).
-BRAIN_RUN_LANGUAGES = ("dart", "c", "sql")
+BRAIN_RUN_LANGUAGES = ("dart", "c", "sql", "typescript", "rust")
 
 
 @app.post("/api/brain/run")
 def brain_run(body: BrainRunRequest) -> dict:
-    """"Run it" for a Dart, C or SQL drill: the snippet, run for real by the Gotchas runner (a bare environment, an
+    """"Run it" for a Dart, C, SQL, TypeScript or Rust drill: the snippet, run for real by the Gotchas runner (a bare environment, an
     empty working folder, no input, 5 seconds after the build, 64 KB of output; C is compiled first, SQL goes through
     the runner's SQLite driver, which prints the rows of the last SELECT). Python and JavaScript drills go through
     /api/visualize. The answer has the shape of /api/visualize's (`ok`, `stdout`, `stderr`, `error`) plus the

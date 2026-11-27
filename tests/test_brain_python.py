@@ -220,8 +220,8 @@ class LanguageHistoryTests(unittest.TestCase):
         self.assertEqual(js["checkAges"], [])
         self.assertTrue(js["trainedToday"])
         self.assertEqual(py["language"], "python")
-        self.assertEqual(py["languages"], ["python", "javascript", "dart", "c", "sql"],
-                         "Python is listed first, then JavaScript, Dart, C and SQL")
+        self.assertEqual(py["languages"], ["python", "javascript", "dart", "c", "sql", "typescript", "rust"],
+                         "Python is listed first, then JavaScript, Dart, C, SQL, TypeScript and Rust")
 
     def test_python_activities_are_worded_for_python(self) -> None:
         py = {a["id"]: a for a in brain.summary(language="python")["activities"]}

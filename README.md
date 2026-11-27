@@ -50,7 +50,7 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Session** | One queue across every practice, so a session starts with practice rather than with deciding what to practise. Its History view shows how much of each practice you have touched and what is due to be done again |
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages. Shuffle deals random exercises from a range of pages |
-| **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C and SQL, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
+| **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C, SQL, TypeScript and Rust, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
 | **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 101 puzzles: 22 Python, 28 JavaScript, 10 TypeScript, 12 Dart, 14 C, 9 Rust and 6 Ruby |
 | **Predict** | Read the code, say what it prints. 314 puzzles: 81 Python, 126 JavaScript, 17 TypeScript, 24 Dart, 25 C, 16 Rust, 13 C++ and 12 Ruby |
 | **Gotchas** | Quiz cards where the obvious answer is a trap, one at a time and endless. Python and JavaScript |
@@ -273,8 +273,10 @@ So each mode gets its answers from a different place, on purpose:
   them, and every language's drone library to the same commands. Where the
   wiki is silent the value is a guess, marked as one in `data.py`.
 - **Brain Drills** — each item is made fresh from a template and its answer
-  worked out in Python, by modelling what JavaScript does. The tests run the
-  templates through node over many seeds, and the model has to agree.
+  worked out in Python, by modelling what the language does. The tests run the
+  templates through the real runtime over many seeds (node, Python, dart, the C
+  compilers, SQLite, `tsc --strict`, and rustc built both debug and `-O`), and
+  the model has to agree.
 
 ### Where your work is kept
 

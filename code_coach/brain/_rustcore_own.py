@@ -1,0 +1,243 @@
+"""Rust core pack, part 2: Move, Copy, Clone (programs that compile and print) and Borrow Check (fine or error).
+
+Every answer is worked out by hand. For Borrow Check the "error" answer means rustc refuses the program or it panics when
+run; tests/rust_oracle.py (RustRun.verdict) holds each template to the real rustc and a real run.
+"""
+
+from __future__ import annotations
+
+import random
+
+from ._model import Maker
+from ._rs_model import RS, Retry, debug
+from .items import Item
+
+
+def T(*lines: str) -> str:
+    return "\n".join(lines)
+
+
+def lst(xs) -> str:
+    return "[" + ", ".join(str(x) for x in xs) + "]"
+
+
+# ── 1. Move, Copy, Clone ────────────────────────────────────────────────
+
+OWN: list[Maker] = [
+    RS(T(r'let mut a = $a;', r'let b = a;', r'a += $b;', r'println!("{} {}", a, b);'), lambda p: f"{p['a'] + p['b']} {p['a']}", "An integer is Copy: b is its own copy, so changing a leaves b alone."),
+    RS(T(r'let s = String::from("$w");', r'let t = s;', r'println!("{}", t.len());'), lambda p: p["L"], "The String moved into t; t is the owner and has the length."),
+    RS(T(r'let a = String::from("$w");', r'let mut b = a.clone();', r"b.push('$x');", r'println!("{} {}", a, b);'), lambda p: f"{p['w']} {p['w']}{p['x']}", "clone made an independent copy, so only b grew."),
+    RS(T(r'let mut v = vec![$a, $b];', r'let w = v.clone();', r'v.push($c);', r'println!("{} {}", v.len(), w.len());'), "3 2", "The clone is separate: pushing to v does not change w."),
+    RS(T(r'fn add(mut v: Vec<i32>) -> Vec<i32> { v.push($a); v }', r'fn main() {', r'    let v = add(vec![$b]);', r'    println!("{:?}", v);', r'}'), lambda p: lst([p["b"], p["a"]]), "The vector moves in, gets a push, and the function hands the ownership back."),
+    RS(T(r'fn bump(x: &mut i32) { *x += $a; }', r'fn main() {', r'    let mut n = $b;', r'    bump(&mut n); bump(&mut n);', r'    println!("{}", n);', r'}'), lambda p: p["b"] + 2 * p["a"], "Each call changes the caller's n through the mutable reference."),
+    RS(T(r'fn bump(mut x: i32) { x += $a; }', r'fn main() {', r'    let n = $b;', r'    bump(n);', r'    println!("{}", n);', r'}'), lambda p: p["b"], "The function got a copy of the integer; the caller's n is untouched."),
+    RS(T(r'fn len(s: &String) -> usize { s.len() }', r'fn main() {', r'    let s = String::from("$w");', r'    let n = len(&s);', r'    println!("{} {}", s, n);', r'}'), lambda p: f"{p['w']} {p['L']}", "Only a reference was lent, so s is still usable afterwards."),
+    RS(T(r'let mut a = $a;', r'let mut b = $b;', r'std::mem::swap(&mut a, &mut b);', r'println!("{} {}", a, b);'), lambda p: f"{p['b']} {p['a']}", "swap exchanges the two values."),
+    RS(T(r'let mut v = vec![$a, $b];', r'let t = std::mem::take(&mut v);', r'println!("{} {}", v.len(), t.len());'), "0 2", "take moves the contents out and leaves an empty default behind."),
+    RS(T(r'let mut s = String::from("$w");', r'let old = std::mem::replace(&mut s, String::from("$z"));', r'println!("{} {}", old, s);'), lambda p: f"{p['w']} {p['z']}", "replace puts the new value in and gives back the old one."),
+    RS(T(r'let mut s = String::from("$w");', r'let t = std::mem::take(&mut s);', r'println!("[{}] [{}]", s, t);'), lambda p: f"[] [{p['w']}]", "take leaves an empty String in s."),
+    RS(T(r'use std::rc::Rc;', r'let a = Rc::new($a);', r'let b = Rc::clone(&a);', r'println!("{}", Rc::strong_count(&a) + *b);'), lambda p: 2 + p["a"], "Two owners share the value, so the count is 2; *b is the number itself."),
+    RS(T(r'use std::rc::Rc;', r'let a = Rc::new(String::from("$w"));', r'let cs: Vec<_> = (0..$k).map(|_| Rc::clone(&a)).collect();', r'println!("{}", Rc::strong_count(&a) + cs.len());'), lambda p: 1 + 2 * p["k"], "The count is a plus one clone per item; cs.len() adds them again."),
+    RS(T(r'use std::rc::Rc;', r'let a = Rc::new($a);', r'let b = a.clone();', r'let c = a.clone();', r'drop(b);', r'println!("{}", Rc::strong_count(&c));'), 2, "Three owners were made, one was dropped, so two remain."),
+    RS(T(r'use std::rc::Rc;', r'let a = Rc::new($a);', r'{', r'    let _b = Rc::clone(&a);', r'}', r'println!("{}", Rc::strong_count(&a));'), 1, "The clone is dropped at the closing brace, so only a is left."),
+    RS(T(r'use std::rc::Rc;', r'let a = Rc::new($a);', r'let b = Rc::clone(&a);', r'let c = Rc::new($a);', r'println!("{} {}", Rc::ptr_eq(&a, &b), Rc::ptr_eq(&a, &c));'), "true false", "A clone points at the same allocation; a separate Rc::new does not."),
+    RS(T(r'fn greet(s: String) -> String { format!("{}!", s) }', r'fn main() {', r'    let s = greet(String::from("$w"));', r'    let s = greet(s);', r'    println!("{}", s);', r'}'), lambda p: p["w"] + "!!", "Each call takes ownership and returns a new String that shadows the old name."),
+    RS(T(r'let s = String::from("$w");', r'let t = s;', r'let s = String::from("$z");', r'println!("{}{}", s, t);'), lambda p: p["z"] + p["w"], "The new s shadows the moved one; t owns the first word."),
+    RS(T(r'let a = [$a, $b];', r'let b = a;', r'println!("{}", a[0] + b[1]);'), lambda p: p["a"] + p["b"], "An array of integers is Copy, so both names stay valid."),
+    RS(T(r'let t = ($a, $b);', r'let u = t;', r'println!("{}", t.0 * u.1);'), lambda p: p["a"] * p["b"], "A tuple of integers is Copy."),
+    RS(T(r'let mut o = Some(String::from("$w"));', r'let t = o.take();', r'println!("{:?} {:?}", o, t);'), lambda p: f'None Some("{p["w"]}")', "take moves the content out and leaves None."),
+    RS(T(r'let b = Box::new($a);', r'let c = *b + $b;', r'println!("{}", c);'), lambda p: p["a"] + p["b"], "Dereferencing the Box reads the number inside."),
+    RS(T(r'let s = String::from("$w");', r'let f = move || s.len();', r'println!("{}", f() + f());'), lambda p: 2 * p["L"], "The closure owns s and can be called twice."),
+    RS(T(r'let mut n = $a;', r'let mut inc = || n += $b;', r'inc(); inc();', r'println!("{}", n);'), lambda p: p["a"] + 2 * p["b"], "The closure borrows n mutably; after its last call n can be read."),
+    RS(T(r'let n = $a;', r'let f = move || n + 1;', r'println!("{} {}", f(), n);'), lambda p: f"{p['a'] + 1} {p['a']}", "move copies an integer into the closure; n is still usable."),
+    RS(T(r'struct P { name: String, n: i32 }', r'fn main() {', r'    let p = P { name: String::from("$w"), n: $a };', r'    let q = p.name;', r'    println!("{} {}", q, p.n);', r'}'), lambda p: f"{p['w']} {p['a']}", "Moving one field leaves the other fields usable."),
+    RS(T(r'#[derive(Clone, Debug)]', r'struct S { v: Vec<i32> }', r'fn main() {', r'    let a = S { v: vec![$a] };', r'    let mut b = a.clone();', r'    b.v.push($b);', r'    println!("{:?} {:?}", a.v, b.v);', r'}'), lambda p: f"{lst([p['a']])} {lst([p['a'], p['b']])}", "The derived clone copies the vector too, so only b changes."),
+    RS(T(r'fn push_all(v: &mut Vec<i32>) { for i in 0..$k { v.push(i); } }', r'fn main() {', r'    let mut v = vec![$a];', r'    push_all(&mut v); push_all(&mut v);', r'    println!("{:?}", v);', r'}'), lambda p: lst([p["a"]] + list(range(p["k"])) * 2), "Each call appends 0 up to k - 1 to the same vector."),
+    RS(T(r'let v = vec![$a, $b, $c];', r'let mut t = 0;', r'for x in &v { t += x; }', r'println!("{} {}", t, v.len());'), lambda p: f"{p['a'] + p['b'] + p['c']} 3", "Looping over &v only borrows, so v is still there afterwards."),
+    RS(T(r'let v = vec![$a, $b, $c];', r'let d: Vec<i32> = v.iter().map(|x| x * 2).collect();', r'println!("{} {}", v.len(), d[0]);'), lambda p: f"3 {p['a'] * 2}", "iter borrows, so v is intact; d holds the doubled values."),
+    RS(T(r'let v = vec![$a, $b];', r'let w: Vec<i32> = v.into_iter().rev().collect();', r'println!("{:?}", w);'), lambda p: lst([p["b"], p["a"]]), "into_iter consumes v and rev flips the order."),
+    RS(T(r'let s = String::from("$w");', r'let r = &s;', r'let r2 = &s;', r'println!("{}", r.len() + r2.len());'), lambda p: 2 * p["L"], "Any number of shared references can exist together."),
+    RS(T(r'let mut s = String::from("$w");', r'{', r'    let r = &mut s;', r'    r.push_str("$z");', r'}', r'println!("{}", s);'), lambda p: p["w"] + p["z"], "The mutable borrow ends at the brace; s holds the appended text."),
+    RS(T(r'let mut s = String::from("$w");', r'let r = &mut s;', r"r.push('$x');", r'println!("{}", s);'), lambda p: p["w"] + p["x"], "r's last use is the push, so reading s afterwards is allowed."),
+    RS(T(r"fn longest<'a>(a: &'a str, b: &'a str) -> &'a str { if a.len() >= b.len() { a } else { b } }", r'fn main() {', r'    println!("{}", longest("$w", "$z"));', r'}'), lambda p: p["w"] if len(p["w"]) >= len(p["z"]) else p["z"], "The longer word wins; on a tie the first one is returned."),
+    RS(T(r'let x = Some(String::from("$w"));', r'if let Some(ref s) = x { let _ = s.len(); }', r'println!("{:?}", x);'), lambda p: f'Some("{p["w"]}")', "ref borrows the content, so x is not moved."),
+    RS(T(r'let s1 = String::from("$w");', r'let s2 = s1 + "$z";', r'println!("{}", s2);'), lambda p: p["w"] + p["z"], "+ takes s1 by value and appends; s1 can no longer be used."),
+    RS(T(r'let mut v = vec![$a, $b, $c];', r'let first = v[0];', r'v.push(first);', r'println!("{:?}", v);'), lambda p: lst([p["a"], p["b"], p["c"], p["a"]]), "Reading an integer element copies it, leaving no borrow behind."),
+    RS(T(r'let v = vec![String::from("$w")];', r'let s = v[0].clone();', r'println!("{} {}", s, v.len());'), lambda p: f"{p['w']} 1", "Cloning the element leaves the vector whole."),
+    RS(T(r'let a = vec![$a; 3];', r'let b = a;', r'let a = vec![$b];', r'println!("{:?} {:?}", a, b);'), lambda p: f"{lst([p['b']])} {lst([p['a']] * 3)}", "The first vector moved into b; the new a is a different vector."),
+    RS(T(r'let mut a = vec![$a, $b];', r'let b = &mut a;', r'b.push($c);', r'let c = &a;', r'println!("{}", c.len());'), 3, "The mutable borrow was last used before the shared one began."),
+    RS(T(r'fn first(v: &[i32]) -> i32 { v[0] }', r'fn main() {', r'    let v = vec![$a, $b, $c];', r'    println!("{} {}", first(&v), first(&v[1..]));', r'}'), lambda p: f"{p['a']} {p['b']}", "A slice of the vector starts at index 1, so its first item is b."),
+    RS(T(r'fn make() -> Vec<i32> { let v = vec![$a, $b]; v }', r'fn main() {', r'    let mut v = make();', r'    v.push($c);', r'    println!("{:?}", v);', r'}'), lambda p: lst([p["a"], p["b"], p["c"]]), "Ownership of the vector is returned to the caller, who may mutate it."),
+    RS(T(r'let s = String::from("$w");', r'let t = s.clone();', r'drop(s);', r'println!("{}", t);'), lambda p: p["w"], "t is an independent clone, so dropping s changes nothing for it."),
+]
+
+
+# ── 2. Borrow Check ─────────────────────────────────────────────────────
+
+def one(fmt: str, verdict: str, why: str) -> Maker:
+    return RS(fmt, verdict, why)
+
+
+def EF(err: str, fine: str, why_err: str, why_fine: str) -> Maker:
+    """A pair: the same shape twice, once rustc refuses it (or it panics), once made legal."""
+    me, mf = RS(err, "error", why_err), RS(fine, "fine", why_fine)
+
+    def make(rng: random.Random) -> Item:
+        return (me if rng.random() < 0.5 else mf)(rng)
+    make.__name__ = "ef_" + err[:20]
+    return make
+
+
+BORROW: list[Maker] = [
+    EF(T(r'let s = String::from("$w");', r'let t = s;', r'println!("{} {}", s, t);'),
+       T(r'let s = String::from("$w");', r'let t = s.clone();', r'println!("{} {}", s, t);'),
+       "s was moved into t, so it cannot be used.", "clone leaves s valid."),
+    EF(T(r'fn eat(s: String) -> usize { s.len() }', r'fn main() {', r'    let s = String::from("$w");', r'    let n = eat(s);', r'    println!("{} {}", s, n);', r'}'),
+       T(r'fn eat(s: &String) -> usize { s.len() }', r'fn main() {', r'    let s = String::from("$w");', r'    let n = eat(&s);', r'    println!("{} {}", s, n);', r'}'),
+       "Passing s by value moved it into the function.", "Passing a reference only lends s."),
+    EF(T(r'let mut v = vec![$a];', r'let r1 = &mut v;', r'let r2 = &mut v;', r'r1.push($b);', r'r2.push($c);'),
+       T(r'let mut v = vec![$a];', r'let r1 = &mut v;', r'r1.push($b);', r'let r2 = &mut v;', r'r2.push($c);'),
+       "Two mutable borrows of v are alive at the same time.", "r1 is finished before r2 begins."),
+    EF(T(r'let mut n = $a;', r'let r = &n;', r'n += 1;', r'println!("{}", r);'),
+       T(r'let mut n = $a;', r'let r = &n;', r'println!("{}", r);', r'n += 1;'),
+       "n is changed while the shared reference r is still going to be used.", "r's last use comes before the change, so the borrow has ended."),
+    EF(T(r'fn add(v: &Vec<i32>) { v.push($a); }', r'fn main() {', r'    let mut v = vec![$b];', r'    add(&v);', r'    println!("{}", v.len());', r'}'),
+       T(r'fn add(v: &mut Vec<i32>) { v.push($a); }', r'fn main() {', r'    let mut v = vec![$b];', r'    add(&mut v);', r'    println!("{}", v.len());', r'}'),
+       "A shared reference cannot be used to push.", "The mutable reference allows the push."),
+    EF(T(r'let x = $a;', r'x = $b;', r'println!("{}", x);'),
+       T(r'let mut x = $a;', r'x = $b;', r'println!("{}", x);'),
+       "x is not declared mut, so it cannot be assigned twice.", "mut allows the second assignment."),
+    EF(T(r'let x;', r'if $a > $b { x = 1; }', r'println!("{}", x);'),
+       T(r'let x;', r'if $a > $b { x = 1; } else { x = 2; }', r'println!("{}", x);'),
+       "x might never be assigned.", "Every branch assigns x exactly once."),
+    EF(T(r'''fn mk() -> &'static str { let s = String::from("$w"); &s }''', r'fn main() { println!("{}", mk()); }'),
+       T(r'fn mk() -> String { let s = String::from("$w"); s }', r'fn main() { println!("{}", mk()); }'),
+       "It returns a reference to a local that is dropped at the end of the function.", "Returning the String itself moves it out."),
+    EF(T(r'let s = String::from("$w");', r'for _ in 0..$k {', r'    drop(s);', r'}'),
+       T(r'let s = String::from("$w");', r'for _ in 0..$k {', r'    drop(s.clone());', r'}'),
+       "s is moved in the first turn and used again in the next one.", "Each turn drops a fresh clone."),
+    EF(T(r'let mut v = vec![$a, $b];', r'let first = &v[0];', r'v.push($c);', r'println!("{}", first);'),
+       T(r'let mut v = vec![$a, $b];', r'let first = &v[0];', r'println!("{}", first);', r'v.push($c);'),
+       "push may reallocate the vector while first still points into it.", "first is no longer used when push runs."),
+    EF(T(r'let v = vec![$a, $b, $c];', r'let i = v.len() + $k;', r'println!("{}", v[i]);'),
+       T(r'let v = vec![$a, $b, $c];', r'let i = v.len() + $k;', r'println!("{:?}", v.get(i));'),
+       "The index is past the end, so the program panics.", "get returns None instead of panicking."),
+    EF(T(r'let v: Vec<i32> = Vec::new();', r'println!("{}", v.first().unwrap());'),
+       T(r'let v: Vec<i32> = Vec::new();', r'println!("{}", v.first().unwrap_or(&$a));'),
+       "first gives None for an empty vector and unwrap panics.", "unwrap_or supplies a fallback."),
+    EF(T(r'let n: i32 = "x$n".parse().unwrap();', r'println!("{}", n);'),
+       T(r'let n: i32 = "$n".parse().unwrap();', r'println!("{}", n);'),
+       "The text is not a number, so unwrap panics on the Err.", "The text is a valid number."),
+    one(T(r'''let i = "$w".find('$x').unwrap();''', r'println!("{}", i);'), lambda p: "fine" if p["x"] in p["w"] else "error", "unwrap panics when the letter is not in the word."),
+    EF(T(r'use std::cell::RefCell;', r'let c = RefCell::new($a);', r'let a = c.borrow_mut();', r'let b = c.borrow_mut();', r'println!("{}", *a + *b);'),
+       T(r'use std::cell::RefCell;', r'let c = RefCell::new($a);', r'{ let mut a = c.borrow_mut(); *a += 1; }', r'let b = c.borrow_mut();', r'println!("{}", *b);'),
+       "A second borrow_mut while the first is alive panics at run time.", "The first borrow ends at the brace."),
+    EF(T(r'use std::cell::RefCell;', r'let c = RefCell::new($a);', r'let r = c.borrow();', r'*c.borrow_mut() += 1;', r'println!("{}", r);'),
+       T(r'use std::cell::RefCell;', r'let c = RefCell::new($a);', r'let r1 = c.borrow();', r'let r2 = c.borrow();', r'println!("{}", *r1 + *r2);'),
+       "borrow_mut panics while a borrow is still alive.", "Any number of shared borrows may coexist."),
+    EF(T(r'let mut n = $a;', r'let mut inc = || n += 1;', r'println!("{}", n);', r'inc();'),
+       T(r'let mut n = $a;', r'let mut inc = || n += 1;', r'inc();', r'println!("{}", n);'),
+       "The closure holds a mutable borrow of n until its last call.", "The closure is done before n is read."),
+    EF(T(r'let r;', r'{', r'    let x = $a;', r'    r = &x;', r'}', r'println!("{}", r);'),
+       T(r'let x = $a;', r'let r;', r'{', r'    r = &x;', r'}', r'println!("{}", r);'),
+       "x does not live long enough: it is gone at the closing brace.", "x outlives r."),
+    EF(T(r'let a: u8 = $u;', r'let b: u32 = a;', r'println!("{}", b);'),
+       T(r'let a: u8 = $u;', r'let b: u32 = a.into();', r'println!("{}", b);'),
+       "Rust never converts u8 to u32 silently.", "into does the lossless conversion."),
+    EF(T(r'let v = Vec::new();', r'v.push($a);', r'println!("{}", v.len());'),
+       T(r'let mut v = Vec::new();', r'v.push($a);', r'println!("{}", v.len());'),
+       "push needs a mutable v.", "mut was added."),
+    EF(T(r'let s = String::from("$w");', r'let f = move || s.len();', r'println!("{} {}", f(), s);'),
+       T(r'let n = $a;', r'let f = move || n + 1;', r'println!("{} {}", f(), n);'),
+       "move gave s to the closure, so s cannot be used afterwards.", "An integer is Copy, so n is still usable."),
+    EF(T(r'struct P { name: String, n: i32 }', r'fn main() {', r'    let p = P { name: String::from("$w"), n: $a };', r'    let q = p.name;', r'    println!("{} {}", q, p.name);', r'}'),
+       T(r'struct P { name: String, n: i32 }', r'fn main() {', r'    let p = P { name: String::from("$w"), n: $a };', r'    let q = p.name;', r'    println!("{} {}", q, p.n);', r'}'),
+       "p.name was moved out and is used again.", "The untouched field n is still usable."),
+    EF(T(r'let v = vec![String::from("$w")];', r'let s = v[0];', r'println!("{}", s);'),
+       T(r'let v = vec![String::from("$w")];', r'let s = v[0].clone();', r'println!("{}", s);'),
+       "A String cannot be moved out of a vector by indexing.", "clone makes an owned copy."),
+    EF(T(r'let o = Some(String::from("$w"));', r'if let Some(s) = o { println!("{}", s); }', r'println!("{:?}", o);'),
+       T(r'let o = Some(String::from("$w"));', r'if let Some(s) = &o { println!("{}", s); }', r'println!("{:?}", o);'),
+       "The pattern moved the String out of o.", "Matching on &o only borrows."),
+    EF(T(r'let v = vec![$a, $b];', r'for x in v { println!("{}", x); }', r'println!("{}", v.len());'),
+       T(r'let v = vec![$a, $b];', r'for x in &v { println!("{}", x); }', r'println!("{}", v.len());'),
+       "for over v consumes the vector.", "for over &v borrows it."),
+    EF(T(r'let mut v = vec![$a];', r'let r = &mut v;', r'r.push(v.len() as i32);', r'println!("{:?}", v);'),
+       T(r'let mut v = vec![$a];', r'v.push(v.len() as i32);', r'println!("{:?}", v);'),
+       "v.len() borrows v while the mutable reference r is still alive.", "Two-phase borrows allow v.push(v.len())."),
+    EF(T(r'let s = String::from("$w");', r'let c = s[0];', r'println!("{}", c);'),
+       T(r'let s = String::from("$w");', r'let c = s.chars().next().unwrap();', r'println!("{}", c);'),
+       "A String cannot be indexed by a number.", "chars().next() gets the first character."),
+    EF(T(r'let v = vec![$a, $b];', r'let z = v.len() as i32 - 2;', r'println!("{}", $c / z);'),
+       T(r'let v = vec![$a, $b];', r'let z = v.len() as i32 - 1;', r'println!("{}", $c / z);'),
+       "z is 0, and an integer division by zero panics.", "z is 1, so the division is fine."),
+    EF(T(r'let v = vec![$a, $b, $c];', r'println!("{:?}", &v[1..$n]);'),
+       T(r'let v = vec![$a, $b, $c];', r'println!("{:?}", &v[..$k]);'),
+       "The slice range ends past the length, so it panics.", "k is at most 3, inside the vector."),
+    EF(T(r'let s = "caf\u{e9}";', r'println!("{}", &s[0..4]);'),
+       T(r'let s = "caf\u{e9}";', r'println!("{}", &s[0..3]);'),
+       "Byte 4 is in the middle of the two-byte letter, so slicing panics.", "Byte 3 is a character boundary."),
+    EF(T(r'let a = vec![$a, $b, $c];', r'let i = $n / $n + 2 + $k;', r'println!("{}", a[i]);'),
+       T(r'let a = vec![$a, $b, $c];', r'let i = $n / $n + $q - 1;', r'println!("{}", a[i]);'),
+       "The index is 3 or more, past the end of the vector.", "The index is 0, 1 or 2."),
+    EF(T(r'use std::rc::Rc;', r'let a = Rc::new($a);', r'*a += 1;', r'println!("{}", a);'),
+       T(r'use std::{cell::RefCell, rc::Rc};', r'let a = Rc::new(RefCell::new($a));', r'*a.borrow_mut() += 1;', r'println!("{}", a.borrow());'),
+       "An Rc only gives shared access, so it cannot be changed.", "RefCell allows the change at run time."),
+    EF(T(r'let s: &str = String::from("$w");', r'println!("{}", s);'),
+       T(r'let s: &str = &String::from("$w");', r'println!("{}", s);'),
+       "A String is not a &str.", "Borrowing the String gives a &str."),
+    EF(T(r'let x: i32;', r'println!("{}", x);'),
+       T(r'let x: i32;', r'x = $a;', r'println!("{}", x);'),
+       "x is read before it has a value.", "x is assigned before it is read."),
+    EF(T(r'let n = if $a > $b { 1 };', r'println!("{:?}", n);'),
+       T(r'let n = if $a > $b { 1 } else { 0 };', r'println!("{:?}", n);'),
+       "An if without else has the type () but the branch gives a number.", "Both branches give a number."),
+    EF(T(r'let n: i32 = $a;', r'let s = match n { 1 => "one", 2 => "two" };', r'println!("{}", s);'),
+       T(r'let n: i32 = $a;', r'let s = match n { 1 => "one", 2 => "two", _ => "many" };', r'println!("{}", s);'),
+       "The match does not cover every i32.", "The _ arm covers the rest."),
+    EF(T(r'struct C { n: i32 }', r'impl C { fn inc(&mut self) { self.n += 1; } }', r'fn main() {', r'    let c = C { n: $a };', r'    c.inc();', r'    println!("{}", c.n);', r'}'),
+       T(r'struct C { n: i32 }', r'impl C { fn inc(&mut self) { self.n += 1; } }', r'fn main() {', r'    let mut c = C { n: $a };', r'    c.inc();', r'    println!("{}", c.n);', r'}'),
+       "inc needs &mut self but c is not mut.", "c is declared mut."),
+    EF(T(r'let a = String::from("$w");', r'let b = String::from("$z");', r'let c = a + b;', r'println!("{}", c);'),
+       T(r'let a = String::from("$w");', r'let b = String::from("$z");', r'let c = a + &b;', r'println!("{}", c);'),
+       "+ wants a &str on the right, not a String.", "&b is a &str."),
+    EF(T(r'let c = "$w" + "$z";', r'println!("{}", c);'),
+       T(r'let c = format!("{}{}", "$w", "$z");', r'println!("{}", c);'),
+       "Two &str values cannot be added with +.", "format! builds a String."),
+    EF(T(r'use std::collections::BTreeMap;', r'let mut m = BTreeMap::new();', r'm.insert("$w", $a);', r'println!("{}", m["$z"]);'),
+       T(r'use std::collections::BTreeMap;', r'let mut m = BTreeMap::new();', r'm.insert("$w", $a);', r'println!("{:?}", m.get("$z"));'),
+       "Indexing a missing key panics.", "get gives None for a missing key."),
+    EF(T(r'let mut v = vec![$a, $b];', r'v.remove($k + 1);', r'println!("{}", v.len());'),
+       T(r'let mut v = vec![$a, $b];', r'v.remove($r);', r'println!("{}", v.len());'),
+       "remove panics when the index is not below the length.", "Index 0 or 1 exists."),
+    EF(T(r'let x: u32 = -$a;', r'println!("{}", x);'),
+       T(r'let x: i32 = -$a;', r'println!("{}", x);'),
+       "An unsigned number cannot be negated.", "i32 can be negative."),
+    EF(T(r'let mut v = vec![$a, $b];', r'for x in &v { v.push(*x); }', r'println!("{}", v.len());'),
+       T(r'let mut v = vec![$a, $b];', r'for x in v.clone() { v.push(x); }', r'println!("{}", v.len());'),
+       "The loop borrows v while the body pushes to it.", "The loop walks a clone."),
+    EF(T(r'let mut s = String::from("$w");', r'let r = &mut s;', r'let t = &s;', r"r.push('$x');", r'println!("{}", t);'),
+       T(r'let mut s = String::from("$w");', r'let r = &mut s;', r"r.push('$x');", r'let t = &s;', r'println!("{}", t);'),
+       "A shared and a mutable borrow overlap.", "The mutable borrow ends before the shared one starts."),
+    EF(T(r'let s = "$w";', r"s.push('$x');", r'println!("{}", s);'),
+       T(r'let mut s = String::from("$w");', r"s.push('$x');", r'println!("{}", s);'),
+       "A &str cannot grow.", "A String can."),
+    EF(T(r'let a: i32 = $a;', r'let b: i64 = $b;', r'println!("{}", a + b);'),
+       T(r'let a: i32 = $a;', r'let b: i64 = $b;', r'println!("{}", a as i64 + b);'),
+       "i32 and i64 cannot be added directly.", "The cast makes both i64."),
+    EF(T(r'struct P { x: i32 }', r'fn main() {', r'    let p = P { x: $a };', r'    let q = p;', r'    println!("{} {}", p.x, q.x);', r'}'),
+       T(r'#[derive(Clone, Copy)]', r'struct P { x: i32 }', r'fn main() {', r'    let p = P { x: $a };', r'    let q = p;', r'    println!("{} {}", p.x, q.x);', r'}'),
+       "P is not Copy, so let q = p moves it.", "derive(Copy) makes the assignment a copy."),
+    EF(T(r'let o = Some(String::from("$w"));', r'let s = o.unwrap();', r'println!("{:?} {}", o, s);'),
+       T(r'let o = Some(String::from("$w"));', r'let s = o.clone().unwrap();', r'println!("{:?} {}", o, s);'),
+       "unwrap consumes o.", "Unwrapping a clone leaves o."),
+    EF(T(r"fn pick<'a>(a: &'a str, b: &str) -> &'a str { b }", r'fn main() { println!("{}", pick("$w", "$z")); }'),
+       T(r"fn pick<'a>(a: &'a str, b: &str) -> &'a str { a }", r'fn main() { println!("{}", pick("$w", "$z")); }'),
+       "b does not have the lifetime 'a that the result promises.", "a has the right lifetime."),
+    EF(T(r'let n: usize = $n;', r'let m: i32 = n;', r'println!("{}", m);'),
+       T(r'let n: usize = $n;', r'let m: i32 = n as i32;', r'println!("{}", m);'),
+       "usize does not convert to i32 by itself.", "as i32 converts it."),
+    EF(T(r'let x = $a;', r'let y = &mut x;', r'*y += 1;', r'println!("{}", x);'),
+       T(r'let mut x = $a;', r'let y = &mut x;', r'*y += 1;', r'println!("{}", x);'),
+       "x must be mut to take a mutable reference.", "mut x allows &mut x."),
+]

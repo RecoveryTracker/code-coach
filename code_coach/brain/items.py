@@ -1,4 +1,4 @@
-"""The one drill item, shared by the templates of every language (JavaScript, Python, Dart, C, SQL)."""
+"""The one drill item, shared by the templates of every language (JavaScript, Python, Dart, C, SQL, TypeScript, Rust)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 #: Every language an activity can be played in, in the order the package lists them (`brain.LANGUAGES`).
-LANGUAGES = ("python", "javascript", "dart", "c", "sql")
+LANGUAGES = ("python", "javascript", "dart", "c", "sql", "typescript", "rust")
 #: Which fields of an Activity carry a language's generator and wording: (make, question, blurb). JavaScript is the
 #: base (`make`, `question`, `blurb`); the rest hold a generator only when the activity is played in that language.
 FIELDS = {
@@ -15,6 +15,8 @@ FIELDS = {
     "dart": ("make_dart", "question_dart", "blurb_dart"),
     "c": ("make_c", "question_c", "blurb_c"),
     "sql": ("make_sql", "question_sql", "blurb_sql"),
+    "typescript": ("make_ts", "question_ts", "blurb_ts"),
+    "rust": ("make_rs", "question_rs", "blurb_rs"),
 }
 
 
@@ -70,6 +72,14 @@ class Activity:
     make_sql: Callable[[random.Random], Item] | None = None
     question_sql: str = ""
     blurb_sql: str = ""
+    #: The TypeScript version and the Rust version (tests/ts_oracle.py, tests/rust_oracle.py): like C, the program
+    #: prints its own answer (console.log / println!) and the answer is its output with the ends trimmed.
+    make_ts: Callable[[random.Random], Item] | None = None
+    question_ts: str = ""
+    blurb_ts: str = ""
+    make_rs: Callable[[random.Random], Item] | None = None
+    question_rs: str = ""
+    blurb_rs: str = ""
     #: Glossary term ids (plain lowercase words) this activity drills; the glossary maps them back to the
     #: activity, so this is the one place the mapping lives.
     concepts: tuple[str, ...] = ()

@@ -58,7 +58,7 @@ import { QuestionWords } from "./WordsUsed";
 
 export type BrainLanguage = BrainLang;
 const LANGUAGE_NAMES: Record<BrainLanguage, string> = {
-  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", sql: "SQL",
+  javascript: "JavaScript", python: "Python", dart: "Dart", c: "C", sql: "SQL", typescript: "TypeScript", rust: "Rust",
 };
 
 // Brain Drills follows the language picked at the top of the app: the mapping (brainLanguageFor) and the list of

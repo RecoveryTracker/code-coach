@@ -217,8 +217,23 @@ out.mapping = Object.fromEntries(
   ["python", "tfwr", "javascript", "typescript", "dart", "c", "sql", "postgresql", "rust", "cpp", "csharp", "go", "ruby", ""]
     .map((id) => [id, R.brainLanguageFor(id)]));
 out.offered = R.DRILL_APP_LANGUAGES;
-out.runner = Object.fromEntries(["python", "javascript", "dart", "c", "sql"].map((l) => [l, R.runsOnTheRunner(l)]));
-out.canExplain = Object.fromEntries(["python", "javascript", "dart", "c", "sql"].map((l) => [l, R.canExplain(l)]));
+out.runner = Object.fromEntries(["python", "javascript", "dart", "c", "sql", "typescript", "rust"].map((l) => [l, R.runsOnTheRunner(l)]));
+out.canExplain = Object.fromEntries(["python", "javascript", "dart", "c", "sql", "typescript", "rust"].map((l) => [l, R.canExplain(l)]));
+out.tsPrograms = {
+  plain: R.tsProgram("console.log(1);\n\n"),
+  module: R.tsProgram("export const x = 1;\nconsole.log(x);"),
+};
+out.rustPrograms = {
+  body: R.rustProgram("let x = 1;\n\nprintln!(\"{}\", x);"),
+  whole: R.rustProgram("struct P;\nfn main() {\n    println!(\"p\");\n}\n\n"),
+};
+out.sameRust = {
+  exact: R.sameAnswer(" [1, 2] ", "[1, 2]", "rust"),
+  spaces: R.sameAnswer("[1,2]", "[1, 2]", "rust"),
+  quotes: R.sameAnswer("abc", "\"abc\"", "rust"),
+  tsList: R.sameAnswer("[1,2]", "[ 1, 2 ]", "typescript"),
+  tsCase: R.sameAnswer("TRUE", "true", "typescript"),
+};
 out.explainSource = {
   dart: R.explainSource("dart_eval", { prompt: "7 ~/ 2", answer: "3", explain: "", show: "", check: "print(7 ~/ 2);" }, "dart"),
   flutter: R.explainSource("fl_flex", { prompt: "Row(children: [Text('a')])", answer: "1", explain: "", show: "" }, "dart"),
@@ -292,7 +307,7 @@ sys.stdout.write(json.dumps(result))
 
 def _items() -> list[dict]:
     seen: dict[tuple, dict] = {}
-    for language in ("javascript", "python", "dart", "c", "sql"):
+    for language in ("javascript", "python", "dart", "c", "sql", "typescript", "rust"):
         for activity in brain.activities_in(language):
             for seed in SEEDS:
                 for it in brain.make_round(activity.id, seed, language):
@@ -547,12 +562,13 @@ class AppLanguageMapping(unittest.TestCase):
     def test_each_app_language_gets_its_drills(self):
         m = results()["mapping"]
         self.assertEqual({k: m[k] for k in ("python", "tfwr")}, {"python": "python", "tfwr": "python"})
-        self.assertEqual({k: m[k] for k in ("javascript", "typescript")}, {"javascript": "javascript", "typescript": "javascript"})
-        self.assertEqual((m["dart"], m["c"], m["sql"]), ("dart", "c", "sql"))
+        self.assertEqual({k: m[k] for k in ("javascript", "typescript")}, {"javascript": "javascript", "typescript": "typescript"},
+                         "TypeScript has drills of its own (2026-11)")
+        self.assertEqual((m["dart"], m["c"], m["sql"], m["rust"]), ("dart", "c", "sql", "rust"))
 
     def test_a_language_with_no_drills_gives_none_including_postgresql(self):
         m = results()["mapping"]
-        for lang in ("postgresql", "rust", "cpp", "csharp", "go", "ruby", ""):
+        for lang in ("postgresql", "cpp", "csharp", "go", "ruby", ""):
             self.assertIsNone(m[lang], lang)
 
     def test_the_mapping_only_gives_languages_the_server_plays(self):
@@ -561,14 +577,15 @@ class AppLanguageMapping(unittest.TestCase):
 
     def test_the_no_drills_screen_offers_every_drill_language(self):
         offered = results()["offered"]
-        self.assertEqual([o["id"] for o in offered], ["python", "javascript", "dart", "c", "sql"])
-        self.assertEqual([o["name"] for o in offered], ["Python", "JavaScript", "Dart", "C", "SQL"])
+        self.assertEqual([o["id"] for o in offered], ["python", "javascript", "dart", "c", "sql", "typescript", "rust"])
+        self.assertEqual([o["name"] for o in offered], ["Python", "JavaScript", "Dart", "C", "SQL", "TypeScript", "Rust"])
         for o in offered:  # a button switches the app to a language that really has drills
             self.assertEqual(results()["mapping"][o["id"]], o["id"])
 
     def test_every_drill_language_can_explain_and_dart_c_sql_send_the_prompt_itself(self):
         r = results()
-        self.assertEqual(r["canExplain"], {"python": True, "javascript": True, "dart": True, "c": True, "sql": True})
+        self.assertEqual(r["canExplain"], {"python": True, "javascript": True, "dart": True, "c": True, "sql": True,
+                                           "typescript": True, "rust": False}, "Rust has no reader yet")
         src = r["explainSource"]
         self.assertEqual(src["dart"], "7 ~/ 2", "what the screen shows, not the wrapped program (the server wraps it to run it)")
         self.assertEqual(src["c"], 'printf("%d\n", 7 / 2);')
@@ -578,7 +595,8 @@ class AppLanguageMapping(unittest.TestCase):
         self.assertEqual(src["blank"], "", "nothing to explain")
 
     def test_dart_c_and_sql_run_on_the_runner(self):
-        self.assertEqual(results()["runner"], {"python": False, "javascript": False, "dart": True, "c": True, "sql": True})
+        self.assertEqual(results()["runner"], {"python": False, "javascript": False, "dart": True, "c": True, "sql": True,
+                                               "typescript": True, "rust": True})
 
 
 class TypedAnswers(unittest.TestCase):
@@ -694,3 +712,45 @@ class RunItFlutter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RunItTypeScriptAndRust(unittest.TestCase):
+    """TypeScript's and Rust's "Run it": `tsProgram` / `rustProgram` in brainRound.ts are the same rule as `full_program`
+    in tests/ts_oracle.py and tests/rust_oracle.py (the programs the oracles build), and the answers are compared the
+    way each language prints: TypeScript forgives like JavaScript, Rust is exact like C."""
+
+    def test_the_browser_builds_the_program_the_oracles_build(self):
+        from tests import rust_oracle, ts_oracle
+
+        for language, oracle in (("typescript", ts_oracle), ("rust", rust_oracle)):
+            rows = [r for r in results()["runnables"] if r["language"] == language]
+            if not brain.activities_in(language):
+                continue
+            self.assertGreater(len(rows), 100, language)
+            for r in rows:
+                item = r["item"]
+                self.assertTrue(r["runnable"]["ok"], item["prompt"])
+                self.assertEqual(r["runnable"]["code"], oracle.full_program(item["check"] or item["prompt"]), item["prompt"])
+                self.assertEqual(r["runnable"]["run"], "")
+                self.assertFalse(r["runnable"]["parseIsTheAnswer"])
+                self.assertEqual(bool(r["runnable"].get("raisesIsTheAnswer")),
+                                 brain.ACTIVITIES_BY_ID[r["activity"]].oracle == "error", item["prompt"])
+            self.assertEqual({r["activity"] for r in rows}, {a.id for a in brain.activities_in(language)})
+
+    def test_a_few_fixed_programs(self):
+        from tests import rust_oracle, ts_oracle
+
+        ts, rs = results()["tsPrograms"], results()["rustPrograms"]
+        self.assertEqual(ts["plain"], "console.log(1);\nexport {};\n", "a module, as the oracle compiles it")
+        self.assertEqual(ts["module"], "export const x = 1;\nconsole.log(x);\n", "already a module: left alone")
+        self.assertEqual(ts["plain"], ts_oracle.full_program("console.log(1);\n\n"))
+        self.assertEqual(rs["body"], 'fn main() {\n    let x = 1;\n\n    println!("{}", x);\n}\n')
+        self.assertEqual(rs["whole"], 'struct P;\nfn main() {\n    println!("p");\n}\n')
+        self.assertEqual(rs["body"], rust_oracle.full_program('let x = 1;\n\nprintln!("{}", x);'))
+
+    def test_rust_answers_are_exact_and_typescript_ones_forgive(self):
+        r = results()["sameRust"]
+        self.assertTrue(r["exact"], "the spaces at the ends are forgiven")
+        self.assertFalse(r["spaces"], "Rust prints [1, 2]: the spaces are the answer")
+        self.assertFalse(r["quotes"], "{:?} quotes a string: they are the answer")
+        self.assertTrue(r["tsList"] and r["tsCase"], "TypeScript forgives like JavaScript")

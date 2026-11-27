@@ -270,11 +270,11 @@ code_coach/farm/
   `tests/test_canvas_pywebapp.py`; library and session behaviour is in
   `tests/test_pyweb_lib.py`.
 - **Brain Drills** (`code_coach/brain/`): timed reflex activities in Python,
-  JavaScript, Dart, C or SQL. **The screen has no language switch of its own: it follows
+  JavaScript, Dart, C, SQL, TypeScript or Rust (see "TypeScript and Rust packs" below). **The screen has no language switch of its own: it follows
   the app's language picker at the top** (`BrainDrills` takes `appLanguage` from
   `App.tsx`; `brainLanguageFor()` - pure, in `lib/brainRound.ts`, tested by
-  `tests/test_brain_round.py` - maps python/tfwr -> Python, javascript/typescript ->
-  JavaScript, dart -> Dart, c -> C, sql -> SQL (SQLite semantics), anything else
+  `tests/test_brain_round.py` - maps python/tfwr -> Python, javascript -> JavaScript,
+  typescript -> TypeScript, rust -> Rust, dart -> Dart, c -> C, sql -> SQL (SQLite semantics), anything else
   (PostgreSQL included) -> none, and the screen then says there
   are no drills for that language yet and offers five "Switch to Python / JavaScript /
   Dart / C / SQL" buttons (`DRILL_APP_LANGUAGES`; they wrap, so 375px is fine), which
@@ -470,6 +470,32 @@ code_coach/farm/
   with no edit: `pytest tests/test_brain_packs.py -k "COracle or CShape or CAndSql"`. **To check ONE pack while writing it**: `.venv/Scripts/python.exe -m tests.brain_check ccore` (a pack name, an activity id or a prefix such as `c_loop`; shape rules, the oracle on every build, the warning lint and the sanitizer for C, the oracle for SQL; `--seeds N`; exit 1 on any problem). Traps found: `i3_main` has no
   implicit `return 0`, so `isolate()` adds it; two complete programs both defining `counter()` clash at link time
   without `static`; a pack file holding `printf("%d\n"...` must not go through a shell heredoc (the backslashes).
+  **TypeScript and Rust packs** (2026-11; `pack_tscore.py`, group "TypeScript core", ids `ts_*`, and
+  `pack_rustcore.py`, group "Rust core", ids `rs_*`; 8 activities each). Pass `make_ts=` / `make_rs=` (fields
+  `question_ts/blurb_ts`, `question_rs/blurb_rs`), templates `_tscore_*.py` / `_rustcore_*.py` built with
+  `_ts_model.TS(fmt, ans, why)` / `_rs_model.RS(...)` over the C pack's `P()` holes (TypeScript's own `${}` is `$${}`
+  in a template). **The item convention** is C's: the program is `check` or the prompt and PRINTS ITS OWN ANSWER
+  (`console.log` / `println!`), the answer is its output with the ends trimmed. TypeScript is a MODULE of top-level
+  statements (`export {};` is added by `tsProgram` and `ts_oracle.full_program`, so a top-level `const name` never
+  clashes with the DOM library), compiled with "Run it"'s flags (`--strict --target es2020 --module commonjs`): ES2020
+  library (no `.at()`, `replaceAll`, `Object.hasOwn`), no node typings, no async (the oracle does not run the event
+  loop), console.log prints node's inspect. Rust is the body of `fn main()` unless it mentions `fn main(` (`rustProgram`,
+  `rust_oracle.full_program`). `oracle` is "value" or "error": a fine/error pick (`choices=("fine", "error")`,
+  `ts_compile` "Does tsc Accept It?", `rs_borrow` "Borrow Check") where "error" means it does not compile OR it throws
+  / panics. Rust answers are compared EXACTLY (`sameAnswer`, like C: `{:?}` quotes and padding are the question);
+  TypeScript forgives like JavaScript. Code age checks: `ts_eval ts_narrow ts_compile`, `rs_eval rs_own rs_borrow`.
+  **The oracles**: `tests/ts_oracle.py` writes every item as its own `itemN.ts` (so two may declare `interface P`), ONE
+  `tsc` program (errors named `itemN.ts(line,col): error TSxxxx`, the rest still emitted), ONE node process loading the
+  emitted files in turn with console.log captured through `util.format` (a hang is named and skipped).
+  `tests/rust_oracle.py` makes every item a module of a crate (`mod iN { pub fn main() {...} }`, a complete program's
+  `fn main(` made `pub`), crates of 220 built in parallel; items that do not compile are found with
+  `rustc --emit=metadata` (the borrow checker runs: borrow errors only show once type errors are gone, hence a loop),
+  then each refused item is checked ON ITS OWN; the clean crate is built debug (overflow checks) AND `-O` (what "Run it"
+  builds, overflow wraps), each item runs in `catch_unwind` between markers, and the two builds must print the same
+  (else `BUILDS DIFFER`: an implicit overflow). `#![allow(warnings)]`; deny lints stay errors. Run them with
+  `pytest tests/test_brain_packs.py -k "Typed or TypeScriptOracle or RustOracle"`, or one pack with
+  `-m tests.brain_check tscore` / `rustcore`. No glossary for Rust yet (TypeScript's words are JavaScript's, through the
+  glossary's alias), and no explainer for Rust (`canExplain`), so a Rust drill has "Run it" but no "Explain".
   **SQL packs** (`pack_sqlcore.py`: group "SQL core", ids `sql_*`, 8 activities of 40-80 templates;
   templates `_sqlcore_rows.py`, `_sqlcore_joins.py`, `_sqlcore_funcs.py`, the model `_sql_model.py`). Pass
   `make_sql=`, `oracle="value"`. A template is a plain function `(rng) -> Item` wrapped by `fit(f)` (which re-rolls

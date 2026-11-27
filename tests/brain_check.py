@@ -1,4 +1,4 @@
-"""Check ONE Brain Drills C or SQL pack (or activity) against the real compilers / SQLite, outside pytest.
+"""Check ONE Brain Drills C, SQL, TypeScript or Rust pack (or activity) against the real compilers / SQLite, outside pytest.
 
     .venv/Scripts/python.exe -m tests.brain_check ccore          # every activity of pack_ccore.py
     .venv/Scripts/python.exe -m tests.brain_check c_loop         # one activity
@@ -9,7 +9,9 @@ per matching activity of the C or SQL language: the same samples tests/test_brai
 `--seeds` seeds, 12 whole rounds), the shape rules (prompt <= 220 characters and 10 lines, answer short and not
 padded, no `$` hole left, an explanation), and the ORACLE - for C every item through every build (clang -O0 and -O2,
 signed and unsigned `char`, MSVC /Od when installed: all must print the model's answer), the warning lint and the
-undefined-behaviour sanitizer; for SQL every script in a fresh in-memory SQLite. Prints the first problems and exits 1
+undefined-behaviour sanitizer; for SQL every script in a fresh in-memory SQLite; for TypeScript every item through
+`tsc --strict` and node (tests/ts_oracle.py), for Rust every item through rustc debug and -O (tests/rust_oracle.py). An
+activity with `oracle="error"` is judged by whether the code fails to compile or throws / panics. Prints the first problems and exits 1
 when there are any. Cost: C is ~1 s per 30 programs in a body batch plus ~50 ms for every complete program (a program
 with its own `main`); SQL is ~0.3 ms an item.
 """
@@ -65,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     bad = 0
-    for language in ("c", "sql"):
+    for language in ("c", "sql", "typescript", "rust"):
         acts = _matching(args.what, language)
         if not acts:
             continue
@@ -102,6 +104,22 @@ def main(argv: list[str] | None = None) -> int:
             for k, why in c_oracle.ub_findings(programs).items():
                 bad += 1
                 print(f"UNDEFINED {flat[k][0]}: {why}: {flat[k][1].prompt!r}")
+        elif language in ("typescript", "rust"):
+            if language == "typescript":
+                from tests import ts_oracle as oracle
+                results = oracle.ts_results if oracle.HAVE_TSC else None
+            else:
+                from tests import rust_oracle as oracle
+                results = oracle.rust_results if oracle.HAVE_RUSTC else None
+            if results is None:
+                print(f"no {language} toolchain: oracle skipped")
+                continue
+            modes = {a.id: a.oracle for a in acts}
+            for (a_id, i), r in zip(flat, results([i.check or i.prompt for _, i in flat])):
+                got = r.verdict if modes[a_id] == "error" else r.value
+                if got != i.answer:
+                    bad += 1
+                    print(f"ORACLE {a_id}: model says {i.answer!r}, {language} says {got!r} ({r.value[:160]!r}): {i.prompt!r}")
         else:
             from tests import sql_oracle
 

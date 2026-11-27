@@ -398,7 +398,7 @@ def _check_pack(name: str, acts: Any, taken: set[str]) -> tuple[Activity, ...]:
         if a.id in taken:
             raise ValueError(f"duplicate activity id {a.id!r}")
         if not a.languages:
-            raise ValueError(f"{a.id}: a pack activity needs at least one generator (make, make_py, make_dart, make_c or make_sql)")
+            raise ValueError(f"{a.id}: a pack activity needs at least one generator (make, make_py, make_dart, make_c, make_sql, make_ts or make_rs)")
         taken.add(a.id)
     return acts
 
@@ -437,6 +437,8 @@ CHECKS: dict[str, tuple[str, ...]] = {
     "dart": ("dart_eval", "dart_null", "dart_final"),
     "c": ("c_int", "c_printf", "c_loop"),
     "sql": ("sql_count", "sql_null", "sql_scalar"),
+    "typescript": ("ts_eval", "ts_narrow", "ts_compile"),
+    "rust": ("rs_eval", "rs_own", "rs_borrow"),
 }
 
 

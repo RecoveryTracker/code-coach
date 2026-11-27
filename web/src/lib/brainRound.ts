@@ -29,12 +29,13 @@ export type BrainItem = {
   activity?: string;
 };
 
-export type BrainLang = "javascript" | "python" | "dart" | "c" | "sql";
+export type BrainLang = "javascript" | "python" | "dart" | "c" | "sql" | "typescript" | "rust";
 
 /**
  * Brain Drills has no language switch of its own: it follows the language picked at the top of the app. Each app
- * language maps to the drills that fit it; TypeScript plays the JavaScript drills and the farm's language plays
- * Python's (it is Python syntax). SQL is SQLite's. A language with no drills yet (PostgreSQL, Rust...) gives null.
+ * language maps to the drills that fit it; the farm's language plays Python's (it is Python syntax). TypeScript and
+ * Rust have drills of their own (2026-11; TypeScript's are about its types and `tsc --strict`). SQL is SQLite's. A
+ * language with no drills yet (PostgreSQL, C++, Go...) gives null.
  */
 export function brainLanguageFor(appLanguage: string): BrainLang | null {
   switch (appLanguage) {
@@ -42,8 +43,11 @@ export function brainLanguageFor(appLanguage: string): BrainLang | null {
     case "tfwr":
       return "python";
     case "javascript":
-    case "typescript":
       return "javascript";
+    case "typescript":
+      return "typescript";
+    case "rust":
+      return "rust";
     case "dart":
       return "dart";
     case "c":
@@ -62,18 +66,22 @@ export const DRILL_APP_LANGUAGES: { id: string; name: string }[] = [
   { id: "dart", name: "Dart" },
   { id: "c", name: "C" },
   { id: "sql", name: "SQL" },
+  { id: "typescript", name: "TypeScript" },
+  { id: "rust", name: "Rust" },
 ];
 
 /** The languages whose "Run it" goes through the Brain Drills runner (`POST /api/brain/run`: a real dart, a real C
- *  compiler, a real SQLite) instead of the tracer (/api/visualize), and that have no explainer yet. */
+ *  compiler, a real SQLite, `tsc --strict` + node, rustc) instead of the tracer (/api/visualize). */
 export function runsOnTheRunner(lang: BrainLang): boolean {
-  return lang === "dart" || lang === "c" || lang === "sql";
+  return lang === "dart" || lang === "c" || lang === "sql" || lang === "typescript" || lang === "rust";
 }
 
-/** Every drill language has an explainer now (Python and JavaScript read with their parsers, Dart, C and SQL with the
- *  statement readers in code_coach/explain_dart.py, explain_c.py, explain_sql.py). */
+/** Which drill languages have an explainer: Python and JavaScript read with their parsers (TypeScript with
+ *  JavaScript's), Dart, C and SQL with the statement readers in code_coach/explain_dart.py, explain_c.py,
+ *  explain_sql.py. Rust has no reader yet. */
 export function canExplain(lang: BrainLang): boolean {
-  return lang === "python" || lang === "javascript" || lang === "dart" || lang === "c" || lang === "sql";
+  return lang === "python" || lang === "javascript" || lang === "dart" || lang === "c" || lang === "sql" ||
+    lang === "typescript";
 }
 
 /**
@@ -83,7 +91,8 @@ export function canExplain(lang: BrainLang): boolean {
  * SQL text is case-sensitive (`UPPER('a')` is `A`).
  */
 export function sameAnswer(given: string, answer: string, lang?: BrainLang): boolean {
-  if (lang === "c" || lang === "sql") return given.trim() === answer.trim();
+  // Rust is exact like C: `{:>4}` padding, `{:?}` quotes and `1.0` against `1` are the question.
+  if (lang === "c" || lang === "sql" || lang === "rust") return given.trim() === answer.trim();
   const clean = (s: string) => {
     const t = s.trim().replace(/^(['"`])(.*)\1$/s, "$2").trim().toLowerCase();
     return /^[[({]/.test(t) ? t.replace(/\s+/g, "") : t;
@@ -274,12 +283,36 @@ export function cProgram(code: string): string {
 }
 
 /**
+ * The TypeScript program behind an item's code (the same rule as `full_program` in tests/ts_oracle.py, which a test
+ * holds this to): the code as a module of statements that prints its own answer with console.log.
+ */
+export function tsProgram(code: string): string {
+  // A module (`export {};`), as the oracle compiles it: a top-level `const name` then never clashes with a global of
+  // the DOM library, and the program is the same one the answer was measured on.
+  const src = code.replace(/\s+$/, "") + "\n";
+  return /^\s*(import|export)\b/m.test(src) ? src : src + "export {};\n";
+}
+
+/**
+ * The Rust program behind an item's code (the same rule as `full_program` in tests/rust_oracle.py, which a test holds
+ * this to): the code as it is when it mentions `fn main(` (structs, impls, helper functions, then main), else the code
+ * as the body of `fn main()`. The program prints its own answer with println!.
+ */
+export function rustProgram(code: string): string {
+  const body = code.replace(/\s+$/, "");
+  if (/\bfn\s+main\s*\(/.test(body)) return body + "\n";
+  return "fn main() {\n" + body.split("\n").map((ln) => (ln.trim() ? "    " + ln : ln)).join("\n") + "\n}\n";
+}
+
+/**
  * The code "Explain my code" reads for one question. Dart, C and SQL send the question's own code (what the screen
  * shows: the server wraps a fragment in `main` itself to run it for the output note); Python and JavaScript send the
  * program the drill builds. Flutter items can be explained although they cannot run. "" = nothing to explain.
  */
 export function explainSource(activityId: string, item: BrainItem, lang: BrainLang): string {
-  if (lang === "dart" || lang === "c" || lang === "sql") return item.prompt.trim() ? item.prompt : "";
+  if (lang === "dart" || lang === "c" || lang === "sql" || lang === "typescript" || lang === "rust") {
+    return item.prompt.trim() ? item.prompt : "";
+  }
   const what = runnableFor(activityId, item, lang);
   return what.ok ? what.code : "";
 }
@@ -306,6 +339,16 @@ export function runnableFor(activityId: string, item: BrainItem, lang: BrainLang
     if (!source.trim()) return { ok: false, reason: "There is no code to run here." };
     return {
       ok: true, code: dartProgram(source), run: "", parseIsTheAnswer: false,
+      ...(item.answer === "fine" || item.answer === "error" ? { raisesIsTheAnswer: true } : {}),
+    };
+  }
+  if (lang === "typescript" || lang === "rust") {
+    // Every TypeScript and Rust activity is a pack: the program is `check` when the item has one, else the prompt, and it
+    // prints its own answer. A compiles-or-not question ("fine" / "error") is judged by whether the build fails.
+    const source = item.check || item.prompt;
+    if (!source.trim()) return { ok: false, reason: "There is no code to run here." };
+    return {
+      ok: true, code: lang === "typescript" ? tsProgram(source) : rustProgram(source), run: "", parseIsTheAnswer: false,
       ...(item.answer === "fine" || item.answer === "error" ? { raisesIsTheAnswer: true } : {}),
     };
   }
