@@ -67,6 +67,7 @@ out.speed = {
 
 out.keys = {
   right: k("ArrowRight"), left: k("ArrowLeft"), space: k(" "), p: k("p"), other: k("a"), enter: k("Enter"),
+  explain: [k("e"), k("E"), k("e", { tag: "INPUT" }), k("e", { ctrl: true })],
   inInput: [k("ArrowRight", { tag: "INPUT" }), k(" ", { tag: "TEXTAREA" }), k("ArrowLeft", { tag: "SELECT" })],
   editable: k("ArrowRight", { editable: true }),
   ctrl: k("ArrowRight", { ctrl: true }), alt: k("ArrowLeft", { alt: true }), meta: k(" ", { meta: true }),
@@ -245,3 +246,25 @@ def test_several_presses_each_move_one_slide():
     p = results()["presses"]
     assert p["log"] == [1, 2, 3, 2, 3]
     assert p["clamped"] == 4
+
+
+def test_e_opens_explain_this_code_but_not_while_typing_or_with_a_modifier():
+    assert results()["keys"]["explain"] == ["explain", "explain", "none", "none"]
+
+
+def test_the_python_reader_explains_slide_examples():
+    """"Explain this code" sends a slide's example to /api/explain: the Python reader must read every one without an
+    error and give each a row (a sample of every deck: its first and last slide with code)."""
+    from code_coach.api import server
+    from code_coach.api.schemas import ExplainRequest
+    from code_coach import slides
+
+    checked = 0
+    for d in slides.decks_for("python"):
+        with_code = [s for s in d.slides if s.code]
+        for s in (with_code[:1] + with_code[-1:]):
+            r = server.explain(ExplainRequest(code=s.code, language="python"))
+            assert r.ok, (d.id, s.title, r.summary)
+            assert r.lines, (d.id, s.title)
+            checked += 1
+    assert checked >= 40

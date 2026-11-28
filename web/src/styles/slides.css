@@ -405,3 +405,19 @@
 .sl-upnext {
   color: var(--sl-accent);
 }
+
+/* "Explain this code": the app's own reader under the example (the explain-* rows are styled in workspace.css). */
+.sl-explain {
+  margin-top: 10px;
+}
+.sl-explain .sl-btn.on {
+  border-color: var(--accent, #6aa9ff);
+}
+.sl-explain-body {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  max-height: 46vh;
+  overflow: auto;
+}

@@ -130,15 +130,15 @@ export interface KeyContext {
   meta: boolean;
 }
 
-export type KeyAction = "next" | "prev" | "toggle" | "none";
+export type KeyAction = "next" | "prev" | "toggle" | "explain" | "none";
 
 export function isTypingTarget(tag: string, editable: boolean): boolean {
   return editable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
 /**
- * What a key does: the right arrow and Space go to the next slide, the left arrow to the previous one, and
- * P plays or pauses. Nothing happens while you are typing in a text box or with Ctrl, Alt or Meta held. A
+ * What a key does: the right arrow and Space go to the next slide, the left arrow to the previous one,
+ * P plays or pauses, and E opens or closes "Explain this code". Nothing happens while you are typing in a text box or with Ctrl, Alt or Meta held. A
  * focused button keeps its own Space (it clicks).
  */
 export function keyAction(key: string, c: KeyContext): KeyAction {
@@ -149,6 +149,7 @@ export function keyAction(key: string, c: KeyContext): KeyAction {
     return c.tag === "BUTTON" || c.tag === "A" || c.tag === "SUMMARY" ? "none" : "next";
   }
   if (key === "p" || key === "P") return "toggle";
+  if (key === "e" || key === "E") return "explain";
   return "none";
 }
 

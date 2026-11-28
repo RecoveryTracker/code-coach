@@ -350,10 +350,12 @@ code_coach/farm/
   language, blurb, slides)` of `Slide(title, text, code, output, point)`. Decks are FOUND BY FILE NAME: every
   `code_coach/slides/content_*.py` with a `DECK` (and an `ORDER` int: lower is earlier in the picker, default 100; a
   module that fails to import is skipped and named in `slides.LOAD_ERRORS`, which a test holds empty) - a new deck is a
-  new file, nothing to register. Python only so far: 20 decks of 15 slides (ORDER 10-30 the basics: types, syntax,
-  patterns; 40-55 strings, lists, dicts and sets, functions, comprehensions; 60-80 classes, special methods, errors,
-  gotchas, idioms, type hints; 100-120 collections/itertools, functional tools, recursion, searching and sorting,
-  Big-O, algorithm patterns). Every deck carries its language, so another language is new `content_<lang>_*.py`
+  new file, nothing to register. Python only so far: 40 decks of 15 slides (ORDER 10-30 the basics: types, syntax,
+  patterns; 40-55 strings, lists, dicts and sets, functions, comprehensions; 60-95 classes, special methods, errors,
+  gotchas, idioms, type hints, iterators, context managers, decorators, match and enums, scope, modules, objects and
+  references, async; 100-106 collections/itertools, functional tools, regex, JSON and CSV, dates, numbers, text;
+  110-127 recursion, searching and sorting, Big-O, algorithm patterns, linked lists, trees, graphs, DP, heaps,
+  grids, interview classics). Every deck carries its language, so another language is new `content_<lang>_*.py`
   files. Routes: `GET /api/slides?language=` (`{decks: [{id,
   title, blurb, count}]}`, an empty list - never an error - for a language with no decks) and `GET /api/slides/{id}`
   (the deck, with the language's colouring rules as `syntax`; 404 for an unknown id). Like Brain Drills the screen
@@ -372,7 +374,10 @@ code_coach/farm/
   deck that is gone falls back to the picker). Every storage access is in try/catch. Keys (`keyAction`): right arrow
   and Space next, left arrow back, P play/pause; ignored while typing or with Ctrl/Alt/Meta; any manual step pauses
   autoplay; each press is applied with a functional state update (`pressTarget`), so several presses in one tick each
-  move one slide.
+  move one slide. **Explain this code** (button under the example, or E): sends the slide's code to `/api/explain` in
+  the deck's language and shows the reader's summary, rows, output notes and Words used chips (the `explain-*` styles
+  of workspace.css); opening it pauses autoplay, a new slide closes it, and it asks once per slide.
+  `tests/test_slides_ts.py` also holds the Python reader to the first and last example of every deck.
   `prefers-reduced-motion` turns the slide-in and the fade off. `tests/test_slides_ts.py` runs `slides.ts` in node.
   Not part of the session queue (no `lastKeys.ts` entry) and awards no Momentum.
 - **Brain Drills Shuffle** (2026-11; `brain.make_shuffle` / `shuffle_payload`, `GET /api/brain/shuffle?language=&groups=`,

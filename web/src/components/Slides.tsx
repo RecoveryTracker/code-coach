@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchSlideDeck, fetchSlides } from "../api";
+import { explainCode, fetchSlideDeck, fetchSlides } from "../api";
 import { tokenize } from "../lib/codeColors";
 import { languageName } from "../lib/languageNames";
 import {
@@ -40,6 +40,8 @@ import {
   upNextLabel,
 } from "../lib/slides";
 import type { SlideDeck, SlideList } from "../lib/slides";
+import type { ExplainResult } from "../types";
+import { WordsUsed } from "./WordsUsed";
 import "../styles/slides.css";
 
 function savedSpeed(): number {
@@ -117,6 +119,11 @@ export default function Slides({
   const [loop, setLoop] = useState<boolean>(() => savedFlag(LOOP_KEY, false));
   const [shuffle, setShuffle] = useState<boolean>(() => savedFlag(SHUFFLE_KEY, false));
   const [resumeNote, setResumeNote] = useState<string | null>(null);
+  // "Explain this code": the app's own reader (/api/explain) on the slide's example, opened on demand.
+  const [explainOpen, setExplainOpen] = useState(false);
+  const [explained, setExplained] = useState<ExplainResult | null>(null);
+  const [explainBusy, setExplainBusy] = useState(false);
+  const [explainError, setExplainError] = useState(false);
   const seenRef = useRef<string[]>([]);
   const openToken = useRef(0);
   const triedResume = useRef(false);
@@ -189,6 +196,31 @@ export default function Slides({
     return () => window.clearTimeout(t);
   }, [deck, index, slide, speed]);
 
+  // A new slide closes the explanation (it was about the other slide's code).
+  useEffect(() => {
+    setExplainOpen(false);
+    setExplained(null);
+    setExplainError(false);
+  }, [deck, index]);
+
+  // Opening it pauses autoplay (reading takes as long as it takes) and asks the reader once per slide.
+  const toggleExplain = useCallback(() => {
+    if (!slide || !slide.code || !deck) return;
+    if (explainOpen) {
+      setExplainOpen(false);
+      return;
+    }
+    setPlaying(false);
+    setExplainOpen(true);
+    if (explained) return;
+    setExplainBusy(true);
+    setExplainError(false);
+    explainCode(slide.code, deck.language)
+      .then((r) => setExplained(r))
+      .catch(() => setExplainError(true))
+      .finally(() => setExplainBusy(false));
+  }, [slide, deck, explainOpen, explained]);
+
   // Remember the place (deck and slide) for the next visit.
   useEffect(() => {
     if (deck) saveStore(RESUME_KEY, serializeResume({ deckId: deck.id, index: clampIndex(index, count) }));
@@ -227,8 +259,8 @@ export default function Slides({
     go(to);
   };
 
-  const stateRef = useRef({ count, togglePlay });
-  stateRef.current = { count, togglePlay };
+  const stateRef = useRef({ count, togglePlay, toggleExplain });
+  stateRef.current = { count, togglePlay, toggleExplain };
 
   useEffect(() => {
     if (!deck) return undefined;
@@ -245,6 +277,7 @@ export default function Slides({
       e.preventDefault();
       const s = stateRef.current;
       if (action === "toggle") s.togglePlay();
+      else if (action === "explain") s.toggleExplain();
       else {
         setPlaying(false);
         // Functional update: presses in the same tick each move one slide from the latest index.
@@ -353,6 +386,54 @@ export default function Slides({
               </pre>
             </div>
           ) : null}
+          {slide.code ? (
+            <div className="sl-explain">
+              <button
+                type="button"
+                className={`sl-btn${explainOpen ? " on" : ""}`}
+                aria-expanded={explainOpen}
+                onClick={toggleExplain}
+                title="Read the example line by line (E)"
+              >
+                {explainOpen ? "Hide the explanation" : "Explain this code"}
+              </button>
+              {explainOpen ? (
+                <div className="sl-explain-body" role="region" aria-label="What this code does">
+                  {explainBusy ? <p className="explain-note">Reading the code…</p> : null}
+                  {explainError ? (
+                    <p className="explain-note bad">Couldn’t reach the explainer - is the API running?</p>
+                  ) : null}
+                  {explained ? (
+                    <>
+                      <p className="explain-summary">{explained.summary}</p>
+                      {explained.error_note ? <p className="explain-note bad">{explained.error_note}</p> : null}
+                      {explained.lines.length > 0 ? (
+                        <div className="explain-lines">
+                          {explained.lines.map((L, n) => (
+                            <div key={`${L.line}-${n}`} className="explain-row" style={{ paddingLeft: 10 + L.depth * 18 }}>
+                              <code className="explain-code">{L.source || " "}</code>
+                              <span className="explain-text">{L.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {explained.output_notes.length > 0 ? (
+                        <div className="explain-output">
+                          <div className="explain-output-title">Why the output looks like this</div>
+                          {explained.output_notes.map((t, n) => (
+                            <p key={n} className="explain-note">
+                              {t}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                      <WordsUsed words={explained.words} scope="slides" />
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {slide.point ? (
             <p className="sl-point">
               <span className="sl-point-tag">Remember</span> {slide.point}
@@ -418,7 +499,7 @@ export default function Slides({
           </li>
         ))}
       </ol>
-      <p className="sl-hint">Right arrow or Space: next. Left arrow: back. P: play or pause. Play carries on into the next deck.</p>
+      <p className="sl-hint">Right arrow or Space: next. Left arrow: back. P: play or pause. E: explain the code. Play carries on into the next deck.</p>
     </div>
   );
 }
