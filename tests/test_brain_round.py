@@ -114,6 +114,33 @@ const statuses = (s) => s.answers.map((_, i) => R.cellStatus(s, i));
     misses: R.missesOf(t, items).map((m) => [m.item.prompt, m.given]),
   };
 
+  // Retry the misses: answered out of order, retried in ORIGINAL order, narrowing each time; items keep their activity.
+  {
+    const its = [0, 1, 2, 3, 4].map((n) => ({ prompt: "p" + n, answer: "a" + n, explain: "", show: "", activity: n % 2 ? "x" : "y" }));
+    const play = (its2, right) => {
+      let r = R.newRound(its2.length);
+      its2.forEach((_, i) => { r = R.recordAnswer(r, i, "g", right.includes(i)); });
+      return r;
+    };
+    const first = play(its, [1, 3]);
+    const retry1 = R.retryItems(its, first);
+    const second = play(retry1, [1]);
+    const retry2 = R.retryItems(retry1, second);
+    const third = play(retry2, [0]);
+    const allRight = play(its, [0, 1, 2, 3, 4]);
+    out.retry = {
+      firstMissed: R.missedIndices(first),
+      retry1: retry1.map((i) => [i.prompt, i.activity, i.answer]),
+      sameObjects: retry1.every((x, k) => x === its[R.missedIndices(first)[k]]),
+      retry2: retry2.map((i) => i.prompt),
+      retry3: R.retryItems(retry2, third).map((i) => i.prompt),
+      none: R.retryItems(its, allRight).length, noneIdx: R.missedIndices(allRight),
+      unanswered: R.missedIndices(R.newRound(3)),
+      labels: [R.retryLabel(3, false), R.retryLabel(1, false), R.retryLabel(2, true)],
+      outcomes: [R.retryOutcome(2, 1), R.retryOutcome(0, 3), R.retryOutcome(0, 1)],
+    };
+  }
+
   // Navigation: wrap-around, clamping, the end of a finished round.
   let w = R.newRound(4);
   w = R.recordAnswer(R.recordAnswer(w, 0, "a", true), 3, "a", true);
@@ -422,6 +449,30 @@ class RoundRules(unittest.TestCase):
         self.assertTrue(r["sameIndex"])
         self.assertTrue(r["finishedComplete"])
         self.assertEqual(r["finishedForwardFromLast"], -1, "nothing open: the caller finishes the round")
+
+
+class RetryRules(unittest.TestCase):
+    def test_a_round_with_no_misses_gives_no_retry(self):
+        r = results()["retry"]
+        self.assertEqual((r["none"], r["noneIdx"], r["unanswered"]), (0, [], []))
+
+    def test_a_retry_keeps_the_missed_items_in_order_with_their_own_activity(self):
+        r = results()["retry"]
+        self.assertEqual(r["firstMissed"], [0, 2, 4])
+        self.assertEqual(r["retry1"], [["p0", "y", "a0"], ["p2", "y", "a2"], ["p4", "y", "a4"]])
+        self.assertTrue(r["sameObjects"], "the very same items, not copies that could drift")
+
+    def test_each_retry_narrows_until_cleared(self):
+        r = results()["retry"]
+        self.assertEqual(r["retry2"], ["p0", "p4"])
+        self.assertEqual(r["retry3"], ["p4"])
+
+    def test_labels_and_the_cleared_outcome(self):
+        r = results()["retry"]
+        self.assertEqual(r["labels"], ["Retry the 3 you missed", "Retry the 1 you missed", "Retry the 2 you still missed"])
+        self.assertEqual(r["outcomes"][0]["cleared"], False)
+        self.assertEqual(r["outcomes"][1], {"cleared": True, "text": "All cleared - every question right, cleared in 3 tries"})
+        self.assertIn("cleared in 1 try", r["outcomes"][2]["text"])
 
 
 class ClockRules(unittest.TestCase):

@@ -410,6 +410,15 @@ code_coach/farm/
   activity is gone / not played in that language / no longer fits (more questions than the activity asks, a pick answer
   that is not one of its choices, a later check activity gone). Momentum is not paid twice: `brain_item` keys are
   `<activity>:<roundId>:<index>` and the round id is saved; `brain_round` and `check_age` fire only at the end.
+- **Brain Drills retry** (2026-11-28; the user asked for "a button to retry the misses until complete"): a finished
+  round with misses offers "Retry the N you missed" (primary, Enter) on its done screen - during a Code age check with an
+  activity still to go, "Next" stays primary and Retry is secondary. A retry round plays the SAME item objects that
+  were missed, in their original order (a Shuffle item keeps its own activity: question, tools, Words chips; Variable
+  Recall shows its values again first), and its done screen offers "Retry the N you still missed" until "All cleared -
+  cleared in K tries". A retry is PRACTICE: `Round` with `practice` never posts a result (no code age, history or check),
+  makes no Momentum `award` call, and saves/clears no resume snapshot (leaving mid-retry returns to the home screen).
+  Pure rules in `brainRound.ts`: `missedIndices`, `retryItems`, `retryLabel`, `retryOutcome` (tests/test_brain_round.py
+  `RetryRules`).
 - **Brain Drills packs** (how a new activity gets in; the Reading Pack in
   `pack_reading.py` is the model). Add `code_coach/brain/pack_<name>.py`
   exposing `ACTIVITIES: tuple[Activity, ...]` and touch nothing else:

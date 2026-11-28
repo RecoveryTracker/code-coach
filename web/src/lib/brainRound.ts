@@ -196,6 +196,36 @@ export function missesOf<T extends BrainItem>(s: RoundState, items: T[]): { item
   return out;
 }
 
+// ── Retry the ones you missed ────────────────────────────────────
+// A retry round is practice made of exactly the questions you missed, as they were (same prompt, answer, check and
+// activity), in their original order. It posts nothing and pays nothing; it can be retried again until none is missed.
+
+/** The indices of the missed questions, in question order. */
+export function missedIndices(s: RoundState): number[] {
+  const out: number[] = [];
+  s.answers.forEach((a, i) => {
+    if (a && !a.right) out.push(i);
+  });
+  return out;
+}
+
+/** The questions to retry: the missed items, untouched and in their original order ([] when nothing was missed). */
+export function retryItems<T extends BrainItem>(items: T[], s: RoundState): T[] {
+  return missedIndices(s).filter((i) => i < items.length).map((i) => items[i]);
+}
+
+/** The retry button: "Retry the 3 you missed", and after a retry "Retry the 2 you still missed". */
+export function retryLabel(misses: number, still: boolean): string {
+  return `Retry the ${misses} you ${still ? "still " : ""}missed`;
+}
+
+/** A finished retry round's headline: cleared once nothing is missed (with the number of tries), else what is left. */
+export function retryOutcome(missesLeft: number, tries: number): { cleared: boolean; text: string } {
+  const t = `${tries} ${tries === 1 ? "try" : "tries"}`;
+  if (missesLeft === 0) return { cleared: true, text: `All cleared - every question right, cleared in ${t}` };
+  return { cleared: false, text: `${missesLeft} still missed after ${t}` };
+}
+
 // ── The clock ───────────────────────────────────────────────────────────
 // A stopwatch that can be paused. `lost` is time spent paused, which is
 // taken off; pausing twice or resuming a running clock changes nothing.

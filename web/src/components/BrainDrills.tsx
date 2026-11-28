@@ -35,6 +35,8 @@ import {
   newRound,
   nextOpen,
   recordAnswer,
+  retryLabel,
+  retryOutcome,
   resumeTarget,
   sameAnswer,
   type BrainItem,
@@ -168,6 +170,16 @@ type Screen =
       checkId: string;
       checkLeft: string[];
       checkAges: number[];
+    }
+  // Retry the ones you missed: PRACTICE (posts nothing, pays nothing, saves nothing), `tries` counts this one.
+  | { name: "retry"; activity: ActivityInfo; language: BrainLanguage; items: BrainItem[]; tries: number }
+  | {
+      name: "retryDone";
+      activity: ActivityInfo;
+      items: BrainItem[];
+      seconds: number;
+      misses: Miss[];
+      tries: number;
     };
 
 /** The home screen's sections: the server's heading order, then any other group, "More" last. */
@@ -382,6 +394,44 @@ export default function BrainDrills({
     );
   }
 
+  if (screen.name === "retry" && screen.language === language) {
+    return (
+      <Round
+        key={`retry-${screen.language}-${screen.activity.id}-${screen.tries}`}
+        activity={screen.activity}
+        language={language}
+        checkId=""
+        checkLeft={[]}
+        checkAges={[]}
+        checkStep={0}
+        checkSize={0}
+        practice={screen.items}
+        activities={byId}
+        shuffleGroups={pickedGroups}
+        onQuit={() => setScreen({ name: "home" })}
+        onDone={(seconds, misses) =>
+          setScreen({ name: "retryDone", activity: screen.activity, items: screen.items, seconds, misses, tries: screen.tries })
+        }
+      />
+    );
+  }
+
+  if (screen.name === "retryDone") {
+    return (
+      <RetryDone
+        screen={screen}
+        onRetry={() =>
+          setScreen({
+            name: "retry", activity: screen.activity, language, items: screen.misses.map((m) => m.item),
+            tries: screen.tries + 1,
+          })
+        }
+        onAgain={() => start(screen.activity)}
+        onHome={() => setScreen({ name: "home" })}
+      />
+    );
+  }
+
   if (screen.name === "done") {
     const next = screen.checkLeft.length ? byId.get(screen.checkLeft[0]) : undefined;
     const checkDone = screen.checkId && !screen.checkLeft.length;
@@ -401,6 +451,11 @@ export default function BrainDrills({
           })
         }
         onAgain={() => start(screen.activity)}
+        onRetry={() =>
+          setScreen({
+            name: "retry", activity: screen.activity, language, items: screen.misses.map((m) => m.item), tries: 1,
+          })
+        }
         onHome={() => setScreen({ name: "home" })}
       />
     );
@@ -556,6 +611,7 @@ function Round({
   checkStep,
   checkSize,
   resume,
+  practice,
   activities,
   shuffleGroups,
   onQuit,
@@ -575,13 +631,15 @@ function Round({
   checkSize: number;
   /** A saved round to pick up: its questions, answers, typed text and clock; no fetch, no countdown. */
   resume?: RoundSnapshot;
+  /** A retry round: exactly these questions, played as practice (never saved, posted or paid for). */
+  practice?: BrainItem[];
   onQuit: () => void;
   /** `final` is the finished round's snapshot, handed back so a failed post can keep it for another try. */
   onDone: (seconds: number, misses: Miss[], total: number, final: RoundSnapshot | null) => void;
 }) {
-  const [items, setItems] = useState<BrainItem[] | null>(resume?.items ?? null);
+  const [items, setItems] = useState<BrainItem[] | null>(resume?.items ?? practice ?? null);
   const [count, setCount] = useState(resume ? 0 : 3);
-  const [rs, setRs] = useState<RoundState>(() => resume?.rs ?? newRound(0));
+  const [rs, setRs] = useState<RoundState>(() => resume?.rs ?? newRound(practice?.length ?? 0));
   const [typed, setTyped] = useState(resume?.typed ?? "");
   const [flash, setFlash] = useState(false);
   const [showing, setShowing] = useState(false);
@@ -615,7 +673,7 @@ function Round({
   const live = useRef({ items, rs, typed, showing, count });
   live.current = { items, rs, typed, showing, count };
   const pending = useRef<RoundState | null>(null);
-  const ended = useRef(false);
+  const ended = useRef(!!practice);
 
   const snapshotNow = useCallback(
     (state?: RoundState): RoundSnapshot | null => {
@@ -660,7 +718,7 @@ function Round({
   }, [resumedNote]);
 
   useEffect(() => {
-    if (resume) return; // the questions are the saved ones: never fetched again
+    if (resume || practice) return; // the questions are the saved ones: never fetched again
     let alive = true;
     (activity.id === SHUFFLE_ID ? fetchBrainShuffle(language, shuffleGroups) : fetchBrainRound(activity.id, language)).then((r) => {
       if (!alive) return;
@@ -742,18 +800,19 @@ function Round({
       // the result cannot be posted (so there is something to Finish again); a posted round leaves nothing behind.
       const final = snapshotNow(state);
       ended.current = true;
-      clearSnapshot(language);
+      // A retry is practice: the normal round's snapshot is long gone, and nothing here may touch another one.
+      if (!practice) clearSnapshot(language);
       onDone(seconds, missesOf(state, items), items.length, final);
     },
-    [items, onDone, snapshotNow, language],
+    [items, onDone, snapshotNow, language, practice],
   );
 
   // Quit (the button or Escape) ends the round for good: the saved copy goes too.
   const quit = useCallback(() => {
     ended.current = true;
-    clearSnapshot(language);
+    if (!practice) clearSnapshot(language);
     onQuit();
-  }, [language, onQuit]);
+  }, [language, onQuit, practice]);
 
   const go = useCallback(
     (i: number) => {
@@ -784,7 +843,8 @@ function Round({
       const right = sameAnswer(given, item.answer, language);
       const next = recordAnswer(rs, rs.index, given, right);
       if (right) {
-        award("brain_item", `${cur.id}:${roundId.current}:${rs.index}`);
+        // (A retry pays nothing: the original round already did.)
+        if (!practice) award("brain_item", `${cur.id}:${roundId.current}:${rs.index}`);
         busy.current = true;
         setFlash(true);
         // Leaving inside this 120 ms must still keep the answer just given.
@@ -802,7 +862,7 @@ function Round({
       guard.current = performance.now() + 300;
       commit(next);
     },
-    [items, item, rs, showing, reviewing, count, finish, commit, cur.id, language],
+    [items, item, rs, showing, reviewing, count, finish, commit, cur.id, language, practice],
   );
 
   const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -858,6 +918,7 @@ function Round({
     <div className="brain-wrap brain-play">
       <div className="brain-play-top">
         <strong>{activity.title}</strong>
+        {practice ? <span className="brain-from">Retry: practice only</span> : null}
         {cur !== activity ? <span className="brain-from">{cur.title}</span> : null}
         {checkSize && checkStep ? <span className="brain-check-step">Code age check · {checkStep} of {checkSize}</span> : null}
         <span className="brain-progress" title={`${answered} of ${total} answered`}>
@@ -996,6 +1057,7 @@ function Done({
   next,
   onNext,
   onAgain,
+  onRetry,
   onHome,
 }: {
   screen: Extract<Screen, { name: "done" }>;
@@ -1003,13 +1065,17 @@ function Done({
   next: ActivityInfo | undefined;
   onNext: () => void;
   onAgain: () => void;
+  onRetry: () => void;
   onHome: () => void;
 }) {
+  // Enter does the primary action: retrying the misses, unless a Code age check has another activity waiting.
+  const retryFirst = screen.misses.length > 0 && !next;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
         if (next) onNext();
+        else if (retryFirst) onRetry();
         else onAgain();
       } else if (e.key === "Escape") {
         onHome();
@@ -1017,7 +1083,7 @@ function Done({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [next, onNext, onAgain, onHome]);
+  }, [next, retryFirst, onNext, onAgain, onRetry, onHome]);
 
   return (
     <div className="brain-wrap brain-done">
@@ -1062,13 +1128,100 @@ function Done({
           <button type="button" className="ws-btn primary" onClick={onNext}>
             Next: {next.title} (Enter)
           </button>
+        ) : null}
+        {retryFirst ? (
+          <button type="button" className="ws-btn primary" data-testid="brain-retry" onClick={onRetry}>
+            {retryLabel(screen.misses.length, false)} (Enter)
+          </button>
+        ) : null}
+        {!next ? (
+          <button type="button" className={retryFirst ? "ws-btn" : "ws-btn primary"} onClick={onAgain}>
+            Again{retryFirst ? "" : " (Enter)"}
+          </button>
+        ) : null}
+        {next && screen.misses.length ? (
+          <button type="button" className="ws-btn" data-testid="brain-retry" onClick={onRetry}>
+            {retryLabel(screen.misses.length, false)}
+          </button>
+        ) : null}
+        <button type="button" className="ws-btn" onClick={onHome}>
+          Home (Esc)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The end of a retry round: practice, so no code age; what is left, or "all cleared" with the tries it took. */
+function RetryDone({
+  screen,
+  onRetry,
+  onAgain,
+  onHome,
+}: {
+  screen: Extract<Screen, { name: "retryDone" }>;
+  onRetry: () => void;
+  onAgain: () => void;
+  onHome: () => void;
+}) {
+  const left = screen.misses.length;
+  const outcome = retryOutcome(left, screen.tries);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (left) onRetry();
+        else onAgain();
+      } else if (e.key === "Escape") {
+        onHome();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [left, onRetry, onAgain, onHome]);
+
+  return (
+    <div className="brain-wrap brain-done">
+      <h2>{screen.activity.title}</h2>
+      <p className="brain-perfect" data-testid="brain-retry-outcome">{outcome.text}</p>
+      <div className="brain-stats">
+        <span>Retry practice - no code age, nothing saved</span>
+        <span>{screen.seconds.toFixed(1)} seconds</span>
+        <span>
+          {screen.items.length - left} of {screen.items.length} right, {left} missed
+        </span>
+      </div>
+      {left ? (
+        <section className="brain-misses">
+          <h3>Worth another look</h3>
+          {screen.misses.map((m, i) => (
+            <div key={i} className="brain-miss">
+              <pre>{m.item.prompt}</pre>
+              <span>
+                You said <code>{m.given || "nothing"}</code>, it's <code>{m.item.answer}</code>.{" "}
+                {m.item.explain}
+              </span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+      <div className="brain-actions">
+        {left ? (
+          <button type="button" className="ws-btn primary" data-testid="brain-retry" onClick={onRetry}>
+            {retryLabel(left, true)} (Enter)
+          </button>
         ) : (
           <button type="button" className="ws-btn primary" onClick={onAgain}>
             Again (Enter)
           </button>
         )}
+        {left ? (
+          <button type="button" className="ws-btn" onClick={onAgain}>
+            Again
+          </button>
+        ) : null}
         <button type="button" className="ws-btn" onClick={onHome}>
-          Home (Esc)
+          Back to the activities (Esc)
         </button>
       </div>
     </div>
