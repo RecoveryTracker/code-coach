@@ -34,9 +34,29 @@ class Deck:
     slides: tuple[Slide, ...]
 
 
-_MODULES = ("content_py_types", "content_py_syntax", "content_py_patterns")
+#: A deck module that failed to import (or has no DECK): skipped and recorded here, never fatal; the tests fail on it.
+LOAD_ERRORS: dict[str, str] = {}
 
-DECKS: tuple[Deck, ...] = tuple(import_module(f"{__name__}.{m}").DECK for m in _MODULES)
+
+def _discover() -> tuple[Deck, ...]:
+    """Every `content_*.py` beside this file that has a `DECK`, found BY NAME (a new deck is a new file, nothing to
+    register), in the order of each module's `ORDER` (an int: lower is earlier, beginner decks first; default 100),
+    then by file name."""
+    import pkgutil
+
+    found: list[tuple[int, str, Deck]] = []
+    for info in pkgutil.iter_modules(__path__):
+        if not info.name.startswith("content_"):
+            continue
+        try:
+            module = import_module(f"{__name__}.{info.name}")
+            found.append((int(getattr(module, "ORDER", 100)), info.name, module.DECK))
+        except Exception as e:  # a broken deck is skipped and recorded
+            LOAD_ERRORS[info.name] = f"{type(e).__name__}: {e}"
+    return tuple(d for _, _, d in sorted(found, key=lambda t: (t[0], t[1])))
+
+
+DECKS: tuple[Deck, ...] = _discover()
 
 
 def decks_for(language: str) -> list[Deck]:

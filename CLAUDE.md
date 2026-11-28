@@ -347,9 +347,14 @@ code_coach/farm/
   with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
 - **Slides** (2026-11-27; tab "Slides" after Concepts; `code_coach/slides/`, `web/src/components/Slides.tsx`,
   pure rules in `web/src/lib/slides.ts`): PASSIVE tutorials - you watch, you do not answer. A `Deck(id, title,
-  language, blurb, slides)` of `Slide(title, text, code, output, point)`; Python only so far (`content_py_types.py`,
-  `content_py_syntax.py`, `content_py_patterns.py`, 15 slides each), but every deck carries its language, so another
-  language is a new `content_<lang>_*.py` registered in `DECKS`. Routes: `GET /api/slides?language=` (`{decks: [{id,
+  language, blurb, slides)` of `Slide(title, text, code, output, point)`. Decks are FOUND BY FILE NAME: every
+  `code_coach/slides/content_*.py` with a `DECK` (and an `ORDER` int: lower is earlier in the picker, default 100; a
+  module that fails to import is skipped and named in `slides.LOAD_ERRORS`, which a test holds empty) - a new deck is a
+  new file, nothing to register. Python only so far: 20 decks of 15 slides (ORDER 10-30 the basics: types, syntax,
+  patterns; 40-55 strings, lists, dicts and sets, functions, comprehensions; 60-80 classes, special methods, errors,
+  gotchas, idioms, type hints; 100-120 collections/itertools, functional tools, recursion, searching and sorting,
+  Big-O, algorithm patterns). Every deck carries its language, so another language is new `content_<lang>_*.py`
+  files. Routes: `GET /api/slides?language=` (`{decks: [{id,
   title, blurb, count}]}`, an empty list - never an error - for a language with no decks) and `GET /api/slides/{id}`
   (the deck, with the language's colouring rules as `syntax`; 404 for an unknown id). Like Brain Drills the screen
   follows the app's language picker; a language with no decks shows "No slides for <X> yet" and a "Switch to Python"
@@ -357,9 +362,17 @@ code_coach/farm/
   slide's code with the real Python (`-I`, a scratch folder) and requires stdout == output + "\n" - deterministic code
   only (no time, randomness, input, files; print `sorted(set)`, never a set). Autoplay is OFF by default; a slide
   stays `slideDurationMs` = (2500 ms + 300 ms a word of text and point + 700 ms a code line + 1200 ms if there is
-  output) / speed, speeds 0.75/1/1.5/2 (kept in localStorage `code-coach:slides-speed`), the output panel fades in
-  1000 ms / speed after the code, and autoplay stops at the last slide. Keys (`keyAction`): right arrow and Space next,
-  left arrow back, P play/pause; ignored while typing or with Ctrl/Alt/Meta; any manual step pauses autoplay.
+  output) / speed, speeds 0.5/0.75/1/1.5/2 (kept in localStorage `code-coach:slides-speed`), and the output panel
+  fades in 1000 ms / speed after the code. It is made to be left running in the background: autoplay PLAYS THROUGH -
+  after a deck's last slide it fetches the next deck in picker order and keeps going (a "Next deck: <title>" line on
+  the last slide); **Loop** (default off, `code-coach:slides-loop`) wraps from the last deck to the first, otherwise it
+  stops at the end of the last deck; **Shuffle** (default off, `code-coach:slides-shuffle`) picks a random deck not yet
+  seen this session (`nextDeckId(order, current, {loop, shuffle, seen, rng})`, pure, tested with a seeded rng);
+  **Resume** (`code-coach:slides-resume`) reopens the deck and slide you were on, paused, with "Picked up at ..." (a
+  deck that is gone falls back to the picker). Every storage access is in try/catch. Keys (`keyAction`): right arrow
+  and Space next, left arrow back, P play/pause; ignored while typing or with Ctrl/Alt/Meta; any manual step pauses
+  autoplay; each press is applied with a functional state update (`pressTarget`), so several presses in one tick each
+  move one slide.
   `prefers-reduced-motion` turns the slide-in and the fade off. `tests/test_slides_ts.py` runs `slides.ts` in node.
   Not part of the session queue (no `lastKeys.ts` entry) and awards no Momentum.
 - **Brain Drills Shuffle** (2026-11; `brain.make_shuffle` / `shuffle_payload`, `GET /api/brain/shuffle?language=&groups=`,

@@ -389,3 +389,19 @@
 .sl-wrap > * {
   flex-shrink: 0;
 }
+
+.sl-flags {
+  display: flex;
+  gap: 4px;
+}
+
+.sl-resume,
+.sl-upnext {
+  margin: 0;
+  font-size: 14px;
+  color: var(--sl-dim);
+}
+
+.sl-upnext {
+  color: var(--sl-accent);
+}

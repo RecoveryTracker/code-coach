@@ -5,6 +5,9 @@ from __future__ import annotations
 
 from . import Deck, Slide
 
+#: Where the deck sits in the picker (lower is earlier).
+ORDER = 10
+
 DECK = Deck(
     id="py-types",
     title="Python Data Types",

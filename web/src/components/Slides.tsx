@@ -16,19 +16,28 @@ import { tokenize } from "../lib/codeColors";
 import { languageName } from "../lib/languageNames";
 import {
   DEFAULT_SPEED,
+  LOOP_KEY,
+  RESUME_KEY,
+  SHUFFLE_KEY,
   SPEEDS,
   SPEED_KEY,
   autoStep,
   clampIndex,
+  deckPositionLabel,
   isLast,
   keyAction,
-  nextIndex,
+  nextDeckId,
   outputDelayMs,
+  parseFlag,
+  parseResume,
   parseSpeed,
-  prevIndex,
+  pressTarget,
   progressLabel,
+  resumeLabel,
+  serializeResume,
   slideDurationMs,
   speedLabel,
+  upNextLabel,
 } from "../lib/slides";
 import type { SlideDeck, SlideList } from "../lib/slides";
 import "../styles/slides.css";
@@ -46,6 +55,30 @@ function saveSpeed(speed: number): void {
     window.localStorage.setItem(SPEED_KEY, String(speed));
   } catch {
     /* private mode or blocked storage: the speed just is not remembered */
+  }
+}
+
+function savedFlag(key: string, fallback: boolean): boolean {
+  try {
+    return parseFlag(window.localStorage.getItem(key), fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStore(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    /* blocked storage: just not remembered */
+  }
+}
+
+function readStore(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
   }
 }
 
@@ -81,6 +114,12 @@ export default function Slides({
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<number>(savedSpeed);
   const [outputShown, setOutputShown] = useState(false);
+  const [loop, setLoop] = useState<boolean>(() => savedFlag(LOOP_KEY, false));
+  const [shuffle, setShuffle] = useState<boolean>(() => savedFlag(SHUFFLE_KEY, false));
+  const [resumeNote, setResumeNote] = useState<string | null>(null);
+  const seenRef = useRef<string[]>([]);
+  const openToken = useRef(0);
+  const triedResume = useRef(false);
 
   // The decks for the app's language. Changing the language closes the open deck.
   useEffect(() => {
@@ -101,14 +140,36 @@ export default function Slides({
     };
   }, [language]);
 
-  const open = useCallback((id: string) => {
+  const order = useMemo(() => (list ? list.decks.map((d) => d.id) : []), [list]);
+
+  /** Open a deck at a slide. `keepPlaying` is for play-through: autoplay carries on into the new deck. */
+  const open = useCallback((id: string, start = 0, keepPlaying = false, resumed = false) => {
+    const token = ++openToken.current;
     setDeckError(null);
-    setIndex(0);
-    setPlaying(false);
+    if (!keepPlaying) setPlaying(false);
     fetchSlideDeck(id)
-      .then(setDeck)
-      .catch((e: unknown) => setDeckError(e instanceof Error ? e.message : String(e)));
+      .then((got) => {
+        if (token !== openToken.current) return;
+        if (!seenRef.current.includes(got.id)) seenRef.current.push(got.id);
+        const at = clampIndex(start, got.slides.length);
+        setIndex(at);
+        setResumeNote(resumed ? resumeLabel(got.title, at) : null);
+        setDeck(got);
+      })
+      .catch((e: unknown) => {
+        if (token !== openToken.current) return;
+        setPlaying(false);
+        setDeckError(e instanceof Error ? e.message : String(e));
+      });
   }, []);
+
+  // Reopening the tab picks up where you were, paused. A deck that is gone falls back to the picker.
+  useEffect(() => {
+    if (!list || triedResume.current) return;
+    triedResume.current = true;
+    const r = parseResume(readStore(RESUME_KEY), order);
+    if (r) open(r.deckId, r.index, false, true);
+  }, [list, order, open]);
 
   const count = deck?.slides.length ?? 0;
   const slide = deck ? deck.slides[clampIndex(index, count)] : null;
@@ -128,16 +189,32 @@ export default function Slides({
     return () => window.clearTimeout(t);
   }, [deck, index, slide, speed]);
 
-  // Autoplay: stay on a slide for as long as it takes to read, then move on; stop at the last one.
+  // Remember the place (deck and slide) for the next visit.
+  useEffect(() => {
+    if (deck) saveStore(RESUME_KEY, serializeResume({ deckId: deck.id, index: clampIndex(index, count) }));
+  }, [deck, index, count]);
+
+  // The deck that follows this one. Shuffle picks at random, so it is picked once per deck (and per option).
+  const deckId = deck?.id ?? null;
+  const upNextId = useMemo(
+    () =>
+      deckId ? nextDeckId(order, deckId, { loop, shuffle, seen: seenRef.current, rng: Math.random }) : null,
+    [deckId, order, loop, shuffle],
+  );
+  const upNextTitle = upNextId ? (list?.decks.find((d) => d.id === upNextId)?.title ?? null) : null;
+
+  // Autoplay: stay on a slide for as long as it takes to read, then move on; at the end of a deck go on to
+  // the next one (Loop: round to the first), or stop when there is none.
   useEffect(() => {
     if (!playing || !slide) return undefined;
     const t = window.setTimeout(() => {
       const to = autoStep(index, count);
-      if (to === null) setPlaying(false);
-      else setIndex(to);
+      if (to !== null) setIndex(to);
+      else if (upNextId) open(upNextId, 0, true);
+      else setPlaying(false);
     }, slideDurationMs(slide, speed));
     return () => window.clearTimeout(t);
-  }, [playing, slide, index, count, speed]);
+  }, [playing, slide, index, count, speed, upNextId, open]);
 
   const togglePlay = useCallback(() => {
     // Pressing Play on the last slide starts again from the top.
@@ -150,8 +227,8 @@ export default function Slides({
     go(to);
   };
 
-  const stateRef = useRef({ index, count, togglePlay });
-  stateRef.current = { index, count, togglePlay };
+  const stateRef = useRef({ count, togglePlay });
+  stateRef.current = { count, togglePlay };
 
   useEffect(() => {
     if (!deck) return undefined;
@@ -170,12 +247,22 @@ export default function Slides({
       if (action === "toggle") s.togglePlay();
       else {
         setPlaying(false);
-        setIndex(action === "next" ? nextIndex(s.index, s.count) : prevIndex(s.index, s.count));
+        // Functional update: presses in the same tick each move one slide from the latest index.
+        setIndex((cur) => pressTarget(action, cur, s.count));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [deck]);
+
+  const toggleLoop = () => {
+    saveStore(LOOP_KEY, loop ? "0" : "1");
+    setLoop(!loop);
+  };
+  const toggleShuffle = () => {
+    saveStore(SHUFFLE_KEY, shuffle ? "0" : "1");
+    setShuffle(!shuffle);
+  };
 
   const chooseSpeed = (s: number) => {
     setSpeed(s);
@@ -195,7 +282,7 @@ export default function Slides({
         {!list && !listError ? <p className="sl-note">Loading…</p> : null}
         {list && list.decks.length === 0 ? (
           <div className="sl-empty">
-            <p>No slides for {name} yet - Python has three decks.</p>
+            <p>No slides for {name} yet - the decks are all Python for now.</p>
             <button
               type="button"
               className="sl-btn primary"
@@ -243,9 +330,15 @@ export default function Slides({
         </button>
         <span className="sl-deck-name">{deck.title}</span>
         <span className="sl-count" aria-live="polite">
-          {progressLabel(i, count)}
+          {[deckPositionLabel(order, deck.id), progressLabel(i, count)].filter(Boolean).join(" \u00b7 ")}
         </span>
       </div>
+      {resumeNote ? <p className="sl-resume">{resumeNote}</p> : null}
+      {upNextLabel(playing, atLast, upNextTitle) ? (
+        <p className="sl-upnext" role="status">
+          {upNextLabel(playing, atLast, upNextTitle)}
+        </p>
+      ) : null}
 
       {slide ? (
         <article className="sl-slide" key={`${deck.id}-${i}`}>
@@ -296,6 +389,19 @@ export default function Slides({
             </button>
           ))}
         </div>
+        <div className="sl-flags" role="group" aria-label="Play-through options">
+          <button type="button" className={`sl-speed${loop ? " on" : ""}`} aria-pressed={loop} onClick={toggleLoop}>
+            Loop
+          </button>
+          <button
+            type="button"
+            className={`sl-speed${shuffle ? " on" : ""}`}
+            aria-pressed={shuffle}
+            onClick={toggleShuffle}
+          >
+            Shuffle decks
+          </button>
+        </div>
       </div>
 
       <ol className="sl-dots" aria-label="Slides">
@@ -312,7 +418,7 @@ export default function Slides({
           </li>
         ))}
       </ol>
-      <p className="sl-hint">Right arrow or Space: next. Left arrow: back. P: play or pause.</p>
+      <p className="sl-hint">Right arrow or Space: next. Left arrow: back. P: play or pause. Play carries on into the next deck.</p>
     </div>
   );
 }

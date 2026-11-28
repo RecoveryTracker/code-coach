@@ -103,3 +103,10 @@ def test_unknown_deck_is_404():
     with pytest.raises(HTTPException) as err:
         slides_deck("nope")
     assert err.value.status_code == 404
+
+
+def test_every_deck_module_loads_and_the_beginner_decks_come_first():
+    """Decks are found by file name (`content_*.py` with a DECK); a broken one is skipped and named here."""
+    assert slides.LOAD_ERRORS == {}
+    ids = [d.id for d in slides.decks_for("python")]
+    assert ids[:3] == ["py-types", "py-syntax", "py-patterns"], ids

@@ -185,6 +185,7 @@ class ReferenceTests(unittest.TestCase):
                     "ruby": f"def {k.name}(",
                     "typescript": f"function {k.name}(",
                     "rust": f"fn {k.name}(",
+                    "cpp": f" {k.name}(",
                 }.get(k.language, f"def {k.name}(")
                 self.assertIn(opener, shown)
                 self.assertNotIn(f"def {k.solve.__name__}(", shown)
@@ -845,6 +846,11 @@ class JavaScriptTests(unittest.TestCase):
                     self.assertTrue(k.signature.startswith(f"function {k.name}("))
                     self.assertTrue(k.signature.endswith("{"))
                     self.assertIn("):", k.signature, "a TypeScript signature says what it returns")
+                elif k.language == "cpp":
+                    self.assertIn(f" {k.name}(", k.signature)
+                    self.assertTrue(k.signature.endswith("{"))
+                    self.assertFalse(k.signature.startswith(("def ", "function ", "fn ")))
+                    self.assertEqual(len(k.types), len(k.params), "one C++ type per parameter")
                 elif k.language == "rust":
                     self.assertTrue(k.signature.startswith(f"fn {k.name}("))
                     self.assertTrue(k.signature.endswith("{"))
@@ -957,6 +963,11 @@ class RouteLanguageTests(unittest.TestCase):
 
                 if not typescript_available():
                     continue
+            if language == "cpp":
+                from code_coach.engine import cpp_available
+
+                if not cpp_available():
+                    continue
             if language == "rust":
                 from code_coach.engine import rust_available
 
@@ -1049,3 +1060,106 @@ class StubTests(unittest.TestCase):
         for k in self._stubs():
             with self.subTest(kata=k.id):
                 self.assertTrue(k.bug.strip())
+
+
+class CppKataTests(unittest.TestCase):
+    """Forms in C++: the reference answers, compiled for real.
+
+    Skipped cleanly on a machine with no C++ compiler, where Forms does not
+    offer the language at all.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from code_coach.engine import cpp_available
+
+        if not cpp_available():
+            raise unittest.SkipTest("no C++ compiler installed")
+
+    def _cpp(self):
+        return [k for k in katas() if k.language == "cpp"]
+
+    def _run(self, k, code: str):
+        out, err, exit_code = run_code(harness(k, code), language="cpp")
+        return judge(k, out, err, exit_code)
+
+    def test_there_are_enough_and_they_spread_over_levels(self) -> None:
+        ks = self._cpp()
+        self.assertGreaterEqual(len(ks), 14)
+        self.assertGreaterEqual(len({k.level for k in ks}), 3)
+        self.assertEqual({k.family for k in ks}, {"C++"})
+
+    def test_every_cpp_answer_passes_every_case(self) -> None:
+        for k in self._cpp():
+            with self.subTest(kata=k.id):
+                self.assertTrue(k.cpp_answer.strip(), f"{k.id} has no C++ answer")
+                outcome = self._run(k, k.reference())
+                self.assertEqual(outcome.broke, "")
+                failed = [(r.args, r.got, r.want) for r in outcome.results if not r.passed]
+                self.assertEqual(failed, [], f"{k.id}: {failed[:2]}")
+                self.assertEqual(len(outcome.results), len(k.cases))
+
+    def test_the_signature_is_cpp_and_the_answer_opens_on_it(self) -> None:
+        for k in self._cpp():
+            with self.subTest(kata=k.id):
+                self.assertTrue(k.signature.endswith("{"))
+                self.assertFalse(k.signature.startswith(("def ", "function ", "fn ")))
+                self.assertTrue(
+                    k.reference().startswith(k.signature),
+                    f"{k.id}: the answer should open on the signature the box shows")
+
+    def test_a_wrong_answer_fails_and_names_the_input(self) -> None:
+        k = kata("cpp-sum-positive")
+        outcome = self._run(
+            k, "int sumPositive(const std::vector<int> &nums) {\n"
+               "    int t = 0;\n    for (int n : nums) t += n;\n    return t;\n}")
+        self.assertEqual(outcome.broke, "")
+        self.assertFalse(outcome.passed)
+        wrong = [r for r in outcome.results if not r.passed]
+        self.assertIn([3, -1, 4], [r.args[0] for r in wrong])
+
+    def test_a_boundary_the_obvious_answer_gets_wrong_is_caught(self) -> None:
+        # Truncating division: the average of {1, 2} is 1.5, not 1.
+        k = kata("cpp-average")
+        outcome = self._run(
+            k, "double averageOf(const std::vector<int> &nums) {\n"
+               "    if (nums.empty()) return 0;\n"
+               "    int t = 0;\n    for (int n : nums) t += n;\n"
+               "    return t / (int)nums.size();\n}")
+        self.assertFalse(outcome.passed)
+
+    def test_changing_the_vector_fails_even_when_the_answer_is_right(self) -> None:
+        k = kata("cpp-unique-sorted")
+        outcome = self._run(
+            k, "std::vector<int> distinctAscending(std::vector<int> &nums) {\n"
+               "    std::sort(nums.begin(), nums.end());\n"
+               "    nums.erase(std::unique(nums.begin(), nums.end()), nums.end());\n"
+               "    return nums;\n}")
+        self.assertFalse(outcome.passed)
+        self.assertTrue([r for r in outcome.results if r.changed])
+
+    def test_a_compile_error_is_reported_as_one(self) -> None:
+        k = kata("cpp-clamp")
+        outcome = self._run(k, "int clampTo(int x, int lo, int hi) {\n    return x +;\n}")
+        self.assertTrue(outcome.broke)
+        self.assertEqual(outcome.results, ())
+
+    def test_a_missing_function_is_not_reported_as_wrong_answers(self) -> None:
+        k = kata("cpp-clamp")
+        outcome = self._run(k, "int somethingElse(int x) { return x; }")
+        self.assertTrue(outcome.broke)
+        self.assertEqual(outcome.results, ())
+
+    def test_the_route_runs_a_cpp_answer(self) -> None:
+        from code_coach.api import server
+        from code_coach.api.schemas import KataCheckRequest
+
+        k = kata("cpp-gcd")
+        response = server.kata_check(KataCheckRequest(kata_id=k.id, code=k.reference()))
+        self.assertEqual(response.broke, "")
+        self.assertTrue(response.passed)
+
+    def test_only_katas_with_a_cpp_answer_are_offered_as_cpp(self) -> None:
+        for k in katas():
+            if k.language == "cpp":
+                self.assertTrue(k.cpp_answer.strip(), k.id)

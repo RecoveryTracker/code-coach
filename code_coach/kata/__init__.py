@@ -728,7 +728,8 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
     from code_coach.kata.ruby_katas import RUBY_KATAS
     from code_coach.kata.ts_katas import TS_KATAS
     from code_coach.kata.rust_katas import RUST_KATAS
-    from code_coach.engine import if_rust, if_typescript
+    from code_coach.kata.cpp_katas import CPP_KATAS
+    from code_coach.engine import if_cpp, if_rust, if_typescript
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
@@ -754,6 +755,7 @@ def katas(family: str | None = None) -> tuple[Kata, ...]:
         + if_ruby(RUBY_KATAS + RUBY_BUGS)
         + if_typescript(TS_KATAS)
         + if_rust(RUST_KATAS)
+        + if_cpp(CPP_KATAS)
     )
     # Easiest first, and stable within a level so the order inside one
     # is still the order it was curated in rather than an accident of
@@ -778,7 +780,8 @@ def _in_file_order() -> tuple[Kata, ...]:
     from code_coach.kata.ruby_katas import RUBY_KATAS
     from code_coach.kata.ts_katas import TS_KATAS
     from code_coach.kata.rust_katas import RUST_KATAS
-    from code_coach.engine import if_rust, if_typescript
+    from code_coach.kata.cpp_katas import CPP_KATAS
+    from code_coach.engine import if_cpp, if_rust, if_typescript
     from code_coach.engine import if_c, if_dart, if_ruby
     from code_coach.kata.dart_bugs import DART_BUGS
     from code_coach.kata.dart_bugs2 import DART_BUGS_2
@@ -804,6 +807,7 @@ def _in_file_order() -> tuple[Kata, ...]:
         + if_ruby(RUBY_KATAS + RUBY_BUGS)
         + if_typescript(TS_KATAS)
         + if_rust(RUST_KATAS)
+        + if_cpp(CPP_KATAS)
     )
 
 

@@ -68,7 +68,7 @@ export function progressLabel(index: number, count: number): string {
 
 // ── Timing ─────────────────────────────────────────────────────────────
 
-export const SPEEDS = [0.75, 1, 1.5, 2] as const;
+export const SPEEDS = [0.5, 0.75, 1, 1.5, 2] as const;
 export const DEFAULT_SPEED = 1;
 export const SPEED_KEY = "code-coach:slides-speed";
 
@@ -150,4 +150,95 @@ export function keyAction(key: string, c: KeyContext): KeyAction {
   }
   if (key === "p" || key === "P") return "toggle";
   return "none";
+}
+
+// ── Playing on: the next deck, loop, shuffle, resume ───────────────────
+
+export const LOOP_KEY = "code-coach:slides-loop";
+export const SHUFFLE_KEY = "code-coach:slides-shuffle";
+export const RESUME_KEY = "code-coach:slides-resume";
+
+/** A saved on/off switch: "1" or "0", anything else is the default. */
+export function parseFlag(raw: string | null | undefined, fallback: boolean): boolean {
+  return raw === "1" ? true : raw === "0" ? false : fallback;
+}
+
+export interface NextDeckOptions {
+  /** After the last deck go back to the first (or, shuffling, start a new round of unseen decks). */
+  loop: boolean;
+  /** Pick a random deck not yet seen instead of the next in order. */
+  shuffle: boolean;
+  /** Deck ids already played this session (the current one counts as seen). */
+  seen: readonly string[];
+  /** Returns [0, 1); injectable so tests are exact. */
+  rng: () => number;
+}
+
+/**
+ * Which deck follows `current` when autoplay finishes it: the next in `order`, or a random unseen one when
+ * shuffling. null when it should stop: the last deck without loop, every deck seen without loop, or no decks.
+ * With loop on, a finished round starts again (in order: the first deck; shuffled: any deck but this one).
+ */
+export function nextDeckId(order: readonly string[], current: string, o: NextDeckOptions): string | null {
+  if (order.length === 0) return null;
+  const at = order.indexOf(current);
+  if (!o.shuffle) {
+    if (at >= 0 && at < order.length - 1) return order[at + 1];
+    if (!o.loop) return null;
+    return order.length === 1 && at === 0 ? null : order[0];
+  }
+  const seen = new Set(o.seen);
+  seen.add(current);
+  let pool = order.filter((id) => !seen.has(id));
+  if (pool.length === 0) {
+    if (!o.loop) return null;
+    pool = order.filter((id) => id !== current);
+  }
+  if (pool.length === 0) return null;
+  const r = o.rng();
+  const k = Math.min(pool.length - 1, Math.max(0, Math.floor(Number.isFinite(r) ? r * pool.length : 0)));
+  return pool[k];
+}
+
+/** "deck 4 of 20" (null when the deck is not in the list). */
+export function deckPositionLabel(order: readonly string[], id: string): string | null {
+  const at = order.indexOf(id);
+  return at < 0 ? null : `deck ${at + 1} of ${order.length}`;
+}
+
+export interface Resume {
+  deckId: string;
+  index: number;
+}
+
+export function serializeResume(r: Resume): string {
+  return JSON.stringify({ deckId: r.deckId, index: Math.max(0, Math.trunc(r.index)) });
+}
+
+/** A saved place, or null for nothing, junk, or a deck that no longer exists in `order`. */
+export function parseResume(raw: string | null | undefined, order: readonly string[]): Resume | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as { deckId?: unknown; index?: unknown };
+    if (typeof v.deckId !== "string" || !order.includes(v.deckId)) return null;
+    const n = typeof v.index === "number" && Number.isFinite(v.index) ? Math.max(0, Math.trunc(v.index)) : 0;
+    return { deckId: v.deckId, index: n };
+  } catch {
+    return null;
+  }
+}
+
+/** "Picked up at Types, slide 5". */
+export function resumeLabel(title: string, index: number): string {
+  return `Picked up at ${title}, slide ${Math.max(0, Math.trunc(index)) + 1}`;
+}
+
+/** The "Next deck: X" notice: only while playing the last slide, when a deck follows. */
+export function upNextLabel(playing: boolean, atLast: boolean, nextTitle: string | null): string | null {
+  return playing && atLast && nextTitle ? `Next deck: ${nextTitle}` : null;
+}
+
+/** Where a manual key press lands from `index`; applied one press at a time so several presses never collapse. */
+export function pressTarget(action: "next" | "prev", index: number, count: number): number {
+  return action === "next" ? nextIndex(index, count) : prevIndex(index, count);
 }

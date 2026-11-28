@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from . import Deck, Slide
 
+#: Where the deck sits in the picker (lower is earlier).
+ORDER = 30
+
 DECK = Deck(
     id="py-patterns",
     title="Python Patterns",

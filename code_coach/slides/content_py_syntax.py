@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from . import Deck, Slide
 
+#: Where the deck sits in the picker (lower is earlier).
+ORDER = 20
+
 DECK = Deck(
     id="py-syntax",
     title="Python Syntax",
