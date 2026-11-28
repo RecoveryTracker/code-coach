@@ -230,7 +230,7 @@ TERMS: list[Entry] = [
         see=("pointer", "array", "index", "increment", "dereference"),
         priority=55,
         aka=("pointer math", "pointer arithmetics", "p + 1", "*p++", "pointer increment", "pointer addition", "pointer subtraction", "walk an array", "pointer walk", "pointer difference", "pointer comparison"),
-        detect=(r"\*[ \t]*\(?[ \t]*\w+[ \t]*\+[ \t]*\w+[ \t]*\)|\*[ \t]*\w+[ \t]*(?:\+\+|--)|(?:\+\+|--)[ \t]*\w+\b[ \t]*;[ \t]*//|\bptrdiff_t\b|\w+[ \t]*\+[ \t]*\w+[ \t]*\)[ \t]*-[ \t]*\w+\b",),
+        detect=(r"\*[ \t]*\(?[ \t]*\w+[ \t]*\+[ \t]*\w+[ \t]*\)|\*[ \t]*\w+[ \t]*(?:\+\+|--)|(?:\+\+|--)[ \t]*\w+\b[ \t]*;[ \t]*//|\bptrdiff_t\b|\b\w{1,40}[ \t]*\+[ \t]*\w{1,40}[ \t]*\)[ \t]*-[ \t]*\w+\b",),
         rules=(
             r"For int *p, p + 1 is the next int (4 bytes on); for char *p it is the next byte.",
             r"p[i] is *(p + i); p2 - p1 counts elements and has type ptrdiff_t.",

@@ -5576,3 +5576,25 @@ def test_c_and_sql_are_read_quickly():
         find_words(code, "sql", limit=60)
     find_words("SELECT " + ", ".join(f"c{i}" for i in range(2000)) + " FROM t WHERE " + " AND ".join(f"c{i} > {i}" for i in range(500)), "sql", limit=60)
     assert time.perf_counter() - started < 6.0
+
+
+@pytest.mark.parametrize("lang", LANGS)
+def test_no_detect_pattern_is_quadratic_on_one_long_word(lang):
+    """One unanchored word-run (backslash-w plus) at the front of a pattern rescans a long word from every position (quadratic): the C
+    `pointer-arithmetic` card once took 2 s on `0x` * 4000 alone. Each pattern gets a few long single-token inputs."""
+    import time
+
+    inputs = ["0x" * 4000, "a" * 8000, "a1_" * 3000, "x." * 4000, "ab+" * 3000]
+    slow = []
+    for e in glossary.all_entries(lang):
+        for pattern in e.detect:
+            raw = pattern.startswith("raw:")
+            compiled = re.compile(pattern[4:] if raw else pattern, re.M)
+            for text in inputs:
+                code = text if raw else glossary.blank_code(text, lang)
+                started = time.perf_counter()
+                compiled.search(code)
+                took = time.perf_counter() - started
+                if took > 0.25:
+                    slow.append((e.id, text[:6], round(took, 2)))
+    assert not slow, f"patterns that rescan a long word: {slow[:8]}"

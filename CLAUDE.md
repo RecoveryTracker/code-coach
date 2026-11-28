@@ -35,24 +35,36 @@ an old build plan, kept for history.
   Farm has `POST /api/farm/reset`; Brain Drills keeps
   `~/.code_coach/brain_drills.json`).
 
-## Shipping: the full suite, in two runs
+## Shipping: the full suite, in three runs
 
-Push only after the full suite is green. Serially it takes about 1 hour 45
-minutes, and a background command is stopped after ~30 minutes, so it runs as
-two parallel (pytest-xdist) runs, each its own background command:
+Push only after the full suite is green. Serially it takes hours, and a background command is stopped after ~30
+minutes, so it runs as THREE parallel (pytest-xdist) runs, each its own background command, started together:
 
 | Run | What | About |
 |---|---|---|
-| P1 | everything except `test_workbook.py`, `test_worked_lessons.py`, `test_gotchas*.py`, with `-n 6` | 26 min |
-| P2 | `tests/test_workbook.py tests/test_worked_lessons.py tests/test_gotchas*.py` | 1 h 35 min on `-n 4` |
+| P1 | everything except P2's and P3's files, `-n 4` | 1 h 15 min |
+| P3 | the Dart-heavy files (below), `-n 2` | 1 h 45 min |
+| P2 | `tests/test_workbook.py tests/test_worked_lessons.py tests/test_gotchas*.py`, `-n 4` | 2 h |
 
-P2 is slower parallel than as serial chunks (its tests start many compilers
-and the cleanup tests see other workers' processes), so either split it into
-serial chunks (`tests/test_gotchas*.py` ~50 min; `tests/test_workbook.py -k
-"not _part"` ~24 min; `-k "_part1 or _part2 or _parts"`, `-k "_part3 or
-_part4"`, `-k "_part5 or _part6"` ~16 min each) or run it on `-n 4` and re-run
-its failures serially. Known load flakes: `test_gotchas_langs.py` cleanup and
-timing cases and `test_workbook.py::ReferenceRunTests` - they pass serially.
+P3 is `tests/test_*dart*.py` plus `tests/test_bughunt.py tests/test_errors.py tests/test_language_tools.py
+tests/test_magnets.py tests/test_predict.py tests/test_puzzles.py tests/test_regex.py tests/test_trace.py
+tests/test_typing.py` (every file that starts many `dart` processes). Why (2026-11-27): each Dart program has a 25 s
+limit, and with those files in P1 at `-n 6` beside P2 the machine (4 cores, 8 threads) ran them past it - P1 failed
+~115 load flakes a round and the count grew with every Dart set. Split three ways at the same 10 workers, P1 + P3
+failed 46 (P1 alone 3), and the whole suite still ends with P2. P1, for example:
+
+```text
+IGN=$(for f in tests/test_gotchas*.py tests/test_*dart*.py tests/test_bughunt.py tests/test_errors.py \
+  tests/test_language_tools.py tests/test_magnets.py tests/test_predict.py tests/test_puzzles.py tests/test_regex.py \
+  tests/test_trace.py tests/test_typing.py; do printf -- "--ignore=%s " "$f"; done)
+pytest -q -p no:randomly -rf -n 4 tests --ignore=tests/test_workbook.py --ignore=tests/test_worked_lessons.py $IGN
+```
+
+Then re-run each run's failures SERIALLY (extract them with `grep -E "^(SUB)?FAILED" | sed` into a list) - a failure
+that passes alone is load. Known load flakes: Dart programs timing out (P3), MSVC toolchain tests, the
+`test_gotchas_langs.py` cleanup and timing cases, `test_workbook.py::ReferenceRunTests`. Windows Defender sometimes
+quarantines a freshly built C test program (`WinError 225 ... contains a virus`): a false positive, run it again.
+Do not run a helper's heavy tests while the suite runs - it roughly doubles the load flakes.
 
 Run each with `./.venv/Scripts/python.exe -m pytest -q -p no:randomly -rf`
 and save its log. Before starting, **freeze the list of files the commit
