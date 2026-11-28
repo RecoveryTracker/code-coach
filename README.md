@@ -43,7 +43,7 @@ only the last line. Nothing installed yet, or something went wrong? See
 
 ## What is in it
 
-Twenty-four modes, all sharing one row of names at the top of every screen. Session, Typing, Workbook and Brain Drills come first; after them the modes run from easiest to hardest.
+Twenty-five modes, all sharing one row of names at the top of every screen. Session, Typing, Workbook and Brain Drills come first; after them the modes run from easiest to hardest.
 
 | Mode | What you do |
 |------|-------------|
@@ -69,6 +69,7 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Tickets** | One small codebase and the team's queue of work against it: bug reports, features, a change of rules, a refactor. Each ticket starts from the code as the last one left it, and is checked on what it asks and on everything that already worked. 12 tickets in two projects: a shop's orders in Python and a team task board in JavaScript |
 | **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
 | **Concepts** | The questions an interview asks that are not coding problems |
+| **Slides** | Passive tutorials you watch rather than answer: a heading, a plain explanation, a short example and what it prints, one slide at a time - step through or press Play. Python for now: Data Types, Syntax and Patterns, 15 slides each, every output checked against real Python |
 | **Reference** | Cheat sheets and flashcards for the language you are in |
 | **Free mode** | The editor with the exercises paused: code anything you like |
 

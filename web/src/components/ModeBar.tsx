@@ -143,6 +143,12 @@ export const MODES = [
     title: "The questions an interview asks that aren't coding problems",
   },
   {
+    /* Watch-only, so it sits with the other reading modes at the end. */
+    id: "slides",
+    label: "Slides",
+    title: "Short passive tutorials you watch - data types, syntax and patterns, one slide at a time",
+  },
+  {
     id: "reference",
     label: "Reference",
     title: "Cheat sheet and flashcards for the language you're in",

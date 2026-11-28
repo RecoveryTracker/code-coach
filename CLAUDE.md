@@ -46,15 +46,15 @@ minutes, so it runs as THREE parallel (pytest-xdist) runs, each its own backgrou
 | P3 | the Dart-heavy files (below), `-n 2` | 1 h 45 min |
 | P2 | `tests/test_workbook.py tests/test_worked_lessons.py tests/test_gotchas*.py`, `-n 4` | 2 h |
 
-P3 is `tests/test_*dart*.py` plus `tests/test_bughunt.py tests/test_errors.py tests/test_language_tools.py
-tests/test_magnets.py tests/test_predict.py tests/test_puzzles.py tests/test_regex.py tests/test_trace.py
-tests/test_typing.py` (every file that starts many `dart` processes). Why (2026-11-27): each Dart program has a 25 s
+P3 is `tests/test_*dart*.py` plus `tests/test_bughunt.py tests/test_errors.py tests/test_kata.py
+tests/test_language_tools.py tests/test_magnets.py tests/test_predict.py tests/test_puzzles.py tests/test_regex.py
+tests/test_trace.py tests/test_typing.py` (every file that starts many `dart` processes). Why (2026-11-27): each Dart program has a 25 s
 limit, and with those files in P1 at `-n 6` beside P2 the machine (4 cores, 8 threads) ran them past it - P1 failed
 ~115 load flakes a round and the count grew with every Dart set. Split three ways at the same 10 workers, P1 + P3
 failed 46 (P1 alone 3), and the whole suite still ends with P2. P1, for example:
 
 ```text
-IGN=$(for f in tests/test_gotchas*.py tests/test_*dart*.py tests/test_bughunt.py tests/test_errors.py \
+IGN=$(for f in tests/test_gotchas*.py tests/test_*dart*.py tests/test_bughunt.py tests/test_errors.py tests/test_kata.py \
   tests/test_language_tools.py tests/test_magnets.py tests/test_predict.py tests/test_puzzles.py tests/test_regex.py \
   tests/test_trace.py tests/test_typing.py; do printf -- "--ignore=%s " "$f"; done)
 pytest -q -p no:randomly -rf -n 4 tests --ignore=tests/test_workbook.py --ignore=tests/test_worked_lessons.py $IGN
@@ -345,6 +345,23 @@ code_coach/farm/
   "Words in this question" chips ask the glossary for the drill's language: `dart` (2026-10-22), `c` and `sql`
   (2026-10-23) are full glossary languages of their own (see "Glossary"), so their drills show their chips
   with no web change, and a new pack's `concepts` are resolved in its language with no edit anywhere.
+- **Slides** (2026-11-27; tab "Slides" after Concepts; `code_coach/slides/`, `web/src/components/Slides.tsx`,
+  pure rules in `web/src/lib/slides.ts`): PASSIVE tutorials - you watch, you do not answer. A `Deck(id, title,
+  language, blurb, slides)` of `Slide(title, text, code, output, point)`; Python only so far (`content_py_types.py`,
+  `content_py_syntax.py`, `content_py_patterns.py`, 15 slides each), but every deck carries its language, so another
+  language is a new `content_<lang>_*.py` registered in `DECKS`. Routes: `GET /api/slides?language=` (`{decks: [{id,
+  title, blurb, count}]}`, an empty list - never an error - for a language with no decks) and `GET /api/slides/{id}`
+  (the deck, with the language's colouring rules as `syntax`; 404 for an unknown id). Like Brain Drills the screen
+  follows the app's language picker; a language with no decks shows "No slides for <X> yet" and a "Switch to Python"
+  button. **The oracle rule**: every slide's `output` is worked out by hand, and `tests/test_slides.py` runs every
+  slide's code with the real Python (`-I`, a scratch folder) and requires stdout == output + "\n" - deterministic code
+  only (no time, randomness, input, files; print `sorted(set)`, never a set). Autoplay is OFF by default; a slide
+  stays `slideDurationMs` = (2500 ms + 300 ms a word of text and point + 700 ms a code line + 1200 ms if there is
+  output) / speed, speeds 0.75/1/1.5/2 (kept in localStorage `code-coach:slides-speed`), the output panel fades in
+  1000 ms / speed after the code, and autoplay stops at the last slide. Keys (`keyAction`): right arrow and Space next,
+  left arrow back, P play/pause; ignored while typing or with Ctrl/Alt/Meta; any manual step pauses autoplay.
+  `prefers-reduced-motion` turns the slide-in and the fade off. `tests/test_slides_ts.py` runs `slides.ts` in node.
+  Not part of the session queue (no `lastKeys.ts` entry) and awards no Momentum.
 - **Brain Drills Shuffle** (2026-11; `brain.make_shuffle` / `shuffle_payload`, `GET /api/brain/shuffle?language=&groups=`,
   `tests/test_brain_shuffle.py`): one round of `SHUFFLE_COUNT` (16) questions from many activities of the language, under
   the home-screen headings ticked on the Shuffle card (chips; all by default; remembered per language in localStorage

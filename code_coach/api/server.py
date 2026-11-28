@@ -876,6 +876,29 @@ def concepts(language: str | None = None) -> list[dict]:
     return payload(_viewing_language(language))
 
 
+@app.get("/api/slides")
+def slides_list(language: str | None = None) -> dict:
+    """The slide decks for a language: passive, watch-only tutorials.
+
+    A language with no decks yet gets an empty list, never an error, so the
+    screen can say so and offer Python.
+    """
+    from code_coach import slides
+
+    return slides.list_payload(_viewing_language(language))
+
+
+@app.get("/api/slides/{deck_id}")
+def slides_deck(deck_id: str) -> dict:
+    """One whole deck (every slide), with its language's colouring rules."""
+    from code_coach import slides
+
+    found = slides.deck(deck_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail=f"no slide deck {deck_id!r}")
+    return slides.deck_payload(found)
+
+
 @app.get("/api/workbook")
 def workbook(language: str | None = None) -> dict:
     """The workbook: pages of small exercises you solve by typing.

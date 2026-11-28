@@ -1,0 +1,391 @@
+/* Slides: passive tutorials. The slide is a dark card in every skin (like the Gotchas card), with its
+   own colour tokens. The slide-in motion is off under prefers-reduced-motion. */
+
+.sl-wrap {
+  --sl-bg: #0e1220;
+  --sl-panel: #161c30;
+  --sl-line: #2b3555;
+  --sl-text: #e8edf7;
+  --sl-dim: #a3b0c9;
+  --sl-accent: #7cc4ff;
+  --sl-ok: #4ade80;
+  --tk-keyword: #ff8fc7;
+  --tk-string: #ffd479;
+  --tk-number: #c8b0ff;
+  --tk-comment: #93a1bd;
+  --tk-fn: #7fdcff;
+  --tk-const: #ffab70;
+  --tk-punct: #bcc6dc;
+  --tk-type: #7ee7a8;
+  --tk-preproc: #d6a9ff;
+
+  max-width: 900px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 18px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  color: inherit;
+}
+
+.sl-wrap .tk-keyword { color: var(--tk-keyword); }
+.sl-wrap .tk-string { color: var(--tk-string); }
+.sl-wrap .tk-number { color: var(--tk-number); }
+.sl-wrap .tk-comment { color: var(--tk-comment); }
+.sl-wrap .tk-fn { color: var(--tk-fn); }
+.sl-wrap .tk-const { color: var(--tk-const); }
+.sl-wrap .tk-punct { color: var(--tk-punct); }
+.sl-wrap .tk-type { color: var(--tk-type); }
+.sl-wrap .tk-preproc { color: var(--tk-preproc); }
+
+.sl-head h2 {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.sl-sub,
+.sl-note,
+.sl-deck-name,
+.sl-count,
+.sl-hint {
+  margin: 0;
+  color: inherit;
+  opacity: 0.78;
+}
+
+/* ── The deck picker ── */
+
+.sl-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.sl-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  text-align: left;
+  font: inherit;
+  color: var(--sl-text);
+  background: var(--sl-panel);
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.sl-card:hover,
+.sl-card:focus-visible {
+  border-color: var(--sl-accent);
+  outline: none;
+}
+
+.sl-card-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sl-card-blurb {
+  color: var(--sl-dim);
+  line-height: 1.45;
+}
+
+.sl-card-count {
+  margin-top: auto;
+  color: var(--sl-accent);
+  font-size: 13px;
+}
+
+.sl-empty {
+  color: var(--sl-text);
+  padding: 18px;
+  background: var(--sl-panel);
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+}
+
+.sl-empty p {
+  margin: 0 0 12px;
+}
+
+/* ── A deck ── */
+
+.sl-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.sl-deck-name {
+  font-weight: 600;
+}
+
+.sl-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-slide {
+  color: var(--sl-text);
+  min-width: 0;
+  min-height: 380px;
+  padding: 26px 28px;
+  background: var(--sl-bg);
+  border: 1px solid var(--sl-line);
+  border-radius: 18px;
+  animation: sl-in 0.28s ease-out;
+}
+
+@keyframes sl-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sl-title {
+  margin: 0 0 12px;
+  font-size: 34px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.sl-text {
+  margin: 0 0 18px;
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--sl-text);
+}
+
+.sl-code {
+  margin: 0 0 12px;
+  padding: 16px 18px;
+  background: var(--sl-panel);
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+  font: 18px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--sl-text);
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.sl-code code {
+  font: inherit;
+}
+
+.sl-out {
+  margin: 0 0 16px;
+  border: 1px solid var(--sl-line);
+  border-left: 4px solid var(--sl-ok);
+  border-radius: 10px;
+  background: #0a0e1a;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.sl-out.shown {
+  opacity: 1;
+  transform: none;
+}
+
+.sl-out-label {
+  padding: 6px 14px 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-ok);
+}
+
+.sl-out-body {
+  margin: 0;
+  padding: 4px 14px 12px;
+  font: 17px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--sl-text);
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+}
+
+.sl-point {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--sl-text);
+}
+
+.sl-point-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0e1220;
+  background: var(--sl-accent);
+}
+
+/* ── Controls ── */
+
+.sl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sl-btn {
+  padding: 8px 16px;
+  font: inherit;
+  color: var(--sl-text);
+  background: var(--sl-panel);
+  border: 1px solid var(--sl-line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.sl-btn:hover:not(:disabled) {
+  border-color: var(--sl-accent);
+}
+
+.sl-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sl-btn.primary {
+  border-color: var(--sl-accent);
+}
+
+.sl-btn.primary.on {
+  background: var(--sl-accent);
+  color: #0e1220;
+  font-weight: 700;
+}
+
+.sl-speeds {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.sl-speed {
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--sl-dim);
+  background: transparent;
+  border: 1px solid var(--sl-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sl-speed.on {
+  color: #0e1220;
+  background: var(--sl-text);
+  border-color: var(--sl-text);
+  font-weight: 700;
+}
+
+.sl-dots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sl-dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--sl-line);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sl-dot.seen {
+  background: var(--sl-line);
+}
+
+.sl-dot.on {
+  background: var(--sl-accent);
+  border-color: var(--sl-accent);
+}
+
+.sl-btn:focus-visible,
+.sl-speed:focus-visible,
+.sl-dot:focus-visible,
+.sl-code:focus-visible,
+.sl-out-body:focus-visible {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: 2px;
+}
+
+.sl-hint {
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .sl-wrap {
+    padding: 12px 16px 40px;
+  }
+  .sl-slide {
+    min-height: 0;
+    padding: 18px 16px;
+  }
+  .sl-title {
+    font-size: 26px;
+  }
+  .sl-text {
+    font-size: 17px;
+  }
+  .sl-code {
+    font-size: 15px;
+    padding: 12px;
+  }
+  .sl-out-body {
+    font-size: 15px;
+  }
+  .sl-point {
+    font-size: 16px;
+  }
+  .sl-speeds {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-slide {
+    animation: none;
+  }
+  .sl-out {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* The wrap scrolls; its children keep their height instead of squashing into each other. */
+.sl-wrap > * {
+  flex-shrink: 0;
+}

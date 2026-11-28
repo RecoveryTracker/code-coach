@@ -1,5 +1,6 @@
 import type { BrainItem, BrainSummary } from "./components/BrainDrills";
 import type { AwardResult } from "./lib/momentumView";
+import type { SlideDeck, SlideList } from "./lib/slides";
 import type {
   Confidence,
   GotchaAnswer,
@@ -190,6 +191,14 @@ function withLanguage(path: string, language?: string): string {
 
 export function fetchReference(language?: string): Promise<ReferenceSheet> {
   return request(withLanguage("/api/reference", language));
+}
+
+export function fetchSlides(language?: string): Promise<SlideList> {
+  return request(withLanguage("/api/slides", language));
+}
+
+export function fetchSlideDeck(id: string): Promise<SlideDeck> {
+  return request(`/api/slides/${encodeURIComponent(id)}`);
 }
 
 export function fetchLessons(language?: string): Promise<LessonEntry[]> {

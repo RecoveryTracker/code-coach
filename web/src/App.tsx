@@ -44,6 +44,7 @@ import BugHunt from "./components/BugHunt";
 import CaseFiles from "./components/CaseFiles";
 import BrainDrills from "./components/BrainDrills";
 import Gotchas from "./components/Gotchas";
+import Slides from "./components/Slides";
 import CanvasMode from "./components/CanvasMode";
 import FarmMode from "./components/FarmMode";
 import FlutterMode from "./components/FlutterMode";
@@ -269,6 +270,7 @@ export default function App() {
   const farmOpen = mode === "farm";
   const brainOpen = mode === "brain";
   const gotchasOpen = mode === "gotchas";
+  const slidesOpen = mode === "slides";
   const ticketsOpen = mode === "tickets";
   const traceOpen = mode === "trace";
   const sessionOpen = mode === "session";
@@ -1351,6 +1353,28 @@ export default function App() {
         {/* Brain Drills follows the language picker at the top, like every other mode. */}
         <BrainDrills
           appLanguage={viewingLanguage}
+          onChangeLanguage={(id) => {
+            void (async () => {
+              try {
+                await updateProgress({ language: id });
+                onLanguageChanged();
+              } catch {
+                /* stay on the current language */
+              }
+            })();
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (slidesOpen) {
+    return (
+      <div className="typing-shell">
+        {modeBar}
+        {/* Slides follows the language picker at the top, like Brain Drills. */}
+        <Slides
+          language={viewingLanguage}
           onChangeLanguage={(id) => {
             void (async () => {
               try {
