@@ -42,13 +42,14 @@ def _runnable():
     everywhere; without it the Dart hunts are skipped rather than failed."""
     from code_coach.engine import dart_available
 
-    from code_coach.engine import c_available, ruby_available, rust_available, typescript_available
+    from code_coach.engine import c_available, cpp_available, ruby_available, rust_available, typescript_available
 
     return tuple(h for h in hunts()
                  if (h.language != "dart" or dart_available())
                  and (h.language != "ruby" or ruby_available())
                  and (h.language != "typescript" or typescript_available())
-                 and (h.language != "rust" or rust_available()))
+                 and (h.language != "rust" or rust_available())
+                and (h.language != "cpp" or cpp_available()))
 
 
 class CollectionTests(unittest.TestCase):
@@ -56,13 +57,14 @@ class CollectionTests(unittest.TestCase):
     def test_every_language_has_some(self) -> None:
         from code_coach.engine import dart_available
 
-        from code_coach.engine import c_available, ruby_available, rust_available, typescript_available
+        from code_coach.engine import c_available, cpp_available, ruby_available, rust_available, typescript_available
 
         want = ({"Python", "JavaScript"} | ({"Dart"} if dart_available() else set())
                 | ({"Ruby"} if ruby_available() else set())
                 | ({"TypeScript"} if typescript_available() else set())
                 | ({"Rust"} if rust_available() else set())
-                | ({"C"} if c_available() else set()))
+                | ({"C"} if c_available() else set())
+                | ({"C++"} if cpp_available() else set()))
         # Topic families (the JavaScript game-code hunts) sit beside
         # the language ones and are checked in their own test file.
         self.assertEqual(set(hunt_families()) - {"Game code"}, want)

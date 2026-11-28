@@ -1157,6 +1157,10 @@ class FarmHost:
                 # What the run harvested goes to Momentum (the lifetime total, today's quest,
                 # the steps it crossed) before the run reads as over: whoever sees "done" sees it paid.
                 self.rewards.flush()
+            # The save goes to disk before the run reads as over, for the same reason: whoever sees "done" (the
+            # browser's polling, a test about to remove its sandbox) sees the farm saved. Saving after the status
+            # let a test's teardown delete the folder under a late save.
+            self.save(run.language)
             if run.stop and not run.error:
                 run.status = "stopped"
                 self._say("info", "Stopped.")
@@ -1171,7 +1175,6 @@ class FarmHost:
             else:
                 run.status = "done"
                 self._say("info", "Your program finished.")
-            self.save(run.language)
         shutil.rmtree(run.workdir, ignore_errors=True)
 
     def _finish_simulation(self, run: "Run") -> None:

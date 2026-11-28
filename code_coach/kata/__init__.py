@@ -86,6 +86,8 @@ class Kata:
     dart_answer: str = ""
     #: The worked answer in C. Run through kata/c_harness.py, the C driver.
     c_answer: str = ""
+    #: The worked answer in C++. Run through kata/cpp_harness.py.
+    cpp_answer: str = ""
     #: The worked answer in Ruby. Run through kata/ruby_harness.py.
     ruby_answer: str = ""
     #: The worked answer in TypeScript. Run through TS_DRIVER, so it has to
@@ -176,6 +178,10 @@ class Kata:
             from code_coach.kata.c_harness import signature
 
             return signature(self)
+        if self.language == "cpp":
+            from code_coach.kata.cpp_harness import signature as cpp_signature
+
+            return cpp_signature(self)
         if self.language == "ruby":
             from code_coach.kata.ruby_harness import signature as ruby_signature
 
@@ -234,6 +240,8 @@ class Kata:
             return self.dart_answer.strip()
         if self.language == "c":
             return self.c_answer.strip()
+        if self.language == "cpp":
+            return self.cpp_answer.strip()
         if self.language == "ruby":
             return self.ruby_answer.strip()
         if self.language == "typescript":
@@ -457,6 +465,10 @@ def harness(kata: Kata, code: str) -> str:
         from code_coach.kata import c_harness
 
         return c_harness.harness(kata, code)
+    if kata.language == "cpp":
+        from code_coach.kata import cpp_harness
+
+        return cpp_harness.harness(kata, code)
     if kata.language == "ruby":
         from code_coach.kata import ruby_harness
 
@@ -532,6 +544,14 @@ def judge(kata: Kata, stdout: str, stderr: str, exit_code: int) -> Outcome:
             stdout = NO_FUNCTION
         else:
             stdout = c_harness.unpack(kata, stdout, stderr, exit_code, MARKER)
+    if kata.language == "cpp":
+        # Same per-case lines as C, so a crash is pinned to its input.
+        from code_coach.kata import cpp_harness
+
+        if cpp_harness.missing(kata, stdout, stderr):
+            stdout = NO_FUNCTION
+        else:
+            stdout = cpp_harness.unpack(kata, stdout, stderr, exit_code, MARKER)
     if kata.language == "rust":
         from code_coach.kata import rust_harness
 
@@ -651,7 +671,12 @@ def _tidy(detail: str) -> str:
         # Dart and C compilers put the message on the same line as the
         # place: <path>.dart:3:10: Error: ... - keep the message.
         kept = False
-        for suffix in (".dart:", ".c:"):
+        # MSVC: <path>.cpp(5): error C2065: ...
+        msvc = re.search(r"\.cpp\((\d+)(?:,\d+)?\): (.*)", line)
+        if msvc:
+            out.append(f"Line {msvc.group(1)}: {msvc.group(2)}")
+            continue
+        for suffix in (".dart:", ".c:", ".cpp:"):
             if suffix in line:
                 after = line.split(suffix, 1)[1]
                 found = re.match(r"(\d+):\d+: (.*)", after)

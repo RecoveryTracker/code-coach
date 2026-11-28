@@ -51,7 +51,7 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Typing** | Keyboard practice — key sections, symbols, speed, vocabulary |
 | **Workbook** | Pages of small exercises solved by typing. 600 pages, ~12,000 exercises, across 20 languages. Shuffle deals random exercises from a range of pages |
 | **Brain Drills** | Timed quick-fire reflexes, about a minute each: what does this print, truthy or falsy, how many times does the loop run, is this line valid. In Python, JavaScript, Dart, C, SQL, TypeScript and Rust, made fresh each time, scored as a code age from 20 at your sharpest to 80 at your slowest. Shuffle mixes many drills into one round |
-| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 139 puzzles: 22 Python, 28 JavaScript, 20 TypeScript, 20 Dart, 14 C, 10 C++, 19 Rust and 6 Ruby |
+| **Magnets** | The lines of a working program, shuffled. Put them back under the stage each belongs to. 149 puzzles: 22 Python, 28 JavaScript, 20 TypeScript, 20 Dart, 14 C, 10 C++, 19 Rust, 6 Ruby and 10 SQL |
 | **Predict** | Read the code, say what it prints. 344 puzzles: 81 Python, 126 JavaScript, 17 TypeScript, 39 Dart, 25 C, 15 SQL, 16 Rust, 13 C++ and 12 Ruby |
 | **Gotchas** | Quiz cards where the obvious answer is a trap, one at a time and endless. Python and JavaScript |
 | **HTML & CSS** | Read it: what does the browser compute? 38 questions. Type it: copy the markup and watch what you typed render, 20 drills |
@@ -65,7 +65,7 @@ Twenty-four modes, all sharing one row of names at the top of every screen. Sess
 | **Farm** | A copy of the programming game The Farmer Was Replaced. Write the program that runs a drone around a farm, and spend the harvest on research, the language included: no `while` until you have bought Loops. Playable in the game's own language, Python, JavaScript and Dart |
 | **Case files** | A mystery in a database. Query real PostgreSQL however you like, then answer each step. 5 cases, 20 steps, from IS NULL up to window functions. Needs the optional PostgreSQL below |
 | **Puzzles** | Two-part puzzles: solve part one and part two changes the rules - same input, a new question, and your part-one code is still there to change. 21 puzzles, in Python, JavaScript, TypeScript, Dart and Rust (typed signatures included) |
-| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 110 hunts: 21 Python, 27 JavaScript, 13 TypeScript, 23 Dart, 12 Rust, 6 Ruby and 8 C |
+| **Bug Hunt** | A bug report and the program it is about. Reproduce it, find the line, say what is wrong, then fix it — in that order, because the order is the skill. 116 hunts: 21 Python, 27 JavaScript, 13 TypeScript, 23 Dart, 12 Rust, 6 Ruby, 8 C and 6 C++ |
 | **Tickets** | One small codebase and the team's queue of work against it: bug reports, features, a change of rules, a refactor. Each ticket starts from the code as the last one left it, and is checked on what it asks and on everything that already worked. 12 tickets in two projects: a shop's orders in Python and a team task board in JavaScript |
 | **LeetCode** | 104 problems across 13 patterns, with the editor, the coach and the terminal |
 | **Concepts** | The questions an interview asks that are not coding problems |

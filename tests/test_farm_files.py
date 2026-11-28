@@ -197,6 +197,28 @@ class JavaScriptImportRunTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAS_DART, "needs dart")
+class SavedBeforeDoneTests(unittest.TestCase):
+    """Whoever sees a run as over sees the farm saved: the browser stops polling at "done", and a test removes its
+    sandbox. The save used to come after the status, so a slow run's last save could land in a deleted folder."""
+
+    def test_the_last_save_happens_before_the_run_reads_as_over(self) -> None:
+        h = host()
+        seen: list[str] = []
+        real_save = h.save
+
+        def watching_save(language=None):
+            if h.run is not None and h.run.finished:
+                seen.append(h.run.status)
+            return real_save(language)
+
+        h.save = watching_save  # type: ignore[method-assign]
+        started = h.start("python", "harvest()\n", "main")
+        self.assertTrue(started["ok"], started)
+        self.assertEqual(finish(h, 90), "done", h.run.error)
+        self.assertTrue(seen, "the finished run was saved")
+        self.assertNotIn("done", seen, "saved only after the run already read as done")
+
+
 class DartImportRunTests(unittest.TestCase):
     def test_dart_files_import_each_other(self) -> None:
         h = host()
